@@ -7,13 +7,22 @@ function lex(source) {
   function consume() {
     tokenSoFar += source[i];
     i += 1;
+    console.log("tokenSoFar:", tokenSoFar);
   }
 
-  function has(pattern) {
-    if (pattern instanceof RegExp) {
-      return source.charAt(i).match(pattern);
+  function has(pattern, offset) {
+    if (!offset) {
+      index = i;
     } else {
-      return source.charAt(i) == pattern;
+      index = i + offset;
+    }
+
+    if (index < 0 || index >= source.length) {
+      return false;
+    } else if (pattern instanceof RegExp) {
+      return source.charAt(index).match(pattern);
+    } else {
+      return source.charAt(index) == pattern;
     }
   }
 
@@ -45,11 +54,21 @@ function lex(source) {
     while (has(/\d/)) {
       consume();
     }
-    
+
     if (has('.')) {
       decimal();
     } else {
+      if (has('e') && has(/\d/, 1)) {
+        eSuffix();
+      }
       emit(Tokens.Integer);
+    }
+  }
+
+  function eSuffix() {
+    consume();
+    while (has(/\d/)) {
+      consume();
     }
   }
 
@@ -58,6 +77,12 @@ function lex(source) {
     while (has(/\d/)) {
       consume();
     }
+
+    // Handle e123.
+    if (has('e') && has(/\d/, 1)) {
+      eSuffix();
+    }
+
     emit(Tokens.Real);
   }
 

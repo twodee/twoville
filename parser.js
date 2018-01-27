@@ -19,14 +19,14 @@ function parse(tokens) {
   }
 
   function statement() {
-    return expression();
+    return expressionAdditive();
   }
 
-  function expression() {
-    var a = atom();
+  function expressionAdditive() {
+    var a = expressionMultiplicative();
     while (has(Tokens.Plus) || has(Tokens.Minus)) {
       var operator = consume();
-      var b = atom();
+      var b = expressionMultiplicative();
       if (operator.type == Tokens.Plus) {
         a = new ExpressionAdd(a, b);
       } else {
@@ -36,10 +36,29 @@ function parse(tokens) {
     return a;
   }
 
+  function expressionMultiplicative() {
+    var a = atom();
+    while (has(Tokens.Asterisk) || has(Tokens.ForwardSlash) || has(Tokens.Percent)) {
+      var operator = consume();
+      var b = atom();
+      if (operator.type == Tokens.Asterisk) {
+        a = new ExpressionMultiply(a, b);
+      } else if (operator.type == Tokens.ForwardSlash) {
+        a = new ExpressionDivide(a, b);
+      } else {
+        a = new ExpressionRemainder(a, b);
+      }
+    }
+    return a;
+  }
+
   function atom() {
     if (has(Tokens.Integer)) {
       var token = consume();
-      return new ExpressionInteger(parseInt(token.source));
+      return new ExpressionInteger(Number(token.source));
+    } else if (has(Tokens.Real)) {
+      var token = consume();
+      return new ExpressionReal(Number(token.source));
     }
   }
 

@@ -8,6 +8,25 @@
   <script src="parser.js"></script>
 </head>
 <body>
+
+<input type="text" size="20" id="e">
+<input type="button" id="eval" value="Evaluate">
+<input type="text" size="20" id="integer" readonly>
+<input type="text" size="20" id="real" readonly>
+
+<script>
+var eBox = document.getElementById('e');
+var evalButton = document.getElementById('eval');
+
+evalButton.onclick = function() {
+  tokens = lex(eBox.value);
+  ast = parse(tokens);
+  result = ast.evaluate();
+  document.getElementById('integer').value = result.integer();
+  document.getElementById('real').value = result.real();
+}
+
+</script>
   
 </body>
 </html>
