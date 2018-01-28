@@ -48,6 +48,12 @@ function lex(source) {
     while (has(/[a-zA-Z0-9_]/)) {
       consume();
     }
+
+    if (tokenSoFar == 'rectangle') {
+      emit(Tokens.Rectangle);
+    } else {
+      emit(Tokens.Identifier);
+    }
   }
 
   function digits() {
@@ -89,7 +95,7 @@ function lex(source) {
   while (i < source.length) {
     if (has(/\d/)) {
       digits();
-    } else if (has(/a-zA-Z_/)) {
+    } else if (has(/[a-zA-Z_]/)) {
       identifier();
     } else if (has('-')) {
       dash();
@@ -105,6 +111,8 @@ function lex(source) {
     } else if (has('/')) {
       consume();
       emit(Tokens.ForwardSlash);
+    } else if (has(' ')) {
+      ++i;
     } else {
       throw 'unknowned!';
     }
@@ -112,5 +120,6 @@ function lex(source) {
 
   emit(Tokens.EOF);
 
+  console.log("tokens:", tokens);
   return tokens;
 }

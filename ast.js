@@ -1,3 +1,5 @@
+var namespace = "http://www.w3.org/2000/svg";
+
 // --------------------------------------------------------------------------- 
 // PRIMITIVES
 // --------------------------------------------------------------------------- 
@@ -7,7 +9,7 @@ function ExpressionNumber(i) {
     return i;
   }
 
-  this.evaluate = function() {
+  this.evaluate = function(env) {
     return this;
   };
 }
@@ -41,9 +43,9 @@ ExpressionReal.prototype = Object.create(ExpressionNumber.prototype);
 // --------------------------------------------------------------------------- 
 
 function ExpressionAdd(a, b) {
-  this.evaluate = function() {
-    var evalA = a.evaluate();
-    var evalB = b.evaluate();
+  this.evaluate = function(env) {
+    var evalA = a.evaluate(env);
+    var evalB = b.evaluate(env);
 
     if (evalA instanceof ExpressionInteger &&
         evalB instanceof ExpressionInteger) {
@@ -61,9 +63,9 @@ function ExpressionAdd(a, b) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionSubtract(a, b) {
-  this.evaluate = function() {
-    var evalA = a.evaluate();
-    var evalB = b.evaluate();
+  this.evaluate = function(env) {
+    var evalA = a.evaluate(env);
+    var evalB = b.evaluate(env);
 
     if (evalA instanceof ExpressionInteger &&
         evalB instanceof ExpressionInteger) {
@@ -81,9 +83,9 @@ function ExpressionSubtract(a, b) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionMultiply(a, b) {
-  this.evaluate = function() {
-    var evalA = a.evaluate();
-    var evalB = b.evaluate();
+  this.evaluate = function(env) {
+    var evalA = a.evaluate(env);
+    var evalB = b.evaluate(env);
 
     if (evalA instanceof ExpressionInteger &&
         evalB instanceof ExpressionInteger) {
@@ -101,9 +103,9 @@ function ExpressionMultiply(a, b) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionDivide(a, b) {
-  this.evaluate = function() {
-    var evalA = a.evaluate();
-    var evalB = b.evaluate();
+  this.evaluate = function(env) {
+    var evalA = a.evaluate(env);
+    var evalB = b.evaluate(env);
 
     if (evalA instanceof ExpressionInteger &&
         evalB instanceof ExpressionInteger) {
@@ -121,9 +123,9 @@ function ExpressionDivide(a, b) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionRemainder(a, b) {
-  this.evaluate = function() {
-    var evalA = a.evaluate();
-    var evalB = b.evaluate();
+  this.evaluate = function(env) {
+    var evalA = a.evaluate(env);
+    var evalB = b.evaluate(env);
 
     if (evalA instanceof ExpressionInteger &&
         evalB instanceof ExpressionInteger) {
@@ -142,10 +144,35 @@ function ExpressionRemainder(a, b) {
 //
 // ---------------------------------------------------------------------------
 
+function ExpressionRectangle(left, bottom, width, height) {
+  this.evaluate = function(env) {
+    var valueLeft = left.evaluate(env).real();
+    var valueBottom = bottom.evaluate(env).real();
+    var valueWidth = width.evaluate(env).real();
+    var valueHeight = height.evaluate(env).real();
+    console.log("valueLeft:", valueLeft);
+    console.log("valueBottom:", valueBottom);
+    console.log("valueWidth:", valueWidth);
+    console.log("valueHeight:", valueHeight);
+
+    var rectangle = document.createElementNS(namespace, 'rect');
+    rectangle.setAttributeNS(null, 'x', valueLeft);
+    rectangle.setAttributeNS(null, 'y', valueBottom);
+    rectangle.setAttributeNS(null, 'width', valueWidth);
+    rectangle.setAttributeNS(null, 'height', valueHeight);
+    rectangle.setAttributeNS(null, 'fill', '#FF00FF');
+    env.svg.appendChild(rectangle);
+  };
+}
+
+// --------------------------------------------------------------------------- 
+//
+// ---------------------------------------------------------------------------
+
 function Block(statements) {
-  this.evaluate = function() {
+  this.evaluate = function(env) {
     var result = null;
-    statements.forEach(statement => result = statement.evaluate());
+    statements.forEach(statement => result = statement.evaluate(env));
     return result;
   }
 }

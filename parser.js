@@ -19,7 +19,16 @@ function parse(tokens) {
   }
 
   function statement() {
-    return expressionAdditive();
+    if (has(Tokens.Rectangle)) {
+      consume();
+      var left = expressionAdditive();
+      var bottom = expressionAdditive();
+      var width = expressionAdditive();
+      var height = expressionAdditive();
+      return new ExpressionRectangle(left, bottom, width, height);
+    } else {
+      throw 'ick';
+    }
   }
 
   function expressionAdditive() {
@@ -59,6 +68,8 @@ function parse(tokens) {
     } else if (has(Tokens.Real)) {
       var token = consume();
       return new ExpressionReal(Number(token.source));
+    } else {
+      throw 'Don\'t know ' + tokens[i];
     }
   }
 
