@@ -1,8 +1,17 @@
 function parse(tokens) {
   var i = 0;
 
-  function has(type) {
-    return tokens[i].type == type;
+  function has(type, offset) {
+    var index = i;
+    if (offset) {
+      index = i + offset;
+    }
+
+    if (index < 0 || index >= tokens.length) {
+      return false;
+    } else {
+      return tokens[index].type == type;
+    }
   }
 
   function consume() {
@@ -19,16 +28,17 @@ function parse(tokens) {
   }
 
   function statement() {
-    if (has(Tokens.Rectangle)) {
-      consume();
-      var left = expressionAdditive();
-      var bottom = expressionAdditive();
-      var width = expressionAdditive();
-      var height = expressionAdditive();
-      return new ExpressionRectangle(left, bottom, width, height);
-    } else {
-      throw 'ick';
-    }
+    return expressionAdditive();
+    // if (has(Tokens.Rectangle)) {
+      // consume();
+      // var left = expressionAdditive();
+      // var bottom = expressionAdditive();
+      // var width = expressionAdditive();
+      // var height = expressionAdditive();
+      // return new ExpressionRectangle(left, bottom, width, height);
+    // } else {
+      // throw 'ick';
+    // }
   }
 
   function expressionAdditive() {
@@ -61,6 +71,11 @@ function parse(tokens) {
     return a;
   }
 
+  function isFirstOfExpression(offset) {
+    return has(Tokens.Integer, offset) ||
+           has(Tokens.Identifier, offset);
+  }
+
   function atom() {
     if (has(Tokens.Integer)) {
       var token = consume();
@@ -68,8 +83,28 @@ function parse(tokens) {
     } else if (has(Tokens.Real)) {
       var token = consume();
       return new ExpressionReal(Number(token.source));
+    } else if (has(Tokens.Identifier) && has(Tokens.LeftParenthesis, 1)) {
+      var name = consume().source;
+      consume(); // eat (
+
+      var actuals = [];
+      if (isFirstOfExpression()) {
+        actuals.push(atom());
+        while (has(Tokens.Comma) && isFirstOfExpression(1)) {
+          consume(); // eat ,
+          actuals.push(atom());
+        }
+      }
+
+      if (has(Tokens.RightParenthesis)) {
+        consume();
+      } else {
+        throw 'Missing )';
+      }
+
+      return new ExpressionFunctionCall(name, actuals);
     } else {
-      throw 'Don\'t know ' + tokens[i];
+      throw 'Don\'t know ' + tokens[i].source;
     }
   }
 

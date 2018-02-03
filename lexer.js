@@ -7,13 +7,11 @@ function lex(source) {
   function consume() {
     tokenSoFar += source[i];
     i += 1;
-    console.log("tokenSoFar:", tokenSoFar);
   }
 
   function has(pattern, offset) {
-    if (!offset) {
-      index = i;
-    } else {
+    var index = i;
+    if (offset) {
       index = i + offset;
     }
 
@@ -49,11 +47,7 @@ function lex(source) {
       consume();
     }
 
-    if (tokenSoFar == 'rectangle') {
-      emit(Tokens.Rectangle);
-    } else {
-      emit(Tokens.Identifier);
-    }
+    emit(Tokens.Identifier);
   }
 
   function digits() {
@@ -99,6 +93,15 @@ function lex(source) {
       identifier();
     } else if (has('-')) {
       dash();
+    } else if (has(',')) {
+      consume();
+      emit(Tokens.Comma);
+    } else if (has('(')) {
+      consume();
+      emit(Tokens.LeftParenthesis);
+    } else if (has(')')) {
+      consume();
+      emit(Tokens.RightParenthesis);
     } else if (has('+')) {
       consume();
       emit(Tokens.Plus);

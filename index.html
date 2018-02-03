@@ -5,11 +5,12 @@
   <script src="token.js"></script>
   <script src="lexer.js"></script>
   <script src="ast.js"></script>
+  <script src="builtins.js"></script>
   <script src="parser.js"></script>
 </head>
 <body>
 
-<input type="text" size="20" id="e">
+<input type="text" size="20" id="e" value="rectangle(0, 10, 200, 300)">
 <input type="button" id="eval" value="Evaluate">
 <input type="text" size="20" id="integer" readonly>
 <input type="text" size="20" id="real" readonly>
@@ -31,8 +32,17 @@ evalButton.onclick = function() {
   tokens = lex(eBox.value);
   ast = parse(tokens);
   var env = {
-    svg: svg
+    svg: svg,
+    variables: {},
+    functions: {}
   };
+
+  env.functions['rectangle'] = {
+    name: 'rectangle',
+    formals: ['left', 'bottom', 'width', 'height'],
+    body: new ExpressionRectangle()
+  };
+
   result = ast.evaluate(env);
   //document.getElementById('integer').value = result.integer();
   //document.getElementById('real').value = result.real();

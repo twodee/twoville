@@ -6,7 +6,9 @@ Tokens = Object.freeze({
   Integer: 'Integer',
   Real: 'Real',
   Percent: 'Percent',
-  Rectangle: 'Rectangle',
+  Comma: 'Comma',
+  LeftParenthesis: 'LeftParenthesis',
+  RightParenthesis: 'RightParenthesis',
   Circle: 'Circle',
   Identifier: 'Identifier',
   EOF: 'EOF'

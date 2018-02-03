@@ -141,27 +141,37 @@ function ExpressionRemainder(a, b) {
 }
 
 // --------------------------------------------------------------------------- 
-//
-// ---------------------------------------------------------------------------
 
-function ExpressionRectangle(left, bottom, width, height) {
+function ExpressionFunctionDefinition(name, formals, body) {
   this.evaluate = function(env) {
-    var valueLeft = left.evaluate(env).real();
-    var valueBottom = bottom.evaluate(env).real();
-    var valueWidth = width.evaluate(env).real();
-    var valueHeight = height.evaluate(env).real();
-    console.log("valueLeft:", valueLeft);
-    console.log("valueBottom:", valueBottom);
-    console.log("valueWidth:", valueWidth);
-    console.log("valueHeight:", valueHeight);
+    env.functions[name] = {
+      name: name,
+      formals: formals,
+      body: body
+    };
+  };
+}
 
-    var rectangle = document.createElementNS(namespace, 'rect');
-    rectangle.setAttributeNS(null, 'x', valueLeft);
-    rectangle.setAttributeNS(null, 'y', valueBottom);
-    rectangle.setAttributeNS(null, 'width', valueWidth);
-    rectangle.setAttributeNS(null, 'height', valueHeight);
-    rectangle.setAttributeNS(null, 'fill', '#FF00FF');
-    env.svg.appendChild(rectangle);
+// --------------------------------------------------------------------------- 
+
+function ExpressionFunctionCall(name, actuals) {
+  this.evaluate = function(env) {
+    if (!env.functions.hasOwnProperty(name)) {
+      throw 'no such func ' + name;
+    }
+
+    var f = env.functions[name];
+
+    if (actuals.length != f.formals.length) {
+      throw 'params mismatch!';
+    }
+
+    var callEnvironment = {svg: env.svg, variables: {}, functions: {}};
+    actuals.forEach((actual, i) => {
+      callEnvironment[f.formals[i]] = actual.evaluate(env);
+    });
+
+    f.body.evaluate(callEnvironment);
   };
 }
 
@@ -172,7 +182,13 @@ function ExpressionRectangle(left, bottom, width, height) {
 function Block(statements) {
   this.evaluate = function(env) {
     var result = null;
-    statements.forEach(statement => result = statement.evaluate(env));
+    statements.forEach(statement => {
+      console.log("statement:", statement);
+      result = statement.evaluate(env)
+    });
     return result;
   }
 }
+
+// --------------------------------------------------------------------------- 
+
