@@ -10,10 +10,13 @@
 </head>
 <body>
 
-<input type="text" size="20" id="e" value="rectangle(0, 10, 200, 300)">
+<textarea rows="10" id="e">
+r = rectangle
+r.position = [100, 100]
+r.size = [100, 100]
+r.color = red
+</textarea>
 <input type="button" id="eval" value="Evaluate">
-<input type="text" size="20" id="integer" readonly>
-<input type="text" size="20" id="real" readonly>
 
 <br>
 
@@ -44,8 +47,6 @@ evalButton.onclick = function() {
   };
 
   result = ast.evaluate(env);
-  //document.getElementById('integer').value = result.integer();
-  //document.getElementById('real').value = result.real();
 }
 
 </script>

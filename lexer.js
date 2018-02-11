@@ -34,10 +34,13 @@ function lex(source) {
 
     if (has(/\d/)) {
       digits();
+    } else if (has('>')) {
+      consume();
+      emit(Tokens.RightArrow);
     } else if (has('.')) {
       decimal();
     } else {
-      emit(Token.Minus);
+      emit(Tokens.Minus);
     }
   }
 
@@ -86,13 +89,44 @@ function lex(source) {
     emit(Tokens.Real);
   }
 
+  function dot() {
+    if (has(/\d/, 1)) {
+      decimal();
+    } else {
+      consume();
+      emit(Tokens.Dot);
+    }
+  }
+
+  function indentation() {
+    while (has(/[ \t]/)) {
+      consume();
+    }
+    emit(Tokens.Indentation);
+  }
+
+  function equals() {
+    consume();
+    if (has('=')) {
+      consume();
+      emit(Tokens.Equality);
+    } else {
+      emit(Tokens.Assign);
+    }
+  }
+
+  indentation();
   while (i < source.length) {
     if (has(/\d/)) {
       digits();
     } else if (has(/[a-zA-Z_]/)) {
       identifier();
+    } else if (has('.')) {
+      dot();
     } else if (has('-')) {
       dash();
+    } else if (has('=')) {
+      equals();
     } else if (has(',')) {
       consume();
       emit(Tokens.Comma);
@@ -102,9 +136,24 @@ function lex(source) {
     } else if (has(')')) {
       consume();
       emit(Tokens.RightParenthesis);
+    } else if (has('{')) {
+      consume();
+      emit(Tokens.LeftCurlyBrace);
+    } else if (has('}')) {
+      consume();
+      emit(Tokens.RightCurlyBrace);
+    } else if (has('[')) {
+      consume();
+      emit(Tokens.LeftSquareBracket);
+    } else if (has(']')) {
+      consume();
+      emit(Tokens.RightSquareBracket);
     } else if (has('+')) {
       consume();
       emit(Tokens.Plus);
+    } else if (has('^')) {
+      consume();
+      emit(Tokens.Circumflex);
     } else if (has('*')) {
       consume();
       emit(Tokens.Asterisk);
@@ -114,10 +163,14 @@ function lex(source) {
     } else if (has('/')) {
       consume();
       emit(Tokens.ForwardSlash);
+    } else if (has('\n')) {
+      consume();
+      emit(Tokens.Linebreak);
+      indentation();
     } else if (has(' ')) {
       ++i;
     } else {
-      throw 'unknowned!';
+      throw 'unknowned! [' + source[i] + ']';
     }
   }
 

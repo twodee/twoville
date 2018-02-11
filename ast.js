@@ -192,3 +192,21 @@ function Block(statements) {
 
 // --------------------------------------------------------------------------- 
 
+function ExpressionAssignment(l, r) {
+  this.evaluate = function(env) {
+    console.log("l:", l);
+    console.log("r:", r);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+function expressionProperty(base, property) {
+  this.evaluate = function(env) {
+    console.log("base:", base);
+    console.log("property:", property);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+

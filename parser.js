@@ -28,17 +28,17 @@ function parse(tokens) {
   }
 
   function statement() {
-    return expressionAdditive();
-    // if (has(Tokens.Rectangle)) {
-      // consume();
-      // var left = expressionAdditive();
-      // var bottom = expressionAdditive();
-      // var width = expressionAdditive();
-      // var height = expressionAdditive();
-      // return new ExpressionRectangle(left, bottom, width, height);
-    // } else {
-      // throw 'ick';
-    // }
+    return expressionAssignment();
+  }
+
+  function expressionAssignment() {
+    var lhs = expressionAdditive(); 
+    if (has(Tokens.Assign)) {
+      consume();
+      var rhs = expressionAssignment();
+      lhs = new ExpressionAssignment(lhs, rhs);
+    }
+    return lhs;
   }
 
   function expressionAdditive() {
@@ -56,10 +56,10 @@ function parse(tokens) {
   }
 
   function expressionMultiplicative() {
-    var a = atom();
+    var a = expressionProperty();
     while (has(Tokens.Asterisk) || has(Tokens.ForwardSlash) || has(Tokens.Percent)) {
       var operator = consume();
-      var b = atom();
+      var b = expressionProperty();
       if (operator.type == Tokens.Asterisk) {
         a = new ExpressionMultiply(a, b);
       } else if (operator.type == Tokens.ForwardSlash) {
@@ -69,6 +69,16 @@ function parse(tokens) {
       }
     }
     return a;
+  }
+
+  function expressionProperty() {
+    var base = atom();
+    while (has(Tokens.Dot)) {
+      consume(); 
+      var property = atom();
+      base = new ExpressionProperty(base, property);
+    }
+    return base;
   }
 
   function isFirstOfExpression(offset) {
