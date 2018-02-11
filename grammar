@@ -1,0 +1,29 @@
+program
+  : block? EOF
+
+block
+  : (INDENTATION statement)*
+
+statement
+  : e1 NEWLINE
+
+e1
+  : e2 ASSIGN e1
+
+e2
+  : e3 ([PLUS|DASH] e3)*
+
+e3
+  : e4 ([ASTERISK|FORWARDSLASH] e4)*
+
+e4
+  : atom (DOT IDENTIFIER)*
+
+e5
+  : atom (LEFTBRACKET e1 RIGHTBRACKET)*
+
+atom
+  : INTEGER
+  | REAL
+  | LEFT_PARENTHESIS e1 RIGHT_PARENTHESIS
+  | LEFT_BRACKET (e1 (COMMA e1)*)? RIGHT_BRACKET

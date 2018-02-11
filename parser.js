@@ -20,15 +20,38 @@ function parse(tokens) {
   }
 
   function program() {
-    statements = [];
-    while (!has(Tokens.EOF)) {
-      statements.push(statement());
+    var b = block();
+    if (!has(Tokens.EOF)) {
+      throw 'Expected EOF';
     }
+    return b;
+  }
+
+  function block() {
+    if (!has(Tokens.Indentation)) {
+      throw 'expected indent';
+    }
+
+    var indentation = tokens[i];
+
+    statements = [];
+    while (has(Tokens.Indentation) && tokens[i].length == indentation.length) {
+      consume(); // eat indentation
+      if (!has(Tokens.EOF)) {
+        statements.push(statement());
+      }
+    }
+
     return new Block(statements);
   }
 
   function statement() {
-    return expressionAssignment();
+    var e = expressionAssignment();
+    if (!has(Tokens.Linebreak) && !has(Tokens.EOF)) {
+      throw 'Expected linebreak or EOF';
+    }
+    consume();
+    return e;
   }
 
   function expressionAssignment() {
@@ -93,6 +116,21 @@ function parse(tokens) {
     } else if (has(Tokens.Real)) {
       var token = consume();
       return new ExpressionReal(Number(token.source));
+    } else if (has(Tokens.LeftSquareBracket)) {
+      consume(); // eat [
+      var elements = [];
+      while (!has(Tokens.RightSquareBracket)) {
+        elements.push(expressionAssignment());
+        if (!has(Tokens.RightSquareBracket)) {
+          if (has(Tokens.Comma)) {
+            consume(); // eat ,
+          } else {
+            throw 'bad bad bad';
+          }
+        }
+      }
+      consume(); // eat ]
+      return new ExpressionVector(elements);
     } else if (has(Tokens.Identifier) && has(Tokens.LeftParenthesis, 1)) {
       var name = consume().source;
       consume(); // eat (
@@ -113,8 +151,11 @@ function parse(tokens) {
       }
 
       return new ExpressionFunctionCall(name, actuals);
+    } else if (has(Tokens.Identifier)) {
+      var id = consume().source;
+      return new ExpressionIdentifier(id);
     } else {
-      throw 'Don\'t know ' + tokens[i].source;
+      throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';
     }
   }
 

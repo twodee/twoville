@@ -154,6 +154,19 @@ function ExpressionFunctionDefinition(name, formals, body) {
 
 // --------------------------------------------------------------------------- 
 
+function ExpressionIdentifier(id) {
+  this.evaluate = function(env) {
+    if (!env.variables.hasOwnProperty(id)) {
+      throw 'no such var ' + id;
+    }
+
+    var variable = env.variables[id];
+    return variable;
+  };
+}
+
+// --------------------------------------------------------------------------- 
+
 function ExpressionFunctionCall(name, actuals) {
   this.evaluate = function(env) {
     if (!env.functions.hasOwnProperty(name)) {
@@ -201,7 +214,7 @@ function ExpressionAssignment(l, r) {
 
 // --------------------------------------------------------------------------- 
 
-function expressionProperty(base, property) {
+function ExpressionProperty(base, property) {
   this.evaluate = function(env) {
     console.log("base:", base);
     console.log("property:", property);
@@ -209,4 +222,10 @@ function expressionProperty(base, property) {
 }
 
 // --------------------------------------------------------------------------- 
+
+function ExpressionVector(elements) {
+  this.evaluate = function(env) {
+    return 0;
+  }
+}
 
