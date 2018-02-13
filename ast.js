@@ -12,6 +12,10 @@ function ExpressionNumber(i) {
   this.evaluate = function(env) {
     return this;
   };
+
+  this.toString = function() {
+    return '' + i;
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -154,15 +158,28 @@ function ExpressionFunctionDefinition(name, formals, body) {
 
 // --------------------------------------------------------------------------- 
 
-function ExpressionIdentifier(id) {
+function ExpressionIdentifier(token) {
+  this.token = token;
+  console.log("token::::::::", token);
+
   this.evaluate = function(env) {
-    if (!env.variables.hasOwnProperty(id)) {
-      throw 'no such var ' + id;
+    console.log("env:", env);
+    if (!env.variables.hasOwnProperty(token.source)) {
+      throw 'no such var [' + token.source + ']';
     }
 
-    var variable = env.variables[id];
+    var variable = env.variables[token.source];
     return variable;
   };
+
+  this.assign = function(env, rhs) {
+    console.log("env before:", env);
+    console.log("rhs:", rhs);
+    var value = rhs.evaluate(env);
+    env.variables[token.source] = value;
+    console.log("env after assignment:", env);
+    return value;
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -179,12 +196,16 @@ function ExpressionFunctionCall(name, actuals) {
       throw 'params mismatch!';
     }
 
-    var callEnvironment = {svg: env.svg, variables: {}, functions: {}};
+    console.log("f.formals:", f.formals);
+    var callEnvironment = {svg: env.svg, variables: {}, functions: {}, shapes: env.shapes};
+    console.log("callEnvironment:", callEnvironment);
     actuals.forEach((actual, i) => {
+      console.log("actual:", actual);
       callEnvironment[f.formals[i]] = actual.evaluate(env);
     });
+    console.log("callEnvironment:", callEnvironment);
 
-    f.body.evaluate(callEnvironment);
+    return f.body.evaluate(callEnvironment);
   };
 }
 
@@ -207,8 +228,12 @@ function Block(statements) {
 
 function ExpressionAssignment(l, r) {
   this.evaluate = function(env) {
-    console.log("l:", l);
-    console.log("r:", r);
+    if (l instanceof ExpressionIdentifier || l instanceof ExpressionProperty) {
+      console.log("env at ass:", env);
+      return l.assign(env, r);
+    } else {
+      throw 'unassignable';
+    }
   }
 }
 
@@ -216,8 +241,20 @@ function ExpressionAssignment(l, r) {
 
 function ExpressionProperty(base, property) {
   this.evaluate = function(env) {
-    console.log("base:", base);
+    var object = base.evaluate(env); 
+    console.log("propertyyyyyyyyyyy:", property);
+    console.log("object:", object);
+    return property.evaluate(object);
+  }
+
+  this.assign = function(env, rhs) {
+    var value = rhs.evaluate(env);
+    var object = base.evaluate(env); 
     console.log("property:", property);
+    console.log("value:", value);
+    console.log("object:", object);
+    new ExpressionAssignment(property, value).evaluate(object);
+    return value;
   }
 }
 

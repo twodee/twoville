@@ -1,16 +1,41 @@
+function TwovilleEnvironment() {
+  this.variables = {};
+}
+
+function TwovilleRectangle() {
+  TwovilleEnvironment.call(this);
+  this.variables.x = 0;
+  this.variables.y = 0;
+  this.variables.width = 200;
+  this.variables.height = 100;
+}
+
+TwovilleRectangle.prototype = Object.create(TwovilleEnvironment.prototype);
+
+TwovilleRectangle.prototype.draw = function() {
+  var rectangle = document.createElementNS(namespace, 'rect');
+  rectangle.setAttributeNS(null, 'x', this.variables.x);
+  rectangle.setAttributeNS(null, 'y', this.variables.y);
+  rectangle.setAttributeNS(null, 'width', this.variables.width);
+  rectangle.setAttributeNS(null, 'height', this.variables.height);
+  rectangle.setAttributeNS(null, 'fill', '#FF00FF');
+  env.svg.appendChild(rectangle);
+}
+
 function ExpressionRectangle() {
   this.evaluate = function(env) {
-    var valueLeft = env['left'].real();
-    var valueBottom = env['bottom'].real();
-    var valueWidth = env['width'].real();
-    var valueHeight = env['height'].real();
+    var r = new TwovilleRectangle();
+    console.log("env:", env);
+    env.shapes.push(r);
+    return r;
+  };
+}
 
-    var rectangle = document.createElementNS(namespace, 'rect');
-    rectangle.setAttributeNS(null, 'x', valueLeft);
-    rectangle.setAttributeNS(null, 'y', valueBottom);
-    rectangle.setAttributeNS(null, 'width', valueWidth);
-    rectangle.setAttributeNS(null, 'height', valueHeight);
-    rectangle.setAttributeNS(null, 'fill', '#FF00FF');
-    env.svg.appendChild(rectangle);
+function ExpressionPrint() {
+  this.evaluate = function(env) {
+    var message = env['message'];
+    console.log("message:", message);
+    console.log(message.toString());
+    return null;
   };
 }

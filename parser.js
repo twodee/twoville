@@ -46,12 +46,16 @@ function parse(tokens) {
   }
 
   function statement() {
-    var e = expressionAssignment();
+    var e = expression();
     if (!has(Tokens.Linebreak) && !has(Tokens.EOF)) {
       throw 'Expected linebreak or EOF';
     }
     consume();
     return e;
+  }
+
+  function expression() {
+    return expressionAssignment();
   }
 
   function expressionAssignment() {
@@ -99,6 +103,7 @@ function parse(tokens) {
     while (has(Tokens.Dot)) {
       consume(); 
       var property = atom();
+      console.log("property ----", property);
       base = new ExpressionProperty(base, property);
     }
     return base;
@@ -120,7 +125,7 @@ function parse(tokens) {
       consume(); // eat [
       var elements = [];
       while (!has(Tokens.RightSquareBracket)) {
-        elements.push(expressionAssignment());
+        elements.push(expression());
         if (!has(Tokens.RightSquareBracket)) {
           if (has(Tokens.Comma)) {
             consume(); // eat ,
@@ -137,7 +142,8 @@ function parse(tokens) {
 
       var actuals = [];
       if (isFirstOfExpression()) {
-        actuals.push(atom());
+        actuals.push(expression());
+        console.log("actuals:", actuals);
         while (has(Tokens.Comma) && isFirstOfExpression(1)) {
           consume(); // eat ,
           actuals.push(atom());
@@ -152,7 +158,8 @@ function parse(tokens) {
 
       return new ExpressionFunctionCall(name, actuals);
     } else if (has(Tokens.Identifier)) {
-      var id = consume().source;
+      var id = consume();
+      console.log("id:", id);
       return new ExpressionIdentifier(id);
     } else {
       throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';

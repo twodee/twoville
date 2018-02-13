@@ -11,10 +11,10 @@
 <body>
 
 <textarea rows="10" id="e">
-r = rectangle
-r.position = [100, 100]
-r.size = [100, 100]
-r.color = red
+r = rectangle()
+r.height = 20
+print(5)
+print(r.height)
 </textarea>
 <input type="button" id="eval" value="Evaluate">
 
@@ -37,13 +37,20 @@ evalButton.onclick = function() {
   var env = {
     svg: svg,
     variables: {},
-    functions: {}
+    functions: {},
+    shapes: []
   };
 
   env.functions['rectangle'] = {
     name: 'rectangle',
-    formals: ['left', 'bottom', 'width', 'height'],
+    formals: [],
     body: new ExpressionRectangle()
+  };
+
+  env.functions['print'] = {
+    name: 'print',
+    formals: ['message'],
+    body: new ExpressionPrint()
   };
 
   result = ast.evaluate(env);
