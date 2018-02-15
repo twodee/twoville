@@ -7,6 +7,11 @@
   <script src="ast.js"></script>
   <script src="builtins.js"></script>
   <script src="parser.js"></script>
+  <style>
+svg {
+  background-color: lightgray;
+}
+  </style>
 </head>
 <body>
 
@@ -17,46 +22,10 @@ print(5)
 print(r.height)
 </textarea>
 <input type="button" id="eval" value="Evaluate">
-
 <br>
-
 <svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="800" height="600"></svg>
 
-<script>
-var eBox = document.getElementById('e');
-var evalButton = document.getElementById('eval');
-var svg = document.getElementById('canvas');
-
-evalButton.onclick = function() {
-  while (svg.lastChild) {
-    svg.removeChild(svg.lastChild);
-  }
-
-  tokens = lex(eBox.value);
-  ast = parse(tokens);
-  var env = {
-    svg: svg,
-    variables: {},
-    functions: {},
-    shapes: []
-  };
-
-  env.functions['rectangle'] = {
-    name: 'rectangle',
-    formals: [],
-    body: new ExpressionRectangle()
-  };
-
-  env.functions['print'] = {
-    name: 'print',
-    formals: ['message'],
-    body: new ExpressionPrint()
-  };
-
-  result = ast.evaluate(env);
-}
-
-</script>
+<script src="main.js"></script>
   
 </body>
 </html>

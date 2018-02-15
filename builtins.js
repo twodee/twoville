@@ -12,14 +12,14 @@ function TwovilleRectangle() {
 
 TwovilleRectangle.prototype = Object.create(TwovilleEnvironment.prototype);
 
-TwovilleRectangle.prototype.draw = function() {
+TwovilleRectangle.prototype.draw = function(svg) {
   var rectangle = document.createElementNS(namespace, 'rect');
   rectangle.setAttributeNS(null, 'x', this.variables.x);
   rectangle.setAttributeNS(null, 'y', this.variables.y);
   rectangle.setAttributeNS(null, 'width', this.variables.width);
   rectangle.setAttributeNS(null, 'height', this.variables.height);
   rectangle.setAttributeNS(null, 'fill', '#FF00FF');
-  env.svg.appendChild(rectangle);
+  svg.appendChild(rectangle);
 }
 
 function ExpressionRectangle() {
