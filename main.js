@@ -22,6 +22,12 @@ evalButton.onclick = function() {
     body: new ExpressionRectangle()
   };
 
+  env.functions['circle'] = {
+    name: 'circle',
+    formals: [],
+    body: new ExpressionCircle()
+  };
+
   env.functions['print'] = {
     name: 'print',
     formals: ['message'],
