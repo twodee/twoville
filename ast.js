@@ -160,10 +160,8 @@ function ExpressionFunctionDefinition(name, formals, body) {
 
 function ExpressionIdentifier(token) {
   this.token = token;
-  console.log("token::::::::", token);
 
   this.evaluate = function(env) {
-    console.log("env:", env);
     if (!env.variables.hasOwnProperty(token.source)) {
       throw 'no such var [' + token.source + ']';
     }
@@ -173,11 +171,8 @@ function ExpressionIdentifier(token) {
   };
 
   this.assign = function(env, rhs) {
-    console.log("env before:", env);
-    console.log("rhs:", rhs);
     var value = rhs.evaluate(env);
     env.variables[token.source] = value;
-    console.log("env after assignment:", env);
     return value;
   }
 }
@@ -196,14 +191,10 @@ function ExpressionFunctionCall(name, actuals) {
       throw 'params mismatch!';
     }
 
-    console.log("f.formals:", f.formals);
     var callEnvironment = {svg: env.svg, variables: {}, functions: {}, shapes: env.shapes};
-    console.log("callEnvironment:", callEnvironment);
     actuals.forEach((actual, i) => {
-      console.log("actual:", actual);
       callEnvironment[f.formals[i]] = actual.evaluate(env);
     });
-    console.log("callEnvironment:", callEnvironment);
 
     return f.body.evaluate(callEnvironment);
   };
@@ -217,7 +208,6 @@ function Block(statements) {
   this.evaluate = function(env) {
     var result = null;
     statements.forEach(statement => {
-      console.log("statement:", statement);
       result = statement.evaluate(env)
     });
     return result;
@@ -229,7 +219,6 @@ function Block(statements) {
 function ExpressionAssignment(l, r) {
   this.evaluate = function(env) {
     if (l instanceof ExpressionIdentifier || l instanceof ExpressionProperty) {
-      console.log("env at ass:", env);
       return l.assign(env, r);
     } else {
       throw 'unassignable';
@@ -242,17 +231,12 @@ function ExpressionAssignment(l, r) {
 function ExpressionProperty(base, property) {
   this.evaluate = function(env) {
     var object = base.evaluate(env); 
-    console.log("propertyyyyyyyyyyy:", property);
-    console.log("object:", object);
     return property.evaluate(object);
   }
 
   this.assign = function(env, rhs) {
     var value = rhs.evaluate(env);
     var object = base.evaluate(env); 
-    console.log("property:", property);
-    console.log("value:", value);
-    console.log("object:", object);
     new ExpressionAssignment(property, value).evaluate(object);
     return value;
   }
@@ -262,7 +246,8 @@ function ExpressionProperty(base, property) {
 
 function ExpressionVector(elements) {
   this.evaluate = function(env) {
-    return 0;
+    var values = elements.map(element => element.evaluate(env));
+    return new TwovilleVector(values);
   }
 }
 

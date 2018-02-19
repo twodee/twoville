@@ -39,6 +39,7 @@ function parse(tokens) {
       consume(); // eat indentation
       if (!has(Tokens.EOF)) {
         statements.push(statement());
+        console.log("i:", i);
       }
     }
 
@@ -47,10 +48,13 @@ function parse(tokens) {
 
   function statement() {
     var e = expression();
-    if (!has(Tokens.Linebreak) && !has(Tokens.EOF)) {
+
+    if (has(Tokens.Linebreak)) {
+      consume();
+    } else if (!has(Tokens.EOF)) {
       throw 'Expected linebreak or EOF';
     }
-    consume();
+
     return e;
   }
 
@@ -103,7 +107,6 @@ function parse(tokens) {
     while (has(Tokens.Dot)) {
       consume(); 
       var property = atom();
-      console.log("property ----", property);
       base = new ExpressionProperty(base, property);
     }
     return base;
@@ -143,7 +146,6 @@ function parse(tokens) {
       var actuals = [];
       if (isFirstOfExpression()) {
         actuals.push(expression());
-        console.log("actuals:", actuals);
         while (has(Tokens.Comma) && isFirstOfExpression(1)) {
           consume(); // eat ,
           actuals.push(atom());
@@ -159,7 +161,6 @@ function parse(tokens) {
       return new ExpressionFunctionCall(name, actuals);
     } else if (has(Tokens.Identifier)) {
       var id = consume();
-      console.log("id:", id);
       return new ExpressionIdentifier(id);
     } else {
       throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';
