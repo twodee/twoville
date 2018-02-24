@@ -131,6 +131,7 @@ function Block(statements) {
   this.evaluate = function(env, fromTime, toTime) {
     var result = null;
     statements.forEach(statement => {
+      console.log("statement:", statement);
       result = statement.evaluate(env, fromTime, toTime)
     });
     return result;
@@ -198,3 +199,13 @@ function StatementTo(toTimeExpression, block) {
 
 // --------------------------------------------------------------------------- 
 
+function StatementBetween(fromTimeExpression, toTimeExpression, block) {
+  this.block = block;
+  this.evaluate = function(env, fromTime, toTime) {
+    var fromTime = fromTimeExpression.evaluate(env, fromTime, toTime);
+    var toTime = toTimeExpression.evaluate(env, fromTime, toTime);
+    block.evaluate(env, fromTime, toTime);
+  }
+}
+
+// --------------------------------------------------------------------------- 

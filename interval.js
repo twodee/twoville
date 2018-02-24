@@ -41,13 +41,3 @@ Interval.prototype.interpolate = function(t) {
     return this.fromValue.interpolate(this.toValue, proportion);
   }
 }
-
-// var i = new Interval(0, new TwovilleNumber(5), 10, new TwovilleNumber(25));
-// console.log("i.hasFrom():", i.hasFrom());
-// console.log("i.hasTo():", i.hasTo());
-// console.log("i.spans(3):", i.spans(3));
-// console.log("i.spans(-3):", i.spans(-3));
-// console.log("i.spans(0):", i.spans(0));
-// console.log("i.interpolate(3):", i.interpolate(3));
-// console.log("i.interpolate(15):", i.interpolate(15));
-// console.log("i.interpolate(5):", i.interpolate(5));

@@ -39,12 +39,11 @@ TwovilleEnvironment.prototype.bindTimelined = function(id, fromTime, toTime, val
   }
 
   if (fromTime != null && toTime != null) {
-    this.bindings[id].setBetweenValue(fromTime, toTime, value);
+    this.bindings[id].setFromValue(fromTime, value);
+    this.bindings[id].setToValue(toTime, value);
   } else if (fromTime != null) {
-    console.log("setting from");
     this.bindings[id].setFromValue(fromTime, value);
   } else if (toTime != null) {
-    console.log("setting to");
     this.bindings[id].setToValue(toTime, value);
   } else {
     this.bindings[id].setDefault(value);

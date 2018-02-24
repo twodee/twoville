@@ -39,19 +39,21 @@ function parse(tokens) {
       throw 'not indented enough';
     }
     indents.push(indentation.source.length);
-    console.log("pre indents:", indents);
+    console.log("pre-indents:", indents);
 
     var statements = [];
     while (has(Tokens.Indentation) && tokens[i].source.length == indentation.source.length) {
       consume(); // eat indentation
       if (!has(Tokens.EOF)) {
-        statements.push(statement());
-        console.log("statements[-1]:", statements[statements.length - 1]);
+        console.log("tokens[i]:", tokens[i]);
+        var s = statement();
+        console.log("s:", s);
+        statements.push(s);
       }
     }
 
     indents.pop();
-    console.log("post indents:", indents);
+    console.log("post-indents:", indents);
 
     return new Block(statements);
   }
@@ -76,13 +78,26 @@ function parse(tokens) {
       var e = expression();
 
       if (has(Tokens.RightArrow)) {
+        var from = e;
         consume();
         if (has(Tokens.T)) {
           consume();
           if (has(Tokens.Linebreak)) {
             consume();
             var b = block();
-            return new StatementFrom(e, b);
+            return new StatementFrom(from, b);
+          } else if (has(Tokens.RightArrow)) {
+            consume();
+            var to = expression();
+            console.log("to:", to);
+            if (has(Tokens.Linebreak)) {
+              consume();
+              var b = block();
+              console.log("b:", b);
+              return new StatementBetween(from, to, b);
+            } else {
+              throw 'expected linebreak';
+            }
           } else {
             throw 'expected linebreak';
           }
