@@ -1,29 +1,68 @@
 program
-  : block? EOF
+  : block[indent=0]? EOF
 
 block
   : (INDENTATION statement)*
 
 statement
-  : e1 NEWLINE
+  | expression RIGHT_ARROW T RIGHT_ARROW expression NEWLINE block[indent+=1]
+  | expression RIGHT_ARROW T NEWLINE block[indent+=1]
+  | T RIGHT_ARROW expression NEWLINE block[indent+=1]
+  : expression NEWLINE
 
-e1
-  : e2 ASSIGN e1
+expression
+  : assignment
 
-e2
-  : e3 ([PLUS|DASH] e3)*
+assignment
+  : logical ((ASSIGN|PLUS_ASSIGN|MINUS_ASSIGN|TIMES_ASSIGN|DIVIDE_ASSIGN) logical)*
 
-e3
-  : e4 ([ASTERISK|FORWARDSLASH] e4)*
+logical:
+  : comparative ((AND|OR) comparative)*
 
-e4
+comparative
+  : relational ((EQUAL|NOT_EQUAL) relational)*
+
+relational
+  : additive ((MORE|MORE_OR_EQUAL|LESS|LESS_OR_EQUAL) additive)*
+
+additive
+  : multiplicative ((PLUS|MINUS) multiplicative)*
+
+multiplicative
+  : power ((ASTERISK|FORWARDSLASH|PERCENT) power)*
+
+power
+  : unary (CARET unary)*
+
+unary
+  : (MINUS|NOT)* reference
+
+reference
+  # object.property
   : atom (DOT IDENTIFIER)*
 
-e5
-  : atom (LEFTBRACKET e1 RIGHTBRACKET)*
+  # Array subscript
+  | atom (LEFT_BRACKET expression RIGHT_BRACKET)*
+
+  # Function call
+  | atom (LEFT_PARENTHESIS (expression (COMMA expression)*)? RIGHT_PARENTHESIS)*
 
 atom
   : INTEGER
   | REAL
-  | LEFT_PARENTHESIS e1 RIGHT_PARENTHESIS
-  | LEFT_BRACKET (e1 (COMMA e1)*)? RIGHT_BRACKET
+  | NOTHING
+  | LEFT_PARENTHESIS expression RIGHT_PARENTHESIS
+
+  # Anonymous function definition
+  | LEFT_PARENTHESIS (IDENTIFIER (COMMA IDENTIFIER)*) RIGHT_PARENTHESIS RIGHT_ARROW expression
+
+  # Named function definition
+  | IDENTIFIER LEFT_PARENTHESIS (IDENTIFIER (COMMA IDENTIFIER)*) RIGHT_PARENTHESIS RIGHT_ARROW block[indent+=1]
+
+  # Vector
+  | LEFT_BRACKET (expression (COMMA expression)*)? RIGHT_BRACKET
+
+  # Flow control
+  | IF expression NEWLINE block[indent+=1] ELSE NEWLINE block[indent+=1]
+  | WHILE expression NEWLINE block[indent+=1]
+  | FOR reference (IN expression)? (TO|THROUGH) expression (BY expression)? NEWLINE block[indent+=1]

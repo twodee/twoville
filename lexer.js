@@ -50,7 +50,11 @@ function lex(source) {
       consume();
     }
 
-    emit(Tokens.Identifier);
+    if (tokenSoFar == 't') {
+      emit(Tokens.T);
+    } else {
+      emit(Tokens.Identifier);
+    }
   }
 
   function digits() {

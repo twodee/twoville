@@ -7,6 +7,8 @@
   <script src="ast.js"></script>
   <script src="builtins.js"></script>
   <script src="parser.js"></script>
+  <script src="interval.js"></script>
+  <script src="timeline.js"></script>
   <style>
 svg {
   background-color: lightgray;
@@ -15,9 +17,20 @@ svg {
 </head>
 <body>
 
+<input type="range" id="scrubber" value="0" min="0" max="100">
+
 <textarea rows="10" id="e">
 r = rectangle()
-r.rgb = [0, 1, 0]
+r.size = [200, 100]
+r.pivot = [0, 0]
+10 -> t
+  r.position = [10, 10]
+  r.rgb = [0, 1, 0]
+  r.rotation = 0
+t -> 100
+  r.position = [50, 10]
+  r.rgb = [1, 0, 1]
+  r.rotation = 720
 </textarea>
 <input type="button" id="eval" value="Evaluate">
 <br>

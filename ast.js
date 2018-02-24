@@ -4,151 +4,77 @@ var namespace = "http://www.w3.org/2000/svg";
 // PRIMITIVES
 // --------------------------------------------------------------------------- 
 
-function ExpressionNumber(i) {
-  this.real = function() {
-    return i;
-  }
-
-  this.evaluate = function(env) {
-    return this;
-  };
-
-  this.toString = function() {
-    return '' + i;
+function ExpressionInteger(x) {
+  this.evaluate = function(env, fromTime, toTime) {
+    return new TwovilleInteger(x);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-function ExpressionInteger(i) {
-  ExpressionNumber.call(this, i);
-
-  this.integer = function() {
-    return i;
+function ExpressionReal(x) {
+  this.evaluate = function(env, fromTime, toTime) {
+    return new TwovilleReal(x);
   }
 }
-
-ExpressionInteger.prototype = Object.create(ExpressionNumber.prototype);
-
-// --------------------------------------------------------------------------- 
-
-function ExpressionReal(i) {
-  ExpressionNumber.call(this, i);
-
-  this.integer = function() {
-    return Math.trunc(i);
-  }
-}
-
-ExpressionReal.prototype = Object.create(ExpressionNumber.prototype);
 
 // --------------------------------------------------------------------------- 
 // ARITHMETIC
 // --------------------------------------------------------------------------- 
 
 function ExpressionAdd(a, b) {
-  this.evaluate = function(env) {
-    var evalA = a.evaluate(env);
-    var evalB = b.evaluate(env);
-
-    if (evalA instanceof ExpressionInteger &&
-        evalB instanceof ExpressionInteger) {
-      return new ExpressionInteger(evalA.integer() + evalB.integer());
-    } else if (evalA instanceof ExpressionNumber &&
-               evalB instanceof ExpressionNumber) {
-      return new ExpressionReal(evalA.real() + evalB.real());
-    } else {
-      throw 'ack!!!'
-    }
-
+  this.evaluate = function(env, fromTime, toTime) {
+    var evalA = a.evaluate(env, fromTime, toTime);
+    var evalB = b.evaluate(env, fromTime, toTime);
+    return evalA.add(evalB);
   };
 }
 
 // --------------------------------------------------------------------------- 
 
 function ExpressionSubtract(a, b) {
-  this.evaluate = function(env) {
-    var evalA = a.evaluate(env);
-    var evalB = b.evaluate(env);
-
-    if (evalA instanceof ExpressionInteger &&
-        evalB instanceof ExpressionInteger) {
-      return new ExpressionInteger(evalA.integer() - evalB.integer());
-    } else if (evalA instanceof ExpressionNumber &&
-               evalB instanceof ExpressionNumber) {
-      return new ExpressionReal(evalA.real() - evalB.real());
-    } else {
-      throw 'ack!!!'
-    }
-
+  this.evaluate = function(env, fromTime, toTime) {
+    var evalA = a.evaluate(env, fromTime, toTime);
+    var evalB = b.evaluate(env, fromTime, toTime);
+    return evalA.subtract(evalB);
   };
 }
 
 // --------------------------------------------------------------------------- 
 
 function ExpressionMultiply(a, b) {
-  this.evaluate = function(env) {
-    var evalA = a.evaluate(env);
-    var evalB = b.evaluate(env);
-
-    if (evalA instanceof ExpressionInteger &&
-        evalB instanceof ExpressionInteger) {
-      return new ExpressionInteger(evalA.integer() * evalB.integer());
-    } else if (evalA instanceof ExpressionNumber &&
-               evalB instanceof ExpressionNumber) {
-      return new ExpressionReal(evalA.real() * evalB.real());
-    } else {
-      throw 'ack!!!'
-    }
-
+  this.evaluate = function(env, fromTime, toTime) {
+    var evalA = a.evaluate(env, fromTime, toTime);
+    var evalB = b.evaluate(env, fromTime, toTime);
+    return evalA.multiply(evalB);
   };
 }
 
 // --------------------------------------------------------------------------- 
 
 function ExpressionDivide(a, b) {
-  this.evaluate = function(env) {
-    var evalA = a.evaluate(env);
-    var evalB = b.evaluate(env);
-
-    if (evalA instanceof ExpressionInteger &&
-        evalB instanceof ExpressionInteger) {
-      return new ExpressionInteger(evalA.integer() / evalB.integer());
-    } else if (evalA instanceof ExpressionNumber &&
-               evalB instanceof ExpressionNumber) {
-      return new ExpressionReal(evalA.real() / evalB.real());
-    } else {
-      throw 'ack!!!'
-    }
-
+  this.evaluate = function(env, fromTime, toTime) {
+    var evalA = a.evaluate(env, fromTime, toTime);
+    var evalB = b.evaluate(env, fromTime, toTime);
+    return evalA.divide(evalB);
   };
 }
 
 // --------------------------------------------------------------------------- 
 
 function ExpressionRemainder(a, b) {
-  this.evaluate = function(env) {
-    var evalA = a.evaluate(env);
-    var evalB = b.evaluate(env);
-
-    if (evalA instanceof ExpressionInteger &&
-        evalB instanceof ExpressionInteger) {
-      return new ExpressionInteger(evalA.integer() % evalB.integer());
-    } else if (evalA instanceof ExpressionNumber &&
-               evalB instanceof ExpressionNumber) {
-      return new ExpressionReal(evalA.real() % evalB.real());
-    } else {
-      throw 'ack!!!'
-    }
-
+  this.evaluate = function(env, fromTime, toTime) {
+    var evalA = a.evaluate(env, fromTime, toTime);
+    var evalB = b.evaluate(env, fromTime, toTime);
+    return evalA.remainder(evalB);
   };
 }
 
 // --------------------------------------------------------------------------- 
 
 function ExpressionFunctionDefinition(name, formals, body) {
-  this.evaluate = function(env) {
-    env.functions[name] = {
+  this.evaluate = function(env, fromTime, toTime) {
+    env.bindings[name] = {
       name: name,
       formals: formals,
       body: body
@@ -161,18 +87,13 @@ function ExpressionFunctionDefinition(name, formals, body) {
 function ExpressionIdentifier(token) {
   this.token = token;
 
-  this.evaluate = function(env) {
-    if (!env.variables.hasOwnProperty(token.source)) {
-      throw 'no such var [' + token.source + ']';
-    }
-
-    var variable = env.variables[token.source];
-    return variable;
+  this.evaluate = function(env, fromTime, toTime) {
+    return env.get(token.source);
   };
 
-  this.assign = function(env, rhs) {
-    var value = rhs.evaluate(env);
-    env.variables[token.source] = value;
+  this.assign = function(env, fromTime, toTime, rhs) {
+    var value = rhs.evaluate(env, fromTime, toTime);
+    value.bind(env, fromTime, toTime, token.source);
     return value;
   }
 }
@@ -180,20 +101,20 @@ function ExpressionIdentifier(token) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionFunctionCall(name, actuals) {
-  this.evaluate = function(env) {
-    if (!env.functions.hasOwnProperty(name)) {
+  this.evaluate = function(env, fromTime, toTime) {
+    if (!env.has(name)) {
       throw 'no such func ' + name;
     }
 
-    var f = env.functions[name];
+    var f = env.bindings[name];
 
     if (actuals.length != f.formals.length) {
       throw 'params mismatch!';
     }
 
-    var callEnvironment = {svg: env.svg, variables: {}, functions: {}, shapes: env.shapes};
+    var callEnvironment = {svg: env.svg, bindings: {}, shapes: env.shapes};
     actuals.forEach((actual, i) => {
-      callEnvironment[f.formals[i]] = actual.evaluate(env);
+      callEnvironment[f.formals[i]] = actual.evaluate(env, fromTime, toTime);
     });
 
     return f.body.evaluate(callEnvironment);
@@ -205,10 +126,12 @@ function ExpressionFunctionCall(name, actuals) {
 // ---------------------------------------------------------------------------
 
 function Block(statements) {
-  this.evaluate = function(env) {
+  this.statements = statements;
+
+  this.evaluate = function(env, fromTime, toTime) {
     var result = null;
     statements.forEach(statement => {
-      result = statement.evaluate(env)
+      result = statement.evaluate(env, fromTime, toTime)
     });
     return result;
   }
@@ -217,9 +140,11 @@ function Block(statements) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionAssignment(l, r) {
-  this.evaluate = function(env) {
+  this.l = l;
+  this.r = r;
+  this.evaluate = function(env, fromTime, toTime) {
     if (l instanceof ExpressionIdentifier || l instanceof ExpressionProperty) {
-      return l.assign(env, r);
+      return l.assign(env, fromTime, toTime, r);
     } else {
       throw 'unassignable';
     }
@@ -229,15 +154,15 @@ function ExpressionAssignment(l, r) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionProperty(base, property) {
-  this.evaluate = function(env) {
-    var object = base.evaluate(env); 
+  this.evaluate = function(env, fromTime, toTime) {
+    var object = base.evaluate(env, fromTime, toTime); 
     return property.evaluate(object);
   }
 
-  this.assign = function(env, rhs) {
-    var value = rhs.evaluate(env);
-    var object = base.evaluate(env); 
-    new ExpressionAssignment(property, value).evaluate(object);
+  this.assign = function(env, fromTime, toTime, rhs) {
+    var value = rhs.evaluate(env, fromTime, toTime);
+    var object = base.evaluate(env, fromTime, toTime); 
+    new ExpressionAssignment(property, value).evaluate(object, fromTime, toTime);
     return value;
   }
 }
@@ -245,9 +170,31 @@ function ExpressionProperty(base, property) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionVector(elements) {
-  this.evaluate = function(env) {
-    var values = elements.map(element => element.evaluate(env));
+  this.evaluate = function(env, fromTime, toTime) {
+    var values = elements.map(element => element.evaluate(env, fromTime, toTime));
     return new TwovilleVector(values);
   }
 }
+
+// --------------------------------------------------------------------------- 
+
+function StatementFrom(fromTimeExpression, block) {
+  this.fromTimeExpression = fromTimeExpression;
+  this.block = block;
+  this.evaluate = function(env, fromTime, toTime) {
+    var fromTime = fromTimeExpression.evaluate(env, fromTime, toTime);
+    block.evaluate(env, fromTime, null);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+function StatementTo(toTimeExpression, block) {
+  this.evaluate = function(env, fromTime, toTime) {
+    var toTime = toTimeExpression.evaluate(env, fromTime, toTime);
+    block.evaluate(env, null, toTime);
+  }
+}
+
+// --------------------------------------------------------------------------- 
 

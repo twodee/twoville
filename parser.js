@@ -1,5 +1,6 @@
 function parse(tokens) {
   var i = 0;
+  var indents = [-1];
 
   function has(type, offset) {
     var index = i;
@@ -22,7 +23,7 @@ function parse(tokens) {
   function program() {
     var b = block();
     if (!has(Tokens.EOF)) {
-      throw 'Expected EOF';
+      throw 'Expected EOF saw [' + tokens[i].type + '|' + tokens[i].source + ']';
     }
     return b;
   }
@@ -34,28 +35,69 @@ function parse(tokens) {
 
     var indentation = tokens[i];
 
-    statements = [];
-    while (has(Tokens.Indentation) && tokens[i].length == indentation.length) {
+    if (indentation.source.length <= indents[indents.length - 1]) {
+      throw 'not indented enough';
+    }
+    indents.push(indentation.source.length);
+    console.log("pre indents:", indents);
+
+    var statements = [];
+    while (has(Tokens.Indentation) && tokens[i].source.length == indentation.source.length) {
       consume(); // eat indentation
       if (!has(Tokens.EOF)) {
         statements.push(statement());
-        console.log("i:", i);
+        console.log("statements[-1]:", statements[statements.length - 1]);
       }
     }
+
+    indents.pop();
+    console.log("post indents:", indents);
 
     return new Block(statements);
   }
 
   function statement() {
-    var e = expression();
-
-    if (has(Tokens.Linebreak)) {
+    if (has(Tokens.T)) {
       consume();
-    } else if (!has(Tokens.EOF)) {
-      throw 'Expected linebreak or EOF';
-    }
+      if (has(Tokens.RightArrow)) {
+        consume();
+        var e = expression();
+        if (has(Tokens.Linebreak)) {
+          consume();
+          var b = block();
+          return new StatementTo(e, b);
+        } else {
+          throw 'expected linebreak';
+        }
+      } else {
+        throw 'expected ->';
+      }
+    } else {
+      var e = expression();
 
-    return e;
+      if (has(Tokens.RightArrow)) {
+        consume();
+        if (has(Tokens.T)) {
+          consume();
+          if (has(Tokens.Linebreak)) {
+            consume();
+            var b = block();
+            return new StatementFrom(e, b);
+          } else {
+            throw 'expected linebreak';
+          }
+        } else {
+          throw 'expected t' 
+        }
+      } else {
+        if (has(Tokens.Linebreak)) {
+          consume();
+          return e;
+        } else if (!has(Tokens.EOF)) {
+          throw 'Expected linebreak or EOF';
+        }
+      }
+    }
   }
 
   function expression() {

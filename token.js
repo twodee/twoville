@@ -1,5 +1,6 @@
 Tokens = Object.freeze({
   Plus: 'Plus',
+  T: 'T',
   Minus: 'Minus',
   Indentation: 'Indentation',
   Asterisk: 'Asterisk',
