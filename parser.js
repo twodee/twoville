@@ -39,21 +39,19 @@ function parse(tokens) {
       throw 'not indented enough';
     }
     indents.push(indentation.source.length);
-    console.log("pre-indents:", indents);
 
     var statements = [];
     while (has(Tokens.Indentation) && tokens[i].source.length == indentation.source.length) {
       consume(); // eat indentation
-      if (!has(Tokens.EOF)) {
-        console.log("tokens[i]:", tokens[i]);
+      if (has(Tokens.Linebreak)) {
+        consume();
+      } else if (!has(Tokens.EOF)) {
         var s = statement();
-        console.log("s:", s);
         statements.push(s);
       }
     }
 
     indents.pop();
-    console.log("post-indents:", indents);
 
     return new Block(statements);
   }
