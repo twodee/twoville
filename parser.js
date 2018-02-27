@@ -68,6 +68,20 @@ function parse(tokens) {
           consume();
           var b = block();
           return new StatementTo(e, b);
+        } else if (has(Tokens.RightArrow)) {
+          consume();
+          if (has(Tokens.T)) {
+            consume();
+            if (has(Tokens.Linebreak)) {
+              consume();
+              var b = block();
+              return new StatementThrough(e, b);
+            } else {
+              throw 'expected linebreak after through';
+            }
+          } else {
+            throw 'expected t on through';
+          }
         } else {
           throw 'expected linebreak';
         }
@@ -89,11 +103,9 @@ function parse(tokens) {
           } else if (has(Tokens.RightArrow)) {
             consume();
             var to = expression();
-            console.log("to:", to);
             if (has(Tokens.Linebreak)) {
               consume();
               var b = block();
-              console.log("b:", b);
               return new StatementBetween(from, to, b);
             } else {
               throw 'expected linebreak';
@@ -107,6 +119,8 @@ function parse(tokens) {
       } else {
         if (has(Tokens.Linebreak)) {
           consume();
+          return e;
+        } else if (has(Tokens.EOF)) {
           return e;
         } else if (!has(Tokens.EOF)) {
           throw 'Expected linebreak or EOF';

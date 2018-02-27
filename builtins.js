@@ -90,24 +90,33 @@ TwovilleRectangle.prototype.draw = function(svg, t) {
     throw 'no rgb';
   }
   
-  if (!this.has('pivot')) {
-    throw 'no pivot';
+  var needsTransforming = false;
+
+  if (this.has('rotation')) {
+    if (this.has('pivot')) {
+      needsTransforming = true;
+    } else {
+      throw 'rotation but not pivot';
+    }
   }
-  
-  if (!this.has('rotation')) {
-    throw 'no rotation';
-  }
+
+  // If we have rotation, but no pivot, error.
 
   var position = this.valueAt('position', t);
   var size = this.valueAt('size', t);
   var rgb = this.valueAt('rgb', t);
-  var pivot = this.valueAt('pivot', t);
-  var rotation = this.valueAt('rotation', t);
 
-  if (position == null || size == null || rgb == null || pivot == null || rotation == null) {
+  if (needsTransforming) {
+    var pivot = this.valueAt('pivot', t);
+    var rotation = this.valueAt('rotation', t);
+  }
+
+  if (position == null || size == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
     this.svgElement.setAttributeNS(null, 'opacity', 0);
   } else {
-    this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ')');
+    if (needsTransforming) {
+      this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
+    }
     this.svgElement.setAttributeNS(null, 'opacity', 1);
     this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
     this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
@@ -171,6 +180,10 @@ TwovilleVector.prototype.toRGB = function(env) {
   return 'rgb(' + r + ', ' + g + ', ' + b + ')';
 }
 
+TwovilleVector.prototype.toString = function(env) {
+  return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
+}
+
 TwovilleVector.prototype.interpolate = function(other, proportion) {
   return new TwovilleVector(this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
 }
@@ -183,6 +196,10 @@ function TwovilleInteger(x) {
 }
 
 TwovilleInteger.prototype = Object.create(TwovilleData.prototype);
+
+TwovilleInteger.prototype.toString = function() {
+  return '' + this.x;
+}
 
 TwovilleInteger.prototype.get = function() {
   return this.x;
@@ -239,8 +256,6 @@ TwovilleInteger.prototype.remainder = function(other) {
 }
 
 TwovilleInteger.prototype.interpolate = function(other, proportion) {
-  console.log("this.get():", this.get());
-  console.log("proportion:", proportion);
   return new TwovilleReal(this.get() + proportion * (other.get() - this.get()));
 }
 
@@ -252,6 +267,10 @@ function TwovilleReal(x) {
 }
 
 TwovilleReal.prototype = Object.create(TwovilleData.prototype);
+
+TwovilleReal.prototype.toString = function() {
+  return '' + this.x;
+}
 
 TwovilleReal.prototype.get = function() {
   return this.x;
@@ -304,7 +323,7 @@ TwovilleReal.prototype.interpolate = function(other, proportion) {
 // --------------------------------------------------------------------------- 
 
 function ExpressionRectangle() {
-  this.evaluate = function(env) {
+  this.evaluate = function(env, fromTime, toTime) {
     var r = new TwovilleRectangle(env);
     env.shapes.push(r);
     return r;
@@ -314,7 +333,7 @@ function ExpressionRectangle() {
 // --------------------------------------------------------------------------- 
 
 function ExpressionCircle() {
-  this.evaluate = function(env) {
+  this.evaluate = function(env, fromTime, toTime) {
     var c = new TwovilleCircle();
     env.shapes.push(c);
     return c;
@@ -324,9 +343,9 @@ function ExpressionCircle() {
 // --------------------------------------------------------------------------- 
 
 function ExpressionPrint() {
-  this.evaluate = function(env) {
+  this.evaluate = function(env, fromTime, toTime) {
     var message = env['message'];
-    console.log(message.toString());
+    console.log(message.toString(fromTime, toTime));
     return null;
   };
 }

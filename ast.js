@@ -106,6 +106,8 @@ function ExpressionFunctionCall(name, actuals) {
       throw 'no such func ' + name;
     }
 
+    console.log("FROMtIME:", fromTime);
+    console.log("TOtIME:", toTime);
     var f = env.bindings[name];
 
     if (actuals.length != f.formals.length) {
@@ -117,7 +119,7 @@ function ExpressionFunctionCall(name, actuals) {
       callEnvironment[f.formals[i]] = actual.evaluate(env, fromTime, toTime);
     });
 
-    return f.body.evaluate(callEnvironment);
+    return f.body.evaluate(callEnvironment, fromTime, toTime);
   };
 }
 
@@ -131,7 +133,7 @@ function Block(statements) {
   this.evaluate = function(env, fromTime, toTime) {
     var result = null;
     statements.forEach(statement => {
-      console.log("statement:", statement);
+      // console.log("statement:", statement);
       result = statement.evaluate(env, fromTime, toTime)
     });
     return result;
@@ -205,6 +207,17 @@ function StatementBetween(fromTimeExpression, toTimeExpression, block) {
     var fromTime = fromTimeExpression.evaluate(env, fromTime, toTime);
     var toTime = toTimeExpression.evaluate(env, fromTime, toTime);
     block.evaluate(env, fromTime, toTime);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+function StatementThrough(throughTimeExpression, block) {
+  this.block = block;
+  this.evaluate = function(env, fromTime, toTime) {
+    var throughTime = throughTimeExpression.evaluate(env, fromTime, toTime);
+    block.evaluate(env, null, throughTime);
+    block.evaluate(env, throughTime, null);
   }
 }
 

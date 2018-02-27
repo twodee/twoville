@@ -9,6 +9,9 @@
   <script src="parser.js"></script>
   <script src="interval.js"></script>
   <script src="timeline.js"></script>
+  <script type="text/javascript" src="jsgif/LZWEncoder.js"></script>
+  <script type="text/javascript" src="jsgif/NeuQuant.js"></script>
+  <script type="text/javascript" src="jsgif/GIFEncoder.js"></script>
   <style>
 svg {
   background-color: lightgray;
@@ -20,21 +23,13 @@ svg {
 <input type="range" id="scrubber" value="0" min="0" max="100">
 
 <textarea rows="10" id="e">
-r = rectangle()
-r.size = [200, 100]
-r.pivot = [0, 0]
-10 -> t
-  r.position = [10, 10]
-  r.rgb = [0, 1, 0]
-  r.rotation = 0
-t -> 100
-  r.position = [50, 10]
-  r.rgb = [1, 0, 1]
-  r.rotation = 720
-</textarea>
+r = rectangle()</textarea>
 <input type="button" id="eval" value="Evaluate">
+<input type="button" id="record" value="Record">
+<input type="button" id="save" value="Save">
 <br>
-<svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="800" height="600"></svg>
+<svg id="svg" xmlns="http://www.w3.org/2000/svg" width="300" height="300"></svg>
+<canvas id="canvas" width="300" height="300"></canvas>
 
 <script src="main.js"></script>
   

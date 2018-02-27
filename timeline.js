@@ -3,6 +3,16 @@ function Timeline() {
   this.intervals = [];
 }
 
+Timeline.prototype.toString = function(fromTime, toTime) {
+  if (fromTime == null && toTime == null) {
+    return this.defaultValue.toString();
+  } else if (fromTime != null) {
+    return this.valueAt(fromTime).toString();
+  } else {
+    return this.valueAt(toTime).toString();
+  }
+}
+
 Timeline.prototype.setDefault = function(value) {
   this.defaultValue = value;
 }

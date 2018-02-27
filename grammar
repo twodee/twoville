@@ -8,6 +8,7 @@ statement
   | expression RIGHT_ARROW T RIGHT_ARROW expression NEWLINE block[indent+=1]
   | expression RIGHT_ARROW T NEWLINE block[indent+=1]
   | T RIGHT_ARROW expression NEWLINE block[indent+=1]
+  | T RIGHT_ARROW expression RIGHT_ARROW T NEWLINE block[indent+=1]
   : expression NEWLINE
 
 expression
