@@ -1,9 +1,27 @@
-var eBox = document.getElementById('e');
+var editor = ace.edit('editor');
+editor.setTheme('ace/theme/twilight');
+editor.setOptions({
+  fontSize: '14pt'
+});
+editor.setValue(
+  'r = rectangle()\n' + 
+  'r.position = [100, 100]\n' +
+  'r.size = [200, 200]\n' +
+  'r.rgb = [0, 0, 0]\n',
+1);
+var left = document.getElementById('left');
 var evalButton = document.getElementById('eval');
 var recordButton = document.getElementById('record');
 var saveButton = document.getElementById('save');
 var svg = document.getElementById('svg');
 var scrubber = document.getElementById('scrubber');
+
+var hdragger = document.getElementById('hdragger');
+hdragger.ondrag = function(event) {
+  var bounds = left.getBoundingClientRect();
+  var width = event.screenX - bounds.x;
+  left.style.width = width + 'px';
+}
 
 var encoder;
 recordButton.onclick = function() {
@@ -60,7 +78,7 @@ evalButton.onclick = function() {
     svg.removeChild(svg.lastChild);
   }
 
-  tokens = lex(eBox.value);
+  tokens = lex(editor.getValue());
   ast = parse(tokens);
 
   env = new TwovilleEnvironment({svg: svg, shapes: [], bindings: [], parent: null});
