@@ -10,17 +10,67 @@ editor.setValue(
   'r.rgb = [0, 0, 0]\n',
 1);
 var left = document.getElementById('left');
+var messager = document.getElementById('messager');
 var evalButton = document.getElementById('eval');
 var recordButton = document.getElementById('record');
 var saveButton = document.getElementById('save');
 var svg = document.getElementById('svg');
 var scrubber = document.getElementById('scrubber');
 
+// document.addEventListener('dragover', function(event) {
+  // event.preventDefault(); 
+// }, false);
+
 var hdragger = document.getElementById('hdragger');
-hdragger.ondrag = function(event) {
-  var bounds = left.getBoundingClientRect();
-  var width = event.screenX - bounds.x;
-  left.style.width = width + 'px';
+hdragger.onmousedown = function(event) {
+  if (event.buttons === 1) {
+    event.stopPropagation();
+    var initialBounds = left.getBoundingClientRect();
+    var gap = event.clientX - initialBounds.right;
+    var unlistener = function(event) {
+      document.removeEventListener('mousemove', moveListener);
+      document.removeEventListener('mouseup', unlistener);
+      document.removeEventListener('mousedown', unlistener);
+    };
+    var moveListener = function(event) {
+      if (event.buttons !== 1) {
+        unlistener();
+      } else {
+        var bounds = left.getBoundingClientRect();
+        var width = event.clientX - bounds.x - gap;
+        left.style.width = width + 'px';
+      }
+    }
+    document.addEventListener('mousemove', moveListener, false);
+    document.addEventListener('mouseup', unlistener, false);
+    document.addEventListener('mousedown', unlistener, false);
+  }
+}
+
+var vdragger = document.getElementById('vdragger');
+vdragger.onmousedown = function(event) {
+  if (event.buttons === 1) {
+    event.stopPropagation();
+    var initialBounds = messager.getBoundingClientRect();
+    var gap = event.screenY - initialBounds.top;
+    var unlistener = function(event) {
+      document.removeEventListener('mousemove', moveListener);
+      document.removeEventListener('mouseup', unlistener);
+      document.removeEventListener('mousedown', unlistener);
+    };
+    var moveListener = function(event) {
+      if (event.buttons !== 1) {
+        unlistener();
+      } else {
+        var bounds = messager.getBoundingClientRect();
+        var height = bounds.bottom - event.clientY;
+        messager.style.height = height + 'px';
+      }
+    }
+    document.addEventListener('mousemove', moveListener, false);
+    document.addEventListener('mouseup', unlistener, false);
+    document.addEventListener('mousedown', unlistener, false);
+  }
 }
 
 var encoder;
