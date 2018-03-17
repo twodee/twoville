@@ -18,61 +18,88 @@ var svg = document.getElementById('svg');
 var scrubber = document.getElementById('scrubber');
 var timeSpinner = document.getElementById('timeSpinner');
 
-// document.addEventListener('dragover', function(event) {
-  // event.preventDefault(); 
-// }, false);
+// --------------------------------------------------------------------------- 
 
-var hdragger = document.getElementById('hdragger');
-hdragger.onmousedown = function(event) {
-  if (event.buttons === 1) {
-    event.stopPropagation();
-    var initialBounds = left.getBoundingClientRect();
-    var gap = event.clientX - initialBounds.right;
-    var unlistener = function(event) {
-      document.removeEventListener('mousemove', moveListener);
-      document.removeEventListener('mouseup', unlistener);
-      document.removeEventListener('mousedown', unlistener);
-    };
-    var moveListener = function(event) {
-      if (event.buttons !== 1) {
-        unlistener();
-      } else {
-        var bounds = left.getBoundingClientRect();
-        var width = event.clientX - bounds.x - gap;
-        left.style.width = width + 'px';
-      }
+function registerResizeListener(bounds, gap, resize) {
+  var unlistener = function(event) {
+    document.removeEventListener('mousemove', moveListener);
+    document.removeEventListener('mouseup', unlistener);
+    document.removeEventListener('mousedown', unlistener);
+  };
+  var moveListener = function(event) {
+    if (event.buttons !== 1) {
+      unlistener();
+    } else {
+      resize(event, bounds, gap);
     }
-    document.addEventListener('mousemove', moveListener, false);
-    document.addEventListener('mouseup', unlistener, false);
-    document.addEventListener('mousedown', unlistener, false);
+  }
+  document.addEventListener('mousemove', moveListener, false);
+  document.addEventListener('mouseup', unlistener, false);
+  document.addEventListener('mousedown', unlistener, false);
+}
+
+function buildResizer(side, element) {
+  if (side === 'right') {
+    var measureGap = (bounds) => event.clientX - bounds.right;
+    var resize = (event, bounds, gap) => {
+      var bounds = element.getBoundingClientRect();
+      var width = event.clientX - bounds.x - gap;
+      element.style.width = width + 'px';
+    };
+  } else if (side === 'left') {
+    var measureGap = (bounds) => event.clientX - bounds.left;
+    var resize = (event, bounds, gap) => {
+      var bounds = element.getBoundingClientRect();
+      var width = bounds.right - event.clientX - gap;
+      element.style.width = width + 'px';
+    };
+  } else if (side === 'top') {
+    var measureGap = (bounds) => event.clientY - bounds.top;
+    var resize = (event, bounds, gap) => {
+      var bounds = messager.getBoundingClientRect();
+      var height = bounds.bottom - event.clientY;
+      messager.style.height = height + 'px';
+    };
+  } else if (side === 'bottom') {
+    var measureGap = (bounds) => event.clientY - bounds.bottom;
+    var resize = (event, bounds, gap) => {
+      var bounds = messager.getBoundingClientRect();
+      var height = bounds.bottom - event.clientY;
+      messager.style.height = height + 'px';
+    };
+  } else {
+    throw 'Resizing ' + side + ' not supported yet.';
+  }
+
+  return function(event) {
+    if (event.buttons === 1) {
+      event.stopPropagation();
+      var bounds = element.getBoundingClientRect();
+      var gap = measureGap(bounds);
+      registerResizeListener(bounds, gap, resize);
+    }
   }
 }
 
-var vdragger = document.getElementById('vdragger');
-vdragger.onmousedown = function(event) {
-  if (event.buttons === 1) {
-    event.stopPropagation();
-    var initialBounds = messager.getBoundingClientRect();
-    var gap = event.screenY - initialBounds.top;
-    var unlistener = function(event) {
-      document.removeEventListener('mousemove', moveListener);
-      document.removeEventListener('mouseup', unlistener);
-      document.removeEventListener('mousedown', unlistener);
-    };
-    var moveListener = function(event) {
-      if (event.buttons !== 1) {
-        unlistener();
-      } else {
-        var bounds = messager.getBoundingClientRect();
-        var height = bounds.bottom - event.clientY;
-        messager.style.height = height + 'px';
-      }
-    }
-    document.addEventListener('mousemove', moveListener, false);
-    document.addEventListener('mouseup', unlistener, false);
-    document.addEventListener('mousedown', unlistener, false);
-  }
+var directions = {
+  horizontal: ['right', 'left'],
+  vertical: ['top', 'bottom']
+};
+for (direction in directions) {
+  sides = directions[direction];
+  sides.forEach(side => {
+    var resizables = document.querySelectorAll('.resizable-' + side);
+    resizables.forEach(resizable => {
+      console.log("resizable:", resizable);
+      var div = document.createElement('div');
+      div.classList.add('resizer', 'resizer-' + direction, 'resizer-' + side);
+      resizable.appendChild(div);
+      div.addEventListener('mousedown', buildResizer(side, resizable));
+    });
+  });
 }
+
+// --------------------------------------------------------------------------- 
 
 var encoder;
 recordButton.onclick = function() {

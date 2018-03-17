@@ -19,14 +19,11 @@
 <body>
 
 <div id="container">
-  <div id="left">
-    <div id="editor"></div>
-    <div id="messager">
-      <div id="vdragger" draggable="false"></div>
-    </div>
-    <div id="hdragger" draggable="false"></div>
+  <div id="left" class="resizable-right">
+    <div id="editor" draggable="false"></div>
+    <div id="messager" class="resizable-top"></div>
   </div>
-  <div id="canvas">
+  <div id="canvas" draggable="false">
     <svg id="svg" xmlns="http://www.w3.org/2000/svg" width="300" height="300"></svg>
     <div id="toolbar">
       <input type="button" id="eval" value="Evaluate">
