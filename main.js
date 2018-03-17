@@ -16,6 +16,7 @@ var recordButton = document.getElementById('record');
 var saveButton = document.getElementById('save');
 var svg = document.getElementById('svg');
 var scrubber = document.getElementById('scrubber');
+var timeSpinner = document.getElementById('timeSpinner');
 
 // document.addEventListener('dragover', function(event) {
   // event.preventDefault(); 
@@ -117,8 +118,14 @@ saveButton.onclick = function() {
 }
 
 var env;
+
 scrubber.oninput = function() {
-  console.log("scrubber.value:", scrubber.value);
+  timeSpinner.value = scrubber.value;
+  env.shapes.forEach(shape => shape.draw(env.svg, scrubber.value));
+}
+
+timeSpinner.oninput = function() {
+  scrubber.value = timeSpinner.value;
   env.shapes.forEach(shape => shape.draw(env.svg, scrubber.value));
 }
 
