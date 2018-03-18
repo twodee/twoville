@@ -106,8 +106,6 @@ function ExpressionFunctionCall(name, actuals) {
       throw 'no such func ' + name;
     }
 
-    console.log("FROMtIME:", fromTime);
-    console.log("TOtIME:", toTime);
     var f = env.bindings[name];
 
     if (actuals.length != f.formals.length) {

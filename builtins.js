@@ -34,7 +34,7 @@ TwovilleEnvironment.prototype.bindUntimelined = function(id, value) {
 }
 
 TwovilleEnvironment.prototype.bindTimelined = function(id, fromTime, toTime, value) {
-  if (!this.has(id)) {
+  if (!this.bindings.hasOwnProperty(id)) {
     this.bindings[id] = new Timeline();
   }
 
@@ -59,6 +59,7 @@ TwovilleEnvironment.prototype.valueAt = function(property, t) {
 
 function TwovilleShape(env) {
   TwovilleEnvironment.call(this, env);
+  this.bindings.stroke = new TwovilleEnvironment(this);
 }
 
 TwovilleShape.prototype = Object.create(TwovilleEnvironment.prototype);
@@ -117,12 +118,24 @@ TwovilleRectangle.prototype.draw = function(svg, t) {
     if (needsTransforming) {
       this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
     }
+
+    if (this.has('stroke')) {
+      var stroke = this.get('stroke');
+      var strokeSize = stroke.valueAt('size', t);
+      var strokeRGB = stroke.valueAt('rgb', t);
+      var strokeOpacity = stroke.valueAt('opacity', t);
+      this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
+      this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
+      this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+    }
+
     this.svgElement.setAttributeNS(null, 'opacity', 1);
     this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
     this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
     this.svgElement.setAttributeNS(null, 'width', size.get(0).get());
     this.svgElement.setAttributeNS(null, 'height', size.get(1).get());
     this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+    console.log("this.svgElement:", this.svgElement);
   }
 }
 

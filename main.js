@@ -3,12 +3,18 @@ editor.setTheme('ace/theme/twilight');
 editor.setOptions({
   fontSize: '14pt'
 });
-editor.setValue(
-  'r = rectangle()\n' + 
-  'r.position = [100, 100]\n' +
-  'r.size = [200, 200]\n' +
-  'r.rgb = [0, 0, 0]\n',
-1);
+if (localStorage.getItem('src') !== null) {
+  editor.setValue(localStorage.getItem('src'), 1);
+}
+// editor.setValue(
+  // 'r = rectangle()\n' + 
+  // 'r.position = [100, 100]\n' +
+  // 'r.size = [200, 200]\n' +
+  // 'r.rgb = [0, 0, 0]\n' +
+  // 'r.stroke.rgb = [1, 1, 0]\n' +
+  // 'r.stroke.size = 3\n' +
+  // 'r.stroke.opacity = 0.5',
+// 1);
 var left = document.getElementById('left');
 var messager = document.getElementById('messager');
 var evalButton = document.getElementById('eval');
@@ -140,8 +146,9 @@ recordButton.onclick = function() {
 } 
 
 saveButton.onclick = function() {
-  encoder.finish();
-	encoder.download("download.gif");
+  // encoder.finish();
+	// encoder.download("download.gif");
+  localStorage.setItem('src', editor.getValue());
 }
 
 var env;
