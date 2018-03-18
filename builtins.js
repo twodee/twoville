@@ -60,6 +60,7 @@ TwovilleEnvironment.prototype.valueAt = function(property, t) {
 function TwovilleShape(env) {
   TwovilleEnvironment.call(this, env);
   this.bindings.stroke = new TwovilleEnvironment(this);
+  this.bindTimelined('opacity', null, null, new TwovilleReal(1));
 }
 
 TwovilleShape.prototype = Object.create(TwovilleEnvironment.prototype);
@@ -129,7 +130,7 @@ TwovilleRectangle.prototype.draw = function(svg, t) {
       this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
     }
 
-    this.svgElement.setAttributeNS(null, 'opacity', 1);
+    this.svgElement.setAttributeNS(null, 'opacity', this.valueAt('opacity', t).get());
     this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
     this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
     this.svgElement.setAttributeNS(null, 'width', size.get(0).get());
