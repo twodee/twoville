@@ -96,7 +96,6 @@ for (direction in directions) {
   sides.forEach(side => {
     var resizables = document.querySelectorAll('.resizable-' + side);
     resizables.forEach(resizable => {
-      console.log("resizable:", resizable);
       var div = document.createElement('div');
       div.classList.add('resizer', 'resizer-' + direction, 'resizer-' + side);
       resizable.appendChild(div);
@@ -113,7 +112,6 @@ recordButton.onclick = function() {
   encoder.setRepeat(0);
 	encoder.setDelay(100);
   var bool = encoder.start();
-	console.log("bool:", bool);
 
 	var canvas = document.getElementById('canvas');
   var context = canvas.getContext('2d');
@@ -121,7 +119,6 @@ recordButton.onclick = function() {
 
 	function tick(i) {
 		if (i > 39) return;
-    console.log("i:", i);
 
 		env.shapes.forEach(shape => shape.draw(env.svg, i));
 
@@ -134,7 +131,6 @@ recordButton.onclick = function() {
 			context.clearRect(0, 0, canvas.width, canvas.height);
 			context.drawImage(img, 0, 0);
 			DOMURL.revokeObjectURL(url);
-			console.log('foofoo');
 			encoder.addFrame(context);
 			tick(i + 1);
 		};
@@ -172,24 +168,24 @@ evalButton.onclick = function() {
   tokens = lex(editor.getValue());
   ast = parse(tokens);
 
-  env = new TwovilleEnvironment({svg: svg, shapes: [], bindings: [], parent: null});
+  env = TwovilleEnvironment.create({svg: svg, shapes: [], bindings: [], parent: null});
 
   env.bindings['rectangle'] = {
     name: 'rectangle',
     formals: [],
-    body: new ExpressionRectangle()
+    body: ExpressionRectangle.create()
   };
 
   env.bindings['circle'] = {
     name: 'circle',
     formals: [],
-    body: new ExpressionCircle()
+    body: ExpressionCircle.create()
   };
 
   env.bindings['print'] = {
     name: 'print',
     formals: ['message'],
-    body: new ExpressionPrint()
+    body: ExpressionPrint.create()
   };
 
   console.log("ast:", ast);

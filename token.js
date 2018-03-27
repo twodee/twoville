@@ -34,8 +34,12 @@ function SourceLocation(lineStart, lineEnd, columnStart, columnEnd, indexStart, 
   this.indexEnd = indexEnd;
 }
 
-function Token(type, source, where) {
-  this.type = type;
-  this.source = source;
-  this.where = where;
+var Token = {
+  create: function (type, source, where) {
+    return Object.assign({}, {
+      type: type,
+      source: source,
+      where: where
+    });
+  }
 }

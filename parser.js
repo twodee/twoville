@@ -53,7 +53,7 @@ function parse(tokens) {
 
     indents.pop();
 
-    return new Block(statements);
+    return Block.create(statements);
   }
 
   function statement() {
@@ -65,7 +65,7 @@ function parse(tokens) {
         if (has(Tokens.Linebreak)) {
           consume();
           var b = block();
-          return new StatementTo(e, b);
+          return StatementTo.create(e, b);
         } else if (has(Tokens.RightArrow)) {
           consume();
           if (has(Tokens.T)) {
@@ -73,7 +73,7 @@ function parse(tokens) {
             if (has(Tokens.Linebreak)) {
               consume();
               var b = block();
-              return new StatementThrough(e, b);
+              return StatementThrough.create(e, b);
             } else {
               throw 'expected linebreak after through';
             }
@@ -97,14 +97,14 @@ function parse(tokens) {
           if (has(Tokens.Linebreak)) {
             consume();
             var b = block();
-            return new StatementFrom(from, b);
+            return StatementFrom.create(from, b);
           } else if (has(Tokens.RightArrow)) {
             consume();
             var to = expression();
             if (has(Tokens.Linebreak)) {
               consume();
               var b = block();
-              return new StatementBetween(from, to, b);
+              return StatementBetween.create(from, to, b);
             } else {
               throw 'expected linebreak';
             }
@@ -136,7 +136,7 @@ function parse(tokens) {
     if (has(Tokens.Assign)) {
       consume();
       var rhs = expressionAssignment();
-      lhs = new ExpressionAssignment(lhs, rhs);
+      lhs = ExpressionAssignment.create(lhs, rhs);
     }
     return lhs;
   }
@@ -147,9 +147,9 @@ function parse(tokens) {
       var operator = consume();
       var b = expressionMultiplicative();
       if (operator.type == Tokens.Plus) {
-        a = new ExpressionAdd(a, b);
+        a = ExpressionAdd.create(a, b);
       } else {
-        a = new ExpressionSubtract(a, b);
+        a = ExpressionSubtract.create(a, b);
       }
     }
     return a;
@@ -161,11 +161,11 @@ function parse(tokens) {
       var operator = consume();
       var b = expressionProperty();
       if (operator.type == Tokens.Asterisk) {
-        a = new ExpressionMultiply(a, b);
+        a = ExpressionMultiply.create(a, b);
       } else if (operator.type == Tokens.ForwardSlash) {
-        a = new ExpressionDivide(a, b);
+        a = ExpressionDivide.create(a, b);
       } else {
-        a = new ExpressionRemainder(a, b);
+        a = ExpressionRemainder.create(a, b);
       }
     }
     return a;
@@ -176,7 +176,7 @@ function parse(tokens) {
     while (has(Tokens.Dot)) {
       consume(); 
       var property = atom();
-      base = new ExpressionProperty(base, property);
+      base = ExpressionProperty.create(base, property);
     }
     return base;
   }
@@ -189,10 +189,10 @@ function parse(tokens) {
   function atom() {
     if (has(Tokens.Integer)) {
       var token = consume();
-      return new ExpressionInteger(Number(token.source));
+      return ExpressionInteger.create(Number(token.source));
     } else if (has(Tokens.Real)) {
       var token = consume();
-      return new ExpressionReal(Number(token.source));
+      return ExpressionReal.create(Number(token.source));
     } else if (has(Tokens.LeftSquareBracket)) {
       consume(); // eat [
       var elements = [];
@@ -207,7 +207,7 @@ function parse(tokens) {
         }
       }
       consume(); // eat ]
-      return new ExpressionVector(elements);
+      return ExpressionVector.create(elements);
     } else if (has(Tokens.Identifier) && has(Tokens.LeftParenthesis, 1)) {
       var name = consume().source;
       consume(); // eat (
@@ -227,10 +227,10 @@ function parse(tokens) {
         throw 'Missing )';
       }
 
-      return new ExpressionFunctionCall(name, actuals);
+      return ExpressionFunctionCall.create(name, actuals);
     } else if (has(Tokens.Identifier)) {
       var id = consume();
-      return new ExpressionIdentifier(id);
+      return ExpressionIdentifier.create(id);
     } else {
       throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';
     }

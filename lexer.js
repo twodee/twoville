@@ -25,7 +25,7 @@ function lex(source) {
   }
 
   function emit(type) {
-    tokens.push(new Token(type, tokenSoFar, null));
+    tokens.push(Token.create(type, tokenSoFar, null));
     tokenSoFar = '';
   }
 
