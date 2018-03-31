@@ -157,7 +157,8 @@ var ExpressionFunctionCall = {
       callEnvironment[f.formals[i]] = actual.evaluate(env, fromTime, toTime);
     });
 
-    return f.body.evaluate(callEnvironment, fromTime, toTime);
+    var returnValue = f.body.evaluate(callEnvironment, fromTime, toTime);
+    return returnValue;
   }
 };
 
@@ -222,7 +223,9 @@ var ExpressionVector = {
     return Object.assign(instance, {elements: elements});
   },
   evaluate: function(env, fromTime, toTime) {
-    var values = this.elements.map(element => element.evaluate(env, fromTime, toTime));
+    var values = this.elements.map(element => {
+      return element.evaluate(env, fromTime, toTime);
+    });
     return TwovilleVector.create(values);
   }
 };
@@ -239,6 +242,7 @@ var StatementFrom = {
   },
   evaluate: function(env, fromTime, toTime) {
     var fromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
+    console.log("fromTime:", fromTime, "toTime: NOOOO");
     this.block.evaluate(env, fromTime, null);
   }
 };
@@ -255,6 +259,7 @@ var StatementTo = {
   },
   evaluate: function(env, fromTime, toTime) {
     var toTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
+    console.log("fromTime: NOOOO", "toTime:", toTime);
     this.block.evaluate(env, null, toTime);
   }
 };
@@ -291,6 +296,26 @@ var StatementThrough = {
     var throughTime = this.throughTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, null, throughTime);
     this.block.evaluate(env, throughTime, null);
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+var ExpressionRepeat = {
+  create: function(count, body) {
+    var instance = Object.create(ExpressionRepeat);
+    return Object.assign(instance, {
+      count: count,
+      body: body
+    });
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var count = this.count.evaluate(env, fromTime, toTime);
+    var last = null;
+    for (var i = 0; i < count; ++i) {
+      last = this.body.evaluate(env, fromTime, toTime);
+    }
+    return last;
   }
 };
 

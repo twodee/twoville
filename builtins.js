@@ -229,7 +229,11 @@ var TwovilleData = {
     return {};
   },
   bind: function(env, fromTime, toTime, id) {
-    env.bindTimelined(id, fromTime, toTime, this);
+    if (Object.getPrototypeOf(env) === TwovilleEnvironment) {
+      env.bindUntimelined(id, this);
+    } else {
+      env.bindTimelined(id, fromTime, toTime, this);
+    }
   },
   evaluate: function(env, fromTime, toTime) {
     return this;
@@ -253,6 +257,7 @@ Object.assign(TwovilleVector, {
   },
   evaluate: function(env) {
     return this;
+    // return TwovilleVector.create(this.elements.map(element => element.evaluate(env)));
   },
   toRGB: function(env) {
     var r = Math.floor(this.elements[0].get() * 255);
@@ -287,46 +292,46 @@ Object.assign(TwovilleInteger, {
     return this.x;
   },
   add: function(other) {
-    if (other instanceof TwovilleInteger) {
-      return TwovilleInteger.create(get() + other.get());
-    } else if (other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() + other.get());
+    if (Object.getPrototypeOf(other) === TwovilleInteger) {
+      return TwovilleInteger.create(this.get() + other.get());
+    } else if (Object.getPrototypeOf(other) === TwovilleReal) {
+      return TwovilleReal.create(this.get() + other.get());
     } else {
       throw '...';
     }
   },
   subtract: function(other) {
-    if (other instanceof TwovilleInteger) {
-      return TwovilleInteger.create(get() - other.get());
-    } else if (other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() - other.get());
+    if (Object.getPrototypeOf(other) === TwovilleInteger) {
+      return TwovilleInteger.create(this.get() - other.get());
+    } else if (Object.getPrototypeOf(other) === TwovilleReal) {
+      return TwovilleReal.create(this.get() - other.get());
     } else {
       throw '...';
     }
   },
   multiply: function(other) {
-    if (other instanceof TwovilleInteger) {
-      return TwovilleInteger.create(get() * other.get());
-    } else if (other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() * other.get());
+    if (Object.getPrototypeOf(other) === TwovilleInteger) {
+      return TwovilleInteger.create(this.get() * other.get());
+    } else if (other === TwovilleReal) {
+      return TwovilleReal.create(this.get() * other.get());
     } else {
       throw '...';
     }
   },
   divide: function(other) {
-    if (other instanceof TwovilleInteger) {
-      return TwovilleInteger.create(Math.trunc(get() / other.get()));
-    } else if (other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() / other.get());
+    if (other === TwovilleInteger) {
+      return TwovilleInteger.create(Math.trunc(this.get() / other.get()));
+    } else if (other === TwovilleReal) {
+      return TwovilleReal.create(this.get() / other.get());
     } else {
       throw '...';
     }
   },
   remainder: function(other) {
-    if (other instanceof TwovilleInteger) {
-      return TwovilleInteger.create(get() % other.get());
-    } else if (other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() % other.get());
+    if (other === TwovilleInteger) {
+      return TwovilleInteger.create(this.get() % other.get());
+    } else if (other === TwovilleReal) {
+      return TwovilleReal.create(this.get() % other.get());
     } else {
       throw '...';
     }
@@ -355,36 +360,41 @@ Object.assign(TwovilleReal, {
     return this.x;
   },
   add: function(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() + other.get());
+    if (Object.getPrototypeOf(other) === TwovilleInteger ||
+        Object.getPrototypeOf(other) === TwovilleReal) {
+      return TwovilleReal.create(this.get() + other.get());
     } else {
       throw '...';
     }
   },
   subtract: function(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() - other.get());
+    if (Object.getPrototypeOf(other) === TwovilleInteger ||
+        Object.getPrototypeOf(other) === TwovilleReal) {
+      return TwovilleReal.create(this.get() - other.get());
     } else {
       throw '...';
     }
   },
   multiply: function(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() * other.get());
+    if (Object.getPrototypeOf(other) === TwovilleInteger ||
+        Object.getPrototypeOf(other) === TwovilleReal) {
+      return TwovilleReal.create(this.get() * other.get());
     } else {
       throw '...';
     }
   },
   divide: function(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() / other.get());
+    if (Object.getPrototypeOf(other) === TwovilleInteger ||
+        Object.getPrototypeOf(other) === TwovilleReal) {
+      return TwovilleReal.create(this.get() / other.get());
     } else {
       throw '...';
     }
   },
   remainder: function(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return TwovilleReal.create(get() % other.get());
+    if (Object.getPrototypeOf(other) === TwovilleInteger ||
+        Object.getPrototypeOf(other) === TwovilleReal) {
+      return TwovilleReal.create(this.get() % other.get());
     } else {
       throw '...';
     }
@@ -427,9 +437,36 @@ var ExpressionPrint = {
     return Object.create(ExpressionPrint);
   },
   evaluate: function(env, fromTime, toTime) {
-    var message = env['message'];
+    var message = env['message'].get();
     console.log(message.toString(fromTime, toTime));
     return null;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+var ExpressionRandom = {
+  create: function(parent) {
+    return Object.create(ExpressionRandom);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var min = env['min'].get();
+    var max = env['max'].get();
+    var x = Math.random() * (max - min) + min;
+    return TwovilleReal.create(x);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+var ExpressionInt = {
+  create: function(parent) {
+    return Object.create(ExpressionInt);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var f = env['x'].get();
+    var i = Math.trunc(f);
+    return TwovilleInteger.create(i);
   }
 }
 

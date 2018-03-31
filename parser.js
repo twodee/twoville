@@ -121,7 +121,7 @@ function parse(tokens) {
         } else if (has(Tokens.EOF)) {
           return e;
         } else if (!has(Tokens.EOF)) {
-          throw 'Expected linebreak or EOF';
+          throw 'Expected linebreak or EOF but had ' + tokens[i].source;
         }
       }
     }
@@ -183,21 +183,25 @@ function parse(tokens) {
 
   function isFirstOfExpression(offset) {
     return has(Tokens.Integer, offset) ||
-           has(Tokens.Identifier, offset);
+           has(Tokens.Identifier, offset) ||
+           has(Tokens.Repeat, offset);
   }
 
   function atom() {
     if (has(Tokens.Integer)) {
       var token = consume();
-      return ExpressionInteger.create(Number(token.source));
+      var ei = ExpressionInteger.create(Number(token.source));
+      return ei;
     } else if (has(Tokens.Real)) {
       var token = consume();
+      console.log("token:", token);
       return ExpressionReal.create(Number(token.source));
     } else if (has(Tokens.LeftSquareBracket)) {
       consume(); // eat [
       var elements = [];
       while (!has(Tokens.RightSquareBracket)) {
-        elements.push(expression());
+        var e = expression();
+        elements.push(e);
         if (!has(Tokens.RightSquareBracket)) {
           if (has(Tokens.Comma)) {
             consume(); // eat ,
@@ -217,7 +221,7 @@ function parse(tokens) {
         actuals.push(expression());
         while (has(Tokens.Comma) && isFirstOfExpression(1)) {
           consume(); // eat ,
-          actuals.push(atom());
+          actuals.push(expression());
         }
       }
 
@@ -228,6 +232,15 @@ function parse(tokens) {
       }
 
       return ExpressionFunctionCall.create(name, actuals);
+    } else if (has(Tokens.Repeat)) {
+      consume(); // eat repeat
+      var count = expression();
+      if (!has(Tokens.Linebreak)) {
+        throw 'expected linebreak';
+      }
+      consume(); // eat linebreak
+      var body = block();
+      return ExpressionRepeat.create(count, body);
     } else if (has(Tokens.Identifier)) {
       var id = consume();
       return ExpressionIdentifier.create(id);

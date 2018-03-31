@@ -3,6 +3,10 @@ function Interval(fromTime, fromValue, toTime, toValue) {
   this.setTo(toTime, toValue);
 }
 
+Interval.prototype.toString = function() {
+  return this.fromTime + ':' + this.fromValue + ' .. ' + this.toTime + ':' + this.toValue;
+}
+
 Interval.prototype.setFrom = function(fromTime, fromValue) {
   this.fromTime = fromTime;
   this.fromValue = fromValue;

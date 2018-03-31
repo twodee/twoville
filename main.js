@@ -188,8 +188,23 @@ evalButton.onclick = function() {
     body: ExpressionPrint.create()
   };
 
+  env.bindings['random'] = {
+    name: 'random',
+    formals: ['min', 'max'],
+    body: ExpressionRandom.create()
+  };
+
+  env.bindings['int'] = {
+    name: 'int',
+    formals: ['x'],
+    body: ExpressionInt.create()
+  };
+
   console.log("ast:", ast);
   result = ast.evaluate(env);
+  console.log("env:", env);
+
+  // console.log("env.bindings['c'].bindings['opacity']:", env.bindings['c'].bindings['opacity'].intervals);
 
   env.shapes.forEach(shape => shape.draw(env.svg, 0));
 }

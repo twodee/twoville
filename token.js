@@ -22,6 +22,7 @@ Tokens = Object.freeze({
   Circumflex: 'Circumflex',
   Circle: 'Circle',
   Identifier: 'Identifier',
+  Repeat: 'Repeat',
   EOF: 'EOF'
 });
 

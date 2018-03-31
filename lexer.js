@@ -52,6 +52,8 @@ function lex(source) {
 
     if (tokenSoFar == 't') {
       emit(Tokens.T);
+    } else if (tokenSoFar == 'repeat') {
+      emit(Tokens.Repeat);
     } else {
       emit(Tokens.Identifier);
     }
