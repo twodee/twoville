@@ -6,23 +6,20 @@ editor.setOptions({
 if (localStorage.getItem('src') !== null) {
   editor.setValue(localStorage.getItem('src'), 1);
 }
-// editor.setValue(
-  // 'r = rectangle()\n' + 
-  // 'r.position = [100, 100]\n' +
-  // 'r.size = [200, 200]\n' +
-  // 'r.rgb = [0, 0, 0]\n' +
-  // 'r.stroke.rgb = [1, 1, 0]\n' +
-  // 'r.stroke.size = 3\n' +
-  // 'r.stroke.opacity = 0.5',
-// 1);
+
 var left = document.getElementById('left');
 var messager = document.getElementById('messager');
+var messagerContainer = document.getElementById('messagerContainer');
 var evalButton = document.getElementById('eval');
 var recordButton = document.getElementById('record');
 var saveButton = document.getElementById('save');
 var svg = document.getElementById('svg');
 var scrubber = document.getElementById('scrubber');
 var timeSpinner = document.getElementById('timeSpinner');
+
+function log(text) {
+  messager.innerText = text;
+}
 
 // --------------------------------------------------------------------------- 
 
@@ -37,6 +34,7 @@ function registerResizeListener(bounds, gap, resize) {
       unlistener();
     } else {
       resize(event, bounds, gap);
+      editor.resize();
     }
   }
   document.addEventListener('mousemove', moveListener, false);
@@ -62,16 +60,16 @@ function buildResizer(side, element) {
   } else if (side === 'top') {
     var measureGap = (bounds) => event.clientY - bounds.top;
     var resize = (event, bounds, gap) => {
-      var bounds = messager.getBoundingClientRect();
+      var bounds = messagerContainer.getBoundingClientRect();
       var height = bounds.bottom - event.clientY;
-      messager.style.height = height + 'px';
+      messagerContainer.style.height = height + 'px';
     };
   } else if (side === 'bottom') {
     var measureGap = (bounds) => event.clientY - bounds.bottom;
     var resize = (event, bounds, gap) => {
-      var bounds = messager.getBoundingClientRect();
+      var bounds = messagerContainer.getBoundingClientRect();
       var height = bounds.bottom - event.clientY;
-      messager.style.height = height + 'px';
+      messagerContainer.style.height = height + 'px';
     };
   } else {
     throw 'Resizing ' + side + ' not supported yet.';

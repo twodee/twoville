@@ -20,6 +20,9 @@ var TwovilleEnvironment = {
     }
     throw 'no such var --' + id + '--';
   },
+  owns: function(id) {
+    return this.bindings.hasOwnProperty(id);
+  },
   has: function(id) {
     var env = this;
     while (env != null) {
@@ -35,7 +38,7 @@ var TwovilleEnvironment = {
   },
   bindTimelined: function(id, fromTime, toTime, value) {
     if (!this.bindings.hasOwnProperty(id)) {
-      this.bindings[id] = new Timeline();
+      this.bindings[id] = Timeline.create();
     }
 
     if (fromTime != null && toTime != null) {
@@ -50,7 +53,9 @@ var TwovilleEnvironment = {
     }
   },
   valueAt: function(property, t) {
+    console.log("this:", this);
     // Assumes property exists.
+    console.log("property:", property);
     return this.bindings[property].valueAt(t);
   },
 }
@@ -127,9 +132,9 @@ Object.assign(TwovilleRectangle, {
 
       if (this.has('stroke')) {
         var stroke = this.get('stroke');
-        if (stroke.has('size') &&
-            stroke.has('rgb') &&
-            stroke.has('opacity')) {
+        if (stroke.owns('size') &&
+            stroke.owns('rgb') &&
+            stroke.owns('opacity')) {
           var strokeSize = stroke.valueAt('size', t);
           var strokeRGB = stroke.valueAt('rgb', t);
           var strokeOpacity = stroke.valueAt('opacity', t);
@@ -438,7 +443,8 @@ var ExpressionPrint = {
   },
   evaluate: function(env, fromTime, toTime) {
     var message = env['message'].get();
-    console.log(message.toString(fromTime, toTime));
+    console.log("message:", message);
+    log(message.toString(fromTime, toTime));
     return null;
   }
 }
