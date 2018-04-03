@@ -11,6 +11,7 @@ Tokens = Object.freeze({
   Assign: 'Assign',
   Real: 'Real',
   Percent: 'Percent',
+  With: 'With',
   Comma: 'Comma',
   RightArrow: 'RightArrow',
   LeftParenthesis: 'LeftParenthesis',

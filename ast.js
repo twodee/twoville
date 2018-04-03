@@ -320,3 +320,31 @@ var ExpressionRepeat = {
 };
 
 // --------------------------------------------------------------------------- 
+
+var StatementWith = {
+  create: function(id, body) {
+    var instance = Object.create(StatementWith);
+    return Object.assign(instance, {
+      id: id,
+      body: body
+    });
+  },
+  evaluate: function(env, fromTime, toTime) {
+    // console.log("env.bindings:", env.bindings);
+    // env.bindings
+    // var count = this.count.evaluate(env, fromTime, toTime);
+    // var last = null;
+    // for (var i = 0; i < count; ++i) {
+      // last = this.body.evaluate(env, fromTime, toTime);
+    // }
+    var id = this.id.source;
+    if (env.has(id)) {
+      var withEnv = env.bindings[id];
+      return this.body.evaluate(withEnv, fromTime, toTime);
+    } else {
+      throw 'no such env ' + id;
+    }
+  }
+};
+
+// --------------------------------------------------------------------------- 

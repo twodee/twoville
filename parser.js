@@ -58,35 +58,63 @@ function parse(tokens) {
 
   function statement() {
     if (has(Tokens.T)) {
-      consume();
-      if (has(Tokens.RightArrow)) {
-        consume();
+      if (has(Tokens.Dot, 1)) {
         var e = expression();
-        if (has(Tokens.Linebreak)) {
+        if (has(Tokens.Linebreak) || has(Tokens.EOF)) {
           consume();
-          var b = block();
-          return StatementTo.create(e, b);
-        } else if (has(Tokens.RightArrow)) {
-          consume();
-          if (has(Tokens.T)) {
-            consume();
-            if (has(Tokens.Linebreak)) {
-              consume();
-              var b = block();
-              return StatementThrough.create(e, b);
-            } else {
-              throw 'expected linebreak after through';
-            }
-          } else {
-            throw 'expected t on through';
-          }
+          return e;
         } else {
-          throw 'expected linebreak';
+          throw 'expected linebreak after t-expression';
         }
       } else {
-        throw 'expected ->';
+        consume();
+        if (has(Tokens.RightArrow)) {
+          consume();
+          var e = expression();
+          if (has(Tokens.Linebreak)) {
+            consume();
+            var b = block();
+            return StatementTo.create(e, b);
+          } else if (has(Tokens.RightArrow)) {
+            consume();
+            if (has(Tokens.T)) {
+              consume();
+              if (has(Tokens.Linebreak)) {
+                consume();
+                var b = block();
+                return StatementThrough.create(e, b);
+              } else {
+                throw 'expected linebreak after through';
+              }
+            } else {
+              throw 'expected t on through';
+            }
+          } else {
+            throw 'expected linebreak';
+          }
+        } else {
+          throw 'expected ->';
+        }
       }
-    } else {
+    }
+
+    else if (has(Tokens.With)) {
+      consume();
+      if (has(Tokens.Identifier) || has(Tokens.T)) {
+        var id = consume();
+        if (!has(Tokens.Linebreak)) {
+          throw 'expected linebreak';
+        }
+        consume(); // eat linebreak
+        var body = block();
+        return StatementWith.create(id, body);
+      } else {
+        throw 'expected id after with but saw ' + tokens[i].source;
+      }
+    }
+    
+    // A statement that doesn't start with T.
+    else {
       var e = expression();
 
       if (has(Tokens.RightArrow)) {
@@ -183,6 +211,7 @@ function parse(tokens) {
 
   function isFirstOfExpression(offset) {
     return has(Tokens.Integer, offset) ||
+           has(Tokens.T, offset) ||
            has(Tokens.Identifier, offset) ||
            has(Tokens.Repeat, offset);
   }
@@ -241,7 +270,7 @@ function parse(tokens) {
       consume(); // eat linebreak
       var body = block();
       return ExpressionRepeat.create(count, body);
-    } else if (has(Tokens.Identifier)) {
+    } else if (has(Tokens.Identifier) || has(Tokens.T)) {
       var id = consume();
       return ExpressionIdentifier.create(id);
     } else {
