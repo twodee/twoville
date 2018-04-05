@@ -126,7 +126,7 @@ var ExpressionIdentifier = {
   },
   assign: function(env, fromTime, toTime, rhs) {
     var value = rhs.evaluate(env, fromTime, toTime);
-    value.bind(env, fromTime, toTime, this.token.source);
+    env.bind(this.token.source, fromTime, toTime, value);
     return value;
   }
 };
@@ -242,7 +242,6 @@ var StatementFrom = {
   },
   evaluate: function(env, fromTime, toTime) {
     var fromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
-    console.log("fromTime:", fromTime, "toTime: NOOOO");
     this.block.evaluate(env, fromTime, null);
   }
 };
@@ -259,7 +258,6 @@ var StatementTo = {
   },
   evaluate: function(env, fromTime, toTime) {
     var toTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
-    console.log("fromTime: NOOOO", "toTime:", toTime);
     this.block.evaluate(env, null, toTime);
   }
 };
@@ -330,13 +328,6 @@ var StatementWith = {
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    // console.log("env.bindings:", env.bindings);
-    // env.bindings
-    // var count = this.count.evaluate(env, fromTime, toTime);
-    // var last = null;
-    // for (var i = 0; i < count; ++i) {
-      // last = this.body.evaluate(env, fromTime, toTime);
-    // }
     var id = this.id.source;
     if (env.has(id)) {
       var withEnv = env.bindings[id];

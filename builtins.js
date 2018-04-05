@@ -33,10 +33,25 @@ var TwovilleEnvironment = {
     }
     return false;
   },
-  bindUntimelined: function(id, value) {
+  bind: function(id, fromTime, toTime, value) {
     this.bindings[id] = value;
   },
-  bindTimelined: function(id, fromTime, toTime, value) {
+  valueAt: function(property, t) {
+    // Assumes property exists.
+    return this.bindings[property].valueAt(t);
+  },
+}
+
+// ---------------------------------------------------------------------------
+
+var TwovilleTimelinedEnvironment = Object.create(TwovilleEnvironment);
+Object.assign(TwovilleTimelinedEnvironment, {
+  create: function(env) {
+    var instance = TwovilleEnvironment.create(env);
+    Object.setPrototypeOf(instance, TwovilleTimelinedEnvironment);
+    return instance;
+  },
+  bind: function(id, fromTime, toTime, value) {
     if (!this.bindings.hasOwnProperty(id)) {
       this.bindings[id] = Timeline.create();
     }
@@ -52,26 +67,20 @@ var TwovilleEnvironment = {
       this.bindings[id].setDefault(value);
     }
   },
-  valueAt: function(property, t) {
-    console.log("this:", this);
-    // Assumes property exists.
-    console.log("property:", property);
-    return this.bindings[property].valueAt(t);
-  },
-}
+});
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleShape = Object.create(TwovilleEnvironment);
+var TwovilleShape = Object.create(TwovilleTimelinedEnvironment);
 Object.assign(TwovilleShape, {
-  bind: function(env, fromTime, toTime, id) {
-    env.bindUntimelined(id, this);
-  },
+  // bind: function(env, fromTime, toTime, id) {
+    // env.bindUntimelined(id, this);
+  // },
   create: function(env) {
-    var instance = TwovilleEnvironment.create(env);
+    var instance = TwovilleTimelinedEnvironment.create(env);
     Object.setPrototypeOf(instance, TwovilleShape);
-    instance.bindings.stroke = TwovilleEnvironment.create(instance);
-    instance.bindTimelined('opacity', null, null, TwovilleReal.create(1));
+    instance.bindings.stroke = TwovilleTimelinedEnvironment.create(instance);
+    instance.bind('opacity', null, null, TwovilleReal.create(1));
     return instance;
   }
 });
@@ -234,11 +243,7 @@ var TwovilleData = {
     return {};
   },
   bind: function(env, fromTime, toTime, id) {
-    if (Object.getPrototypeOf(env) === TwovilleEnvironment) {
-      env.bindUntimelined(id, this);
-    } else {
-      env.bindTimelined(id, fromTime, toTime, this);
-    }
+    env.bind(id, fromTime, toTime, this);
   },
   evaluate: function(env, fromTime, toTime) {
     return this;

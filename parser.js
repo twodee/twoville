@@ -223,7 +223,6 @@ function parse(tokens) {
       return ei;
     } else if (has(Tokens.Real)) {
       var token = consume();
-      console.log("token:", token);
       return ExpressionReal.create(Number(token.source));
     } else if (has(Tokens.LeftSquareBracket)) {
       consume(); // eat [

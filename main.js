@@ -141,10 +141,10 @@ recordButton.onclick = function() {
     } else {
       env.shapes.forEach(shape => shape.draw(env.svg, i));
 
-      var canvas = document.createElement('canvas');
-      canvas.width = box.width;
-      canvas.height = box.height;
-      var context = canvas.getContext('2d');
+      // var canvas = document.createElement('canvas');
+      // canvas.width = box.width;
+      // canvas.height = box.height;
+      // var context = canvas.getContext('2d');
 
       var data = new XMLSerializer().serializeToString(svg);
       var img = new Image();
@@ -198,8 +198,8 @@ evalButton.onclick = function() {
   env = TwovilleEnvironment.create({svg: svg, shapes: [], bindings: [], parent: null});
 
   env.bindings.t = TwovilleEnvironment.create(env);
-  env.bindings.t.bindUntimelined('start', TwovilleInteger.create(0));
-  env.bindings.t.bindUntimelined('stop', TwovilleInteger.create(100));
+  env.bindings.t.bind('start', TwovilleInteger.create(0));
+  env.bindings.t.bind('stop', TwovilleInteger.create(100));
 
   env.bindings['rectangle'] = {
     name: 'rectangle',
