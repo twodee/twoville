@@ -27,21 +27,33 @@ Tokens = Object.freeze({
   EOF: 'EOF'
 });
 
-function SourceLocation(lineStart, lineEnd, columnStart, columnEnd, indexStart, indexEnd) {
-  this.lineStart = lineStart;
-  this.lineEnd = lineEnd;
-  this.columnStart = columnStart;
-  this.columnEnd = columnEnd;
-  this.indexStart = indexStart;
-  this.indexEnd = indexEnd;
+var SourceLocation = {
+  create: function(lineStart, lineEnd, columnStart, columnEnd, indexStart, indexEnd) {
+    var instance = Object.create(SourceLocation);
+    return Object.assign(instance, {
+      lineStart: lineStart,
+      lineEnd: lineEnd,
+      columnStart: columnStart,
+      columnEnd: columnEnd,
+      indexStart: indexStart,
+      indexEnd: indexEnd
+    });
+  },
+  debugPrefix: function() {
+    return this.lineStart + ':' +
+           this.lineEnd + ':' +
+           this.columnStart + ':' +
+           this.columnEnd + ':';
+  }
 }
 
 var Token = {
-  create: function (type, source, where) {
-    return Object.assign({}, {
+  create: function(type, source, where) {
+    var instance = Object.create(Token);
+    return Object.assign(instance, {
       type: type,
       source: source,
       where: where
     });
-  }
+  },
 }

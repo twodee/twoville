@@ -1,10 +1,23 @@
 function lex(source) {
   
+  var iStartIndex = 0;
+  var iEndIndex = -1;
+  var iStartColumn = 0;
+  var iEndColumn = -1;
+  var iStartLine = 0;
+  var iEndLine = 0;
+
   var i = 0;
   var tokens = [];
   var tokenSoFar = '';
 
   function consume() {
+    iEndIndex += 1;
+    iEndColumn += 1;
+    if (source[i] == '\n') {
+      iEndLine += 1;
+      iEndColumn = -1;
+    }
     tokenSoFar += source[i];
     i += 1;
   }
@@ -24,9 +37,16 @@ function lex(source) {
     }
   }
 
-  function emit(type) {
-    tokens.push(Token.create(type, tokenSoFar, null));
+  function resetToken() {
+    iStartIndex = iEndIndex + 1;
+    iStartColumn = iEndColumn + 1;
+    iStartLine = iEndLine;
     tokenSoFar = '';
+  }
+
+  function emit(type) {
+    tokens.push(Token.create(type, tokenSoFar, SourceLocation.create(iStartLine, iEndLine, iStartColumn, iEndColumn, iStartIndex, iEndIndex)));
+    resetToken();
   }
 
   function dash() {
@@ -176,7 +196,10 @@ function lex(source) {
       emit(Tokens.Linebreak);
       indentation();
     } else if (has(' ')) {
-      ++i;
+      while (has(' ')) {
+        consume();
+      }
+      resetToken();
     } else {
       throw 'unknowned! [' + source[i] + ']';
     }
@@ -184,6 +207,5 @@ function lex(source) {
 
   emit(Tokens.EOF);
 
-  console.log("tokens:", tokens);
   return tokens;
 }

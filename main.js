@@ -6,6 +6,7 @@ editor.setOptions({
 if (localStorage.getItem('src') !== null) {
   editor.setValue(localStorage.getItem('src'), 1);
 }
+var Range = ace.require('ace/range').Range;
 
 var left = document.getElementById('left');
 var messager = document.getElementById('messager');
@@ -18,8 +19,22 @@ var scrubber = document.getElementById('scrubber');
 var timeSpinner = document.getElementById('timeSpinner');
 var env;
 
+(function() {
+  var bounds = messagerContainer.getBoundingClientRect();
+  messagerContainer.style.width = bounds.width + 'px';
+})();
+
+function highlight(lineStart, lineEnd, columnStart, columnEnd) {
+  editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
+  editor.centerSelection();
+}
+
 function log(text) {
-  messager.innerText += text + '\n';
+  console.log("text:", text);
+  text = text.replace(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):/, function(__, lineStart, lineEnd, columnStart, columnEnd) {
+    return '<a href="javascript:highlight(' + lineStart + ', ' + lineEnd + ', ' + columnStart + ', ' + columnEnd + ')">Line ' + (parseInt(lineEnd) + 1) + '</a>: '
+  });
+  messager.innerHTML += text + '\n';
 }
 
 // --------------------------------------------------------------------------- 
@@ -186,7 +201,7 @@ timeSpinner.oninput = function() {
 }
 
 evalButton.onclick = function() {
-  messager.innerText = '';
+  messager.innerHTML = '';
 
   while (svg.lastChild) {
     svg.removeChild(svg.lastChild);
@@ -195,11 +210,15 @@ evalButton.onclick = function() {
   tokens = lex(editor.getValue());
   ast = parse(tokens);
 
+  // tokens.forEach(token => {
+    // log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
+  // });
+
   env = TwovilleEnvironment.create({svg: svg, shapes: [], bindings: [], parent: null});
 
   env.bindings.t = TwovilleEnvironment.create(env);
-  env.bindings.t.bind('start', TwovilleInteger.create(0));
-  env.bindings.t.bind('stop', TwovilleInteger.create(100));
+  env.bindings.t.bind('start', null, null, TwovilleInteger.create(0));
+  env.bindings.t.bind('stop', null, null, TwovilleInteger.create(100));
 
   env.bindings['rectangle'] = {
     name: 'rectangle',
@@ -232,20 +251,23 @@ evalButton.onclick = function() {
   };
 
   console.log("ast:", ast);
-  ast.evaluate(env);
-  console.log("env:", env);
+  try {
+    ast.evaluate(env);
+    console.log("env:", env);
+    var tmin = env.get('t').get('start').get();
+    var tmax = env.get('t').get('stop').get();
+    scrubber.min = tmin;
+    scrubber.max = tmax;
 
-  var tmin = env.get('t').get('start').get();
-  var tmax = env.get('t').get('stop').get();
-  scrubber.min = tmin;
-  scrubber.max = tmax;
-
-  var t = parseFloat(scrubber.value);
-  if (t < tmin) {
-    scrubTo(tmin);
-  } else if (t > tmax) {
-    scrubTo(tmax);
-  } else {
-    scrubTo(t);
+    var t = parseFloat(scrubber.value);
+    if (t < tmin) {
+      scrubTo(tmin);
+    } else if (t > tmax) {
+      scrubTo(tmax);
+    } else {
+      scrubTo(t);
+    }
+  } catch (e) {
+    log(e);
   }
 }

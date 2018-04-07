@@ -122,7 +122,12 @@ var ExpressionIdentifier = {
     return Object.assign(instance, {token: token});
   },
   evaluate: function(env, fromTime, toTime) {
-    return env.get(this.token.source);
+    var value = env.get(this.token.source);
+    if (value) {
+      return value;
+    } else {
+      throw this.token.where.debugPrefix() + "I'm sorry, but I don't know anything about " + this.token.source + ".";
+    }
   },
   assign: function(env, fromTime, toTime, rhs) {
     var value = rhs.evaluate(env, fromTime, toTime);

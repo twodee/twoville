@@ -18,7 +18,7 @@ var TwovilleEnvironment = {
       }
       env = env.parent;
     }
-    throw 'no such var --' + id + '--';
+    return null;
   },
   owns: function(id) {
     return this.bindings.hasOwnProperty(id);
