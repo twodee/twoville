@@ -1,7 +1,9 @@
 var editor = ace.edit('editor');
 editor.setTheme('ace/theme/twilight');
 editor.setOptions({
-  fontSize: '14pt'
+  fontSize: '14pt',
+  tabSize: 2,
+  useSoftTabs: true
 });
 if (localStorage.getItem('src') !== null) {
   editor.setValue(localStorage.getItem('src'), 1);
@@ -15,6 +17,7 @@ var evalButton = document.getElementById('eval');
 var recordButton = document.getElementById('record');
 var spinner = document.getElementById('spinner');
 var saveButton = document.getElementById('save');
+var exportButton = document.getElementById('export');
 var svg = document.getElementById('svg');
 var scrubber = document.getElementById('scrubber');
 var timeSpinner = document.getElementById('timeSpinner');
@@ -35,7 +38,7 @@ function log(text) {
   text = text.replace(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):/, function(__, lineStart, lineEnd, columnStart, columnEnd) {
     return '<a href="javascript:highlight(' + lineStart + ', ' + lineEnd + ', ' + columnStart + ', ' + columnEnd + ')">Line ' + (parseInt(lineEnd) + 1) + '</a>: '
   });
-  messager.innerHTML += text + '\n';
+  messager.innerHTML += text + '<br>';
 }
 
 // --------------------------------------------------------------------------- 
@@ -149,16 +152,7 @@ recordButton.onclick = function() {
   });
 
   gif.on('finished', function(blob) {
-    var link = document.createElement('a');
-    link.download = 'download.gif';
-    link.href = URL.createObjectURL(blob);
-    // Firefox needs the element to be live for some reason.
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(function() {
-      URL.revokeObjectURL(link.href);
-      document.body.removeChild(link);
-    });
+    downloadBlob('download.gif', blob);
     stopSpinning();
   });
 
@@ -170,16 +164,11 @@ recordButton.onclick = function() {
       } else {
         env.shapes.forEach(shape => shape.draw(env.svg, i));
 
-        // var canvas = document.createElement('canvas');
-        // canvas.width = box.width;
-        // canvas.height = box.height;
-        // var context = canvas.getContext('2d');
-
         var data = new XMLSerializer().serializeToString(svg);
-        var img = new Image();
         var svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
         var url = URL.createObjectURL(svgBlob);
 
+        var img = new Image();
         img.onload = function () {
           gif.addFrame(img, {
             delay: 10,
@@ -202,6 +191,25 @@ recordButton.onclick = function() {
 
 saveButton.onclick = function() {
   localStorage.setItem('src', editor.getValue());
+}
+
+function downloadBlob(name, blob) {
+  var link = document.createElement('a');
+  link.download = name;
+  link.href = URL.createObjectURL(blob);
+  // Firefox needs the element to be live for some reason.
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(function() {
+    URL.revokeObjectURL(link.href);
+    document.body.removeChild(link);
+  });
+}
+
+exportButton.onclick = function() {
+  var data = new XMLSerializer().serializeToString(svg);
+  var svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+  downloadBlob('download.svg', svgBlob);
 }
 
 function scrubTo(t) {
