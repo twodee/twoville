@@ -13,6 +13,7 @@ var messager = document.getElementById('messager');
 var messagerContainer = document.getElementById('messagerContainer');
 var evalButton = document.getElementById('eval');
 var recordButton = document.getElementById('record');
+var spinner = document.getElementById('spinner');
 var saveButton = document.getElementById('save');
 var svg = document.getElementById('svg');
 var scrubber = document.getElementById('scrubber');
@@ -120,7 +121,18 @@ for (direction in directions) {
 
 // --------------------------------------------------------------------------- 
 
+function startSpinning() {
+  recordButton.disabled = true;
+  spinner.style.display = 'block';
+}
+
+function stopSpinning() {
+  recordButton.disabled = false;
+  spinner.style.display = 'none';
+}
+
 recordButton.onclick = function() {
+  startSpinning();
   var box = svg.getBoundingClientRect();
 
   // I don't know why I need to set the viewport explicitly. Setting the size
@@ -147,35 +159,41 @@ recordButton.onclick = function() {
       URL.revokeObjectURL(link.href);
       document.body.removeChild(link);
     });
+    stopSpinning();
   });
 
 	function tick(i) {
-    // TODO if looping, go >=, otherwise >
-		if (i >= scrubber.max) {
-      gif.render();
-    } else {
-      env.shapes.forEach(shape => shape.draw(env.svg, i));
+    try {
+      // TODO if looping, go >=, otherwise >
+      if (i >= scrubber.max) {
+        gif.render();
+      } else {
+        env.shapes.forEach(shape => shape.draw(env.svg, i));
 
-      // var canvas = document.createElement('canvas');
-      // canvas.width = box.width;
-      // canvas.height = box.height;
-      // var context = canvas.getContext('2d');
+        // var canvas = document.createElement('canvas');
+        // canvas.width = box.width;
+        // canvas.height = box.height;
+        // var context = canvas.getContext('2d');
 
-      var data = new XMLSerializer().serializeToString(svg);
-      var img = new Image();
-      var svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
-      var url = URL.createObjectURL(svgBlob);
+        var data = new XMLSerializer().serializeToString(svg);
+        var img = new Image();
+        var svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+        var url = URL.createObjectURL(svgBlob);
 
-      img.onload = function () {
-        gif.addFrame(img, {
-          delay: 10,
-          copy: true
-        });
-        URL.revokeObjectURL(url);
-        tick(i + 1);
-      };
+        img.onload = function () {
+          gif.addFrame(img, {
+            delay: 10,
+            copy: true
+          });
+          URL.revokeObjectURL(url);
+          tick(i + 1);
+        };
 
-      img.src = url;
+        img.src = url;
+      }
+    } catch (e) {
+      stopSpinning();
+      throw e;
     }
 	}
 
@@ -267,6 +285,8 @@ evalButton.onclick = function() {
     } else {
       scrubTo(t);
     }
+
+    recordButton.disabled = false;
   } catch (e) {
     log(e);
   }

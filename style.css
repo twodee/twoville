@@ -128,3 +128,29 @@ body {
 a {
   color: orange;
 }
+
+#recordContainer {
+	position: relative;
+}
+
+#spinner {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border: 5px solid #97809e;
+  border-top: 5px solid #00537c;
+  border-radius: 50%;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}

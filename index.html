@@ -29,7 +29,10 @@
     <svg id="svg" xmlns="http://www.w3.org/2000/svg" width="300" height="300"></svg>
     <div id="toolbar">
       <input type="button" id="eval" value="Evaluate">
-      <input type="button" id="record" value="Record">
+      <span id="recordContainer">
+        <input type="button" id="record" value="Record" disabled>
+        <div id="spinner"></div>
+      </span>
       <input type="button" id="save" value="Save">
     </div>
     <div id="timeToolbar">
