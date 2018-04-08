@@ -99,18 +99,14 @@ function parse(tokens) {
     }
 
     else if (has(Tokens.With)) {
-      consume();
-      if (has(Tokens.Identifier) || has(Tokens.T)) {
-        var id = consume();
-        if (!has(Tokens.Linebreak)) {
-          throw 'expected linebreak';
-        }
-        consume(); // eat linebreak
-        var body = block();
-        return StatementWith.create(id, body);
-      } else {
-        throw 'expected id after with but saw ' + tokens[i].source;
+      consume(); // eat with
+      var scope = expression();
+      if (!has(Tokens.Linebreak)) {
+        throw 'expected linebreak';
       }
+      consume(); // eat linebreak
+      var body = block();
+      return StatementWith.create(scope, body);
     }
     
     // A statement that doesn't start with T.

@@ -325,21 +325,21 @@ var ExpressionRepeat = {
 // --------------------------------------------------------------------------- 
 
 var StatementWith = {
-  create: function(id, body) {
+  create: function(scope, body) {
     var instance = Object.create(StatementWith);
     return Object.assign(instance, {
-      id: id,
+      scope: scope,
       body: body
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    var id = this.id.source;
-    if (env.has(id)) {
-      var withEnv = env.bindings[id];
-      return this.body.evaluate(withEnv, fromTime, toTime);
-    } else {
-      throw 'no such env ' + id;
-    }
+    // var id = this.id.source;
+    // if (env.has(id)) {
+    var withEnv = this.scope.evaluate(env, fromTime, toTime);
+    return this.body.evaluate(withEnv, fromTime, toTime);
+    // } else {
+      // throw 'no such env ' + id;
+    // }
   }
 };
 
