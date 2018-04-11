@@ -262,6 +262,11 @@ Object.assign(TwovilleVector, {
     });
     return instance;
   },
+  bind: function(id, fromTime, toTime, value) {
+    this.elements.forEach(element => {
+      element.bind(id, fromTime, toTime, value);
+    });
+  },
   get: function(i) {
     return this.elements[i];
   },

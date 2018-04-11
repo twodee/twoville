@@ -194,6 +194,8 @@ var ExpressionAssignment = {
   },
   evaluate: function(env, fromTime, toTime) {
     if ('assign' in this.l) {
+      console.log("this.l:", this.l);
+      console.log("env:", env);
       return this.l.assign(env, fromTime, toTime, this.r);
     } else {
       throw 'unassignable';
