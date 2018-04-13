@@ -65,6 +65,7 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+  /* flex: 0  */
 }
 
 #messagerContainer {
@@ -74,6 +75,10 @@ body {
   background-color: #333333;
   color: #CCCCCC;
   height: 200px;
+
+  /* This is needed to keep #left from
+     expanding to fit content. */
+  min-width: 0;
 }
 
 #messager {

@@ -23,11 +23,6 @@ var scrubber = document.getElementById('scrubber');
 var timeSpinner = document.getElementById('timeSpinner');
 var env;
 
-(function() {
-  var bounds = messagerContainer.getBoundingClientRect();
-  messagerContainer.style.width = bounds.width + 'px';
-})();
-
 function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
   editor.centerSelection();
