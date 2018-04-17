@@ -73,16 +73,31 @@ Object.assign(TwovilleTimelinedEnvironment, {
 
 var TwovilleShape = Object.create(TwovilleTimelinedEnvironment);
 Object.assign(TwovilleShape, {
-  // bind: function(env, fromTime, toTime, id) {
-    // env.bindUntimelined(id, this);
-  // },
+  serial: 0,
   create: function(env) {
     var instance = TwovilleTimelinedEnvironment.create(env);
     Object.setPrototypeOf(instance, TwovilleShape);
     instance.bindings.stroke = TwovilleTimelinedEnvironment.create(instance);
     instance.bind('opacity', null, null, TwovilleReal.create(1));
+    instance.id = TwovilleShape.serial;
+    ++TwovilleShape.serial;
     return instance;
-  }
+  },
+  initialize: function(svg) {
+    if (this.has('clippers')) {
+      var clipPath = document.createElementNS(namespace, 'clipPath')
+      clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
+      var clippers = this.get('clippers').getDefault();
+      clippers.forEach(clipper => {
+        var use = document.createElementNS(namespace, 'use');
+        use.setAttributeNS(null, 'href', '#shape-' + clipper.id);
+        clipPath.appendChild(use);
+      });
+      console.log("svg:", svg);
+      svg.firstChild.appendChild(clipPath);
+      this.svgElement.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
+    }
+  },
 });
 
 // --------------------------------------------------------------------------- 
@@ -95,6 +110,7 @@ Object.assign(TwovilleRectangle, {
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'rect')
     });
+    instance.svgElement.setAttributeNS(null, 'id', 'shape-' + instance.id);
     instance.svg.appendChild(instance.svgElement);
     return instance;
   },
@@ -179,9 +195,11 @@ Object.assign(TwovilleCircle, {
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'circle')
     });
+    instance.svgElement.setAttributeNS(null, 'id', 'shape-' + instance.id);
     instance.svg.appendChild(instance.svgElement);
     return instance;
   },
+
   draw: function(svg, t) {
     if (!this.has('position')) {
       throw 'no position';
@@ -233,7 +251,7 @@ Object.assign(TwovilleCircle, {
         this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
       }
 
-      this.svgElement.setAttributeNS(null, 'opacity', this.valueAt('opacity', t).get());
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
       this.svgElement.setAttributeNS(null, 'cx', position.get(0).get());
       this.svgElement.setAttributeNS(null, 'cy', position.get(1).get());
       this.svgElement.setAttributeNS(null, 'r', radius.get());
@@ -272,6 +290,9 @@ Object.assign(TwovilleVector, {
     this.elements.forEach(element => {
       element.bind(id, fromTime, toTime, value);
     });
+  },
+  forEach: function(each) {
+    this.elements.forEach(each);
   },
   get: function(i) {
     return this.elements[i];

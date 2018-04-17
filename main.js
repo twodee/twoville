@@ -227,6 +227,8 @@ evalButton.onclick = function() {
   while (svg.lastChild) {
     svg.removeChild(svg.lastChild);
   }
+  var defs = document.createElementNS(namespace, 'defs');
+  svg.appendChild(defs);
 
   tokens = lex(editor.getValue());
   ast = parse(tokens);
@@ -275,6 +277,9 @@ evalButton.onclick = function() {
   try {
     ast.evaluate(env);
     console.log("env:", env);
+
+    env.shapes.forEach(shape => shape.initialize(env.svg));
+
     var tmin = env.get('t').get('start').get();
     var tmax = env.get('t').get('stop').get();
     scrubber.min = tmin;

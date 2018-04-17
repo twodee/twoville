@@ -19,9 +19,9 @@ var Timeline = {
     // }
   // }
 
-  // Timeline.prototype.get = function() {
-    // return this.defaultValue;
-  // }
+  getDefault: function() {
+    return this.defaultValue;
+  },
   setDefault: function(value) {
     this.defaultValue = value;
   },
