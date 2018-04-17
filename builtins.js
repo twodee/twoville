@@ -90,7 +90,7 @@ Object.assign(TwovilleShape, {
       var clippers = this.get('clippers').getDefault();
       clippers.forEach(clipper => {
         var use = document.createElementNS(namespace, 'use');
-        use.setAttributeNS(null, 'href', '#shape-' + clipper.id);
+        use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#shape-' + clipper.id);
         clipPath.appendChild(use);
       });
       console.log("svg:", svg);
