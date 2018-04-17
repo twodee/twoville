@@ -153,7 +153,13 @@ Object.assign(TwovilleRectangle, {
         }
       }
 
-      this.svgElement.setAttributeNS(null, 'opacity', this.valueAt('opacity', t).get());
+      if (this.has('rounding')) {
+        var rounding = this.valueAt('rounding', t);
+        this.svgElement.setAttributeNS(null, 'rx', rounding.get());
+        this.svgElement.setAttributeNS(null, 'ry', rounding.get());
+      }
+
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
       this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
       this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
       this.svgElement.setAttributeNS(null, 'width', size.get(0).get());
