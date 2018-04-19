@@ -243,12 +243,12 @@ evalButton.onclick = function() {
   env.bindings.t.bind('start', null, null, TwovilleInteger.create(0));
   env.bindings.t.bind('stop', null, null, TwovilleInteger.create(100));
 
-  env.bindings.window = TwovilleEnvironment.create(env);
-  env.bindings.window.bind('position', null, null, TwovilleVector.create([
+  env.bindings.viewport = TwovilleEnvironment.create(env);
+  env.bindings.viewport.bind('position', null, null, TwovilleVector.create([
     TwovilleInteger.create(0),
     TwovilleInteger.create(0)
   ]));
-  env.bindings.window.bind('size', null, null, TwovilleVector.create([
+  env.bindings.viewport.bind('size', null, null, TwovilleVector.create([
     TwovilleInteger.create(100),
     TwovilleInteger.create(100)
   ]));
@@ -288,8 +288,8 @@ evalButton.onclick = function() {
     ast.evaluate(env);
     console.log("env:", env);
 
-    var dimensions = env.get('window').get('size');
-    var corner = env.get('window').get('position');
+    var dimensions = env.get('viewport').get('size');
+    var corner = env.get('viewport').get('position');
     env.svg.setAttributeNS(null, 'width', dimensions.get(0).get());
     env.svg.setAttributeNS(null, 'height', dimensions.get(1).get());
     env.svg.setAttributeNS(null, 'viewBox',
