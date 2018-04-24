@@ -40,6 +40,9 @@ var TwovilleEnvironment = {
     // Assumes property exists.
     return this.bindings[property].valueAt(t);
   },
+  evaluate: function(env, fromTime, toTime) {
+    return this;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -77,27 +80,59 @@ Object.assign(TwovilleShape, {
   create: function(env) {
     var instance = TwovilleTimelinedEnvironment.create(env);
     Object.setPrototypeOf(instance, TwovilleShape);
+    instance = Object.assign(instance, {
+      id: TwovilleShape.serial,
+      parentElement: null
+    });
     instance.bindings.stroke = TwovilleTimelinedEnvironment.create(instance);
     instance.bind('opacity', null, null, TwovilleReal.create(1));
-    instance.id = TwovilleShape.serial;
     ++TwovilleShape.serial;
     return instance;
   },
-  initialize: function(svg) {
+  domify: function(svg) {
     if (this.has('clippers')) {
       var clipPath = document.createElementNS(namespace, 'clipPath')
       clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
       var clippers = this.get('clippers').getDefault();
       clippers.forEach(clipper => {
         var use = document.createElementNS(namespace, 'use');
-        use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#shape-' + clipper.id);
+        use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
         clipPath.appendChild(use);
       });
       console.log("svg:", svg);
       svg.firstChild.appendChild(clipPath);
       this.svgElement.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
     }
+
+    if (this.has('parent')) {
+      this.parentElement = this.get('parent').getDefault().svgElement;
+    } else if (this.has('template') && this.get('template').getDefault().get()) {
+      this.parentElement = svg.firstChild;
+    } else {
+      this.parentElement = this.svg;
+    }
+    this.parentElement.appendChild(this.svgElement);
   },
+});
+
+// --------------------------------------------------------------------------- 
+
+var TwovilleGroup = Object.create(TwovilleShape);
+Object.assign(TwovilleGroup, {
+  create: function(env) {
+    var instance = TwovilleShape.create(env);
+    Object.setPrototypeOf(instance, TwovilleGroup);
+    instance = Object.assign(instance, {
+      svgElement: document.createElementNS(namespace, 'g'),
+      children: []
+    });
+    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
+    // instance.parentElement.appendChild(instance.svgElement);
+    return instance;
+  },
+  draw: function(svg, t) {
+    this.children.forEach(child => child.draw(svg, t));
+  }
 });
 
 // --------------------------------------------------------------------------- 
@@ -110,8 +145,8 @@ Object.assign(TwovilleRectangle, {
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'rect')
     });
-    instance.svgElement.setAttributeNS(null, 'id', 'shape-' + instance.id);
-    instance.svg.appendChild(instance.svgElement);
+    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
+    // instance.parentElement.appendChild(instance.svgElement);
     return instance;
   },
   draw: function(svg, t) {
@@ -195,8 +230,8 @@ Object.assign(TwovilleCircle, {
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'circle')
     });
-    instance.svgElement.setAttributeNS(null, 'id', 'shape-' + instance.id);
-    instance.svg.appendChild(instance.svgElement);
+    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
+    // instance.parentElement.appendChild(instance.svgElement);
     return instance;
   },
 
@@ -448,6 +483,29 @@ Object.assign(TwovilleReal, {
 
 // --------------------------------------------------------------------------- 
 
+var TwovilleBoolean = Object.create(TwovilleData);
+Object.assign(TwovilleBoolean, {
+  create: function(x) {
+    var instance = TwovilleData.create();
+    Object.setPrototypeOf(instance, TwovilleBoolean);
+    instance = Object.assign(instance, {
+      x: x
+    });
+    return instance;
+  },
+  toString: function() {
+    return '' + this.x;
+  },
+  get: function() {
+    return this.x;
+  },
+  interpolate: function(other, proportion) {
+    return TwovilleBoolean.create(proportion <= 0.5 ? this.get() : other.get());
+  }
+});
+
+// --------------------------------------------------------------------------- 
+
 var ExpressionRectangle = {
   create: function(parent) {
     return Object.create(ExpressionRectangle);
@@ -502,6 +560,7 @@ var ExpressionRandom = {
 
 // --------------------------------------------------------------------------- 
 
+// The casting function.
 var ExpressionInt = {
   create: function(parent) {
     return Object.create(ExpressionInt);
@@ -512,6 +571,19 @@ var ExpressionInt = {
     return TwovilleInteger.create(i);
   }
 }
+
+// --------------------------------------------------------------------------- 
+
+var ExpressionGroup = {
+  create: function(parent) {
+    return Object.create(ExpressionGroup);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var group = TwovilleGroup.create(env);
+    env.shapes.push(group);
+    return group;
+  }
+};
 
 // --------------------------------------------------------------------------- 
 

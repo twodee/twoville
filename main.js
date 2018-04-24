@@ -238,6 +238,7 @@ evalButton.onclick = function() {
   // });
 
   env = TwovilleEnvironment.create({svg: svg, shapes: [], bindings: [], parent: null});
+  TwovilleShape.serial = 0;
 
   env.bindings.t = TwovilleEnvironment.create(env);
   env.bindings.t.bind('start', null, null, TwovilleInteger.create(0));
@@ -257,6 +258,12 @@ evalButton.onclick = function() {
     name: 'rectangle',
     formals: [],
     body: ExpressionRectangle.create()
+  };
+
+  env.bindings['group'] = {
+    name: 'group',
+    formals: [],
+    body: ExpressionGroup.create()
   };
 
   env.bindings['circle'] = {
@@ -299,7 +306,7 @@ evalButton.onclick = function() {
       dimensions.get(1).get()
     );
 
-    env.shapes.forEach(shape => shape.initialize(env.svg));
+    env.shapes.forEach(shape => shape.domify(env.svg));
 
     var tmin = env.get('t').get('start').get();
     var tmax = env.get('t').get('stop').get();

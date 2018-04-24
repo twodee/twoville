@@ -208,18 +208,23 @@ function parse(tokens) {
   function isFirstOfExpression(offset) {
     return has(Tokens.Integer, offset) ||
            has(Tokens.T, offset) ||
+           has(Tokens.Boolean, offset) ||
            has(Tokens.Identifier, offset) ||
+           has(Tokens.LeftSquareBracket, offset) ||
            has(Tokens.Repeat, offset);
   }
 
   function atom() {
     if (has(Tokens.Integer)) {
       var token = consume();
-      var ei = ExpressionInteger.create(Number(token.source));
-      return ei;
+      return ExpressionInteger.create(Number(token.source));
     } else if (has(Tokens.Real)) {
       var token = consume();
       return ExpressionReal.create(Number(token.source));
+    } else if (has(Tokens.Boolean)) {
+      var token = consume();
+      console.log("token:", token);
+      return ExpressionBoolean.create(token.source == 'true');
     } else if (has(Tokens.LeftSquareBracket)) {
       consume(); // eat [
       var elements = [];

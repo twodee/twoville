@@ -24,6 +24,7 @@ Tokens = Object.freeze({
   Circle: 'Circle',
   Identifier: 'Identifier',
   Repeat: 'Repeat',
+  Boolean: 'Boolean',
   EOF: 'EOF'
 });
 

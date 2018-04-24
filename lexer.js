@@ -74,6 +74,10 @@ function lex(source) {
       emit(Tokens.T);
     } else if (tokenSoFar == 'repeat') {
       emit(Tokens.Repeat);
+    } else if (tokenSoFar == 'true') {
+      emit(Tokens.Boolean);
+    } else if (tokenSoFar == 'false') {
+      emit(Tokens.Boolean);
     } else if (tokenSoFar == 'with') {
       emit(Tokens.With);
     } else {

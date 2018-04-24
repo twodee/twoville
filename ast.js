@@ -4,6 +4,18 @@ var namespace = "http://www.w3.org/2000/svg";
 // PRIMITIVES
 // --------------------------------------------------------------------------- 
 
+var ExpressionBoolean = {
+  create: function(x) {
+    var instance = Object.create(ExpressionBoolean);
+    return Object.assign(instance, {x: x});
+  },
+  evaluate: function(env, fromTime, toTime) {
+    return TwovilleBoolean.create(this.x);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 var ExpressionInteger = {
   create: function(x) {
     var instance = Object.create(ExpressionInteger);
@@ -130,6 +142,8 @@ var ExpressionIdentifier = {
     }
   },
   assign: function(env, fromTime, toTime, rhs) {
+    console.log("rhs:", rhs);
+    console.log("this:", this);
     var value = rhs.evaluate(env, fromTime, toTime);
     env.bind(this.token.source, fromTime, toTime, value);
     return value;
