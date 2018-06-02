@@ -1,6 +1,7 @@
 function parse(tokens) {
   var i = 0;
   var indents = [-1];
+  console.log("tokens:", tokens);
 
   function has(type, offset) {
     var index = i;
@@ -40,18 +41,29 @@ function parse(tokens) {
     }
     indents.push(indentation.source.length);
 
+    console.log("[[[[[[[[[[[");
     var statements = [];
+    console.log("current:", indentation.source.length);
     while (has(Tokens.Indentation) && tokens[i].source.length == indentation.source.length) {
+      // for (var j = 0; j < 10; ++j) {
+        // console.log(tokens[i + j]);
+      // }
       consume(); // eat indentation
       if (has(Tokens.Linebreak)) {
         consume();
       } else if (!has(Tokens.EOF)) {
+        console.log("CURrent:", indentation.source.length);
         var s = statement();
+        console.log("s:", s);
         statements.push(s);
       }
+      console.log("current:", indentation.source.length);
     }
+    console.log("]]]]]]]]]]]]");
 
     indents.pop();
+    console.trace('WHERE');
+    console.log("indents:", indents);
 
     return Block.create(statements);
   }
@@ -142,10 +154,10 @@ function parse(tokens) {
         if (has(Tokens.Linebreak)) {
           consume();
           return e;
-        } else if (has(Tokens.EOF)) {
+        } else if (has(Tokens.EOF) || has(Tokens.Indentation)) { // Check for indentation because some expressions end in blocks, which have eaten their linebreak already
           return e;
         } else if (!has(Tokens.EOF)) {
-          throw 'Expected linebreak or EOF but had ' + tokens[i].source;
+          throw 'Expected linebreak or EOF but had "' + tokens[i].source + '" (' + tokens[i].type + ')';
         }
       }
     }
@@ -205,19 +217,24 @@ function parse(tokens) {
     return base;
   }
 
-  function isFirstOfExpression(offset) {
+  function isFirstOfExpression(offset = 0) {
     return has(Tokens.Integer, offset) ||
            has(Tokens.T, offset) ||
            has(Tokens.Boolean, offset) ||
+           has(Tokens.String, offset) ||
            has(Tokens.Identifier, offset) ||
            has(Tokens.LeftSquareBracket, offset) ||
-           has(Tokens.Repeat, offset);
+           has(Tokens.Repeat, offset) ||
+           has(Tokens.For, offset);
   }
 
   function atom() {
     if (has(Tokens.Integer)) {
       var token = consume();
       return ExpressionInteger.create(Number(token.source));
+    } else if (has(Tokens.String)) {
+      var token = consume();
+      return ExpressionString.create(token.source);
     } else if (has(Tokens.Real)) {
       var token = consume();
       return ExpressionReal.create(Number(token.source));
@@ -225,6 +242,30 @@ function parse(tokens) {
       var token = consume();
       console.log("token:", token);
       return ExpressionBoolean.create(token.source == 'true');
+    } else if (has(Tokens.For)) {
+      consume();
+      if (isFirstOfExpression()) {
+        var j = expression();
+        console.log("iiiiii:", j);
+        if (has(Tokens.From) && isFirstOfExpression(1)) {
+          consume();
+          var start = expression();
+          if (has(Tokens.To) && isFirstOfExpression(1)) {
+            consume();
+            var stop = expression();
+
+            if (!has(Tokens.Linebreak)) {
+              throw 'expected linebreak';
+            }
+            consume(); // eat linebreak
+            var body = block();
+
+            var by = TwovilleInteger.create(1);
+
+            return ExpressionFor.create(j, start, stop, by, body);
+          }
+        }
+      }
     } else if (has(Tokens.LeftSquareBracket)) {
       consume(); // eat [
       var elements = [];
@@ -269,6 +310,11 @@ function parse(tokens) {
       }
       consume(); // eat linebreak
       var body = block();
+      console.log("tokens:", tokens);
+      console.log("i:", i);
+      for (var j = 0; j < 10; ++j) {
+        console.log("tokens[j + i]:", tokens[j + i]);
+      }
       return ExpressionRepeat.create(count, body);
     } else if (has(Tokens.Identifier) || has(Tokens.T)) {
       var id = consume();

@@ -99,14 +99,18 @@ Object.assign(TwovilleShape, {
         use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
         clipPath.appendChild(use);
       });
-      console.log("svg:", svg);
       svg.firstChild.appendChild(clipPath);
       this.svgElement.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
     }
 
-    if (this.has('parent')) {
+    if (this.owns('mask')) {
+      var mask = this.get('mask').getDefault();
+      this.svgElement.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
+    }
+
+    if (this.owns('parent')) {
       this.parentElement = this.get('parent').getDefault().svgElement;
-    } else if (this.has('template') && this.get('template').getDefault().get()) {
+    } else if (this.owns('template') && this.get('template').getDefault().get()) {
       this.parentElement = svg.firstChild;
     } else {
       this.parentElement = this.svg;
@@ -123,11 +127,11 @@ Object.assign(TwovilleGroup, {
     var instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleGroup);
     instance = Object.assign(instance, {
-      svgElement: document.createElementNS(namespace, 'g'),
+      svgElement: document.createElementNS(namespace, 'group'),
       children: []
     });
+
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    // instance.parentElement.appendChild(instance.svgElement);
     return instance;
   },
   draw: function(svg, t) {
@@ -137,16 +141,194 @@ Object.assign(TwovilleGroup, {
 
 // --------------------------------------------------------------------------- 
 
+var TwovilleMask = Object.create(TwovilleShape);
+Object.assign(TwovilleMask, {
+  create: function(env) {
+    var instance = TwovilleShape.create(env);
+    Object.setPrototypeOf(instance, TwovilleMask);
+    instance = Object.assign(instance, {
+      svgElement: document.createElementNS(namespace, 'mask'),
+      children: []
+    });
+    instance.bind('template', null, null, TwovilleBoolean.create(true));
+    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
+    return instance;
+  },
+  draw: function(svg, t) {
+    this.children.forEach(child => child.draw(svg, t));
+  }
+});
+
+// --------------------------------------------------------------------------- 
+
+var TwovilleText = Object.create(TwovilleShape);
+Object.assign(TwovilleText, {
+  create: function(env) {
+    var instance = TwovilleShape.create(env);
+    Object.setPrototypeOf(instance, TwovilleText);
+    instance = Object.assign(instance, {
+      svgElement: document.createElementNS(namespace, 'text')
+    });
+    instance.svgElement.setAttributeNS(null, 'font-size', 8);
+    instance.svgElement.setAttributeNS(null, 'text-anchor', 'middle');
+    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
+    instance.svgElement.appendChild(document.createTextNode('foo'));
+    return instance;
+  },
+  draw: function(svg, t) {
+    if (!this.has('position')) {
+      throw 'no position';
+    }
+    
+    if (!this.has('rgb')) {
+      throw 'no rgb';
+    }
+    
+    if (!this.has('text')) {
+      throw 'no text';
+    }
+    
+    var needsTransforming = false;
+
+    if (this.has('rotation')) {
+      if (this.has('pivot')) {
+        needsTransforming = true;
+      } else {
+        throw 'rotation but not pivot';
+      }
+    }
+
+    // If we have rotation, but no pivot, error.
+
+    var position = this.valueAt('position', t);
+    var rgb = this.valueAt('rgb', t);
+    var text = this.valueAt('text', t);
+
+    if (needsTransforming) {
+      var pivot = this.valueAt('pivot', t);
+      var rotation = this.valueAt('rotation', t);
+    }
+
+    if (position == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
+      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    } else {
+      if (needsTransforming) {
+        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
+      }
+
+      if (this.has('stroke')) {
+        var stroke = this.get('stroke');
+        if (stroke.owns('size') &&
+            stroke.owns('rgb') &&
+            stroke.owns('opacity')) {
+          var strokeSize = stroke.valueAt('size', t);
+          var strokeRGB = stroke.valueAt('rgb', t);
+          var strokeOpacity = stroke.valueAt('opacity', t);
+          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+        }
+      }
+
+      this.svgElement.childNodes[0].nodeValue = text.get();
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
+      this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
+      this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
+      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+    }
+  }
+});
+
+// --------------------------------------------------------------------------- 
+
+var TwovilleLine = Object.create(TwovilleShape);
+Object.assign(TwovilleLine, {
+  create: function(env) {
+    var instance = TwovilleShape.create(env);
+    Object.setPrototypeOf(instance, TwovilleLine);
+    instance = Object.assign(instance, {
+      svgElement: document.createElementNS(namespace, 'line')
+    });
+    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
+    return instance;
+  },
+  draw: function(svg, t) {
+    if (!this.has('a')) {
+      throw 'no a';
+    }
+    
+    if (!this.has('b')) {
+      throw 'no b';
+    }
+    
+    if (!this.has('rgb')) {
+      throw 'no rgb';
+    }
+    
+    var needsTransforming = false;
+
+    if (this.has('rotation')) {
+      if (this.has('pivot')) {
+        needsTransforming = true;
+      } else {
+        throw 'rotation but not pivot';
+      }
+    }
+
+    // If we have rotation, but no pivot, error.
+
+    var a = this.valueAt('a', t);
+    var b = this.valueAt('b', t);
+    var rgb = this.valueAt('rgb', t);
+
+    if (needsTransforming) {
+      var pivot = this.valueAt('pivot', t);
+      var rotation = this.valueAt('rotation', t);
+    }
+
+    if (a == null || b == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
+      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    } else {
+      if (needsTransforming) {
+        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
+      }
+
+      if (this.has('stroke')) {
+        var stroke = this.get('stroke');
+        if (stroke.owns('size') &&
+            stroke.owns('rgb') &&
+            stroke.owns('opacity')) {
+          var strokeSize = stroke.valueAt('size', t);
+          var strokeRGB = stroke.valueAt('rgb', t);
+          var strokeOpacity = stroke.valueAt('opacity', t);
+          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+        }
+      }
+
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
+      this.svgElement.setAttributeNS(null, 'x1', a.get(0).get());
+      this.svgElement.setAttributeNS(null, 'y1', a.get(1).get());
+      this.svgElement.setAttributeNS(null, 'x2', b.get(0).get());
+      this.svgElement.setAttributeNS(null, 'y2', b.get(1).get());
+      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+    }
+  }
+});
+
+// --------------------------------------------------------------------------- 
+
 var TwovilleRectangle = Object.create(TwovilleShape);
 Object.assign(TwovilleRectangle, {
   create: function(env) {
+    console.log("rectangle env:", env);
     var instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleRectangle);
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'rect')
     });
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    // instance.parentElement.appendChild(instance.svgElement);
     return instance;
   },
   draw: function(svg, t) {
@@ -276,14 +458,18 @@ Object.assign(TwovilleCircle, {
         this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
       }
 
-      if (this.has('stroke') && this.bi) {
+      if (this.has('stroke')) {
         var stroke = this.get('stroke');
-        var strokeSize = stroke.valueAt('size', t);
-        var strokeRGB = stroke.valueAt('rgb', t);
-        var strokeOpacity = stroke.valueAt('opacity', t);
-        this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-        this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
-        this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+        if (stroke.owns('size') &&
+            stroke.owns('rgb') &&
+            stroke.owns('opacity')) {
+          var strokeSize = stroke.valueAt('size', t);
+          var strokeRGB = stroke.valueAt('rgb', t);
+          var strokeOpacity = stroke.valueAt('opacity', t);
+          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+        }
       }
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
@@ -352,6 +538,29 @@ Object.assign(TwovilleVector, {
 
 // --------------------------------------------------------------------------- 
 
+var TwovilleString = Object.create(TwovilleData);
+Object.assign(TwovilleString, {
+  create: function(x) {
+    var instance = TwovilleData.create();
+    Object.setPrototypeOf(instance, TwovilleString);
+    instance = Object.assign(instance, {
+      x: x
+    });
+    return instance;
+  },
+  toString: function() {
+    return '' + this.x;
+  },
+  get: function() {
+    return this.x;
+  },
+  interpolate: function(other, proportion) {
+    return TwovilleString.create(proportion <= 0.5 ? this.get() : other.get());
+  }
+});
+
+// --------------------------------------------------------------------------- 
+
 var TwovilleInteger = Object.create(TwovilleData);
 Object.assign(TwovilleInteger, {
   create: function(x) {
@@ -389,10 +598,10 @@ Object.assign(TwovilleInteger, {
   multiply: function(other) {
     if (Object.getPrototypeOf(other) === TwovilleInteger) {
       return TwovilleInteger.create(this.get() * other.get());
-    } else if (other === TwovilleReal) {
+    } else if (Object.getPrototypeOf(other) === TwovilleReal) {
       return TwovilleReal.create(this.get() * other.get());
     } else {
-      throw '...';
+      throw 'bad ****';
     }
   },
   divide: function(other) {
@@ -453,11 +662,13 @@ Object.assign(TwovilleReal, {
     }
   },
   multiply: function(other) {
+    console.log("other:", other);
+    console.log("Object.getPrototypeOf(other):", Object.getPrototypeOf(other));
     if (Object.getPrototypeOf(other) === TwovilleInteger ||
         Object.getPrototypeOf(other) === TwovilleReal) {
       return TwovilleReal.create(this.get() * other.get());
     } else {
-      throw '...';
+      throw 'BAD *';
     }
   },
   divide: function(other) {
@@ -519,6 +730,32 @@ var ExpressionRectangle = {
 
 // --------------------------------------------------------------------------- 
 
+var ExpressionLine = {
+  create: function(parent) {
+    return Object.create(ExpressionLine);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var r = TwovilleLine.create(env);
+    env.shapes.push(r);
+    return r;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+var ExpressionText = {
+  create: function(parent) {
+    return Object.create(ExpressionText);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var r = TwovilleText.create(env);
+    env.shapes.push(r);
+    return r;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
 var ExpressionCircle = {
   create: function(parent) {
     return Object.create(ExpressionCircle);
@@ -560,6 +797,32 @@ var ExpressionRandom = {
 
 // --------------------------------------------------------------------------- 
 
+var ExpressionSine = {
+  create: function(parent) {
+    return Object.create(ExpressionSine);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var degrees = env['degrees'].get();
+    var x = Math.sin(degrees * Math.PI / 180);
+    return TwovilleReal.create(x);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+var ExpressionCosine = {
+  create: function(parent) {
+    return Object.create(ExpressionCosine);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var degrees = env['degrees'].get();
+    var x = Math.cos(degrees * Math.PI / 180);
+    return TwovilleReal.create(x);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 // The casting function.
 var ExpressionInt = {
   create: function(parent) {
@@ -582,6 +845,19 @@ var ExpressionGroup = {
     var group = TwovilleGroup.create(env);
     env.shapes.push(group);
     return group;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+var ExpressionMask = {
+  create: function(parent) {
+    return Object.create(ExpressionMask);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    var mask = TwovilleMask.create(env);
+    env.shapes.push(mask);
+    return mask;
   }
 };
 

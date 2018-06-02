@@ -28,6 +28,18 @@ var ExpressionInteger = {
 
 // --------------------------------------------------------------------------- 
 
+var ExpressionString = {
+  create: function(x) {
+    var instance = Object.create(ExpressionString);
+    return Object.assign(instance, {x: x});
+  },
+  evaluate: function(env, fromTime, toTime) {
+    return TwovilleString.create(this.x);
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
 var ExpressionReal = {
   create: function(x) {
     var instance = Object.create(ExpressionReal);
@@ -219,6 +231,37 @@ var ExpressionAssignment = {
 
 // --------------------------------------------------------------------------- 
 
+var ExpressionFor = {
+  create: function(i, start, stop, by, body) {
+    var instance = Object.create(ExpressionFor);
+    return Object.assign(instance, {
+      i: i,
+      start: start,
+      stop: stop,
+      by: by,
+      body: body
+    });
+  },
+  evaluate: function(env, fromTime, toTime) {
+    start = this.start.evaluate(env, fromTime, toTime).get();
+    stop = this.stop.evaluate(env, fromTime, toTime).get();
+    by = this.by.evaluate(env, fromTime, toTime).get();
+    // iterator = this.by.evaluate(env, fromTime, toTime);
+
+    console.log("start:", start);
+    console.log("stop:", stop);
+    console.log("by:", by);
+    console.log("this.i:", this.i);
+
+    for (var i = start; i <= stop; i += by) {
+      ExpressionAssignment.create(this.i, TwovilleInteger.create(i)).evaluate(env, fromTime, toTime);
+      this.body.evaluate(env, fromTime, toTime);
+    }
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
 var ExpressionProperty = {
   create: function(base, property) {
     var instance = Object.create(ExpressionProperty);
@@ -349,13 +392,21 @@ var StatementWith = {
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    // var id = this.id.source;
-    // if (env.has(id)) {
+    // console.log("pre env:", env);
+    // console.log("this.scope:", this.scope);
     var withEnv = this.scope.evaluate(env, fromTime, toTime);
-    return this.body.evaluate(withEnv, fromTime, toTime);
-    // } else {
-      // throw 'no such env ' + id;
+    // console.log("withEnv:", withEnv);
+
+    // Allow functions to access scope at time of definition.
+    // var bindings = {};
+    // for (var key in env.bindings) {
+      // if (env.bindings.hasOwnProperty(key)) {
+        // withEnv.bindings[key] = env.bindings[key];
+      // }
     // }
+    withEnv.parent = env;
+
+    return this.body.evaluate(withEnv, fromTime, toTime);
   }
 };
 

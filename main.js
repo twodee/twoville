@@ -29,7 +29,7 @@ function highlight(lineStart, lineEnd, columnStart, columnEnd) {
 }
 
 function log(text) {
-  console.log("text:", text);
+  console.trace("text:", text);
   text = text.replace(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):/, function(__, lineStart, lineEnd, columnStart, columnEnd) {
     return '<a href="javascript:highlight(' + lineStart + ', ' + lineEnd + ', ' + columnStart + ', ' + columnEnd + ')">Line ' + (parseInt(lineEnd) + 1) + '</a>: '
   });
@@ -260,10 +260,28 @@ evalButton.onclick = function() {
     body: ExpressionRectangle.create()
   };
 
+  env.bindings['line'] = {
+    name: 'line',
+    formals: [],
+    body: ExpressionLine.create()
+  };
+
+  env.bindings['text'] = {
+    name: 'text',
+    formals: [],
+    body: ExpressionText.create()
+  };
+
   env.bindings['group'] = {
     name: 'group',
     formals: [],
     body: ExpressionGroup.create()
+  };
+
+  env.bindings['mask'] = {
+    name: 'mask',
+    formals: [],
+    body: ExpressionMask.create()
   };
 
   env.bindings['circle'] = {
@@ -282,6 +300,18 @@ evalButton.onclick = function() {
     name: 'random',
     formals: ['min', 'max'],
     body: ExpressionRandom.create()
+  };
+
+  env.bindings['sin'] = {
+    name: 'sin',
+    formals: ['degrees'],
+    body: ExpressionSine.create()
+  };
+
+  env.bindings['cos'] = {
+    name: 'cos',
+    formals: ['degrees'],
+    body: ExpressionCosine.create()
   };
 
   env.bindings['int'] = {

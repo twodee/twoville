@@ -64,6 +64,17 @@ function lex(source) {
     }
   }
 
+  function string() {
+    consume();
+    while (!has('"')) {
+      consume();
+    }
+    consume();
+    tokenSoFar = tokenSoFar.substr(1, tokenSoFar.length - 2); // chop off "
+    console.log("tokenSoFar:", tokenSoFar);
+    emit(Tokens.String);
+  }
+
   function identifier() {
     consume(); // eat identifier lead
     while (has(/[a-zA-Z0-9_]/)) {
@@ -80,6 +91,16 @@ function lex(source) {
       emit(Tokens.Boolean);
     } else if (tokenSoFar == 'with') {
       emit(Tokens.With);
+    } else if (tokenSoFar == 'for') {
+      emit(Tokens.For);
+    } else if (tokenSoFar == 'from') {
+      emit(Tokens.From);
+    } else if (tokenSoFar == 'to') {
+      emit(Tokens.To);
+    } else if (tokenSoFar == 'through') {
+      emit(Tokens.Through);
+    } else if (tokenSoFar == 'by') {
+      emit(Tokens.By);
     } else {
       emit(Tokens.Identifier);
     }
@@ -153,6 +174,8 @@ function lex(source) {
       digits();
     } else if (has(/[a-zA-Z_]/)) {
       identifier();
+    } else if (has('"')) {
+      string();
     } else if (has('.')) {
       dot();
     } else if (has('-')) {

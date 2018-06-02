@@ -6,6 +6,7 @@ Tokens = Object.freeze({
   Asterisk: 'Asterisk',
   ForwardSlash: 'ForwardSlash',
   Integer: 'Integer',
+  String: 'String',
   Linebreak: 'Linebreak',
   Dot: 'Dot',
   Assign: 'Assign',
@@ -25,6 +26,10 @@ Tokens = Object.freeze({
   Identifier: 'Identifier',
   Repeat: 'Repeat',
   Boolean: 'Boolean',
+  From: 'From',
+  To: 'To',
+  By: 'By',
+  Through: 'Through',
   EOF: 'EOF'
 });
 
