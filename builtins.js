@@ -152,6 +152,14 @@ Object.assign(TwovilleMask, {
     });
     instance.bind('template', null, null, TwovilleBoolean.create(true));
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
+    // var fill = TwovilleRectangle.create(env);
+    // fill.bind('position', null, null, TwovilleVector.create([TwovilleReal.create(-1000), TwovilleReal.create(-1000)]));
+    // fill.bind('size', null, null, TwovilleVector.create([TwovilleReal.create(2000), TwovilleReal.create(2000)]));
+    // fill.bind('rgb', null, null, TwovilleVector.create([TwovilleReal.create(1), TwovilleReal.create(1), TwovilleReal.create(1)]));
+    // fill.bind('parent', null, null, instance);
+    // env.shapes.push(fill);
+    // console.log("!!!!!!!!!! fill:", fill);
+    // instance.children.push(fill);
     return instance;
   },
   draw: function(svg, t) {
@@ -322,7 +330,6 @@ Object.assign(TwovilleLine, {
 var TwovilleRectangle = Object.create(TwovilleShape);
 Object.assign(TwovilleRectangle, {
   create: function(env) {
-    console.log("rectangle env:", env);
     var instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleRectangle);
     instance = Object.assign(instance, {
