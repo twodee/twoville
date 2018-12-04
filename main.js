@@ -45,6 +45,7 @@ function registerResizeListener(bounds, gap, resize) {
     document.removeEventListener('mousedown', unlistener);
   };
   var moveListener = function(event) {
+    event.preventDefault();
     if (event.buttons !== 1) {
       unlistener();
     } else {
@@ -93,6 +94,7 @@ function buildResizer(side, element) {
   return function(event) {
     if (event.buttons === 1) {
       event.stopPropagation();
+      event.preventDefault();
       var bounds = element.getBoundingClientRect();
       var gap = measureGap(event, bounds);
       registerResizeListener(bounds, gap, resize);
