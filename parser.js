@@ -1,10 +1,10 @@
 function parse(tokens) {
-  var i = 0;
-  var indents = [-1];
+  let i = 0;
+  let indents = [-1];
   console.log("tokens:", tokens);
 
   function has(type, offset) {
-    var index = i;
+    let index = i;
     if (offset) {
       index = i + offset;
     }
@@ -22,7 +22,7 @@ function parse(tokens) {
   }
 
   function program() {
-    var b = block();
+    let b = block();
     if (!has(Tokens.EOF)) {
       throw 'Expected EOF saw [' + tokens[i].type + '|' + tokens[i].source + ']';
     }
@@ -34,7 +34,7 @@ function parse(tokens) {
       throw 'expected indent';
     }
 
-    var indentation = tokens[i];
+    let indentation = tokens[i];
 
     if (indentation.source.length <= indents[indents.length - 1]) {
       throw 'not indented enough';
@@ -42,10 +42,10 @@ function parse(tokens) {
     indents.push(indentation.source.length);
 
     console.log("[[[[[[[[[[[");
-    var statements = [];
+    let statements = [];
     console.log("current:", indentation.source.length);
     while (has(Tokens.Indentation) && tokens[i].source.length == indentation.source.length) {
-      // for (var j = 0; j < 10; ++j) {
+      // for (let j = 0; j < 10; ++j) {
         // console.log(tokens[i + j]);
       // }
       consume(); // eat indentation
@@ -53,7 +53,7 @@ function parse(tokens) {
         consume();
       } else if (!has(Tokens.EOF)) {
         console.log("CURrent:", indentation.source.length);
-        var s = statement();
+        let s = statement();
         console.log("s:", s);
         statements.push(s);
       }
@@ -71,7 +71,7 @@ function parse(tokens) {
   function statement() {
     if (has(Tokens.T)) {
       if (has(Tokens.Dot, 1)) {
-        var e = expression();
+        let e = expression();
         if (has(Tokens.Linebreak) || has(Tokens.EOF)) {
           consume();
           return e;
@@ -82,10 +82,10 @@ function parse(tokens) {
         consume();
         if (has(Tokens.RightArrow)) {
           consume();
-          var e = expression();
+          let e = expression();
           if (has(Tokens.Linebreak)) {
             consume();
-            var b = block();
+            let b = block();
             return StatementTo.create(e, b);
           } else if (has(Tokens.RightArrow)) {
             consume();
@@ -93,7 +93,7 @@ function parse(tokens) {
               consume();
               if (has(Tokens.Linebreak)) {
                 consume();
-                var b = block();
+                let b = block();
                 return StatementThrough.create(e, b);
               } else {
                 throw 'expected linebreak after through';
@@ -112,34 +112,34 @@ function parse(tokens) {
 
     else if (has(Tokens.With)) {
       consume(); // eat with
-      var scope = expression();
+      let scope = expression();
       if (!has(Tokens.Linebreak)) {
         throw 'expected linebreak';
       }
       consume(); // eat linebreak
-      var body = block();
+      let body = block();
       return StatementWith.create(scope, body);
     }
     
     // A statement that doesn't start with T.
     else {
-      var e = expression();
+      let e = expression();
 
       if (has(Tokens.RightArrow)) {
-        var from = e;
+        let from = e;
         consume();
         if (has(Tokens.T)) {
           consume();
           if (has(Tokens.Linebreak)) {
             consume();
-            var b = block();
+            let b = block();
             return StatementFrom.create(from, b);
           } else if (has(Tokens.RightArrow)) {
             consume();
-            var to = expression();
+            let to = expression();
             if (has(Tokens.Linebreak)) {
               consume();
-              var b = block();
+              let b = block();
               return StatementBetween.create(from, to, b);
             } else {
               throw 'expected linebreak';
@@ -168,20 +168,20 @@ function parse(tokens) {
   }
 
   function expressionAssignment() {
-    var lhs = expressionAdditive(); 
+    let lhs = expressionAdditive(); 
     if (has(Tokens.Assign)) {
       consume();
-      var rhs = expressionAssignment();
+      let rhs = expressionAssignment();
       lhs = ExpressionAssignment.create(lhs, rhs);
     }
     return lhs;
   }
 
   function expressionAdditive() {
-    var a = expressionMultiplicative();
+    let a = expressionMultiplicative();
     while (has(Tokens.Plus) || has(Tokens.Minus)) {
-      var operator = consume();
-      var b = expressionMultiplicative();
+      let operator = consume();
+      let b = expressionMultiplicative();
       if (operator.type == Tokens.Plus) {
         a = ExpressionAdd.create(a, b);
       } else {
@@ -192,10 +192,10 @@ function parse(tokens) {
   }
 
   function expressionMultiplicative() {
-    var a = expressionProperty();
+    let a = expressionProperty();
     while (has(Tokens.Asterisk) || has(Tokens.ForwardSlash) || has(Tokens.Percent)) {
-      var operator = consume();
-      var b = expressionProperty();
+      let operator = consume();
+      let b = expressionProperty();
       if (operator.type == Tokens.Asterisk) {
         a = ExpressionMultiply.create(a, b);
       } else if (operator.type == Tokens.ForwardSlash) {
@@ -208,10 +208,10 @@ function parse(tokens) {
   }
 
   function expressionProperty() {
-    var base = atom();
+    let base = atom();
     while (has(Tokens.Dot)) {
       consume(); 
-      var property = atom();
+      let property = atom();
       base = ExpressionProperty.create(base, property);
     }
     return base;
@@ -230,37 +230,37 @@ function parse(tokens) {
 
   function atom() {
     if (has(Tokens.Integer)) {
-      var token = consume();
+      let token = consume();
       return ExpressionInteger.create(Number(token.source));
     } else if (has(Tokens.String)) {
-      var token = consume();
+      let token = consume();
       return ExpressionString.create(token.source);
     } else if (has(Tokens.Real)) {
-      var token = consume();
+      let token = consume();
       return ExpressionReal.create(Number(token.source));
     } else if (has(Tokens.Boolean)) {
-      var token = consume();
+      let token = consume();
       console.log("token:", token);
       return ExpressionBoolean.create(token.source == 'true');
     } else if (has(Tokens.For)) {
       consume();
       if (isFirstOfExpression()) {
-        var j = expression();
+        let j = expression();
         console.log("iiiiii:", j);
         if (has(Tokens.From) && isFirstOfExpression(1)) {
           consume();
-          var start = expression();
+          let start = expression();
           if (has(Tokens.To) && isFirstOfExpression(1)) {
             consume();
-            var stop = expression();
+            let stop = expression();
 
             if (!has(Tokens.Linebreak)) {
               throw 'expected linebreak';
             }
             consume(); // eat linebreak
-            var body = block();
+            let body = block();
 
-            var by = TwovilleInteger.create(1);
+            let by = TwovilleInteger.create(1);
 
             return ExpressionFor.create(j, start, stop, by, body);
           }
@@ -268,9 +268,9 @@ function parse(tokens) {
       }
     } else if (has(Tokens.LeftSquareBracket)) {
       consume(); // eat [
-      var elements = [];
+      let elements = [];
       while (!has(Tokens.RightSquareBracket)) {
-        var e = expression();
+        let e = expression();
         elements.push(e);
         if (!has(Tokens.RightSquareBracket)) {
           if (has(Tokens.Comma)) {
@@ -283,10 +283,10 @@ function parse(tokens) {
       consume(); // eat ]
       return ExpressionVector.create(elements);
     } else if (has(Tokens.Identifier) && has(Tokens.LeftParenthesis, 1)) {
-      var name = consume().source;
+      let name = consume().source;
       consume(); // eat (
 
-      var actuals = [];
+      let actuals = [];
       if (isFirstOfExpression()) {
         actuals.push(expression());
         while (has(Tokens.Comma) && isFirstOfExpression(1)) {
@@ -304,27 +304,27 @@ function parse(tokens) {
       return ExpressionFunctionCall.create(name, actuals);
     } else if (has(Tokens.Repeat)) {
       consume(); // eat repeat
-      var count = expression();
+      let count = expression();
       if (!has(Tokens.Linebreak)) {
         throw 'expected linebreak';
       }
       consume(); // eat linebreak
-      var body = block();
+      let body = block();
       console.log("tokens:", tokens);
       console.log("i:", i);
-      for (var j = 0; j < 10; ++j) {
+      for (let j = 0; j < 10; ++j) {
         console.log("tokens[j + i]:", tokens[j + i]);
       }
       return ExpressionRepeat.create(count, body);
     } else if (has(Tokens.Identifier) || has(Tokens.T)) {
-      var id = consume();
+      let id = consume();
       return ExpressionIdentifier.create(id);
     } else {
       throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';
     }
   }
 
-  var ast = program();
+  let ast = program();
 
   return ast;
 }

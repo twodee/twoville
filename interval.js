@@ -1,6 +1,6 @@
-var Interval = {
+let Interval = {
   create: function(fromTime, fromValue, toTime, toValue) {
-    var instance = Object.create(Interval);
+    let instance = Object.create(Interval);
     instance.setFrom(fromTime, fromValue);
     instance.setTo(toTime, toValue);
     return instance;
@@ -36,7 +36,7 @@ var Interval = {
     } else if (!this.hasTo()) {
       return this.fromValue;
     } else {
-      var proportion = (t - this.fromTime.get()) / this.duration();
+      let proportion = (t - this.fromTime.get()) / this.duration();
       return this.fromValue.interpolate(this.toValue, proportion);
     }
   }

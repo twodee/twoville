@@ -1,6 +1,6 @@
-var Timeline = {
+let Timeline = {
   create: function() {
-    var instance = Object.create(Timeline);
+    let instance = Object.create(Timeline);
     return Object.assign(instance, {
       defaultValue: null,
       intervals: []
@@ -29,7 +29,7 @@ var Timeline = {
     return this.intervals.find(interval => interval.spans(t));
   },
   valueAt: function(t) {
-    var interval = this.intervalAt(t);
+    let interval = this.intervalAt(t);
     if (interval) {
       return interval.interpolate(t);
     } else if (this.defaultValue != null) {
@@ -48,7 +48,7 @@ var Timeline = {
       console.log("t:", t);
       console.log("value:", value);
       console.log("timelineB:", this.toString());
-      var i = 0;
+      let i = 0;
       while (i < this.intervals.length &&
              this.intervals[i].hasFrom() &&
              this.intervals[i].fromTime.get() <= t.get()) {
@@ -86,7 +86,7 @@ var Timeline = {
       console.log("t:", typeof t);
       console.log("value:", value);
       console.log("timeline1:", this.toString());
-      var i = 0;
+      let i = 0;
       while (i < this.intervals.length &&
              this.intervals[i].hasFrom() &&
              this.intervals[i].fromTime.get() <= t.get()) {

@@ -1,15 +1,15 @@
 function lex(source) {
   
-  var iStartIndex = 0;
-  var iEndIndex = -1;
-  var iStartColumn = 0;
-  var iEndColumn = -1;
-  var iStartLine = 0;
-  var iEndLine = 0;
+  let iStartIndex = 0;
+  let iEndIndex = -1;
+  let iStartColumn = 0;
+  let iEndColumn = -1;
+  let iStartLine = 0;
+  let iEndLine = 0;
 
-  var i = 0;
-  var tokens = [];
-  var tokenSoFar = '';
+  let i = 0;
+  let tokens = [];
+  let tokenSoFar = '';
 
   function consume() {
     iEndIndex += 1;
@@ -23,7 +23,7 @@ function lex(source) {
   }
 
   function has(pattern, offset) {
-    var index = i;
+    let index = i;
     if (offset) {
       index = i + offset;
     }

@@ -33,9 +33,9 @@ Tokens = Object.freeze({
   EOF: 'EOF'
 });
 
-var SourceLocation = {
+let SourceLocation = {
   create: function(lineStart, lineEnd, columnStart, columnEnd, indexStart, indexEnd) {
-    var instance = Object.create(SourceLocation);
+    let instance = Object.create(SourceLocation);
     return Object.assign(instance, {
       lineStart: lineStart,
       lineEnd: lineEnd,
@@ -53,9 +53,9 @@ var SourceLocation = {
   }
 }
 
-var Token = {
+let Token = {
   create: function(type, source, where) {
-    var instance = Object.create(Token);
+    let instance = Object.create(Token);
     return Object.assign(instance, {
       type: type,
       source: source,

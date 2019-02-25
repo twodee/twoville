@@ -1,4 +1,4 @@
-var editor = ace.edit('editor');
+let editor = ace.edit('editor');
 editor.setTheme('ace/theme/twilight');
 editor.setOptions({
   fontSize: '14pt',
@@ -8,22 +8,22 @@ editor.setOptions({
 if (localStorage.getItem('src') !== null) {
   editor.setValue(localStorage.getItem('src'), 1);
 }
-var Range = ace.require('ace/range').Range;
+let Range = ace.require('ace/range').Range;
 
-var left = document.getElementById('left');
-var messager = document.getElementById('messager');
-var messagerContainer = document.getElementById('messagerContainer');
-var evalButton = document.getElementById('eval');
-var recordButton = document.getElementById('record');
-var spinner = document.getElementById('spinner');
-var saveButton = document.getElementById('save');
-var exportButton = document.getElementById('export');
-var svg = document.getElementById('svg');
-var scrubber = document.getElementById('scrubber');
-var timeSpinner = document.getElementById('timeSpinner');
-var playOnceButton = document.getElementById('playOnceButton');
-var playLoopButton = document.getElementById('playLoopButton');
-var env;
+let left = document.getElementById('left');
+let messager = document.getElementById('messager');
+let messagerContainer = document.getElementById('messagerContainer');
+let evalButton = document.getElementById('eval');
+let recordButton = document.getElementById('record');
+let spinner = document.getElementById('spinner');
+let saveButton = document.getElementById('save');
+let exportButton = document.getElementById('export');
+let svg = document.getElementById('svg');
+let scrubber = document.getElementById('scrubber');
+let timeSpinner = document.getElementById('timeSpinner');
+let playOnceButton = document.getElementById('playOnceButton');
+let playLoopButton = document.getElementById('playLoopButton');
+let env;
 
 function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
@@ -41,12 +41,12 @@ function log(text) {
 // --------------------------------------------------------------------------- 
 
 function registerResizeListener(bounds, gap, resize) {
-  var unlistener = function(event) {
+  let unlistener = function(event) {
     document.removeEventListener('mousemove', moveListener);
     document.removeEventListener('mouseup', unlistener);
     document.removeEventListener('mousedown', unlistener);
   };
-  var moveListener = function(event) {
+  let moveListener = function(event) {
     event.preventDefault();
     if (event.buttons !== 1) {
       unlistener();
@@ -62,31 +62,27 @@ function registerResizeListener(bounds, gap, resize) {
 
 function buildResizer(side, element) {
   if (side === 'right') {
-    var measureGap = (event, bounds) => event.clientX - bounds.right;
-    var resize = (event, bounds, gap) => {
-      var bounds = element.getBoundingClientRect();
-      var width = event.clientX - bounds.x - gap;
+    let measureGap = (event, bounds) => event.clientX - bounds.right;
+    let resize = (event, bounds, gap) => {
+      let width = event.clientX - bounds.x - gap;
       element.style.width = width + 'px';
     };
   } else if (side === 'left') {
-    var measureGap = (event, bounds) => event.clientX - bounds.left;
-    var resize = (event, bounds, gap) => {
-      var bounds = element.getBoundingClientRect();
-      var width = bounds.right - event.clientX - gap;
+    let measureGap = (event, bounds) => event.clientX - bounds.left;
+    let resize = (event, bounds, gap) => {
+      let width = bounds.right - event.clientX - gap;
       element.style.width = width + 'px';
     };
   } else if (side === 'top') {
-    var measureGap = (event, bounds) => event.clientY - bounds.top;
-    var resize = (event, bounds, gap) => {
-      var bounds = messagerContainer.getBoundingClientRect();
-      var height = bounds.bottom - event.clientY;
+    let measureGap = (event, bounds) => event.clientY - bounds.top;
+    let resize = (event, bounds, gap) => {
+      let height = bounds.bottom - event.clientY;
       messagerContainer.style.height = height + 'px';
     };
   } else if (side === 'bottom') {
-    var measureGap = (event, bounds) => event.clientY - bounds.bottom;
-    var resize = (event, bounds, gap) => {
-      var bounds = messagerContainer.getBoundingClientRect();
-      var height = bounds.bottom - event.clientY;
+    let measureGap = (event, bounds) => event.clientY - bounds.bottom;
+    let resize = (event, bounds, gap) => {
+      let height = bounds.bottom - event.clientY;
       messagerContainer.style.height = height + 'px';
     };
   } else {
@@ -97,23 +93,23 @@ function buildResizer(side, element) {
     if (event.buttons === 1) {
       event.stopPropagation();
       event.preventDefault();
-      var bounds = element.getBoundingClientRect();
-      var gap = measureGap(event, bounds);
+      let bounds = element.getBoundingClientRect();
+      let gap = measureGap(event, bounds);
       registerResizeListener(bounds, gap, resize);
     }
   }
 }
 
-var directions = {
+let directions = {
   horizontal: ['right', 'left'],
   vertical: ['top', 'bottom']
 };
 for (direction in directions) {
   sides = directions[direction];
   sides.forEach(side => {
-    var resizables = document.querySelectorAll('.resizable-' + side);
+    let resizables = document.querySelectorAll('.resizable-' + side);
     resizables.forEach(resizable => {
-      var div = document.createElement('div');
+      let div = document.createElement('div');
       div.classList.add('resizer', 'resizer-' + direction, 'resizer-' + side);
       resizable.appendChild(div);
       div.addEventListener('mousedown', buildResizer(side, resizable));
@@ -135,14 +131,14 @@ function stopSpinning() {
 
 recordButton.onclick = function() {
   startSpinning();
-  var box = svg.getBoundingClientRect();
+  let box = svg.getBoundingClientRect();
 
   // I don't know why I need to set the viewport explicitly. Setting the size
   // of the image isn't sufficient.
   svg.setAttribute('width', box.width);
   svg.setAttribute('height', box.height);
 
-  var gif = new GIF({
+  let gif = new GIF({
     workers: 3,
     quality: 1,
     // transparent: '#000000',
@@ -163,11 +159,11 @@ recordButton.onclick = function() {
       } else {
         env.shapes.forEach(shape => shape.draw(env.svg, i));
 
-        var data = new XMLSerializer().serializeToString(svg);
-        var svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
-        var url = URL.createObjectURL(svgBlob);
+        let data = new XMLSerializer().serializeToString(svg);
+        let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+        let url = URL.createObjectURL(svgBlob);
 
-        var img = new Image();
+        let img = new Image();
         img.onload = function () {
           gif.addFrame(img, {
             delay: 10,
@@ -193,7 +189,7 @@ saveButton.onclick = function() {
 }
 
 function downloadBlob(name, blob) {
-  var link = document.createElement('a');
+  let link = document.createElement('a');
   link.download = name;
   link.href = URL.createObjectURL(blob);
   // Firefox needs the element to be live for some reason.
@@ -206,8 +202,8 @@ function downloadBlob(name, blob) {
 }
 
 exportButton.onclick = function() {
-  var data = new XMLSerializer().serializeToString(svg);
-  var svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+  let data = new XMLSerializer().serializeToString(svg);
+  let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
   downloadBlob('download.svg', svgBlob);
 }
 
@@ -225,7 +221,7 @@ timeSpinner.oninput = function() {
   scrubTo(timeSpinner.value);
 }
 
-var animateTask = null;
+let animateTask = null;
 
 function animateFrame(i, isLoop = false) {
   scrubTo(i);
@@ -262,7 +258,7 @@ evalButton.onclick = function() {
   while (svg.lastChild) {
     svg.removeChild(svg.lastChild);
   }
-  var defs = document.createElementNS(namespace, 'defs');
+  let defs = document.createElementNS(namespace, 'defs');
   svg.appendChild(defs);
 
   tokens = lex(editor.getValue());
@@ -360,8 +356,8 @@ evalButton.onclick = function() {
     ast.evaluate(env);
     console.log("env:", env);
 
-    var dimensions = env.get('viewport').get('size');
-    var corner = env.get('viewport').get('position');
+    let dimensions = env.get('viewport').get('size');
+    let corner = env.get('viewport').get('position');
     env.svg.setAttributeNS(null, 'width', dimensions.get(0).get());
     env.svg.setAttributeNS(null, 'height', dimensions.get(1).get());
     env.svg.setAttributeNS(null, 'viewBox',
@@ -373,12 +369,12 @@ evalButton.onclick = function() {
 
     env.shapes.forEach(shape => shape.domify(env.svg));
 
-    var tmin = env.get('t').get('start').get();
-    var tmax = env.get('t').get('stop').get();
+    let tmin = env.get('t').get('start').get();
+    let tmax = env.get('t').get('stop').get();
     scrubber.min = tmin;
     scrubber.max = tmax;
 
-    var t = parseFloat(scrubber.value);
+    let t = parseFloat(scrubber.value);
     if (t < tmin) {
       scrubTo(tmin);
     } else if (t > tmax) {

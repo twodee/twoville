@@ -1,8 +1,8 @@
 // --------------------------------------------------------------------------- 
 
-var TwovilleEnvironment = {
+let TwovilleEnvironment = {
   create: function(parent) {
-    var instance = Object.create(TwovilleEnvironment);
+    let instance = Object.create(TwovilleEnvironment);
     return Object.assign(instance, {
       bindings: {},
       shapes: parent.shapes,
@@ -11,7 +11,7 @@ var TwovilleEnvironment = {
     });
   },
   get: function(id) {
-    var env = this;
+    let env = this;
     while (env != null) {
       if (env.bindings.hasOwnProperty(id)) {
         return env.bindings[id];
@@ -24,7 +24,7 @@ var TwovilleEnvironment = {
     return this.bindings.hasOwnProperty(id);
   },
   has: function(id) {
-    var env = this;
+    let env = this;
     while (env != null) {
       if (env.bindings.hasOwnProperty(id)) {
         return true;
@@ -47,10 +47,10 @@ var TwovilleEnvironment = {
 
 // ---------------------------------------------------------------------------
 
-var TwovilleTimelinedEnvironment = Object.create(TwovilleEnvironment);
+let TwovilleTimelinedEnvironment = Object.create(TwovilleEnvironment);
 Object.assign(TwovilleTimelinedEnvironment, {
   create: function(env) {
-    var instance = TwovilleEnvironment.create(env);
+    let instance = TwovilleEnvironment.create(env);
     Object.setPrototypeOf(instance, TwovilleTimelinedEnvironment);
     return instance;
   },
@@ -74,11 +74,11 @@ Object.assign(TwovilleTimelinedEnvironment, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleShape = Object.create(TwovilleTimelinedEnvironment);
+let TwovilleShape = Object.create(TwovilleTimelinedEnvironment);
 Object.assign(TwovilleShape, {
   serial: 0,
   create: function(env) {
-    var instance = TwovilleTimelinedEnvironment.create(env);
+    let instance = TwovilleTimelinedEnvironment.create(env);
     Object.setPrototypeOf(instance, TwovilleShape);
     instance = Object.assign(instance, {
       id: TwovilleShape.serial,
@@ -91,11 +91,11 @@ Object.assign(TwovilleShape, {
   },
   domify: function(svg) {
     if (this.has('clippers')) {
-      var clipPath = document.createElementNS(namespace, 'clipPath')
+      let clipPath = document.createElementNS(namespace, 'clipPath')
       clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
-      var clippers = this.get('clippers').getDefault();
+      let clippers = this.get('clippers').getDefault();
       clippers.forEach(clipper => {
-        var use = document.createElementNS(namespace, 'use');
+        let use = document.createElementNS(namespace, 'use');
         use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
         clipPath.appendChild(use);
       });
@@ -104,7 +104,7 @@ Object.assign(TwovilleShape, {
     }
 
     if (this.owns('mask')) {
-      var mask = this.get('mask').getDefault();
+      let mask = this.get('mask').getDefault();
       this.svgElement.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
     }
 
@@ -121,10 +121,10 @@ Object.assign(TwovilleShape, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleGroup = Object.create(TwovilleShape);
+let TwovilleGroup = Object.create(TwovilleShape);
 Object.assign(TwovilleGroup, {
   create: function(env) {
-    var instance = TwovilleShape.create(env);
+    let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleGroup);
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'group'),
@@ -141,10 +141,10 @@ Object.assign(TwovilleGroup, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleMask = Object.create(TwovilleShape);
+let TwovilleMask = Object.create(TwovilleShape);
 Object.assign(TwovilleMask, {
   create: function(env) {
-    var instance = TwovilleShape.create(env);
+    let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleMask);
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'mask'),
@@ -152,7 +152,7 @@ Object.assign(TwovilleMask, {
     });
     instance.bind('template', null, null, TwovilleBoolean.create(true));
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    // var fill = TwovilleRectangle.create(env);
+    // let fill = TwovilleRectangle.create(env);
     // fill.bind('position', null, null, TwovilleVector.create([TwovilleReal.create(-1000), TwovilleReal.create(-1000)]));
     // fill.bind('size', null, null, TwovilleVector.create([TwovilleReal.create(2000), TwovilleReal.create(2000)]));
     // fill.bind('rgb', null, null, TwovilleVector.create([TwovilleReal.create(1), TwovilleReal.create(1), TwovilleReal.create(1)]));
@@ -169,10 +169,10 @@ Object.assign(TwovilleMask, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleText = Object.create(TwovilleShape);
+let TwovilleText = Object.create(TwovilleShape);
 Object.assign(TwovilleText, {
   create: function(env) {
-    var instance = TwovilleShape.create(env);
+    let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleText);
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'text')
@@ -196,7 +196,7 @@ Object.assign(TwovilleText, {
       throw 'no text';
     }
     
-    var needsTransforming = false;
+    let needsTransforming = false;
 
     if (this.has('rotation')) {
       if (this.has('pivot')) {
@@ -208,13 +208,13 @@ Object.assign(TwovilleText, {
 
     // If we have rotation, but no pivot, error.
 
-    var position = this.valueAt('position', t);
-    var rgb = this.valueAt('rgb', t);
-    var text = this.valueAt('text', t);
+    let position = this.valueAt('position', t);
+    let rgb = this.valueAt('rgb', t);
+    let text = this.valueAt('text', t);
 
     if (needsTransforming) {
-      var pivot = this.valueAt('pivot', t);
-      var rotation = this.valueAt('rotation', t);
+      let pivot = this.valueAt('pivot', t);
+      let rotation = this.valueAt('rotation', t);
     }
 
     if (position == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
@@ -225,13 +225,13 @@ Object.assign(TwovilleText, {
       }
 
       if (this.has('stroke')) {
-        var stroke = this.get('stroke');
+        let stroke = this.get('stroke');
         if (stroke.owns('size') &&
             stroke.owns('rgb') &&
             stroke.owns('opacity')) {
-          var strokeSize = stroke.valueAt('size', t);
-          var strokeRGB = stroke.valueAt('rgb', t);
-          var strokeOpacity = stroke.valueAt('opacity', t);
+          let strokeSize = stroke.valueAt('size', t);
+          let strokeRGB = stroke.valueAt('rgb', t);
+          let strokeOpacity = stroke.valueAt('opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
           this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
           this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
@@ -249,10 +249,10 @@ Object.assign(TwovilleText, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleLine = Object.create(TwovilleShape);
+let TwovilleLine = Object.create(TwovilleShape);
 Object.assign(TwovilleLine, {
   create: function(env) {
-    var instance = TwovilleShape.create(env);
+    let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleLine);
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'line')
@@ -273,7 +273,7 @@ Object.assign(TwovilleLine, {
       throw 'no rgb';
     }
     
-    var needsTransforming = false;
+    let needsTransforming = false;
 
     if (this.has('rotation')) {
       if (this.has('pivot')) {
@@ -285,13 +285,13 @@ Object.assign(TwovilleLine, {
 
     // If we have rotation, but no pivot, error.
 
-    var a = this.valueAt('a', t);
-    var b = this.valueAt('b', t);
-    var rgb = this.valueAt('rgb', t);
+    let a = this.valueAt('a', t);
+    let b = this.valueAt('b', t);
+    let rgb = this.valueAt('rgb', t);
 
     if (needsTransforming) {
-      var pivot = this.valueAt('pivot', t);
-      var rotation = this.valueAt('rotation', t);
+      let pivot = this.valueAt('pivot', t);
+      let rotation = this.valueAt('rotation', t);
     }
 
     if (a == null || b == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
@@ -302,13 +302,13 @@ Object.assign(TwovilleLine, {
       }
 
       if (this.has('stroke')) {
-        var stroke = this.get('stroke');
+        let stroke = this.get('stroke');
         if (stroke.owns('size') &&
             stroke.owns('rgb') &&
             stroke.owns('opacity')) {
-          var strokeSize = stroke.valueAt('size', t);
-          var strokeRGB = stroke.valueAt('rgb', t);
-          var strokeOpacity = stroke.valueAt('opacity', t);
+          let strokeSize = stroke.valueAt('size', t);
+          let strokeRGB = stroke.valueAt('rgb', t);
+          let strokeOpacity = stroke.valueAt('opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
           this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
           this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
@@ -327,10 +327,10 @@ Object.assign(TwovilleLine, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleRectangle = Object.create(TwovilleShape);
+let TwovilleRectangle = Object.create(TwovilleShape);
 Object.assign(TwovilleRectangle, {
   create: function(env) {
-    var instance = TwovilleShape.create(env);
+    let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleRectangle);
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'rect')
@@ -351,7 +351,7 @@ Object.assign(TwovilleRectangle, {
       throw 'no rgb';
     }
     
-    var needsTransforming = false;
+    let needsTransforming = false;
 
     if (this.has('rotation')) {
       if (this.has('pivot')) {
@@ -363,13 +363,13 @@ Object.assign(TwovilleRectangle, {
 
     // If we have rotation, but no pivot, error.
 
-    var position = this.valueAt('position', t);
-    var size = this.valueAt('size', t);
-    var rgb = this.valueAt('rgb', t);
+    let position = this.valueAt('position', t);
+    let size = this.valueAt('size', t);
+    let rgb = this.valueAt('rgb', t);
 
     if (needsTransforming) {
-      var pivot = this.valueAt('pivot', t);
-      var rotation = this.valueAt('rotation', t);
+      let pivot = this.valueAt('pivot', t);
+      let rotation = this.valueAt('rotation', t);
     }
 
     if (position == null || size == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
@@ -380,13 +380,13 @@ Object.assign(TwovilleRectangle, {
       }
 
       if (this.has('stroke')) {
-        var stroke = this.get('stroke');
+        let stroke = this.get('stroke');
         if (stroke.owns('size') &&
             stroke.owns('rgb') &&
             stroke.owns('opacity')) {
-          var strokeSize = stroke.valueAt('size', t);
-          var strokeRGB = stroke.valueAt('rgb', t);
-          var strokeOpacity = stroke.valueAt('opacity', t);
+          let strokeSize = stroke.valueAt('size', t);
+          let strokeRGB = stroke.valueAt('rgb', t);
+          let strokeOpacity = stroke.valueAt('opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
           this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
           this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
@@ -394,7 +394,7 @@ Object.assign(TwovilleRectangle, {
       }
 
       if (this.has('rounding')) {
-        var rounding = this.valueAt('rounding', t);
+        let rounding = this.valueAt('rounding', t);
         this.svgElement.setAttributeNS(null, 'rx', rounding.get());
         this.svgElement.setAttributeNS(null, 'ry', rounding.get());
       }
@@ -411,10 +411,10 @@ Object.assign(TwovilleRectangle, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleCircle = Object.create(TwovilleShape);
+let TwovilleCircle = Object.create(TwovilleShape);
 Object.assign(TwovilleCircle, {
   create: function(env) {
-    var instance = TwovilleShape.create(env);
+    let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleCircle);
     instance = Object.assign(instance, {
       svgElement: document.createElementNS(namespace, 'circle')
@@ -437,7 +437,7 @@ Object.assign(TwovilleCircle, {
       throw 'no rgb';
     }
     
-    var needsTransforming = false;
+    let needsTransforming = false;
 
     if (this.has('rotation')) {
       if (this.has('pivot')) {
@@ -449,13 +449,13 @@ Object.assign(TwovilleCircle, {
 
     // If we have rotation, but no pivot, error.
 
-    var position = this.valueAt('position', t);
-    var radius = this.valueAt('radius', t);
-    var rgb = this.valueAt('rgb', t);
+    let position = this.valueAt('position', t);
+    let radius = this.valueAt('radius', t);
+    let rgb = this.valueAt('rgb', t);
 
     if (needsTransforming) {
-      var pivot = this.valueAt('pivot', t);
-      var rotation = this.valueAt('rotation', t);
+      let pivot = this.valueAt('pivot', t);
+      let rotation = this.valueAt('rotation', t);
     }
 
     if (position == null || radius == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
@@ -466,13 +466,13 @@ Object.assign(TwovilleCircle, {
       }
 
       if (this.has('stroke')) {
-        var stroke = this.get('stroke');
+        let stroke = this.get('stroke');
         if (stroke.owns('size') &&
             stroke.owns('rgb') &&
             stroke.owns('opacity')) {
-          var strokeSize = stroke.valueAt('size', t);
-          var strokeRGB = stroke.valueAt('rgb', t);
-          var strokeOpacity = stroke.valueAt('opacity', t);
+          let strokeSize = stroke.valueAt('size', t);
+          let strokeRGB = stroke.valueAt('rgb', t);
+          let strokeOpacity = stroke.valueAt('opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
           this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
           this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
@@ -490,7 +490,7 @@ Object.assign(TwovilleCircle, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleData = {
+let TwovilleData = {
   create: function() {
     return {};
   },
@@ -504,10 +504,10 @@ var TwovilleData = {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleVector = Object.create(TwovilleData);
+let TwovilleVector = Object.create(TwovilleData);
 Object.assign(TwovilleVector, {
   create: function(elements) {
-    var instance = TwovilleData.create();
+    let instance = TwovilleData.create();
     Object.setPrototypeOf(instance, TwovilleVector);
     instance = Object.assign(instance, {
       elements: elements
@@ -530,9 +530,9 @@ Object.assign(TwovilleVector, {
     // return TwovilleVector.create(this.elements.map(element => element.evaluate(env)));
   },
   toRGB: function(env) {
-    var r = Math.floor(this.elements[0].get() * 255);
-    var g = Math.floor(this.elements[1].get() * 255);
-    var b = Math.floor(this.elements[2].get() * 255);
+    let r = Math.floor(this.elements[0].get() * 255);
+    let g = Math.floor(this.elements[1].get() * 255);
+    let b = Math.floor(this.elements[2].get() * 255);
     return 'rgb(' + r + ', ' + g + ', ' + b + ')';
   },
   toString: function(env) {
@@ -545,10 +545,10 @@ Object.assign(TwovilleVector, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleString = Object.create(TwovilleData);
+let TwovilleString = Object.create(TwovilleData);
 Object.assign(TwovilleString, {
   create: function(x) {
-    var instance = TwovilleData.create();
+    let instance = TwovilleData.create();
     Object.setPrototypeOf(instance, TwovilleString);
     instance = Object.assign(instance, {
       x: x
@@ -568,10 +568,10 @@ Object.assign(TwovilleString, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleInteger = Object.create(TwovilleData);
+let TwovilleInteger = Object.create(TwovilleData);
 Object.assign(TwovilleInteger, {
   create: function(x) {
-    var instance = TwovilleData.create();
+    let instance = TwovilleData.create();
     Object.setPrototypeOf(instance, TwovilleInteger);
     instance = Object.assign(instance, {
       x: x
@@ -636,10 +636,10 @@ Object.assign(TwovilleInteger, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleReal = Object.create(TwovilleData);
+let TwovilleReal = Object.create(TwovilleData);
 Object.assign(TwovilleReal, {
   create: function(x) {
-    var instance = TwovilleData.create();
+    let instance = TwovilleData.create();
     Object.setPrototypeOf(instance, TwovilleReal);
     instance = Object.assign(instance, {
       x: x
@@ -701,10 +701,10 @@ Object.assign(TwovilleReal, {
 
 // --------------------------------------------------------------------------- 
 
-var TwovilleBoolean = Object.create(TwovilleData);
+let TwovilleBoolean = Object.create(TwovilleData);
 Object.assign(TwovilleBoolean, {
   create: function(x) {
-    var instance = TwovilleData.create();
+    let instance = TwovilleData.create();
     Object.setPrototypeOf(instance, TwovilleBoolean);
     instance = Object.assign(instance, {
       x: x
@@ -724,12 +724,12 @@ Object.assign(TwovilleBoolean, {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionRectangle = {
+let ExpressionRectangle = {
   create: function(parent) {
     return Object.create(ExpressionRectangle);
   },
   evaluate: function(env, fromTime, toTime) {
-    var r = TwovilleRectangle.create(env);
+    let r = TwovilleRectangle.create(env);
     env.shapes.push(r);
     return r;
   }
@@ -737,12 +737,12 @@ var ExpressionRectangle = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionLine = {
+let ExpressionLine = {
   create: function(parent) {
     return Object.create(ExpressionLine);
   },
   evaluate: function(env, fromTime, toTime) {
-    var r = TwovilleLine.create(env);
+    let r = TwovilleLine.create(env);
     env.shapes.push(r);
     return r;
   }
@@ -750,12 +750,12 @@ var ExpressionLine = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionText = {
+let ExpressionText = {
   create: function(parent) {
     return Object.create(ExpressionText);
   },
   evaluate: function(env, fromTime, toTime) {
-    var r = TwovilleText.create(env);
+    let r = TwovilleText.create(env);
     env.shapes.push(r);
     return r;
   }
@@ -763,12 +763,12 @@ var ExpressionText = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionCircle = {
+let ExpressionCircle = {
   create: function(parent) {
     return Object.create(ExpressionCircle);
   },
   evaluate: function(env, fromTime, toTime) {
-    var c = TwovilleCircle.create(env);
+    let c = TwovilleCircle.create(env);
     env.shapes.push(c);
     return c;
   }
@@ -776,12 +776,12 @@ var ExpressionCircle = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionPrint = {
+let ExpressionPrint = {
   create: function(parent) {
     return Object.create(ExpressionPrint);
   },
   evaluate: function(env, fromTime, toTime) {
-    var message = env['message'].get();
+    let message = env['message'].get();
     console.log("message:", message);
     log(message.toString(fromTime, toTime));
     return null;
@@ -790,40 +790,40 @@ var ExpressionPrint = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionRandom = {
+let ExpressionRandom = {
   create: function(parent) {
     return Object.create(ExpressionRandom);
   },
   evaluate: function(env, fromTime, toTime) {
-    var min = env['min'].get();
-    var max = env['max'].get();
-    var x = Math.random() * (max - min) + min;
+    let min = env['min'].get();
+    let max = env['max'].get();
+    let x = Math.random() * (max - min) + min;
     return TwovilleReal.create(x);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionSine = {
+let ExpressionSine = {
   create: function(parent) {
     return Object.create(ExpressionSine);
   },
   evaluate: function(env, fromTime, toTime) {
-    var degrees = env['degrees'].get();
-    var x = Math.sin(degrees * Math.PI / 180);
+    let degrees = env['degrees'].get();
+    let x = Math.sin(degrees * Math.PI / 180);
     return TwovilleReal.create(x);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionCosine = {
+let ExpressionCosine = {
   create: function(parent) {
     return Object.create(ExpressionCosine);
   },
   evaluate: function(env, fromTime, toTime) {
-    var degrees = env['degrees'].get();
-    var x = Math.cos(degrees * Math.PI / 180);
+    let degrees = env['degrees'].get();
+    let x = Math.cos(degrees * Math.PI / 180);
     return TwovilleReal.create(x);
   }
 }
@@ -831,25 +831,25 @@ var ExpressionCosine = {
 // --------------------------------------------------------------------------- 
 
 // The casting function.
-var ExpressionInt = {
+let ExpressionInt = {
   create: function(parent) {
     return Object.create(ExpressionInt);
   },
   evaluate: function(env, fromTime, toTime) {
-    var f = env['x'].get();
-    var i = Math.trunc(f);
+    let f = env['x'].get();
+    let i = Math.trunc(f);
     return TwovilleInteger.create(i);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionGroup = {
+let ExpressionGroup = {
   create: function(parent) {
     return Object.create(ExpressionGroup);
   },
   evaluate: function(env, fromTime, toTime) {
-    var group = TwovilleGroup.create(env);
+    let group = TwovilleGroup.create(env);
     env.shapes.push(group);
     return group;
   }
@@ -857,12 +857,12 @@ var ExpressionGroup = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionMask = {
+let ExpressionMask = {
   create: function(parent) {
     return Object.create(ExpressionMask);
   },
   evaluate: function(env, fromTime, toTime) {
-    var mask = TwovilleMask.create(env);
+    let mask = TwovilleMask.create(env);
     env.shapes.push(mask);
     return mask;
   }

@@ -1,12 +1,12 @@
-var namespace = "http://www.w3.org/2000/svg";
+let namespace = "http://www.w3.org/2000/svg";
 
 // --------------------------------------------------------------------------- 
 // PRIMITIVES
 // --------------------------------------------------------------------------- 
 
-var ExpressionBoolean = {
+let ExpressionBoolean = {
   create: function(x) {
-    var instance = Object.create(ExpressionBoolean);
+    let instance = Object.create(ExpressionBoolean);
     return Object.assign(instance, {x: x});
   },
   evaluate: function(env, fromTime, toTime) {
@@ -16,9 +16,9 @@ var ExpressionBoolean = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionInteger = {
+let ExpressionInteger = {
   create: function(x) {
-    var instance = Object.create(ExpressionInteger);
+    let instance = Object.create(ExpressionInteger);
     return Object.assign(instance, {x: x});
   },
   evaluate: function(env, fromTime, toTime) {
@@ -28,9 +28,9 @@ var ExpressionInteger = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionString = {
+let ExpressionString = {
   create: function(x) {
-    var instance = Object.create(ExpressionString);
+    let instance = Object.create(ExpressionString);
     return Object.assign(instance, {x: x});
   },
   evaluate: function(env, fromTime, toTime) {
@@ -40,9 +40,9 @@ var ExpressionString = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionReal = {
+let ExpressionReal = {
   create: function(x) {
-    var instance = Object.create(ExpressionReal);
+    let instance = Object.create(ExpressionReal);
     return Object.assign(instance, {x: x});
   },
   evaluate: function(env, fromTime, toTime) {
@@ -54,79 +54,79 @@ var ExpressionReal = {
 // ARITHMETIC
 // --------------------------------------------------------------------------- 
 
-var ExpressionAdd = {
+let ExpressionAdd = {
   create: function(a, b) {
-    var instance = Object.create(ExpressionAdd);
+    let instance = Object.create(ExpressionAdd);
     return Object.assign(instance, {a: a, b: b});
   },
   evaluate: function(env, fromTime, toTime) {
-    var evalA = this.a.evaluate(env, fromTime, toTime);
-    var evalB = this.b.evaluate(env, fromTime, toTime);
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.add(evalB);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionSubtract = {
+let ExpressionSubtract = {
   create: function(a, b) {
-    var instance = Object.create(ExpressionSubtract);
+    let instance = Object.create(ExpressionSubtract);
     return Object.assign(instance, {a: a, b: b});
   },
   evaluate: function(env, fromTime, toTime) {
-    var evalA = this.a.evaluate(env, fromTime, toTime);
-    var evalB = this.b.evaluate(env, fromTime, toTime);
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.subtract(evalB);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionMultiply = {
+let ExpressionMultiply = {
   create: function(a, b) {
-    var instance = Object.create(ExpressionMultiply);
+    let instance = Object.create(ExpressionMultiply);
     return Object.assign(instance, {a: a, b: b});
   },
   evaluate: function(env, fromTime, toTime) {
-    var evalA = this.a.evaluate(env, fromTime, toTime);
-    var evalB = this.b.evaluate(env, fromTime, toTime);
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.multiply(evalB);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionDivide = {
+let ExpressionDivide = {
   create: function(a, b) {
-    var instance = Object.create(ExpressionDivide);
+    let instance = Object.create(ExpressionDivide);
     return Object.assign(instance, {a: a, b: b});
   },
   evaluate: function(env, fromTime, toTime) {
-    var evalA = this.a.evaluate(env, fromTime, toTime);
-    var evalB = this.b.evaluate(env, fromTime, toTime);
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.divide(evalB);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionRemainder = {
+let ExpressionRemainder = {
   create: function(a, b) {
-    var instance = Object.create(ExpressionRemainder);
+    let instance = Object.create(ExpressionRemainder);
     return Object.assign(instance, {a: a, b: b});
   },
   evaluate: function(env, fromTime, toTime) {
-    var evalA = this.a.evaluate(env, fromTime, toTime);
-    var evalB = this.b.evaluate(env, fromTime, toTime);
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.remainder(evalB);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionFunctionDefinition = {
+let ExpressionFunctionDefinition = {
   create: function(name, formals, body) {
-    var instance = Object.create(ExpressionFunctionDefinition);
+    let instance = Object.create(ExpressionFunctionDefinition);
     return Object.assign(instance, {name: name, formals: formals, body: body});
   },
   evaluate: function(env, fromTime, toTime) {
@@ -140,13 +140,13 @@ var ExpressionFunctionDefinition = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionIdentifier = {
+let ExpressionIdentifier = {
   create: function(token) {
-    var instance = Object.create(ExpressionIdentifier);
+    let instance = Object.create(ExpressionIdentifier);
     return Object.assign(instance, {token: token});
   },
   evaluate: function(env, fromTime, toTime) {
-    var value = env.get(this.token.source);
+    let value = env.get(this.token.source);
     if (value) {
       return value;
     } else {
@@ -156,7 +156,7 @@ var ExpressionIdentifier = {
   assign: function(env, fromTime, toTime, rhs) {
     console.log("rhs:", rhs);
     console.log("this:", this);
-    var value = rhs.evaluate(env, fromTime, toTime);
+    let value = rhs.evaluate(env, fromTime, toTime);
     env.bind(this.token.source, fromTime, toTime, value);
     return value;
   }
@@ -164,9 +164,9 @@ var ExpressionIdentifier = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionFunctionCall = {
+let ExpressionFunctionCall = {
   create: function(name, actuals) {
-    var instance = Object.create(ExpressionFunctionCall);
+    let instance = Object.create(ExpressionFunctionCall);
     return Object.assign(instance, {
       name: name,
       actuals: actuals
@@ -177,18 +177,18 @@ var ExpressionFunctionCall = {
       throw 'no such func ' + name;
     }
 
-    var f = env.bindings[this.name];
+    let f = env.bindings[this.name];
 
     if (this.actuals.length != f.formals.length) {
       throw 'params mismatch!';
     }
 
-    var callEnvironment = {svg: env.svg, bindings: {}, shapes: env.shapes};
+    let callEnvironment = {svg: env.svg, bindings: {}, shapes: env.shapes};
     this.actuals.forEach((actual, i) => {
       callEnvironment[f.formals[i]] = actual.evaluate(env, fromTime, toTime);
     });
 
-    var returnValue = f.body.evaluate(callEnvironment, fromTime, toTime);
+    let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime);
     return returnValue;
   }
 };
@@ -197,13 +197,13 @@ var ExpressionFunctionCall = {
 //
 // ---------------------------------------------------------------------------
 
-var Block = {
+let Block = {
   create: function(statements) {
-    var instance = Object.create(Block);
+    let instance = Object.create(Block);
     return Object.assign(instance, {statements: statements});
   },
   evaluate: function(env, fromTime, toTime) {
-    var result = null;
+    let result = null;
     this.statements.forEach(statement => {
       result = statement.evaluate(env, fromTime, toTime)
     });
@@ -213,9 +213,9 @@ var Block = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionAssignment = {
+let ExpressionAssignment = {
   create: function(l, r) {
-    var instance = Object.create(ExpressionAssignment);
+    let instance = Object.create(ExpressionAssignment);
     return Object.assign(instance, {l: l, r: r});
   },
   evaluate: function(env, fromTime, toTime) {
@@ -231,9 +231,9 @@ var ExpressionAssignment = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionFor = {
+let ExpressionFor = {
   create: function(i, start, stop, by, body) {
-    var instance = Object.create(ExpressionFor);
+    let instance = Object.create(ExpressionFor);
     return Object.assign(instance, {
       i: i,
       start: start,
@@ -253,7 +253,7 @@ var ExpressionFor = {
     console.log("by:", by);
     console.log("this.i:", this.i);
 
-    for (var i = start; i <= stop; i += by) {
+    for (let i = start; i <= stop; i += by) {
       ExpressionAssignment.create(this.i, TwovilleInteger.create(i)).evaluate(env, fromTime, toTime);
       this.body.evaluate(env, fromTime, toTime);
     }
@@ -262,18 +262,18 @@ var ExpressionFor = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionProperty = {
+let ExpressionProperty = {
   create: function(base, property) {
-    var instance = Object.create(ExpressionProperty);
+    let instance = Object.create(ExpressionProperty);
     return Object.assign(instance, {base: base, property: property});
   },
   evaluate: function(env, fromTime, toTime) {
-    var object = this.base.evaluate(env, fromTime, toTime); 
+    let object = this.base.evaluate(env, fromTime, toTime); 
     return this.property.evaluate(object);
   },
   assign: function(env, fromTime, toTime, rhs) {
-    var value = rhs.evaluate(env, fromTime, toTime);
-    var object = this.base.evaluate(env, fromTime, toTime); 
+    let value = rhs.evaluate(env, fromTime, toTime);
+    let object = this.base.evaluate(env, fromTime, toTime); 
     ExpressionAssignment.create(this.property, value).evaluate(object, fromTime, toTime);
     return value;
   }
@@ -281,13 +281,13 @@ var ExpressionProperty = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionVector = {
+let ExpressionVector = {
   create: function(elements) {
-    var instance = Object.create(ExpressionVector);
+    let instance = Object.create(ExpressionVector);
     return Object.assign(instance, {elements: elements});
   },
   evaluate: function(env, fromTime, toTime) {
-    var values = this.elements.map(element => {
+    let values = this.elements.map(element => {
       return element.evaluate(env, fromTime, toTime);
     });
     return TwovilleVector.create(values);
@@ -296,41 +296,41 @@ var ExpressionVector = {
 
 // --------------------------------------------------------------------------- 
 
-var StatementFrom = {
+let StatementFrom = {
   create: function(fromTimeExpression, block) {
-    var instance = Object.create(StatementFrom);
+    let instance = Object.create(StatementFrom);
     return Object.assign(instance, {
       fromTimeExpression: fromTimeExpression,
       block: block
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    var fromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
+    let fromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, fromTime, null);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-var StatementTo = {
+let StatementTo = {
   create: function(toTimeExpression, block) {
-    var instance = Object.create(StatementTo);
+    let instance = Object.create(StatementTo);
     return Object.assign(instance, {
       toTimeExpression: toTimeExpression,
       block: block
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    var toTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
+    let toTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, null, toTime);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-var StatementBetween = {
+let StatementBetween = {
   create: function(fromTimeExpression, toTimeExpression, block) {
-    var instance = Object.create(StatementBetween);
+    let instance = Object.create(StatementBetween);
     return Object.assign(instance, {
       fromTimeExpression: fromTimeExpression,
       toTimeExpression: toTimeExpression,
@@ -338,24 +338,24 @@ var StatementBetween = {
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    var fromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
-    var toTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
+    let fromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
+    let toTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, fromTime, toTime);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-var StatementThrough = {
+let StatementThrough = {
   create: function(throughTimeExpression, block) {
-    var instance = Object.create(StatementThrough);
+    let instance = Object.create(StatementThrough);
     return Object.assign(instance, {
       throughTimeExpression: throughTimeExpression,
       block: block
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    var throughTime = this.throughTimeExpression.evaluate(env, fromTime, toTime);
+    let throughTime = this.throughTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, null, throughTime);
     this.block.evaluate(env, throughTime, null);
   }
@@ -363,18 +363,18 @@ var StatementThrough = {
 
 // --------------------------------------------------------------------------- 
 
-var ExpressionRepeat = {
+let ExpressionRepeat = {
   create: function(count, body) {
-    var instance = Object.create(ExpressionRepeat);
+    let instance = Object.create(ExpressionRepeat);
     return Object.assign(instance, {
       count: count,
       body: body
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    var count = this.count.evaluate(env, fromTime, toTime);
-    var last = null;
-    for (var i = 0; i < count; ++i) {
+    let count = this.count.evaluate(env, fromTime, toTime);
+    let last = null;
+    for (let i = 0; i < count; ++i) {
       last = this.body.evaluate(env, fromTime, toTime);
     }
     return last;
@@ -383,9 +383,9 @@ var ExpressionRepeat = {
 
 // --------------------------------------------------------------------------- 
 
-var StatementWith = {
+let StatementWith = {
   create: function(scope, body) {
-    var instance = Object.create(StatementWith);
+    let instance = Object.create(StatementWith);
     return Object.assign(instance, {
       scope: scope,
       body: body
@@ -394,12 +394,12 @@ var StatementWith = {
   evaluate: function(env, fromTime, toTime) {
     // console.log("pre env:", env);
     // console.log("this.scope:", this.scope);
-    var withEnv = this.scope.evaluate(env, fromTime, toTime);
+    let withEnv = this.scope.evaluate(env, fromTime, toTime);
     // console.log("withEnv:", withEnv);
 
     // Allow functions to access scope at time of definition.
-    // var bindings = {};
-    // for (var key in env.bindings) {
+    // let bindings = {};
+    // for (let key in env.bindings) {
       // if (env.bindings.hasOwnProperty(key)) {
         // withEnv.bindings[key] = env.bindings[key];
       // }
