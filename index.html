@@ -39,8 +39,12 @@
       <input type="button" id="export" value="Export">
     </div>
     <div id="timeToolbar">
-      <input type="number" id="timeSpinner" value="0" min="0" max="100">
-      <input type="range" id="scrubber" value="0" min="0" max="100">
+      <div>
+        <input type="number" id="timeSpinner" value="0" min="0" max="100">
+        <input type="button" id="playOnceButton" value="&rarr;">
+        <input type="button" id="playLoopButton" value="&infin;">
+      </div>
+      <input type="range" id="scrubber" value="0" min="0" max="100000">
     </div>
   </canvas>
 </div>

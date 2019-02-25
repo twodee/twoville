@@ -21,6 +21,8 @@ var exportButton = document.getElementById('export');
 var svg = document.getElementById('svg');
 var scrubber = document.getElementById('scrubber');
 var timeSpinner = document.getElementById('timeSpinner');
+var playOnceButton = document.getElementById('playOnceButton');
+var playLoopButton = document.getElementById('playLoopButton');
 var env;
 
 function highlight(lineStart, lineEnd, columnStart, columnEnd) {
@@ -222,6 +224,37 @@ scrubber.oninput = function() {
 timeSpinner.oninput = function() {
   scrubTo(timeSpinner.value);
 }
+
+var animateTask = null;
+
+function animateFrame(i, isLoop = false) {
+  scrubTo(i);
+  if (i < parseInt(scrubber.max)) {
+    animateTask = setTimeout(() => animateFrame(i + 1, isLoop), 100);
+  } else if (isLoop) {
+    animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop), 100);
+  } else {
+    animateTask = null;
+  }
+}
+
+playOnceButton.addEventListener('click', e => {
+  if (animateTask) {
+    clearTimeout(animateTask);
+    animateTask = null;
+  } else {
+    animateFrame(parseInt(scrubber.min), false);
+  }
+});
+
+playLoopButton.addEventListener('click', e => {
+  if (animateTask) {
+    clearTimeout(animateTask);
+    animateTask = null;
+  } else {
+    animateFrame(parseInt(scrubber.min), true);
+  }
+});
 
 evalButton.onclick = function() {
   messager.innerHTML = '';
