@@ -1,4 +1,6 @@
-let Timeline = {
+import { Interval } from './interval.js';
+
+export let Timeline = {
   create: function() {
     let instance = Object.create(Timeline);
     return Object.assign(instance, {

@@ -1,3 +1,26 @@
+import { lex } from './lexer.js';
+import { parse } from './parser.js';
+import {
+  TwovilleEnvironment,
+  TwovilleShape,
+  TwovilleInteger,
+  TwovilleVector,
+  svgNamespace,
+} from './types.js';
+import {
+  ExpressionRectangle,
+  ExpressionLine,
+  ExpressionText,
+  ExpressionGroup,
+  ExpressionMask,
+  ExpressionCircle,
+  ExpressionPrint,
+  ExpressionRandom,
+  ExpressionSine,
+  ExpressionCosine,
+  ExpressionInt,
+} from './ast.js';
+
 let editor = ace.edit('editor');
 editor.setTheme('ace/theme/twilight');
 editor.setOptions({
@@ -104,8 +127,8 @@ let directions = {
   horizontal: ['right', 'left'],
   vertical: ['top', 'bottom']
 };
-for (direction in directions) {
-  sides = directions[direction];
+for (let direction in directions) {
+  let sides = directions[direction];
   sides.forEach(side => {
     let resizables = document.querySelectorAll('.resizable-' + side);
     resizables.forEach(resizable => {
@@ -258,11 +281,11 @@ evalButton.addEventListener('click', () => {
   while (svg.lastChild) {
     svg.removeChild(svg.lastChild);
   }
-  let defs = document.createElementNS(namespace, 'defs');
+  let defs = document.createElementNS(svgNamespace, 'defs');
   svg.appendChild(defs);
 
-  tokens = lex(editor.getValue());
-  ast = parse(tokens);
+  let tokens = lex(editor.getValue());
+  let ast = parse(tokens);
 
   // tokens.forEach(token => {
     // log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');

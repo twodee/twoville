@@ -1,6 +1,10 @@
+import { Timeline } from './timeline.js';
+
+export let svgNamespace = "http://www.w3.org/2000/svg";
+
 // --------------------------------------------------------------------------- 
 
-let TwovilleEnvironment = {
+export let TwovilleEnvironment = {
   create: function(parent) {
     let instance = Object.create(TwovilleEnvironment);
     return Object.assign(instance, {
@@ -47,7 +51,7 @@ let TwovilleEnvironment = {
 
 // ---------------------------------------------------------------------------
 
-let TwovilleTimelinedEnvironment = Object.create(TwovilleEnvironment);
+export let TwovilleTimelinedEnvironment = Object.create(TwovilleEnvironment);
 Object.assign(TwovilleTimelinedEnvironment, {
   create: function(env) {
     let instance = TwovilleEnvironment.create(env);
@@ -74,7 +78,7 @@ Object.assign(TwovilleTimelinedEnvironment, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleShape = Object.create(TwovilleTimelinedEnvironment);
+export let TwovilleShape = Object.create(TwovilleTimelinedEnvironment);
 Object.assign(TwovilleShape, {
   serial: 0,
   create: function(env) {
@@ -91,11 +95,11 @@ Object.assign(TwovilleShape, {
   },
   domify: function(svg) {
     if (this.has('clippers')) {
-      let clipPath = document.createElementNS(namespace, 'clipPath')
+      let clipPath = document.createElementNS(svgNamespace, 'clipPath')
       clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
       let clippers = this.get('clippers').getDefault();
       clippers.forEach(clipper => {
-        let use = document.createElementNS(namespace, 'use');
+        let use = document.createElementNS(svgNamespace, 'use');
         use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
         clipPath.appendChild(use);
       });
@@ -121,13 +125,13 @@ Object.assign(TwovilleShape, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleGroup = Object.create(TwovilleShape);
+export let TwovilleGroup = Object.create(TwovilleShape);
 Object.assign(TwovilleGroup, {
   create: function(env) {
     let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleGroup);
     instance = Object.assign(instance, {
-      svgElement: document.createElementNS(namespace, 'group'),
+      svgElement: document.createElementNS(svgNamespace, 'group'),
       children: []
     });
 
@@ -141,13 +145,13 @@ Object.assign(TwovilleGroup, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleMask = Object.create(TwovilleShape);
+export let TwovilleMask = Object.create(TwovilleShape);
 Object.assign(TwovilleMask, {
   create: function(env) {
     let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleMask);
     instance = Object.assign(instance, {
-      svgElement: document.createElementNS(namespace, 'mask'),
+      svgElement: document.createElementNS(svgNamespace, 'mask'),
       children: []
     });
     instance.bind('template', null, null, TwovilleBoolean.create(true));
@@ -169,13 +173,13 @@ Object.assign(TwovilleMask, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleText = Object.create(TwovilleShape);
+export let TwovilleText = Object.create(TwovilleShape);
 Object.assign(TwovilleText, {
   create: function(env) {
     let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleText);
     instance = Object.assign(instance, {
-      svgElement: document.createElementNS(namespace, 'text')
+      svgElement: document.createElementNS(svgNamespace, 'text')
     });
     instance.svgElement.setAttributeNS(null, 'font-size', 8);
     instance.svgElement.setAttributeNS(null, 'text-anchor', 'middle');
@@ -249,13 +253,13 @@ Object.assign(TwovilleText, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleLine = Object.create(TwovilleShape);
+export let TwovilleLine = Object.create(TwovilleShape);
 Object.assign(TwovilleLine, {
   create: function(env) {
     let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleLine);
     instance = Object.assign(instance, {
-      svgElement: document.createElementNS(namespace, 'line')
+      svgElement: document.createElementNS(svgNamespace, 'line')
     });
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
     return instance;
@@ -327,13 +331,13 @@ Object.assign(TwovilleLine, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleRectangle = Object.create(TwovilleShape);
+export let TwovilleRectangle = Object.create(TwovilleShape);
 Object.assign(TwovilleRectangle, {
   create: function(env) {
     let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleRectangle);
     instance = Object.assign(instance, {
-      svgElement: document.createElementNS(namespace, 'rect')
+      svgElement: document.createElementNS(svgNamespace, 'rect')
     });
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
     return instance;
@@ -411,13 +415,13 @@ Object.assign(TwovilleRectangle, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleCircle = Object.create(TwovilleShape);
+export let TwovilleCircle = Object.create(TwovilleShape);
 Object.assign(TwovilleCircle, {
   create: function(env) {
     let instance = TwovilleShape.create(env);
     Object.setPrototypeOf(instance, TwovilleCircle);
     instance = Object.assign(instance, {
-      svgElement: document.createElementNS(namespace, 'circle')
+      svgElement: document.createElementNS(svgNamespace, 'circle')
     });
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
     // instance.parentElement.appendChild(instance.svgElement);
@@ -490,7 +494,7 @@ Object.assign(TwovilleCircle, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleData = {
+export let TwovilleData = {
   create: function() {
     return {};
   },
@@ -504,7 +508,7 @@ let TwovilleData = {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleVector = Object.create(TwovilleData);
+export let TwovilleVector = Object.create(TwovilleData);
 Object.assign(TwovilleVector, {
   create: function(elements) {
     let instance = TwovilleData.create();
@@ -545,7 +549,7 @@ Object.assign(TwovilleVector, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleString = Object.create(TwovilleData);
+export let TwovilleString = Object.create(TwovilleData);
 Object.assign(TwovilleString, {
   create: function(x) {
     let instance = TwovilleData.create();
@@ -568,7 +572,7 @@ Object.assign(TwovilleString, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleInteger = Object.create(TwovilleData);
+export let TwovilleInteger = Object.create(TwovilleData);
 Object.assign(TwovilleInteger, {
   create: function(x) {
     let instance = TwovilleData.create();
@@ -636,7 +640,7 @@ Object.assign(TwovilleInteger, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleReal = Object.create(TwovilleData);
+export let TwovilleReal = Object.create(TwovilleData);
 Object.assign(TwovilleReal, {
   create: function(x) {
     let instance = TwovilleData.create();
@@ -701,7 +705,7 @@ Object.assign(TwovilleReal, {
 
 // --------------------------------------------------------------------------- 
 
-let TwovilleBoolean = Object.create(TwovilleData);
+export let TwovilleBoolean = Object.create(TwovilleData);
 Object.assign(TwovilleBoolean, {
   create: function(x) {
     let instance = TwovilleData.create();
@@ -723,150 +727,3 @@ Object.assign(TwovilleBoolean, {
 });
 
 // --------------------------------------------------------------------------- 
-
-let ExpressionRectangle = {
-  create: function(parent) {
-    return Object.create(ExpressionRectangle);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let r = TwovilleRectangle.create(env);
-    env.shapes.push(r);
-    return r;
-  }
-};
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionLine = {
-  create: function(parent) {
-    return Object.create(ExpressionLine);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let r = TwovilleLine.create(env);
-    env.shapes.push(r);
-    return r;
-  }
-};
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionText = {
-  create: function(parent) {
-    return Object.create(ExpressionText);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let r = TwovilleText.create(env);
-    env.shapes.push(r);
-    return r;
-  }
-};
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionCircle = {
-  create: function(parent) {
-    return Object.create(ExpressionCircle);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let c = TwovilleCircle.create(env);
-    env.shapes.push(c);
-    return c;
-  }
-};
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionPrint = {
-  create: function(parent) {
-    return Object.create(ExpressionPrint);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let message = env['message'].get();
-    console.log("message:", message);
-    log(message.toString(fromTime, toTime));
-    return null;
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionRandom = {
-  create: function(parent) {
-    return Object.create(ExpressionRandom);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let min = env['min'].get();
-    let max = env['max'].get();
-    let x = Math.random() * (max - min) + min;
-    return TwovilleReal.create(x);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionSine = {
-  create: function(parent) {
-    return Object.create(ExpressionSine);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let degrees = env['degrees'].get();
-    let x = Math.sin(degrees * Math.PI / 180);
-    return TwovilleReal.create(x);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionCosine = {
-  create: function(parent) {
-    return Object.create(ExpressionCosine);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let degrees = env['degrees'].get();
-    let x = Math.cos(degrees * Math.PI / 180);
-    return TwovilleReal.create(x);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-// The casting function.
-let ExpressionInt = {
-  create: function(parent) {
-    return Object.create(ExpressionInt);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let f = env['x'].get();
-    let i = Math.trunc(f);
-    return TwovilleInteger.create(i);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionGroup = {
-  create: function(parent) {
-    return Object.create(ExpressionGroup);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let group = TwovilleGroup.create(env);
-    env.shapes.push(group);
-    return group;
-  }
-};
-
-// --------------------------------------------------------------------------- 
-
-let ExpressionMask = {
-  create: function(parent) {
-    return Object.create(ExpressionMask);
-  },
-  evaluate: function(env, fromTime, toTime) {
-    let mask = TwovilleMask.create(env);
-    env.shapes.push(mask);
-    return mask;
-  }
-};
-
-// --------------------------------------------------------------------------- 
-

@@ -1,4 +1,4 @@
-let Interval = {
+export let Interval = {
   create: function(fromTime, fromValue, toTime, toValue) {
     let instance = Object.create(Interval);
     instance.setFrom(fromTime, fromValue);

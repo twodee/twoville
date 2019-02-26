@@ -1,7 +1,32 @@
-function parse(tokens) {
+import { Tokens } from './token.js';
+import {
+  ExpressionAdd,
+  ExpressionAssignment,
+  ExpressionBlock,
+  ExpressionBoolean,
+  ExpressionDivide,
+  ExpressionFor,
+  ExpressionFunctionCall,
+  ExpressionIdentifier,
+  ExpressionInteger,
+  ExpressionMultiply,
+  ExpressionProperty,
+  ExpressionReal,
+  ExpressionRemainder,
+  ExpressionRepeat,
+  ExpressionString,
+  ExpressionSubtract,
+  ExpressionVector,
+  ExpressionWith,
+  StatementTo,
+  StatementThrough,
+  StatementFrom,
+  StatementBetween,
+} from './ast.js';
+
+export function parse(tokens) {
   let i = 0;
   let indents = [-1];
-  console.log("tokens:", tokens);
 
   function has(type, offset) {
     let index = i;
@@ -65,7 +90,7 @@ function parse(tokens) {
     console.trace('WHERE');
     console.log("indents:", indents);
 
-    return Block.create(statements);
+    return ExpressionBlock.create(statements);
   }
 
   function statement() {

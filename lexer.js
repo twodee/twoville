@@ -1,4 +1,6 @@
-function lex(source) {
+import { Tokens, Token, SourceLocation } from './token.js';
+
+export function lex(source) {
   
   let iStartIndex = 0;
   let iEndIndex = -1;

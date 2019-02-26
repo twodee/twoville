@@ -1,4 +1,4 @@
-Tokens = Object.freeze({
+export let Tokens = Object.freeze({
   Plus: 'Plus',
   T: 'T',
   Minus: 'Minus',
@@ -33,7 +33,7 @@ Tokens = Object.freeze({
   EOF: 'EOF'
 });
 
-let SourceLocation = {
+export let SourceLocation = {
   create: function(lineStart, lineEnd, columnStart, columnEnd, indexStart, indexEnd) {
     let instance = Object.create(SourceLocation);
     return Object.assign(instance, {
@@ -53,7 +53,7 @@ let SourceLocation = {
   }
 }
 
-let Token = {
+export let Token = {
   create: function(type, source, where) {
     let instance = Object.create(Token);
     return Object.assign(instance, {

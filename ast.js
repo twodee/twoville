@@ -1,10 +1,22 @@
-let namespace = "http://www.w3.org/2000/svg";
+import {
+  TwovilleBoolean,
+  TwovilleInteger,
+  TwovilleString,
+  TwovilleVector,
+  TwovilleRectangle,
+  TwovilleLine,
+  TwovilleText,
+  TwovilleCircle,
+  TwovilleGroup,
+  TwovilleMask,
+  TwovilleReal,
+} from "./types.js";
 
 // --------------------------------------------------------------------------- 
 // PRIMITIVES
 // --------------------------------------------------------------------------- 
 
-let ExpressionBoolean = {
+export let ExpressionBoolean = {
   create: function(x) {
     let instance = Object.create(ExpressionBoolean);
     return Object.assign(instance, {x: x});
@@ -16,7 +28,7 @@ let ExpressionBoolean = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionInteger = {
+export let ExpressionInteger = {
   create: function(x) {
     let instance = Object.create(ExpressionInteger);
     return Object.assign(instance, {x: x});
@@ -28,7 +40,7 @@ let ExpressionInteger = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionString = {
+export let ExpressionString = {
   create: function(x) {
     let instance = Object.create(ExpressionString);
     return Object.assign(instance, {x: x});
@@ -40,7 +52,7 @@ let ExpressionString = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionReal = {
+export let ExpressionReal = {
   create: function(x) {
     let instance = Object.create(ExpressionReal);
     return Object.assign(instance, {x: x});
@@ -54,7 +66,7 @@ let ExpressionReal = {
 // ARITHMETIC
 // --------------------------------------------------------------------------- 
 
-let ExpressionAdd = {
+export let ExpressionAdd = {
   create: function(a, b) {
     let instance = Object.create(ExpressionAdd);
     return Object.assign(instance, {a: a, b: b});
@@ -68,7 +80,7 @@ let ExpressionAdd = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionSubtract = {
+export let ExpressionSubtract = {
   create: function(a, b) {
     let instance = Object.create(ExpressionSubtract);
     return Object.assign(instance, {a: a, b: b});
@@ -82,7 +94,7 @@ let ExpressionSubtract = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionMultiply = {
+export let ExpressionMultiply = {
   create: function(a, b) {
     let instance = Object.create(ExpressionMultiply);
     return Object.assign(instance, {a: a, b: b});
@@ -96,7 +108,7 @@ let ExpressionMultiply = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionDivide = {
+export let ExpressionDivide = {
   create: function(a, b) {
     let instance = Object.create(ExpressionDivide);
     return Object.assign(instance, {a: a, b: b});
@@ -110,7 +122,7 @@ let ExpressionDivide = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionRemainder = {
+export let ExpressionRemainder = {
   create: function(a, b) {
     let instance = Object.create(ExpressionRemainder);
     return Object.assign(instance, {a: a, b: b});
@@ -124,7 +136,7 @@ let ExpressionRemainder = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionFunctionDefinition = {
+export let ExpressionFunctionDefinition = {
   create: function(name, formals, body) {
     let instance = Object.create(ExpressionFunctionDefinition);
     return Object.assign(instance, {name: name, formals: formals, body: body});
@@ -140,7 +152,7 @@ let ExpressionFunctionDefinition = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionIdentifier = {
+export let ExpressionIdentifier = {
   create: function(token) {
     let instance = Object.create(ExpressionIdentifier);
     return Object.assign(instance, {token: token});
@@ -164,7 +176,7 @@ let ExpressionIdentifier = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionFunctionCall = {
+export let ExpressionFunctionCall = {
   create: function(name, actuals) {
     let instance = Object.create(ExpressionFunctionCall);
     return Object.assign(instance, {
@@ -197,15 +209,16 @@ let ExpressionFunctionCall = {
 //
 // ---------------------------------------------------------------------------
 
-let Block = {
+export let ExpressionBlock = {
   create: function(statements) {
-    let instance = Object.create(Block);
+    let instance = Object.create(ExpressionBlock);
     return Object.assign(instance, {statements: statements});
   },
-  evaluate: function(env, fromTime, toTime) {
+  evaluate: function(env, a, toTime) {
     let result = null;
     this.statements.forEach(function(statement) {
-      result = statement.evaluate(env, fromTime, toTime);
+      console.log("statement:", statement);
+      result = statement.evaluate(env, a, toTime);
     });
     return result;
   }
@@ -213,7 +226,7 @@ let Block = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionAssignment = {
+export let ExpressionAssignment = {
   create: function(l, r) {
     let instance = Object.create(ExpressionAssignment);
     return Object.assign(instance, {l: l, r: r});
@@ -231,7 +244,7 @@ let ExpressionAssignment = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionFor = {
+export let ExpressionFor = {
   create: function(i, start, stop, by, body) {
     let instance = Object.create(ExpressionFor);
     return Object.assign(instance, {
@@ -262,7 +275,7 @@ let ExpressionFor = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionProperty = {
+export let ExpressionProperty = {
   create: function(base, property) {
     let instance = Object.create(ExpressionProperty);
     return Object.assign(instance, {base: base, property: property});
@@ -281,7 +294,7 @@ let ExpressionProperty = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionVector = {
+export let ExpressionVector = {
   create: function(elements) {
     let instance = Object.create(ExpressionVector);
     return Object.assign(instance, {elements: elements});
@@ -296,23 +309,23 @@ let ExpressionVector = {
 
 // --------------------------------------------------------------------------- 
 
-let StatementFrom = {
+export let StatementFrom = {
   create: function(fromTimeExpression, block) {
     let instance = Object.create(StatementFrom);
     return Object.assign(instance, {
       fromTimeExpression: fromTimeExpression,
-      block: block
+      block: block,
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    let fromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
-    this.block.evaluate(env, fromTime, null);
+    let realFromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
+    this.block.evaluate(env, realFromTime, null);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-let StatementTo = {
+export let StatementTo = {
   create: function(toTimeExpression, block) {
     let instance = Object.create(StatementTo);
     return Object.assign(instance, {
@@ -321,14 +334,14 @@ let StatementTo = {
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    let toTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
-    this.block.evaluate(env, null, toTime);
+    let realToTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
+    this.block.evaluate(env, null, realToTime);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-let StatementBetween = {
+export let StatementBetween = {
   create: function(fromTimeExpression, toTimeExpression, block) {
     let instance = Object.create(StatementBetween);
     return Object.assign(instance, {
@@ -338,15 +351,15 @@ let StatementBetween = {
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    let fromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
-    let toTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
-    this.block.evaluate(env, fromTime, toTime);
+    let realFromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
+    let realToTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
+    this.block.evaluate(env, realFromTime, realToTime);
   }
 };
 
 // --------------------------------------------------------------------------- 
 
-let StatementThrough = {
+export let StatementThrough = {
   create: function(throughTimeExpression, block) {
     let instance = Object.create(StatementThrough);
     return Object.assign(instance, {
@@ -363,7 +376,7 @@ let StatementThrough = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionRepeat = {
+export let ExpressionRepeat = {
   create: function(count, body) {
     let instance = Object.create(ExpressionRepeat);
     return Object.assign(instance, {
@@ -383,7 +396,7 @@ let ExpressionRepeat = {
 
 // --------------------------------------------------------------------------- 
 
-let ExpressionWith = {
+export let ExpressionWith = {
   create: function(scope, body) {
     let instance = Object.create(ExpressionWith);
     return Object.assign(instance, {
@@ -396,6 +409,152 @@ let ExpressionWith = {
     withEnv.parent = env;
     this.body.evaluate(withEnv, fromTime, toTime);
     return withEnv;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionRectangle = {
+  create: function(parent) {
+    return Object.create(ExpressionRectangle);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let r = TwovilleRectangle.create(env);
+    env.shapes.push(r);
+    return r;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionLine = {
+  create: function(parent) {
+    return Object.create(ExpressionLine);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let r = TwovilleLine.create(env);
+    env.shapes.push(r);
+    return r;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionText = {
+  create: function(parent) {
+    return Object.create(ExpressionText);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let r = TwovilleText.create(env);
+    env.shapes.push(r);
+    return r;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionCircle = {
+  create: function(parent) {
+    return Object.create(ExpressionCircle);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let c = TwovilleCircle.create(env);
+    env.shapes.push(c);
+    return c;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionPrint = {
+  create: function(parent) {
+    return Object.create(ExpressionPrint);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let message = env['message'].get();
+    console.log("message:", message);
+    log(message.toString(fromTime, toTime));
+    return null;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionRandom = {
+  create: function(parent) {
+    return Object.create(ExpressionRandom);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let min = env['min'].get();
+    let max = env['max'].get();
+    let x = Math.random() * (max - min) + min;
+    return TwovilleReal.create(x);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionSine = {
+  create: function(parent) {
+    return Object.create(ExpressionSine);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let degrees = env['degrees'].get();
+    let x = Math.sin(degrees * Math.PI / 180);
+    return TwovilleReal.create(x);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionCosine = {
+  create: function(parent) {
+    return Object.create(ExpressionCosine);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let degrees = env['degrees'].get();
+    let x = Math.cos(degrees * Math.PI / 180);
+    return TwovilleReal.create(x);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+// The casting function.
+export let ExpressionInt = {
+  create: function(parent) {
+    return Object.create(ExpressionInt);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let f = env['x'].get();
+    let i = Math.trunc(f);
+    return TwovilleInteger.create(i);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionGroup = {
+  create: function(parent) {
+    return Object.create(ExpressionGroup);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let group = TwovilleGroup.create(env);
+    env.shapes.push(group);
+    return group;
+  }
+};
+
+// --------------------------------------------------------------------------- 
+
+export let ExpressionMask = {
+  create: function(parent) {
+    return Object.create(ExpressionMask);
+  },
+  evaluate: function(env, fromTime, toTime) {
+    let mask = TwovilleMask.create(env);
+    env.shapes.push(mask);
+    return mask;
   }
 };
 
