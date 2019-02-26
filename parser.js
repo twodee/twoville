@@ -109,17 +109,6 @@ function parse(tokens) {
         }
       }
     }
-
-    else if (has(Tokens.With)) {
-      consume(); // eat with
-      let scope = expression();
-      if (!has(Tokens.Linebreak)) {
-        throw 'expected linebreak';
-      }
-      consume(); // eat linebreak
-      let body = block();
-      return StatementWith.create(scope, body);
-    }
     
     // A statement that doesn't start with T.
     else {
@@ -310,15 +299,24 @@ function parse(tokens) {
       }
       consume(); // eat linebreak
       let body = block();
-      console.log("tokens:", tokens);
-      console.log("i:", i);
-      for (let j = 0; j < 10; ++j) {
-        console.log("tokens[j + i]:", tokens[j + i]);
-      }
+      // console.log("tokens:", tokens);
+      // console.log("i:", i);
+      // for (let j = 0; j < 10; ++j) {
+        // console.log("tokens[j + i]:", tokens[j + i]);
+      // }
       return ExpressionRepeat.create(count, body);
     } else if (has(Tokens.Identifier) || has(Tokens.T)) {
       let id = consume();
       return ExpressionIdentifier.create(id);
+    } else if (has(Tokens.With)) {
+      consume(); // eat with
+      let scope = expression();
+      if (!has(Tokens.Linebreak)) {
+        throw 'expected linebreak';
+      }
+      consume(); // eat linebreak
+      let body = block();
+      return ExpressionWith.create(scope, body);
     } else {
       throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';
     }

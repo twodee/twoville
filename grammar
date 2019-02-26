@@ -67,3 +67,4 @@ atom
   | IF expression NEWLINE block[indent+=1] ELSE NEWLINE block[indent+=1]
   | WHILE expression NEWLINE block[indent+=1]
   | FOR reference (IN expression)? (TO|THROUGH) expression (BY expression)? NEWLINE block[indent+=1]
+  | WITH expression NEWLINE block[indent+=1]

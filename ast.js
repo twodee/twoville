@@ -204,8 +204,8 @@ let Block = {
   },
   evaluate: function(env, fromTime, toTime) {
     let result = null;
-    this.statements.forEach(statement => {
-      result = statement.evaluate(env, fromTime, toTime)
+    this.statements.forEach(function(statement) {
+      result = statement.evaluate(env, fromTime, toTime);
     });
     return result;
   }
@@ -383,30 +383,19 @@ let ExpressionRepeat = {
 
 // --------------------------------------------------------------------------- 
 
-let StatementWith = {
+let ExpressionWith = {
   create: function(scope, body) {
-    let instance = Object.create(StatementWith);
+    let instance = Object.create(ExpressionWith);
     return Object.assign(instance, {
       scope: scope,
       body: body
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    // console.log("pre env:", env);
-    // console.log("this.scope:", this.scope);
     let withEnv = this.scope.evaluate(env, fromTime, toTime);
-    // console.log("withEnv:", withEnv);
-
-    // Allow functions to access scope at time of definition.
-    // let bindings = {};
-    // for (let key in env.bindings) {
-      // if (env.bindings.hasOwnProperty(key)) {
-        // withEnv.bindings[key] = env.bindings[key];
-      // }
-    // }
     withEnv.parent = env;
-
-    return this.body.evaluate(withEnv, fromTime, toTime);
+    this.body.evaluate(withEnv, fromTime, toTime);
+    return withEnv;
   }
 };
 

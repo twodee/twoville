@@ -32,7 +32,7 @@ function highlight(lineStart, lineEnd, columnStart, columnEnd) {
 
 function log(text) {
   console.trace("text:", text);
-  text = text.replace(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):/, function(__, lineStart, lineEnd, columnStart, columnEnd) {
+  text = text.replace(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):/, (__, lineStart, lineEnd, columnStart, columnEnd) => {
     return '<a href="javascript:highlight(' + lineStart + ', ' + lineEnd + ', ' + columnStart + ', ' + columnEnd + ')">Line ' + (parseInt(lineEnd) + 1) + '</a>: '
   });
   messager.innerHTML += text + '<br>';
@@ -41,12 +41,12 @@ function log(text) {
 // --------------------------------------------------------------------------- 
 
 function registerResizeListener(bounds, gap, resize) {
-  let unlistener = function(event) {
+  let unlistener = (event) => {
     document.removeEventListener('mousemove', moveListener);
     document.removeEventListener('mouseup', unlistener);
     document.removeEventListener('mousedown', unlistener);
   };
-  let moveListener = function(event) {
+  let moveListener = (event) => {
     event.preventDefault();
     if (event.buttons !== 1) {
       unlistener();
@@ -89,7 +89,7 @@ function buildResizer(side, element) {
     throw 'Resizing ' + side + ' not supported yet.';
   }
 
-  return function(event) {
+  return (event) => {
     if (event.buttons === 1) {
       event.stopPropagation();
       event.preventDefault();
@@ -129,7 +129,7 @@ function stopSpinning() {
   spinner.style.display = 'none';
 }
 
-recordButton.onclick = function() {
+recordButton.addEventListener('clock', () => {
   startSpinning();
   let box = svg.getBoundingClientRect();
 
@@ -146,7 +146,7 @@ recordButton.onclick = function() {
     repeat: 0
   });
 
-  gif.on('finished', function(blob) {
+  gif.on('finished', (blob) => {
     downloadBlob('download.gif', blob);
     stopSpinning();
   });
@@ -164,7 +164,7 @@ recordButton.onclick = function() {
         let url = URL.createObjectURL(svgBlob);
 
         let img = new Image();
-        img.onload = function () {
+        img.onload = () => {
           gif.addFrame(img, {
             delay: 10,
             copy: true
@@ -182,11 +182,11 @@ recordButton.onclick = function() {
 	}
 
 	tick(parseInt(scrubber.min));
-} 
+});
 
-saveButton.onclick = function() {
+saveButton.addEventListener('click', () => {
   localStorage.setItem('src', editor.getValue());
-}
+});
 
 function downloadBlob(name, blob) {
   let link = document.createElement('a');
@@ -195,17 +195,17 @@ function downloadBlob(name, blob) {
   // Firefox needs the element to be live for some reason.
   document.body.appendChild(link);
   link.click();
-  setTimeout(function() {
+  setTimeout(() => {
     URL.revokeObjectURL(link.href);
     document.body.removeChild(link);
   });
 }
 
-exportButton.onclick = function() {
+exportButton.addEventListener('click', () => {
   let data = new XMLSerializer().serializeToString(svg);
   let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
   downloadBlob('download.svg', svgBlob);
-}
+});
 
 function scrubTo(t) {
   timeSpinner.value = t;
@@ -213,13 +213,13 @@ function scrubTo(t) {
   env.shapes.forEach(shape => shape.draw(env.svg, t));
 }
 
-scrubber.oninput = function() {
+scrubber.addEventListener('input', () => {
   scrubTo(scrubber.value);
-}
+});
 
-timeSpinner.oninput = function() {
+timeSpinner.addEventListener('input', () => {
   scrubTo(timeSpinner.value);
-}
+});
 
 let animateTask = null;
 
@@ -234,7 +234,7 @@ function animateFrame(i, isLoop = false) {
   }
 }
 
-playOnceButton.addEventListener('click', e => {
+playOnceButton.addEventListener('click', (e) => {
   if (animateTask) {
     clearTimeout(animateTask);
     animateTask = null;
@@ -252,7 +252,7 @@ playLoopButton.addEventListener('click', e => {
   }
 });
 
-evalButton.onclick = function() {
+evalButton.addEventListener('click', () => {
   messager.innerHTML = '';
 
   while (svg.lastChild) {
@@ -385,6 +385,10 @@ evalButton.onclick = function() {
 
     recordButton.disabled = false;
   } catch (e) {
-    log(e);
+    if (e instanceof Error) {
+      throw e;
+    } else {
+      log(e);
+    }
   }
-}
+});
