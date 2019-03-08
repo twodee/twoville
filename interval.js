@@ -1,3 +1,5 @@
+import { TwovilleInteger } from './types.js';
+
 export let Interval = {
   create: function(fromTime, fromValue, toTime, toValue) {
     let instance = Object.create(Interval);
@@ -30,11 +32,14 @@ export let Interval = {
   duration: function() {
     return this.toTime.get() - this.fromTime.get();
   },
-  interpolate: function(t) {
+  interpolate: function(env, t) {
     if (!this.hasFrom()) {
-      return this.toValue;
+      return this.toValue.evaluate(env);
     } else if (!this.hasTo()) {
-      return this.fromValue;
+      return this.fromValue.evaluate(env);
+    } else if (this.fromValue.isTimeSensitive(env)) {
+      env.bindings.t = TwovilleInteger.create(t);
+      return this.fromValue.evaluate(env);
     } else {
       let proportion = (t - this.fromTime.get()) / this.duration();
       return this.fromValue.interpolate(this.toValue, proportion);

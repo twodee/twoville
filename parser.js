@@ -66,29 +66,18 @@ export function parse(tokens) {
     }
     indents.push(indentation.source.length);
 
-    console.log("[[[[[[[[[[[");
     let statements = [];
-    console.log("current:", indentation.source.length);
     while (has(Tokens.Indentation) && tokens[i].source.length == indentation.source.length) {
-      // for (let j = 0; j < 10; ++j) {
-        // console.log(tokens[i + j]);
-      // }
       consume(); // eat indentation
       if (has(Tokens.Linebreak)) {
         consume();
       } else if (!has(Tokens.EOF)) {
-        console.log("CURrent:", indentation.source.length);
         let s = statement();
-        console.log("s:", s);
         statements.push(s);
       }
-      console.log("current:", indentation.source.length);
     }
-    console.log("]]]]]]]]]]]]");
 
     indents.pop();
-    console.trace('WHERE');
-    console.log("indents:", indents);
 
     return ExpressionBlock.create(statements);
   }
@@ -254,13 +243,11 @@ export function parse(tokens) {
       return ExpressionReal.create(Number(token.source));
     } else if (has(Tokens.Boolean)) {
       let token = consume();
-      console.log("token:", token);
       return ExpressionBoolean.create(token.source == 'true');
     } else if (has(Tokens.For)) {
       consume();
       if (isFirstOfExpression()) {
         let j = expression();
-        console.log("iiiiii:", j);
         if (has(Tokens.From) && isFirstOfExpression(1)) {
           consume();
           let start = expression();
@@ -274,7 +261,7 @@ export function parse(tokens) {
             consume(); // eat linebreak
             let body = block();
 
-            let by = TwovilleInteger.create(1);
+            let by = ExpressionInteger.create(1);
 
             return ExpressionFor.create(j, start, stop, by, body);
           }
@@ -324,11 +311,6 @@ export function parse(tokens) {
       }
       consume(); // eat linebreak
       let body = block();
-      // console.log("tokens:", tokens);
-      // console.log("i:", i);
-      // for (let j = 0; j < 10; ++j) {
-        // console.log("tokens[j + i]:", tokens[j + i]);
-      // }
       return ExpressionRepeat.create(count, body);
     } else if (has(Tokens.Identifier) || has(Tokens.T)) {
       let id = consume();

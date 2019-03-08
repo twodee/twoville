@@ -30,26 +30,20 @@ export let Timeline = {
   intervalAt: function(t) {
     return this.intervals.find(interval => interval.spans(t));
   },
-  valueAt: function(t) {
+  valueAt: function(env, t) {
     let interval = this.intervalAt(t);
     if (interval) {
-      return interval.interpolate(t);
+      return interval.interpolate(env, t);
     } else if (this.defaultValue != null) {
-      return this.defaultValue;
+      return this.defaultValue; // TODO: default should be time sensitive too
     } else {
       return null;
     }
   },
   setFromValue: function(t, value) {
-    console.log("from");
     if (this.intervals.length == 0) {
-      console.log("brand new ", t, value);
       this.intervals.push(Interval.create(t, value));
-      console.log("timelineA:", this.toString());
     } else {
-      console.log("t:", t);
-      console.log("value:", value);
-      console.log("timelineB:", this.toString());
       let i = 0;
       while (i < this.intervals.length &&
              this.intervals[i].hasFrom() &&
@@ -58,13 +52,10 @@ export let Timeline = {
       }
 
       if (i == 0) {
-        console.log("unshift");
         this.intervals.unshift(Interval.create(t, value));
       } else if (i < this.intervals.length && !this.intervals[i].hasFrom()) {
-        console.log("set from");
         this.intervals[i].setFrom(t, value);
       } else {
-        console.log("splice");
         --i;
         if (this.intervals[i].fromTime.get() == t.get()) {
           this.intervals[i].setFrom(t, value);
@@ -74,38 +65,27 @@ export let Timeline = {
           this.intervals.splice(i + 1, 0, Interval.create(t, value, this.intervals[i].toTime, this.intervals[i].toValue));
           this.intervals[i].setTo(null, null);
         }
-        console.log("timelineC:", this.toString());
       }
     }
   },
   setToValue: function(t, value) {
-    console.log("to");
     if (this.intervals.length == 0) {
-      console.log("brand new to");
       this.intervals.push(Interval.create(null, null, t, value));
     } else {
-      console.log("t:", t);
-      console.log("t:", typeof t);
-      console.log("value:", value);
-      console.log("timeline1:", this.toString());
       let i = 0;
       while (i < this.intervals.length &&
              this.intervals[i].hasFrom() &&
              this.intervals[i].fromTime.get() <= t.get()) {
-        console.log("i:", i);
         ++i;
       }
-      console.log("i:", i);
 
       // i points to interval that starts after 
 
       if (i == 0) {
-        console.log("unshift");
         this.intervals.unshift(Interval.create(null, null, t, value));
       // } else if (i < this.intervals.length && !this.intervals[i].hasTo()) {
         // this.intervals[i].setTo(t, value);
       } else {
-        console.log("splice");
         --i;
         if (!this.intervals[i].hasTo()) {
           this.intervals[i].setTo(t, value);
@@ -117,7 +97,6 @@ export let Timeline = {
           this.intervals.splice(i + 1, 0, Interval.create(t, value, this.intervals[i].toTime, this.intervals[i].toValue));
           this.intervals[i].setTo(null, null);
         }
-        console.log("timeline3:", this.toString());
       }
     }
   }

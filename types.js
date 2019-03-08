@@ -40,9 +40,9 @@ export let TwovilleEnvironment = {
   bind: function(id, fromTime, toTime, value) {
     this.bindings[id] = value;
   },
-  valueAt: function(property, t) {
+  valueAt: function(env, property, t) {
     // Assumes property exists.
-    return this.bindings[property].valueAt(t);
+    return this.bindings[property].valueAt(env, t);
   },
   evaluate: function(env, fromTime, toTime) {
     return this;
@@ -138,8 +138,8 @@ Object.assign(TwovilleGroup, {
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
     return instance;
   },
-  draw: function(svg, t) {
-    this.children.forEach(child => child.draw(svg, t));
+  draw: function(env, t) {
+    this.children.forEach(child => child.draw(env, t));
   }
 });
 
@@ -156,18 +156,10 @@ Object.assign(TwovilleMask, {
     });
     instance.bind('template', null, null, TwovilleBoolean.create(true));
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    // let fill = TwovilleRectangle.create(env);
-    // fill.bind('position', null, null, TwovilleVector.create([TwovilleReal.create(-1000), TwovilleReal.create(-1000)]));
-    // fill.bind('size', null, null, TwovilleVector.create([TwovilleReal.create(2000), TwovilleReal.create(2000)]));
-    // fill.bind('rgb', null, null, TwovilleVector.create([TwovilleReal.create(1), TwovilleReal.create(1), TwovilleReal.create(1)]));
-    // fill.bind('parent', null, null, instance);
-    // env.shapes.push(fill);
-    // console.log("!!!!!!!!!! fill:", fill);
-    // instance.children.push(fill);
     return instance;
   },
-  draw: function(svg, t) {
-    this.children.forEach(child => child.draw(svg, t));
+  draw: function(env, t) {
+    this.children.forEach(child => child.draw(env, t));
   }
 });
 
@@ -187,7 +179,7 @@ Object.assign(TwovilleText, {
     instance.svgElement.appendChild(document.createTextNode('foo'));
     return instance;
   },
-  draw: function(svg, t) {
+  draw: function(env, t) {
     if (!this.has('position')) {
       throw 'no position';
     }
@@ -212,13 +204,15 @@ Object.assign(TwovilleText, {
 
     // If we have rotation, but no pivot, error.
 
-    let position = this.valueAt('position', t);
-    let rgb = this.valueAt('rgb', t);
-    let text = this.valueAt('text', t);
+    let position = this.valueAt(env, 'position', t);
+    let rgb = this.valueAt(env, 'rgb', t);
+    let text = this.valueAt(env, 'text', t);
+    let pivot = null;
+    let rotation = null;
 
     if (needsTransforming) {
-      let pivot = this.valueAt('pivot', t);
-      let rotation = this.valueAt('rotation', t);
+      pivot = this.valueAt(env, 'pivot', t);
+      rotation = this.valueAt(env, 'rotation', t);
     }
 
     if (position == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
@@ -233,9 +227,9 @@ Object.assign(TwovilleText, {
         if (stroke.owns('size') &&
             stroke.owns('rgb') &&
             stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt('size', t);
-          let strokeRGB = stroke.valueAt('rgb', t);
-          let strokeOpacity = stroke.valueAt('opacity', t);
+          let strokeSize = stroke.valueAt(env, 'size', t);
+          let strokeRGB = stroke.valueAt(env, 'rgb', t);
+          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
           this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
           this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
@@ -243,7 +237,7 @@ Object.assign(TwovilleText, {
       }
 
       this.svgElement.childNodes[0].nodeValue = text.get();
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
       this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
       this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
@@ -264,7 +258,7 @@ Object.assign(TwovilleLine, {
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
     return instance;
   },
-  draw: function(svg, t) {
+  draw: function(env, t) {
     if (!this.has('a')) {
       throw 'no a';
     }
@@ -289,13 +283,13 @@ Object.assign(TwovilleLine, {
 
     // If we have rotation, but no pivot, error.
 
-    let a = this.valueAt('a', t);
-    let b = this.valueAt('b', t);
-    let rgb = this.valueAt('rgb', t);
+    let a = this.valueAt(env, 'a', t);
+    let b = this.valueAt(env, 'b', t);
+    let rgb = this.valueAt(env, 'rgb', t);
 
     if (needsTransforming) {
-      let pivot = this.valueAt('pivot', t);
-      let rotation = this.valueAt('rotation', t);
+      let pivot = this.valueAt(env, 'pivot', t);
+      let rotation = this.valueAt(env, 'rotation', t);
     }
 
     if (a == null || b == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
@@ -310,16 +304,16 @@ Object.assign(TwovilleLine, {
         if (stroke.owns('size') &&
             stroke.owns('rgb') &&
             stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt('size', t);
-          let strokeRGB = stroke.valueAt('rgb', t);
-          let strokeOpacity = stroke.valueAt('opacity', t);
+          let strokeSize = stroke.valueAt(env, 'size', t);
+          let strokeRGB = stroke.valueAt(env, 'rgb', t);
+          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
           this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
           this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
         }
       }
 
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
       this.svgElement.setAttributeNS(null, 'x1', a.get(0).get());
       this.svgElement.setAttributeNS(null, 'y1', a.get(1).get());
       this.svgElement.setAttributeNS(null, 'x2', b.get(0).get());
@@ -342,7 +336,7 @@ Object.assign(TwovilleRectangle, {
     instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
     return instance;
   },
-  draw: function(svg, t) {
+  draw: function(env, t) {
     if (!this.has('position')) {
       throw 'no position';
     }
@@ -367,13 +361,15 @@ Object.assign(TwovilleRectangle, {
 
     // If we have rotation, but no pivot, error.
 
-    let position = this.valueAt('position', t);
-    let size = this.valueAt('size', t);
-    let rgb = this.valueAt('rgb', t);
+    let position = this.valueAt(env, 'position', t);
+    let size = this.valueAt(env, 'size', t);
+    let rgb = this.valueAt(env, 'rgb', t);
+    let pivot = null;
+    let rotation = null;
 
     if (needsTransforming) {
-      let pivot = this.valueAt('pivot', t);
-      let rotation = this.valueAt('rotation', t);
+      pivot = this.valueAt(env, 'pivot', t);
+      rotation = this.valueAt(env, 'rotation', t);
     }
 
     if (position == null || size == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
@@ -388,9 +384,9 @@ Object.assign(TwovilleRectangle, {
         if (stroke.owns('size') &&
             stroke.owns('rgb') &&
             stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt('size', t);
-          let strokeRGB = stroke.valueAt('rgb', t);
-          let strokeOpacity = stroke.valueAt('opacity', t);
+          let strokeSize = stroke.valueAt(env, 'size', t);
+          let strokeRGB = stroke.valueAt(env, 'rgb', t);
+          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
           this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
           this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
@@ -398,12 +394,12 @@ Object.assign(TwovilleRectangle, {
       }
 
       if (this.has('rounding')) {
-        let rounding = this.valueAt('rounding', t);
+        let rounding = this.valueAt(env, 'rounding', t);
         this.svgElement.setAttributeNS(null, 'rx', rounding.get());
         this.svgElement.setAttributeNS(null, 'ry', rounding.get());
       }
 
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
       this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
       this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
       this.svgElement.setAttributeNS(null, 'width', size.get(0).get());
@@ -428,7 +424,7 @@ Object.assign(TwovilleCircle, {
     return instance;
   },
 
-  draw: function(svg, t) {
+  draw: function(env, t) {
     if (!this.has('position')) {
       throw 'no position';
     }
@@ -453,13 +449,15 @@ Object.assign(TwovilleCircle, {
 
     // If we have rotation, but no pivot, error.
 
-    let position = this.valueAt('position', t);
-    let radius = this.valueAt('radius', t);
-    let rgb = this.valueAt('rgb', t);
+    let position = this.valueAt(env, 'position', t);
+    let radius = this.valueAt(env, 'radius', t);
+    let rgb = this.valueAt(env, 'rgb', t);
+    let pivot = null;
+    let rotation = null;
 
     if (needsTransforming) {
-      let pivot = this.valueAt('pivot', t);
-      let rotation = this.valueAt('rotation', t);
+      pivot = this.valueAt(env, 'pivot', t);
+      rotation = this.valueAt(env, 'rotation', t);
     }
 
     if (position == null || radius == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
@@ -474,16 +472,16 @@ Object.assign(TwovilleCircle, {
         if (stroke.owns('size') &&
             stroke.owns('rgb') &&
             stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt('size', t);
-          let strokeRGB = stroke.valueAt('rgb', t);
-          let strokeOpacity = stroke.valueAt('opacity', t);
+          let strokeSize = stroke.valueAt(env, 'size', t);
+          let strokeRGB = stroke.valueAt(env, 'rgb', t);
+          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
           this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
           this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
         }
       }
 
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt('opacity', t).get());
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
       this.svgElement.setAttributeNS(null, 'cx', position.get(0).get());
       this.svgElement.setAttributeNS(null, 'cy', position.get(1).get());
       this.svgElement.setAttributeNS(null, 'r', radius.get());
@@ -673,8 +671,6 @@ Object.assign(TwovilleReal, {
     }
   },
   multiply: function(other) {
-    console.log("other:", other);
-    console.log("Object.getPrototypeOf(other):", Object.getPrototypeOf(other));
     if (Object.getPrototypeOf(other) === TwovilleInteger ||
         Object.getPrototypeOf(other) === TwovilleReal) {
       return TwovilleReal.create(this.get() * other.get());

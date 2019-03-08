@@ -1,3 +1,5 @@
+import { Tokens } from './token.js';
+
 import {
   TwovilleBoolean,
   TwovilleInteger,
@@ -23,6 +25,9 @@ export let ExpressionBoolean = {
   },
   evaluate: function(env, fromTime, toTime) {
     return TwovilleBoolean.create(this.x);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 }
 
@@ -35,6 +40,9 @@ export let ExpressionInteger = {
   },
   evaluate: function(env, fromTime, toTime) {
     return TwovilleInteger.create(this.x);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -47,6 +55,9 @@ export let ExpressionString = {
   },
   evaluate: function(env, fromTime, toTime) {
     return TwovilleString.create(this.x);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -59,6 +70,9 @@ export let ExpressionReal = {
   },
   evaluate: function(env, fromTime, toTime) {
     return TwovilleReal.create(this.x);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -75,6 +89,9 @@ export let ExpressionAdd = {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.add(evalB);
+  },
+  isTimeSensitive: function(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 };
 
@@ -89,6 +106,9 @@ export let ExpressionSubtract = {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.subtract(evalB);
+  },
+  isTimeSensitive: function(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 };
 
@@ -103,6 +123,9 @@ export let ExpressionMultiply = {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.multiply(evalB);
+  },
+  isTimeSensitive: function(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 };
 
@@ -117,6 +140,9 @@ export let ExpressionDivide = {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.divide(evalB);
+  },
+  isTimeSensitive: function(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 };
 
@@ -131,6 +157,9 @@ export let ExpressionRemainder = {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
     return evalA.remainder(evalB);
+  },
+  isTimeSensitive: function(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 };
 
@@ -147,6 +176,9 @@ export let ExpressionFunctionDefinition = {
       formals: this.formals,
       body: this.body
     };
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -159,18 +191,24 @@ export let ExpressionIdentifier = {
   },
   evaluate: function(env, fromTime, toTime) {
     let value = env.get(this.token.source);
-    if (value) {
+    if (value != null) {
       return value;
     } else {
       throw this.token.where.debugPrefix() + "I'm sorry, but I don't know anything about " + this.token.source + ".";
     }
   },
   assign: function(env, fromTime, toTime, rhs) {
-    console.log("rhs:", rhs);
-    console.log("this:", this);
-    let value = rhs.evaluate(env, fromTime, toTime);
+    let value;
+    if (rhs.isTimeSensitive(env)) {
+      value = rhs;
+    } else {
+      value = rhs.evaluate(env, fromTime, toTime);
+    }
     env.bind(this.token.source, fromTime, toTime, value);
     return value;
+  },
+  isTimeSensitive: function(env) {
+    return this.token.type == Tokens.T;
   }
 };
 
@@ -202,6 +240,13 @@ export let ExpressionFunctionCall = {
 
     let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime);
     return returnValue;
+  },
+  isTimeSensitive: function(env) {
+    if (!env.has(this.name)) {
+      throw 'no such func ' + name;
+    }
+    let f = env.bindings[this.name];
+    return f.body.isTimeSensitive(env);
   }
 };
 
@@ -217,10 +262,12 @@ export let ExpressionBlock = {
   evaluate: function(env, a, toTime) {
     let result = null;
     this.statements.forEach(function(statement) {
-      console.log("statement:", statement);
       result = statement.evaluate(env, a, toTime);
     });
     return result;
+  },
+  isTimeSensitive: function(env) {
+    return this.statements.some(s => s.isTimeSensitive(env));
   }
 };
 
@@ -233,12 +280,13 @@ export let ExpressionAssignment = {
   },
   evaluate: function(env, fromTime, toTime) {
     if ('assign' in this.l) {
-      console.log("this.l:", this.l);
-      console.log("env:", env);
       return this.l.assign(env, fromTime, toTime, this.r);
     } else {
       throw 'unassignable';
     }
+  },
+  isTimeSensitive: function(env) {
+    return this.r.isTimeSensitive(env);
   }
 };
 
@@ -256,20 +304,17 @@ export let ExpressionFor = {
     });
   },
   evaluate: function(env, fromTime, toTime) {
-    start = this.start.evaluate(env, fromTime, toTime).get();
-    stop = this.stop.evaluate(env, fromTime, toTime).get();
-    by = this.by.evaluate(env, fromTime, toTime).get();
-    // iterator = this.by.evaluate(env, fromTime, toTime);
-
-    console.log("start:", start);
-    console.log("stop:", stop);
-    console.log("by:", by);
-    console.log("this.i:", this.i);
+    let start = this.start.evaluate(env, fromTime, toTime).get();
+    let stop = this.stop.evaluate(env, fromTime, toTime).get();
+    let by = this.by.evaluate(env, fromTime, toTime).get();
 
     for (let i = start; i <= stop; i += by) {
       ExpressionAssignment.create(this.i, TwovilleInteger.create(i)).evaluate(env, fromTime, toTime);
       this.body.evaluate(env, fromTime, toTime);
     }
+  },
+  isTimeSensitive: function(env) {
+    return this.start.isTimeSensitive(env) || this.stop.isTimeSensitive(env) || this.by.isTimeSensitive(env) || this.body.isTimeSensitive(env);
   }
 };
 
@@ -285,10 +330,12 @@ export let ExpressionProperty = {
     return this.property.evaluate(object);
   },
   assign: function(env, fromTime, toTime, rhs) {
-    let value = rhs.evaluate(env, fromTime, toTime);
     let object = this.base.evaluate(env, fromTime, toTime); 
-    ExpressionAssignment.create(this.property, value).evaluate(object, fromTime, toTime);
+    let value = ExpressionAssignment.create(this.property, rhs).evaluate(object, fromTime, toTime);
     return value;
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -304,6 +351,9 @@ export let ExpressionVector = {
       return element.evaluate(env, fromTime, toTime);
     });
     return TwovilleVector.create(values);
+  },
+  isTimeSensitive: function(env) {
+    return this.elements.some(e => e.isTimeSensitive(env));
   }
 };
 
@@ -320,6 +370,9 @@ export let StatementFrom = {
   evaluate: function(env, fromTime, toTime) {
     let realFromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, realFromTime, null);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -336,6 +389,9 @@ export let StatementTo = {
   evaluate: function(env, fromTime, toTime) {
     let realToTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, null, realToTime);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -354,6 +410,9 @@ export let StatementBetween = {
     let realFromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
     let realToTime = this.toTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, realFromTime, realToTime);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -371,6 +430,9 @@ export let StatementThrough = {
     let throughTime = this.throughTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, null, throughTime);
     this.block.evaluate(env, throughTime, null);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -391,6 +453,9 @@ export let ExpressionRepeat = {
       last = this.body.evaluate(env, fromTime, toTime);
     }
     return last;
+  },
+  isTimeSensitive: function(env) {
+    return this.count.isTimeSensitive(env) || this.body.isTimeSensitive(env);
   }
 };
 
@@ -409,6 +474,9 @@ export let ExpressionWith = {
     withEnv.parent = env;
     this.body.evaluate(withEnv, fromTime, toTime);
     return withEnv;
+  },
+  isTimeSensitive: function(env) {
+    return this.scope.isTimeSensitive(env) || this.body.isTimeSensitive(env);
   }
 };
 
@@ -422,6 +490,9 @@ export let ExpressionRectangle = {
     let r = TwovilleRectangle.create(env);
     env.shapes.push(r);
     return r;
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -435,6 +506,9 @@ export let ExpressionLine = {
     let r = TwovilleLine.create(env);
     env.shapes.push(r);
     return r;
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -448,6 +522,9 @@ export let ExpressionText = {
     let r = TwovilleText.create(env);
     env.shapes.push(r);
     return r;
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -461,6 +538,9 @@ export let ExpressionCircle = {
     let c = TwovilleCircle.create(env);
     env.shapes.push(c);
     return c;
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -472,9 +552,11 @@ export let ExpressionPrint = {
   },
   evaluate: function(env, fromTime, toTime) {
     let message = env['message'].get();
-    console.log("message:", message);
     log(message.toString(fromTime, toTime));
     return null;
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 }
 
@@ -489,6 +571,9 @@ export let ExpressionRandom = {
     let max = env['max'].get();
     let x = Math.random() * (max - min) + min;
     return TwovilleReal.create(x);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 }
 
@@ -502,6 +587,9 @@ export let ExpressionSine = {
     let degrees = env['degrees'].get();
     let x = Math.sin(degrees * Math.PI / 180);
     return TwovilleReal.create(x);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 }
 
@@ -515,6 +603,9 @@ export let ExpressionCosine = {
     let degrees = env['degrees'].get();
     let x = Math.cos(degrees * Math.PI / 180);
     return TwovilleReal.create(x);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 }
 
@@ -529,6 +620,9 @@ export let ExpressionInt = {
     let f = env['x'].get();
     let i = Math.trunc(f);
     return TwovilleInteger.create(i);
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 }
 
@@ -542,6 +636,9 @@ export let ExpressionGroup = {
     let group = TwovilleGroup.create(env);
     env.shapes.push(group);
     return group;
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 
@@ -555,6 +652,9 @@ export let ExpressionMask = {
     let mask = TwovilleMask.create(env);
     env.shapes.push(mask);
     return mask;
+  },
+  isTimeSensitive: function(env) {
+    return false;
   }
 };
 

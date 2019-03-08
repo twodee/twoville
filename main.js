@@ -233,7 +233,7 @@ exportButton.addEventListener('click', () => {
 function scrubTo(t) {
   timeSpinner.value = t;
   scrubber.value = t;
-  env.shapes.forEach(shape => shape.draw(env.svg, t));
+  env.shapes.forEach(shape => shape.draw(env, t));
 }
 
 scrubber.addEventListener('input', () => {
@@ -294,9 +294,9 @@ evalButton.addEventListener('click', () => {
   env = TwovilleEnvironment.create({svg: svg, shapes: [], bindings: [], parent: null});
   TwovilleShape.serial = 0;
 
-  env.bindings.t = TwovilleEnvironment.create(env);
-  env.bindings.t.bind('start', null, null, TwovilleInteger.create(0));
-  env.bindings.t.bind('stop', null, null, TwovilleInteger.create(100));
+  env.bindings.time = TwovilleEnvironment.create(env);
+  env.bindings.time.bind('start', null, null, TwovilleInteger.create(0));
+  env.bindings.time.bind('stop', null, null, TwovilleInteger.create(100));
 
   env.bindings.viewport = TwovilleEnvironment.create(env);
   env.bindings.viewport.bind('position', null, null, TwovilleVector.create([
@@ -392,8 +392,8 @@ evalButton.addEventListener('click', () => {
 
     env.shapes.forEach(shape => shape.domify(env.svg));
 
-    let tmin = env.get('t').get('start').get();
-    let tmax = env.get('t').get('stop').get();
+    let tmin = env.get('time').get('start').get();
+    let tmax = env.get('time').get('stop').get();
     scrubber.min = tmin;
     scrubber.max = tmax;
 
