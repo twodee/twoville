@@ -33,13 +33,19 @@ export let Interval = {
     return this.toTime.get() - this.fromTime.get();
   },
   interpolate: function(env, t) {
+    // TODO I shouldn't have to check if isTimeSensitive is a property or not. Some expressions
+    // yield primitives, which don't have this property. Do I add it to them, or do I keep
+    // expressions from yielding primitives?
     if (!this.hasFrom()) {
       return this.toValue.evaluate(env);
-    } else if (!this.hasTo()) {
-      return this.fromValue.evaluate(env);
-    } else if (this.fromValue.isTimeSensitive(env)) {
+    } else if ('isTimeSensitive' in this.fromValue && this.fromValue.isTimeSensitive(env)) {
       env.bindings.t = TwovilleInteger.create(t);
       return this.fromValue.evaluate(env);
+    } else if (!this.hasTo()) {
+      return this.fromValue.evaluate(env);
+    } else if ('isTimeSensitive' in this.toValue && this.toValue.isTimeSensitive(env)) {
+      env.bindings.t = TwovilleInteger.create(t);
+      return this.toValue.evaluate(env);
     } else {
       let proportion = (t - this.fromTime.get()) / this.duration();
       return this.fromValue.interpolate(this.toValue, proportion);

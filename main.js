@@ -54,7 +54,6 @@ function highlight(lineStart, lineEnd, columnStart, columnEnd) {
 }
 
 function log(text) {
-  console.trace("text:", text);
   text = text.replace(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):/, (__, lineStart, lineEnd, columnStart, columnEnd) => {
     return '<a href="javascript:highlight(' + lineStart + ', ' + lineEnd + ', ' + columnStart + ', ' + columnEnd + ')">Line ' + (parseInt(lineEnd) + 1) + '</a>: '
   });
@@ -237,11 +236,13 @@ function scrubTo(t) {
 }
 
 scrubber.addEventListener('input', () => {
-  scrubTo(scrubber.value);
+  stopAnimation();
+  scrubTo(parseInt(scrubber.value));
 });
 
 timeSpinner.addEventListener('input', () => {
-  scrubTo(timeSpinner.value);
+  stopAnimation();
+  scrubTo(parseInt(timeSpinner.value));
 });
 
 let animateTask = null;
@@ -257,22 +258,21 @@ function animateFrame(i, isLoop = false) {
   }
 }
 
-playOnceButton.addEventListener('click', (e) => {
+function stopAnimation() {
   if (animateTask) {
     clearTimeout(animateTask);
     animateTask = null;
-  } else {
-    animateFrame(parseInt(scrubber.min), false);
   }
+}
+
+playOnceButton.addEventListener('click', (e) => {
+  stopAnimation();
+  animateFrame(parseInt(scrubber.min), false);
 });
 
 playLoopButton.addEventListener('click', e => {
-  if (animateTask) {
-    clearTimeout(animateTask);
-    animateTask = null;
-  } else {
-    animateFrame(parseInt(scrubber.min), true);
-  }
+  stopAnimation();
+  animateFrame(parseInt(scrubber.min), true);
 });
 
 evalButton.addEventListener('click', () => {
@@ -390,6 +390,19 @@ evalButton.addEventListener('click', () => {
       dimensions.get(1).get()
     );
 
+    let pageOutline = document.createElementNS(svgNamespace, 'rect');
+    pageOutline.setAttributeNS(null, 'id', 'x-outline');
+    pageOutline.setAttributeNS(null, 'x', corner.get(0).get());
+    pageOutline.setAttributeNS(null, 'y', corner.get(1).get());
+    pageOutline.setAttributeNS(null, 'width', dimensions.get(0).get());
+    pageOutline.setAttributeNS(null, 'height', dimensions.get(1).get());
+    pageOutline.setAttributeNS(null, 'fill', 'none');
+    pageOutline.setAttributeNS(null, 'stroke', 'rgb(0, 0, 0)');
+    pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
+    pageOutline.setAttributeNS(null, 'stroke-width', '1px');
+    pageOutline.setAttributeNS(null, 'stroke-opacity', 1);
+    env.svg.appendChild(pageOutline);
+
     env.shapes.forEach(shape => shape.domify(env.svg));
 
     let tmin = env.get('time').get('start').get();
@@ -411,6 +424,7 @@ evalButton.addEventListener('click', () => {
     if (e instanceof Error) {
       throw e;
     } else {
+      console.trace(e);
       log(e);
     }
   }

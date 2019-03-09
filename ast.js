@@ -18,6 +18,10 @@ import {
 // PRIMITIVES
 // --------------------------------------------------------------------------- 
 
+export let Expression = {
+
+};
+
 export let ExpressionBoolean = {
   create: function(x) {
     let instance = Object.create(ExpressionBoolean);
@@ -29,7 +33,7 @@ export let ExpressionBoolean = {
   isTimeSensitive: function(env) {
     return false;
   }
-}
+};
 
 // --------------------------------------------------------------------------- 
 
@@ -227,13 +231,13 @@ export let ExpressionFunctionCall = {
       throw 'no such func ' + name;
     }
 
-    let f = env.bindings[this.name];
+    let f = env.get(this.name);
 
     if (this.actuals.length != f.formals.length) {
       throw 'params mismatch!';
     }
 
-    let callEnvironment = {svg: env.svg, bindings: {}, shapes: env.shapes};
+    let callEnvironment = {svg: env.svg, bindings: {}, parent: env, shapes: env.shapes};
     this.actuals.forEach((actual, i) => {
       callEnvironment[f.formals[i]] = actual.evaluate(env, fromTime, toTime);
     });
@@ -245,7 +249,7 @@ export let ExpressionFunctionCall = {
     if (!env.has(this.name)) {
       throw 'no such func ' + name;
     }
-    let f = env.bindings[this.name];
+    let f = env.get(this.name);
     return f.body.isTimeSensitive(env);
   }
 };

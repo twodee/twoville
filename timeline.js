@@ -1,3 +1,4 @@
+import { TwovilleInteger } from './types.js';
 import { Interval } from './interval.js';
 
 export let Timeline = {
@@ -21,7 +22,7 @@ export let Timeline = {
     // }
   // }
 
-  getDefault: function() {
+  getDefault: function(env, t) {
     return this.defaultValue;
   },
   setDefault: function(value) {
@@ -35,7 +36,12 @@ export let Timeline = {
     if (interval) {
       return interval.interpolate(env, t);
     } else if (this.defaultValue != null) {
-      return this.defaultValue; // TODO: default should be time sensitive too
+      if ('isTimeSensitive' in this.defaultValue && this.defaultValue.isTimeSensitive(env)) {
+        env.bindings.t = TwovilleInteger.create(t);
+        return this.defaultValue.evaluate(env);
+      } else { 
+        return this.defaultValue;
+      }
     } else {
       return null;
     }
