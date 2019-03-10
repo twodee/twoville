@@ -4,6 +4,16 @@ export let svgNamespace = "http://www.w3.org/2000/svg";
 
 // --------------------------------------------------------------------------- 
 
+class RuntimeException extends Error {
+  constructor(start, stop, message) {
+    super(message);
+    this.start = start;
+    this.stop = stop;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export let TwovilleEnvironment = {
   create: function(parent) {
     let instance = Object.create(TwovilleEnvironment);
@@ -181,15 +191,15 @@ Object.assign(TwovilleText, {
   },
   draw: function(env, t) {
     if (!this.has('position')) {
-      throw 'no position';
+      throw new RuntimeException(null, null, 'This circle\'s position property has not been set.')
     }
     
     if (!this.has('rgb')) {
-      throw 'no rgb';
+      throw new RuntimeException(null, null, 'This circle\'s rgb property has not been set.')
     }
     
     if (!this.has('text')) {
-      throw 'no text';
+      throw new RuntimeException(null, null, 'This circle\'s text property has not been set.')
     }
     
     let needsTransforming = false;
@@ -218,6 +228,8 @@ Object.assign(TwovilleText, {
     if (position == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
       this.svgElement.setAttributeNS(null, 'opacity', 0);
     } else {
+      this.svgElement.setAttributeNS(null, 'opacity', 1);
+
       if (needsTransforming) {
         this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
       }
@@ -295,6 +307,8 @@ Object.assign(TwovilleLine, {
     if (a == null || b == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
       this.svgElement.setAttributeNS(null, 'opacity', 0);
     } else {
+      this.svgElement.setAttributeNS(null, 'opacity', 1);
+
       if (needsTransforming) {
         this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
       }
@@ -338,15 +352,15 @@ Object.assign(TwovilleRectangle, {
   },
   draw: function(env, t) {
     if (!this.has('position')) {
-      throw 'no position';
+      throw new RuntimeException(null, null, 'This circle\'s rectangle property has not been set.')
     }
     
     if (!this.has('size')) {
-      throw 'no size';
+      throw new RuntimeException(null, null, 'This circle\'s size property has not been set.')
     }
     
     if (!this.has('rgb')) {
-      throw 'no rgb';
+      throw new RuntimeException(null, null, 'This circle\'s rgb property has not been set.')
     }
     
     let needsTransforming = false;
@@ -375,6 +389,8 @@ Object.assign(TwovilleRectangle, {
     if (position == null || size == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
       this.svgElement.setAttributeNS(null, 'opacity', 0);
     } else {
+      this.svgElement.setAttributeNS(null, 'opacity', 1);
+
       if (needsTransforming) {
         this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
       }
@@ -426,15 +442,15 @@ Object.assign(TwovilleCircle, {
 
   draw: function(env, t) {
     if (!this.has('position')) {
-      throw 'no position';
+      throw new RuntimeException(null, null, 'This circle\'s position property has not been set.')
     }
     
     if (!this.has('radius')) {
-      throw 'no radius';
+      throw new RuntimeException(null, null, 'This circle\'s radius property has not been set.')
     }
     
     if (!this.has('rgb')) {
-      throw 'no rgb';
+      throw new RuntimeException(null, null, 'This circle\'s rgb property has not been set.')
     }
     
     let needsTransforming = false;
@@ -463,6 +479,8 @@ Object.assign(TwovilleCircle, {
     if (position == null || radius == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
       this.svgElement.setAttributeNS(null, 'opacity', 0);
     } else {
+      this.svgElement.setAttributeNS(null, 'opacity', 1);
+
       if (needsTransforming) {
         this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
       }
@@ -592,7 +610,7 @@ Object.assign(TwovilleInteger, {
     } else if (Object.getPrototypeOf(other) === TwovilleReal) {
       return TwovilleReal.create(this.get() + other.get());
     } else {
-      throw '...';
+      throw RuntimeError('Add failed');
     }
   },
   subtract: function(other) {
@@ -601,7 +619,7 @@ Object.assign(TwovilleInteger, {
     } else if (Object.getPrototypeOf(other) === TwovilleReal) {
       return TwovilleReal.create(this.get() - other.get());
     } else {
-      throw '...';
+      throw RuntimeError('Subtract failed');
     }
   },
   multiply: function(other) {
@@ -614,21 +632,23 @@ Object.assign(TwovilleInteger, {
     }
   },
   divide: function(other) {
-    if (other === TwovilleInteger) {
+    if (Object.getPrototypeOf(other) === TwovilleInteger) {
       return TwovilleInteger.create(Math.trunc(this.get() / other.get()));
-    } else if (other === TwovilleReal) {
+    } else if (Object.getPrototypeOf(other) === TwovilleReal) {
       return TwovilleReal.create(this.get() / other.get());
     } else {
-      throw '...';
+      console.log("this:", this);
+      console.log("other:", other);
+      throw RuntimeError('Divide failed');
     }
   },
   remainder: function(other) {
-    if (other === TwovilleInteger) {
+    if (Object.getPrototypeOf(other) === TwovilleInteger) {
       return TwovilleInteger.create(this.get() % other.get());
     } else if (other === TwovilleReal) {
       return TwovilleReal.create(this.get() % other.get());
     } else {
-      throw '...';
+      throw RuntimeError('Remainder failed');
     }
   },
   interpolate: function(other, proportion) {

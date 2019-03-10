@@ -232,7 +232,9 @@ exportButton.addEventListener('click', () => {
 function scrubTo(t) {
   timeSpinner.value = t;
   scrubber.value = t;
-  env.shapes.forEach(shape => shape.draw(env, t));
+  env.shapes.forEach(shape => {
+    shape.draw(env, t);
+  });
 }
 
 scrubber.addEventListener('input', () => {
@@ -374,10 +376,10 @@ evalButton.addEventListener('click', () => {
     body: ExpressionInt.create()
   };
 
-  console.log("ast:", ast);
+  // console.log("ast:", ast);
   try {
     ast.evaluate(env);
-    console.log("env:", env);
+    // console.log("env:", env);
 
     let dimensions = env.get('viewport').get('size');
     let corner = env.get('viewport').get('position');
@@ -403,7 +405,9 @@ evalButton.addEventListener('click', () => {
     pageOutline.setAttributeNS(null, 'stroke-opacity', 1);
     env.svg.appendChild(pageOutline);
 
-    env.shapes.forEach(shape => shape.domify(env.svg));
+    env.shapes.forEach(shape => {
+      shape.domify(env.svg)
+    });
 
     let tmin = env.get('time').get('start').get();
     let tmax = env.get('time').get('stop').get();
@@ -422,6 +426,7 @@ evalButton.addEventListener('click', () => {
     recordButton.disabled = false;
   } catch (e) {
     if (e instanceof Error) {
+      log(e.message);
       throw e;
     } else {
       console.trace(e);
