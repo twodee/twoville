@@ -351,16 +351,20 @@ Object.assign(TwovilleRectangle, {
     return instance;
   },
   draw: function(env, t) {
-    if (!this.has('position')) {
-      throw new RuntimeException(null, null, 'This circle\'s rectangle property has not been set.')
+    if (this.has('position') && this.has('center')) {
+      throw new RuntimeException(null, null, 'This rectangle\'s location has been set with both position and center. Define only one of these properties.')
+    }
+
+    if (!this.has('position') && !this.has('center')) {
+      throw new RuntimeException(null, null, 'This rectangle\'s location has not been set. Define one of the position and center properties.')
     }
     
     if (!this.has('size')) {
-      throw new RuntimeException(null, null, 'This circle\'s size property has not been set.')
+      throw new RuntimeException(null, null, 'This rectangle\'s size property has not been set.')
     }
     
     if (!this.has('rgb')) {
-      throw new RuntimeException(null, null, 'This circle\'s rgb property has not been set.')
+      throw new RuntimeException(null, null, 'This rectangle\'s rgb property has not been set.')
     }
     
     let needsTransforming = false;
@@ -373,10 +377,19 @@ Object.assign(TwovilleRectangle, {
       }
     }
 
-    // If we have rotation, but no pivot, error.
-
-    let position = this.valueAt(env, 'position', t);
     let size = this.valueAt(env, 'size', t);
+
+    let position;
+    if (this.has('position')) {
+      position = this.valueAt(env, 'position', t);
+    } else {
+      let center = this.valueAt(env, 'center', t);
+      position = TwovilleVector.create([
+        TwovilleReal.create(center.get(0).get() - size.get(0).get() * 0.5),
+        TwovilleReal.create(center.get(1).get() - size.get(1).get() * 0.5),
+      ]);
+    }
+
     let rgb = this.valueAt(env, 'rgb', t);
     let pivot = null;
     let rotation = null;
@@ -441,8 +454,8 @@ Object.assign(TwovilleCircle, {
   },
 
   draw: function(env, t) {
-    if (!this.has('position')) {
-      throw new RuntimeException(null, null, 'This circle\'s position property has not been set.')
+    if (!this.has('center')) {
+      throw new RuntimeException(null, null, 'This circle\'s center property has not been set.')
     }
     
     if (!this.has('radius')) {
@@ -463,9 +476,7 @@ Object.assign(TwovilleCircle, {
       }
     }
 
-    // If we have rotation, but no pivot, error.
-
-    let position = this.valueAt(env, 'position', t);
+    let center = this.valueAt(env, 'center', t);
     let radius = this.valueAt(env, 'radius', t);
     let rgb = this.valueAt(env, 'rgb', t);
     let pivot = null;
@@ -476,7 +487,7 @@ Object.assign(TwovilleCircle, {
       rotation = this.valueAt(env, 'rotation', t);
     }
 
-    if (position == null || radius == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
+    if (center == null || radius == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
       this.svgElement.setAttributeNS(null, 'opacity', 0);
     } else {
       this.svgElement.setAttributeNS(null, 'opacity', 1);
@@ -500,8 +511,8 @@ Object.assign(TwovilleCircle, {
       }
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
-      this.svgElement.setAttributeNS(null, 'cx', position.get(0).get());
-      this.svgElement.setAttributeNS(null, 'cy', position.get(1).get());
+      this.svgElement.setAttributeNS(null, 'cx', center.get(0).get());
+      this.svgElement.setAttributeNS(null, 'cy', center.get(1).get());
       this.svgElement.setAttributeNS(null, 'r', radius.get());
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }

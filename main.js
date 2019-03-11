@@ -4,6 +4,7 @@ import {
   TwovilleEnvironment,
   TwovilleShape,
   TwovilleInteger,
+  TwovilleReal,
   TwovilleVector,
   svgNamespace,
 } from './types.js';
@@ -301,10 +302,6 @@ evalButton.addEventListener('click', () => {
   env.bindings.time.bind('stop', null, null, TwovilleInteger.create(100));
 
   env.bindings.viewport = TwovilleEnvironment.create(env);
-  env.bindings.viewport.bind('position', null, null, TwovilleVector.create([
-    TwovilleInteger.create(0),
-    TwovilleInteger.create(0)
-  ]));
   env.bindings.viewport.bind('size', null, null, TwovilleVector.create([
     TwovilleInteger.create(100),
     TwovilleInteger.create(100)
@@ -376,28 +373,42 @@ evalButton.addEventListener('click', () => {
     body: ExpressionInt.create()
   };
 
-  // console.log("ast:", ast);
   try {
     ast.evaluate(env);
-    // console.log("env:", env);
 
-    let dimensions = env.get('viewport').get('size');
-    let corner = env.get('viewport').get('position');
-    env.svg.setAttributeNS(null, 'width', dimensions.get(0).get());
-    env.svg.setAttributeNS(null, 'height', dimensions.get(1).get());
+    let size = env.get('viewport').get('size');
+
+    let corner;
+    if (env.get('viewport').has('position')) {
+      corner = env.get('viewport').get('position');
+    } else if (env.get('viewport').has('center')) {
+      let center = env.get('viewport').get('center');
+      corner = TwovilleVector.create([
+        TwovilleReal.create(center.get(0).get() - size.get(0).get() * 0.5),
+        TwovilleReal.create(center.get(1).get() - size.get(1).get() * 0.5),
+      ]);
+    } else {
+      corner = TwovilleVector.create([
+        TwovilleInteger.create(0),
+        TwovilleInteger.create(0),
+      ]);
+    }
+
+    env.svg.setAttributeNS(null, 'width', size.get(0).get());
+    env.svg.setAttributeNS(null, 'height', size.get(1).get());
     env.svg.setAttributeNS(null, 'viewBox',
       corner.get(0).get() + ' ' +
       corner.get(1).get() + ' ' + 
-      dimensions.get(0).get() + ' ' +
-      dimensions.get(1).get()
+      size.get(0).get() + ' ' +
+      size.get(1).get()
     );
 
     let pageOutline = document.createElementNS(svgNamespace, 'rect');
     pageOutline.setAttributeNS(null, 'id', 'x-outline');
     pageOutline.setAttributeNS(null, 'x', corner.get(0).get());
     pageOutline.setAttributeNS(null, 'y', corner.get(1).get());
-    pageOutline.setAttributeNS(null, 'width', dimensions.get(0).get());
-    pageOutline.setAttributeNS(null, 'height', dimensions.get(1).get());
+    pageOutline.setAttributeNS(null, 'width', size.get(0).get());
+    pageOutline.setAttributeNS(null, 'height', size.get(1).get());
     pageOutline.setAttributeNS(null, 'fill', 'none');
     pageOutline.setAttributeNS(null, 'stroke', 'rgb(0, 0, 0)');
     pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
