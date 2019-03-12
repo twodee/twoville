@@ -191,15 +191,15 @@ Object.assign(TwovilleText, {
   },
   draw: function(env, t) {
     if (!this.has('position')) {
-      throw new RuntimeException(null, null, 'This circle\'s position property has not been set.')
+      throw new RuntimeException(null, null, 'This text\'s position property has not been set.')
     }
     
     if (!this.has('rgb')) {
-      throw new RuntimeException(null, null, 'This circle\'s rgb property has not been set.')
+      throw new RuntimeException(null, null, 'This text\'s rgb property has not been set.')
     }
     
     if (!this.has('text')) {
-      throw new RuntimeException(null, null, 'This circle\'s text property has not been set.')
+      throw new RuntimeException(null, null, 'This text\'s text property has not been set.')
     }
     
     let needsTransforming = false;
@@ -351,12 +351,12 @@ Object.assign(TwovilleRectangle, {
     return instance;
   },
   draw: function(env, t) {
-    if (this.has('position') && this.has('center')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s location has been set with both position and center. Define only one of these properties.')
+    if (this.has('corner') && this.has('center')) {
+      throw new RuntimeException(null, null, 'This rectangle\'s location has been set with both corner and center. Define only one of these properties.')
     }
 
-    if (!this.has('position') && !this.has('center')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s location has not been set. Define one of the position and center properties.')
+    if (!this.has('corner') && !this.has('center')) {
+      throw new RuntimeException(null, null, 'This rectangle\'s location has not been set. Define one of the corner and center properties.')
     }
     
     if (!this.has('size')) {
@@ -379,12 +379,12 @@ Object.assign(TwovilleRectangle, {
 
     let size = this.valueAt(env, 'size', t);
 
-    let position;
-    if (this.has('position')) {
-      position = this.valueAt(env, 'position', t);
+    let corner;
+    if (this.has('corner')) {
+      corner = this.valueAt(env, 'corner', t);
     } else {
       let center = this.valueAt(env, 'center', t);
-      position = TwovilleVector.create([
+      corner = TwovilleVector.create([
         TwovilleReal.create(center.get(0).get() - size.get(0).get() * 0.5),
         TwovilleReal.create(center.get(1).get() - size.get(1).get() * 0.5),
       ]);
@@ -399,7 +399,7 @@ Object.assign(TwovilleRectangle, {
       rotation = this.valueAt(env, 'rotation', t);
     }
 
-    if (position == null || size == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
+    if (corner == null || size == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
       this.svgElement.setAttributeNS(null, 'opacity', 0);
     } else {
       this.svgElement.setAttributeNS(null, 'opacity', 1);
@@ -429,8 +429,8 @@ Object.assign(TwovilleRectangle, {
       }
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
-      this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
-      this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
+      this.svgElement.setAttributeNS(null, 'x', corner.get(0).get());
+      this.svgElement.setAttributeNS(null, 'y', corner.get(1).get());
       this.svgElement.setAttributeNS(null, 'width', size.get(0).get());
       this.svgElement.setAttributeNS(null, 'height', size.get(1).get());
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());

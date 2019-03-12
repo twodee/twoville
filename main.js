@@ -32,6 +32,7 @@ editor.setOptions({
 if (localStorage.getItem('src') !== null) {
   editor.setValue(localStorage.getItem('src'), 1);
 }
+editor.getSession().on('change', onSourceChanged);
 let Range = ace.require('ace/range').Range;
 
 let left = document.getElementById('left');
@@ -48,6 +49,7 @@ let timeSpinner = document.getElementById('timeSpinner');
 let playOnceButton = document.getElementById('playOnceButton');
 let playLoopButton = document.getElementById('playLoopButton');
 let env;
+let isDirty = false;
 
 function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
@@ -209,6 +211,8 @@ recordButton.addEventListener('clock', () => {
 
 saveButton.addEventListener('click', () => {
   localStorage.setItem('src', editor.getValue());
+  isDirty = false;
+  syncTitle();
 });
 
 function downloadBlob(name, blob) {
@@ -379,8 +383,8 @@ evalButton.addEventListener('click', () => {
     let size = env.get('viewport').get('size');
 
     let corner;
-    if (env.get('viewport').has('position')) {
-      corner = env.get('viewport').get('position');
+    if (env.get('viewport').has('corner')) {
+      corner = env.get('viewport').get('corner');
     } else if (env.get('viewport').has('center')) {
       let center = env.get('viewport').get('center');
       corner = TwovilleVector.create([
@@ -445,3 +449,12 @@ evalButton.addEventListener('click', () => {
     }
   }
 });
+
+function onSourceChanged() {
+  isDirty = true;
+  syncTitle();
+}
+
+function syncTitle() {
+  document.title = 'Twoville' + (isDirty ? '*' : '');
+}
