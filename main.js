@@ -1,17 +1,26 @@
-import { lex } from './lexer.js';
-import { parse } from './parser.js';
+import {
+  lex
+} from './lexer.js';
+
+import {
+  parse
+} from './parser.js';
+
 import {
   TwovilleEnvironment,
   TwovilleShape,
   TwovilleInteger,
   TwovilleReal,
   TwovilleVector,
+  MessagedException,
+  LocatedException,
   svgNamespace,
 } from './types.js';
+
 import {
   ExpressionRectangle,
   ExpressionLine,
-  ExpressionText,
+  ExpressionLabel,
   ExpressionGroup,
   ExpressionMask,
   ExpressionCircle,
@@ -51,16 +60,40 @@ let playLoopButton = document.getElementById('playLoopButton');
 let env;
 let isDirty = false;
 
-function highlight(lineStart, lineEnd, columnStart, columnEnd) {
+export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
   editor.centerSelection();
 }
 
 export function log(text) {
-  text = text.replace(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):/, (__, lineStart, lineEnd, columnStart, columnEnd) => {
-    return '<a href="javascript:highlight(' + lineStart + ', ' + lineEnd + ', ' + columnStart + ', ' + columnEnd + ')">Line ' + (parseInt(lineEnd) + 1) + '</a>: '
-  });
-  messager.innerHTML += text + '<br>';
+  while (messager.lastChild) {
+    messager.removeChild(messager.lastChild);
+  }
+
+  console.log("text:", text);
+  let matches = text.match(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):(.*)/);
+  if (matches) {
+    let lineStart = matches[1];
+    let lineEnd = matches[2];
+    let columnStart = matches[3];
+    let columnEnd = matches[4];
+    let message = matches[5];
+
+    let linkNode = document.createElement('a');
+    linkNode.setAttribute('href', '#');
+    linkNode.addEventListener('click', () => highlight(lineStart, lineEnd, columnStart, columnEnd));
+
+    let label = document.createTextNode('Line ' + (parseInt(lineEnd) + 1));
+    linkNode.appendChild(label);
+
+    messager.appendChild(linkNode);
+
+    let textNode = document.createTextNode(': ' + message);
+    messager.appendChild(textNode);
+  } else {
+    let textNode = document.createTextNode(text);
+    messager.appendChild(textNode);
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -323,10 +356,10 @@ evalButton.addEventListener('click', () => {
     body: new ExpressionLine()
   };
 
-  env.bindings['text'] = {
-    name: 'text',
+  env.bindings['label'] = {
+    name: 'label',
     formals: [],
-    body: new ExpressionText()
+    body: new ExpressionLabel()
   };
 
   env.bindings['group'] = {
@@ -440,7 +473,10 @@ evalButton.addEventListener('click', () => {
 
     recordButton.disabled = false;
   } catch (e) {
-    if (e instanceof Error) {
+    if (e instanceof LocatedException) {
+      log(e.userMessage);
+      throw e;
+    } else if (e instanceof MessagedException) {
       log(e.message);
       throw e;
     } else {

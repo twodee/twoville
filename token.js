@@ -49,6 +49,10 @@ export class SourceLocation {
            this.columnStart + ':' +
            this.columnEnd + ':';
   }
+
+  static span(a, b) {
+    return new SourceLocation(a.lineStart, b.lineEnd, a.columnStart, b.columnEnd, a.indexStart, b.indexEnd);
+  }
 }
 
 export class Token {

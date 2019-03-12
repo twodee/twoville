@@ -1,4 +1,8 @@
-import { Tokens } from './token.js';
+import {
+  Tokens,
+  SourceLocation
+} from './token.js';
+
 import {
   ExpressionAdd,
   ExpressionAssignment,
@@ -82,11 +86,11 @@ export function parse(tokens) {
     let sourceStart = null;
     let sourceEnd = null;
     if (statements.length > 0) {
-      sourceStart = statements[0].sourceStart;
-      sourceEnd = statements[statements.length - 1].sourceStart;
+      sourceStart = statements[0].where;
+      sourceEnd = statements[statements.length - 1].where;
     }
 
-    return new ExpressionBlock(sourceStart, sourceEnd, statements);
+    return new ExpressionBlock(SourceLocation.span(sourceStart, sourceEnd), statements);
   }
 
   function statement() {
@@ -107,7 +111,7 @@ export function parse(tokens) {
           if (has(Tokens.Linebreak)) {
             consume();
             let b = block();
-            return new StatementTo(e.sourceStart, b.sourceEnd, e, b);
+            return new StatementTo(SourceLocation.span(e.where, b.where), e, b);
           } else if (has(Tokens.RightArrow)) {
             consume();
             if (has(Tokens.T)) {
@@ -115,7 +119,7 @@ export function parse(tokens) {
               if (has(Tokens.Linebreak)) {
                 consume();
                 let b = block();
-                return new StatementThrough(e.sourceStart, b.sourceEnd, e, b);
+                return new StatementThrough(SourceLocation.span(e.where, b.where), e, b);
               } else {
                 throw 'expected linebreak after through';
               }
@@ -143,14 +147,14 @@ export function parse(tokens) {
           if (has(Tokens.Linebreak)) {
             consume();
             let b = block();
-            return new StatementFrom(from.sourceStart, b.sourceEnd, from, b);
+            return new StatementFrom(SourceLocation.span(from.where, b.where), from, b);
           } else if (has(Tokens.RightArrow)) {
             consume();
             let to = expression();
             if (has(Tokens.Linebreak)) {
               consume();
               let b = block();
-              return new StatementBetween(from.sourceStart, b.sourceEnd, from, to, b);
+              return new StatementBetween(SourceLocation.span(from.where, b.where), from, to, b);
             } else {
               throw 'expected linebreak';
             }
@@ -182,7 +186,7 @@ export function parse(tokens) {
     if (has(Tokens.Assign)) {
       consume();
       let rhs = expressionAssignment();
-      lhs = new ExpressionAssignment(lhs.sourceStart, rhs.sourceEnd, lhs, rhs);
+      lhs = new ExpressionAssignment(SourceLocation.span(lhs.where, rhs.where), lhs, rhs);
     }
     return lhs;
   }
@@ -193,9 +197,9 @@ export function parse(tokens) {
       let operator = consume();
       let b = expressionMultiplicative();
       if (operator.type == Tokens.Plus) {
-        a = new ExpressionAdd(a.sourceStart, b.sourceEnd, a, b);
+        a = new ExpressionAdd(SourceLocation.span(a.where, b.where), a, b);
       } else {
-        a = new ExpressionSubtract(a.sourceStart, b.sourceEnd, a, b);
+        a = new ExpressionSubtract(SourceLocation.span(a.where, b.where), a, b);
       }
     }
     return a;
@@ -207,11 +211,11 @@ export function parse(tokens) {
       let operator = consume();
       let b = expressionProperty();
       if (operator.type == Tokens.Asterisk) {
-        a = new ExpressionMultiply(a.sourceStart, b.sourceEnd, a, b);
+        a = new ExpressionMultiply(SourceLocation.span(a.where, b.where), a, b);
       } else if (operator.type == Tokens.ForwardSlash) {
-        a = new ExpressionDivide(a.sourceStart, b.sourceEnd, a, b);
+        a = new ExpressionDivide(SourceLocation.span(a.where, b.where), a, b);
       } else {
-        a = new ExpressionRemainder(a.sourceStart, b.sourceEnd, a, b);
+        a = new ExpressionRemainder(SourceLocation.span(a.where, b.where), a, b);
       }
     }
     return a;
@@ -222,7 +226,7 @@ export function parse(tokens) {
     while (has(Tokens.Dot)) {
       consume(); 
       let property = atom();
-      base = new ExpressionProperty(base.sourceStart, property.sourceEnd, base, property);
+      base = new ExpressionProperty(SourceLocation.span(base.where, property.where), base, property);
     }
     return base;
   }
@@ -241,16 +245,16 @@ export function parse(tokens) {
   function atom() {
     if (has(Tokens.Integer)) {
       let token = consume();
-      return new ExpressionInteger(token.where, token.where, Number(token.source));
+      return new ExpressionInteger(token.where, Number(token.source));
     } else if (has(Tokens.String)) {
       let token = consume();
-      return new ExpressionString(token.where, token.where, token.source);
+      return new ExpressionString(token.where, token.source);
     } else if (has(Tokens.Real)) {
       let token = consume();
-      return new ExpressionReal(token.where, token.where, Number(token.source));
+      return new ExpressionReal(token.where, Number(token.source));
     } else if (has(Tokens.Boolean)) {
       let token = consume();
-      return new ExpressionBoolean(token.where, token.where, token.source == 'true');
+      return new ExpressionBoolean(token.where, token.source == 'true');
     } else if (has(Tokens.For)) {
       let sourceStart = tokens[i].where;
       consume();
@@ -269,9 +273,9 @@ export function parse(tokens) {
             consume(); // eat linebreak
             let body = block();
 
-            let by = new ExpressionInteger(null, null, 1);
+            let by = new ExpressionInteger(null, 1);
 
-            return new ExpressionFor(sourceStart, body.sourceEnd, j, start, stop, by, body);
+            return new ExpressionFor(SourceLocation.span(sourceStart, body.where), j, start, stop, by, body);
           }
         }
       }
@@ -292,7 +296,7 @@ export function parse(tokens) {
       }
       let sourceEnd = tokens[i].where;
       consume(); // eat ]
-      return new ExpressionVector(sourceStart, sourceEnd, elements);
+      return new ExpressionVector(SourceLocation.span(sourceStart, sourceEnd), elements);
     } else if (has(Tokens.Identifier) && has(Tokens.LeftParenthesis, 1)) {
       let sourceStart = tokens[i].where;
 
@@ -315,7 +319,7 @@ export function parse(tokens) {
         throw 'Missing )';
       }
 
-      return new ExpressionFunctionCall(sourceStart, sourceEnd, name, actuals);
+      return new ExpressionFunctionCall(SourceLocation.span(sourceStart, sourceEnd), name, actuals);
     } else if (has(Tokens.Repeat)) {
       let sourceStart = tokens[i].where;
       consume(); // eat repeat
@@ -325,11 +329,11 @@ export function parse(tokens) {
       }
       consume(); // eat linebreak
       let body = block();
-      return new ExpressionRepeat(sourceStart, body.sourceEnd, count, body);
+      return new ExpressionRepeat(SourceLocation.span(sourceStart, body.where), count, body);
     } else if (has(Tokens.Identifier) || has(Tokens.T)) {
-      let sourceStart = tokens[i].where;
+      let where = tokens[i].where;
       let id = consume();
-      return new ExpressionIdentifier(sourceStart, sourceStart, id);
+      return new ExpressionIdentifier(where, id);
     } else if (has(Tokens.With)) {
       let sourceStart = tokens[i].where;
       consume(); // eat with
@@ -339,7 +343,7 @@ export function parse(tokens) {
       }
       consume(); // eat linebreak
       let body = block();
-      return new ExpressionWith(sourceStart, body.sourceEnd, scope, body);
+      return new ExpressionWith(SourceLocation.span(sourceStart, body.where), scope, body);
     } else {
       throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';
     }

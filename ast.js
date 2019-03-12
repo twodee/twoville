@@ -8,7 +8,7 @@ import {
   TwovilleVector,
   TwovilleRectangle,
   TwovilleLine,
-  TwovilleText,
+  TwovilleLabel,
   TwovilleCircle,
   TwovilleGroup,
   TwovilleMask,
@@ -20,9 +20,8 @@ import {
 // --------------------------------------------------------------------------- 
 
 export class Expression {
-  constructor(sourceStart, sourceEnd) {
-    this.sourceStart = sourceStart;
-    this.sourceEnd = sourceEnd;
+  constructor(where) {
+    this.where = where;
   }
 
   isTimeSensitive(env) {
@@ -31,8 +30,8 @@ export class Expression {
 }
 
 export class ExpressionBoolean extends Expression {
-  constructor(sourceStart, sourceEnd, x) {
-    super(sourceStart, sourceEnd);
+  constructor(where, x) {
+    super(where);
     this.x = x;
   }
 
@@ -44,8 +43,8 @@ export class ExpressionBoolean extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionInteger extends Expression {
-  constructor(sourceStart, sourceEnd, x) {
-    super(sourceStart, sourceEnd);
+  constructor(where, x) {
+    super(where);
     this.x = x;
   }
 
@@ -57,8 +56,8 @@ export class ExpressionInteger extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionString extends Expression {
-  constructor(sourceStart, sourceEnd, x) {
-    super(sourceStart, sourceEnd);
+  constructor(where, x) {
+    super(where);
     this.x = x;
   }
 
@@ -70,8 +69,8 @@ export class ExpressionString extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionReal extends Expression {
-  constructor(sourceStart, sourceEnd, x) {
-    super(sourceStart, sourceEnd);
+  constructor(where, x) {
+    super(where);
     this.x = x;
   }
 
@@ -85,8 +84,8 @@ export class ExpressionReal extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAdd extends Expression {
-  constructor(sourceStart, sourceEnd, a, b) {
-    super(sourceStart, sourceEnd);
+  constructor(where, a, b) {
+    super(where);
     this.a = a;
     this.b = b;
   }
@@ -105,8 +104,8 @@ export class ExpressionAdd extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSubtract extends Expression {
-  constructor(sourceStart, sourceEnd, a, b) {
-    super(sourceStart, sourceEnd);
+  constructor(where, a, b) {
+    super(where);
     this.a = a;
     this.b = b;
   }
@@ -125,8 +124,8 @@ export class ExpressionSubtract extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMultiply extends Expression {
-  constructor(sourceStart, sourceEnd, a, b) {
-    super(sourceStart, sourceEnd);
+  constructor(where, a, b) {
+    super(where);
     this.a = a;
     this.b = b;
   }
@@ -145,8 +144,8 @@ export class ExpressionMultiply extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionDivide extends Expression {
-  constructor(sourceStart, sourceEnd, a, b) {
-    super(sourceStart, sourceEnd);
+  constructor(where, a, b) {
+    super(where);
     this.a = a;
     this.b = b;
   }
@@ -165,8 +164,8 @@ export class ExpressionDivide extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRemainder extends Expression {
-  constructor(sourceStart, sourceEnd, a, b) {
-    super(sourceStart, sourceEnd);
+  constructor(where, a, b) {
+    super(where);
     this.a = a;
     this.b = b;
   }
@@ -185,8 +184,8 @@ export class ExpressionRemainder extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionDefinition extends Expression {
-  constructor(sourceStart, sourceEnd, name, formals, body) {
-    super(sourceStart, sourceEnd);
+  constructor(where, name, formals, body) {
+    super(where);
     this.name = name;
     this.formals = formals;
     this.body = body;
@@ -204,8 +203,8 @@ export class ExpressionFunctionDefinition extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionIdentifier extends Expression {
-  constructor(sourceStart, sourceEnd, token) {
-    super(sourceStart, sourceEnd);
+  constructor(where, token) {
+    super(where);
     this.token = token;
   }
 
@@ -237,8 +236,8 @@ export class ExpressionIdentifier extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionCall extends Expression {
-  constructor(sourceStart, sourceEnd, name, actuals) {
-    super(sourceStart, sourceEnd);
+  constructor(where, name, actuals) {
+    super(where);
     this.name = name;
     this.actuals = actuals;
   }
@@ -259,7 +258,7 @@ export class ExpressionFunctionCall extends Expression {
       callEnvironment[f.formals[i]] = actual.evaluate(env, fromTime, toTime);
     });
 
-    let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime);
+    let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, this);
     return returnValue;
   }
 
@@ -277,8 +276,8 @@ export class ExpressionFunctionCall extends Expression {
 // ---------------------------------------------------------------------------
 
 export class ExpressionBlock extends Expression {
-  constructor(sourceStart, sourceEnd, statements) {
-    super(sourceStart, sourceEnd);
+  constructor(where, statements) {
+    super(where);
     this.statements = statements;
   }
 
@@ -298,8 +297,8 @@ export class ExpressionBlock extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAssignment extends Expression {
-  constructor(sourceStart, sourceEnd, l, r) {
-    super(sourceStart, sourceEnd);
+  constructor(where, l, r) {
+    super(where);
     this.l = l;
     this.r = r;
   }
@@ -320,8 +319,8 @@ export class ExpressionAssignment extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFor extends Expression {
-  constructor(sourceStart, sourceEnd, i, start, stop, by, body) {
-    super(sourceStart, sourceEnd);
+  constructor(where, i, start, stop, by, body) {
+    super(where);
     this.i = i;
     this.start = start;
     this.stop = stop;
@@ -335,7 +334,7 @@ export class ExpressionFor extends Expression {
     let by = this.by.evaluate(env, fromTime, toTime).get();
 
     for (let i = start; i <= stop; i += by) {
-      new ExpressionAssignment(null, null, this.i, new TwovilleInteger(i)).evaluate(env, fromTime, toTime);
+      new ExpressionAssignment(null, this.i, new TwovilleInteger(i)).evaluate(env, fromTime, toTime);
       this.body.evaluate(env, fromTime, toTime);
     }
   }
@@ -348,8 +347,8 @@ export class ExpressionFor extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionProperty extends Expression {
-  constructor(sourceStart, sourceEnd, base, property) {
-    super(sourceStart, sourceEnd);
+  constructor(where, base, property) {
+    super(where);
     this.base = base;
     this.property = property;
   }
@@ -361,7 +360,7 @@ export class ExpressionProperty extends Expression {
 
   assign(env, fromTime, toTime, rhs) {
     let object = this.base.evaluate(env, fromTime, toTime); 
-    let value = new ExpressionAssignment(null, null, this.property, rhs).evaluate(object, fromTime, toTime);
+    let value = new ExpressionAssignment(null, this.property, rhs).evaluate(object, fromTime, toTime);
     return value;
   }
 }
@@ -369,8 +368,8 @@ export class ExpressionProperty extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVector extends Expression {
-  constructor(sourceStart, sourceEnd, elements) {
-    super(sourceStart, sourceEnd);
+  constructor(where, elements) {
+    super(where);
     this.elements = elements;
   }
 
@@ -389,8 +388,8 @@ export class ExpressionVector extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementFrom extends Expression {
-  constructor(sourceStart, sourceEnd, fromTimeExpression, block) {
-    super(sourceStart, sourceEnd);
+  constructor(where, fromTimeExpression, block) {
+    super(where);
     this.fromTimeExpression = fromTimeExpression;
     this.block = block;
   }
@@ -404,8 +403,8 @@ export class StatementFrom extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementTo extends Expression {
-  constructor(sourceStart, sourceEnd, toTimeExpression, block) {
-    super(sourceStart, sourceEnd);
+  constructor(where, toTimeExpression, block) {
+    super(where);
     this.toTimeExpression = toTimeExpression;
     this.block = block;
   }
@@ -419,8 +418,8 @@ export class StatementTo extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementBetween extends Expression {
-  constructor(sourceStart, sourceEnd, fromTimeExpression, toTimeExpression, block) {
-    super(sourceStart, sourceEnd);
+  constructor(where, fromTimeExpression, toTimeExpression, block) {
+    super(where);
     this.fromTimeExpression = fromTimeExpression;
     this.toTimeExpression = toTimeExpression;
     this.block = block;
@@ -436,8 +435,8 @@ export class StatementBetween extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementThrough extends Expression {
-  constructor(sourceStart, sourceEnd, throughTimeExpression, block) {
-    super(sourceStart, sourceEnd);
+  constructor(where, throughTimeExpression, block) {
+    super(where);
     this.throughTimeExpression = throughTimeExpression;
   }
 
@@ -451,8 +450,8 @@ export class StatementThrough extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRepeat extends Expression {
-  constructor(sourceStart, sourceEnd, count, body) {
-    super(sourceStart, sourceEnd);
+  constructor(where, count, body) {
+    super(where);
     this.count = count;
     this.body = body;
   }
@@ -474,8 +473,8 @@ export class ExpressionRepeat extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionWith extends Expression {
-  constructor(sourceStart, sourceEnd, scope, body) {
-    super(sourceStart, sourceEnd);
+  constructor(where, scope, body) {
+    super(where);
     this.scope = scope;
     this.body = body;
   }
@@ -499,8 +498,8 @@ export class ExpressionRectangle extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let r = new TwovilleRectangle(env);
+  evaluate(env, fromTime, toTime, callExpression) {
+    let r = new TwovilleRectangle(env, callExpression);
     env.shapes.push(r);
     return r;
   }
@@ -513,8 +512,8 @@ export class ExpressionLine extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let r = new TwovilleLine(env);
+  evaluate(env, fromTime, toTime, callExpression) {
+    let r = new TwovilleLine(env, callExpression);
     env.shapes.push(r);
     return r;
   }
@@ -522,13 +521,13 @@ export class ExpressionLine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionText extends Expression {
+export class ExpressionLabel extends Expression {
   constructor() {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let r = new TwovilleText(env);
+  evaluate(env, fromTime, toTime, callExpression) {
+    let r = new TwovilleLabel(env, callExpression);
     env.shapes.push(r);
     return r;
   }
@@ -541,8 +540,8 @@ export class ExpressionCircle extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let c = new TwovilleCircle(env);
+  evaluate(env, fromTime, toTime, callExpression) {
+    let c = new TwovilleCircle(env, callExpression);
     env.shapes.push(c);
     return c;
   }
@@ -555,7 +554,7 @@ export class ExpressionPrint extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, callExpression) {
     let message = env['message'].get();
     log(message.toString(fromTime, toTime));
     return null;
@@ -569,7 +568,7 @@ export class ExpressionRandom extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, callExpression) {
     let min = env['min'].get();
     let max = env['max'].get();
     let x = Math.random() * (max - min) + min;
@@ -584,7 +583,7 @@ export class ExpressionSine extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, callExpression) {
     let degrees = env['degrees'].get();
     let x = Math.sin(degrees * Math.PI / 180);
     return new TwovilleReal(x);
@@ -598,7 +597,7 @@ export class ExpressionCosine extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, callExpression) {
     let degrees = env['degrees'].get();
     let x = Math.cos(degrees * Math.PI / 180);
     return new TwovilleReal(x);
@@ -613,7 +612,7 @@ export class ExpressionInt extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, callExpression) {
     let f = env['x'].get();
     let i = Math.trunc(f);
     return new TwovilleInteger(i);
@@ -627,8 +626,8 @@ export class ExpressionGroup extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let group = new TwovilleGroup(env);
+  evaluate(env, fromTime, toTime, callExpression) {
+    let group = new TwovilleGroup(env, callExpression);
     env.shapes.push(group);
     return group;
   }
@@ -641,8 +640,8 @@ export class ExpressionMask extends Expression {
     super(null, null);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let mask = new TwovilleMask(env);
+  evaluate(env, fromTime, toTime, callExpression) {
+    let mask = new TwovilleMask(env, callExpression);
     env.shapes.push(mask);
     return mask;
   }

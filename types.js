@@ -4,11 +4,22 @@ export let svgNamespace = "http://www.w3.org/2000/svg";
 
 // --------------------------------------------------------------------------- 
 
-class RuntimeException extends Error {
-  constructor(start, stop, message) {
+export class MessagedException extends Error {
+  constructor(message) {
     super(message);
-    this.start = start;
-    this.stop = stop;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class LocatedException extends MessagedException {
+  constructor(where, message) {
+    super(message);
+    this.where = where;
+  }
+
+  get userMessage() {
+    return `${this.where.debugPrefix()}${this.message}`;
   }
 }
 
@@ -93,8 +104,9 @@ export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
 let serial = 0;
 
 export class TwovilleShape extends TwovilleTimelinedEnvironment {
-  constructor(env) {
-    super(env);
+  constructor(env, callExpression) {
+    super(env, callExpression);
+    this.callExpression = callExpression;
     this.parentElement = null;
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
     this.bind('opacity', null, null, new TwovilleReal(1));
@@ -151,8 +163,8 @@ export class TwovilleGroup extends TwovilleShape {
 // --------------------------------------------------------------------------- 
 
 export class TwovilleMask extends TwovilleShape {
-  constructor(env) {
-    super(env);
+  constructor(env, callExpression) {
+    super(env, callExpression);
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
@@ -166,9 +178,9 @@ export class TwovilleMask extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovilleText extends TwovilleShape {
-  constructor(env) {
-    super(env);
+export class TwovilleLabel extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression);
     this.svgElement = document.createElementNS(svgNamespace, 'text');
     this.svgElement.setAttributeNS(null, 'font-size', 8);
     this.svgElement.setAttributeNS(null, 'text-anchor', 'middle');
@@ -178,15 +190,15 @@ export class TwovilleText extends TwovilleShape {
 
   draw(env, t) {
     if (!this.has('position')) {
-      throw new RuntimeException(null, null, 'This text\'s position property has not been set.');
+      throw new LocatedException(this.callExpression.where, 'I found a label whose position property has not been defined.');
     }
     
     if (!this.has('rgb')) {
-      throw new RuntimeException(null, null, 'This text\'s rgb property has not been set.');
+      throw new LocatedException(this.callExpression.where, 'I found a label whose rgb property has not been defined.');
     }
     
     if (!this.has('text')) {
-      throw new RuntimeException(null, null, 'This text\'s text property has not been set.');
+      throw new LocatedException(this.callExpression.where, 'I found a label whose text property has not been defined.');
     }
     
     let needsTransforming = false;
@@ -247,8 +259,8 @@ export class TwovilleText extends TwovilleShape {
 // --------------------------------------------------------------------------- 
 
 export class TwovilleLine extends TwovilleShape {
-  constructor(env) {
-    super(env);
+  constructor(env, callExpression) {
+    super(env, callExpression);
     this.svgElement = document.createElementNS(svgNamespace, 'line');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
   }
@@ -323,27 +335,27 @@ export class TwovilleLine extends TwovilleShape {
 // --------------------------------------------------------------------------- 
 
 export class TwovilleRectangle extends TwovilleShape {
-  constructor(env) {
-    super(env);
+  constructor(env, callExpression) {
+    super(env, callExpression);
     this.svgElement = document.createElementNS(svgNamespace, 'rect');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
   }
 
   draw(env, t) {
     if (this.has('corner') && this.has('center')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s location has been set with both corner and center. Define only one of these properties.');
+      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose corner and center properties were both set. Define only one of these.');
     }
 
     if (!this.has('corner') && !this.has('center')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s location has not been set. Define one of the corner and center properties.');
+      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose location I couldn\'t figure out. Please define its corner or center.');
     }
     
     if (!this.has('size')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s size property has not been set.');
+      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose size property has not been defined.');
     }
     
     if (!this.has('rgb')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s rgb property has not been set.');
+      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose rgb property has not been defined.');
     }
     
     let needsTransforming = false;
@@ -420,23 +432,23 @@ export class TwovilleRectangle extends TwovilleShape {
 // --------------------------------------------------------------------------- 
 
 export class TwovilleCircle extends TwovilleShape {
-  constructor(env) {
-    super(env);
+  constructor(env, callExpression) {
+    super(env, callExpression);
     this.svgElement = document.createElementNS(svgNamespace, 'circle');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
   }
 
   draw(env, t) {
     if (!this.has('center')) {
-      throw new RuntimeException(null, null, 'This circle\'s center property has not been set.');
+      throw new LocatedException(this.callExpression.where, 'I found a circle whose center property has not been defined.');
     }
     
     if (!this.has('radius')) {
-      throw new RuntimeException(null, null, 'This circle\'s radius property has not been set.');
+      throw new LocatedException(this.callExpression.where, 'I found a circle whose radius property has not been defined.');
     }
     
     if (!this.has('rgb')) {
-      throw new RuntimeException(null, null, 'This circle\'s rgb property has not been set.');
+      throw new LocatedException(this.callExpression.where, 'I found a circle whose rgb property has not been defined.');
     }
     
     let needsTransforming = false;
@@ -505,6 +517,10 @@ export class TwovilleData {
   evaluate(env, fromTime, toTime) {
     return this;
   }
+
+  isTimeSensitive(env) {
+    return false;
+  } // TODO remove
 }
 
 // --------------------------------------------------------------------------- 
@@ -593,7 +609,7 @@ export class TwovilleInteger extends TwovilleData {
     } else if (other instanceof TwovilleReal) {
       return new TwovilleReal(this.get() + other.get());
     } else {
-      throw new RuntimeException('Add failed');
+      throw new MessagedException('Add failed');
     }
   }
 
@@ -603,7 +619,7 @@ export class TwovilleInteger extends TwovilleData {
     } else if (other instanceof TwovilleReal) {
       return new TwovilleReal(this.get() - other.get());
     } else {
-      throw new RuntimeException('Subtract failed');
+      throw new MessagedException('Subtract failed');
     }
   }
 
@@ -623,9 +639,7 @@ export class TwovilleInteger extends TwovilleData {
     } else if (other instanceof TwovilleReal) {
       return new TwovilleReal(this.get() / other.get());
     } else {
-      console.log("this:", this);
-      console.log("other:", other);
-      throw new RuntimeException('Divide failed');
+      throw new MessagedException('Divide failed');
     }
   }
 
@@ -635,7 +649,7 @@ export class TwovilleInteger extends TwovilleData {
     } else if (other instanceof TwovilleReal) {
       return new TwovilleReal(this.get() % other.get());
     } else {
-      throw new RuntimeException('Remainder failed');
+      throw new MessagedException('Remainder failed');
     }
   }
 
