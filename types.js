@@ -14,17 +14,15 @@ class RuntimeException extends Error {
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleEnvironment = {
-  create: function(parent) {
-    let instance = Object.create(TwovilleEnvironment);
-    return Object.assign(instance, {
-      bindings: {},
-      shapes: parent.shapes,
-      svg: parent.svg,
-      parent: parent
-    });
-  },
-  get: function(id) {
+export class TwovilleEnvironment {
+  constructor(parent) {
+    this.bindings = {};
+    this.shapes = parent.shapes;
+    this.svg = parent.svg;
+    this.parent = parent;
+  }
+
+  get(id) {
     let env = this;
     while (env != null) {
       if (env.bindings.hasOwnProperty(id)) {
@@ -33,11 +31,13 @@ export let TwovilleEnvironment = {
       env = env.parent;
     }
     return null;
-  },
-  owns: function(id) {
+  }
+
+  owns(id) {
     return this.bindings.hasOwnProperty(id);
-  },
-  has: function(id) {
+  }
+
+  has(id) {
     let env = this;
     while (env != null) {
       if (env.bindings.hasOwnProperty(id)) {
@@ -46,31 +46,32 @@ export let TwovilleEnvironment = {
       env = env.parent;
     }
     return false;
-  },
-  bind: function(id, fromTime, toTime, value) {
+  }
+
+  bind(id, fromTime, toTime, value) {
     this.bindings[id] = value;
-  },
-  valueAt: function(env, property, t) {
+  }
+
+  valueAt(env, property, t) {
     // Assumes property exists.
     return this.bindings[property].valueAt(env, t);
-  },
-  evaluate: function(env, fromTime, toTime) {
+  }
+
+  evaluate(env, fromTime, toTime) {
     return this;
   }
 }
 
 // ---------------------------------------------------------------------------
 
-export let TwovilleTimelinedEnvironment = Object.create(TwovilleEnvironment);
-Object.assign(TwovilleTimelinedEnvironment, {
-  create: function(env) {
-    let instance = TwovilleEnvironment.create(env);
-    Object.setPrototypeOf(instance, TwovilleTimelinedEnvironment);
-    return instance;
-  },
-  bind: function(id, fromTime, toTime, value) {
+export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
+  constructor(env) {
+    super(env);
+  }
+
+  bind(id, fromTime, toTime, value) {
     if (!this.bindings.hasOwnProperty(id)) {
-      this.bindings[id] = Timeline.create();
+      this.bindings[id] = new Timeline();
     }
 
     if (fromTime != null && toTime != null) {
@@ -83,29 +84,27 @@ Object.assign(TwovilleTimelinedEnvironment, {
     } else {
       this.bindings[id].setDefault(value);
     }
-  },
-});
+  }
+
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleShape = Object.create(TwovilleTimelinedEnvironment);
-Object.assign(TwovilleShape, {
-  serial: 0,
-  create: function(env) {
-    let instance = TwovilleTimelinedEnvironment.create(env);
-    Object.setPrototypeOf(instance, TwovilleShape);
-    instance = Object.assign(instance, {
-      id: TwovilleShape.serial,
-      parentElement: null
-    });
-    instance.bindings.stroke = TwovilleTimelinedEnvironment.create(instance);
-    instance.bind('opacity', null, null, TwovilleReal.create(1));
-    ++TwovilleShape.serial;
-    return instance;
-  },
-  domify: function(svg) {
+let serial = 0;
+
+export class TwovilleShape extends TwovilleTimelinedEnvironment {
+  constructor(env) {
+    super(env);
+    this.parentElement = null;
+    this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
+    this.bind('opacity', null, null, new TwovilleReal(1));
+    this.id = serial;
+    ++serial;
+  }
+
+  domify(svg) {
     if (this.has('clippers')) {
-      let clipPath = document.createElementNS(svgNamespace, 'clipPath')
+      let clipPath = document.createElementNS(svgNamespace, 'clipPath');
       clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
       let clippers = this.get('clippers').getDefault();
       clippers.forEach(clipper => {
@@ -130,76 +129,64 @@ Object.assign(TwovilleShape, {
       this.parentElement = this.svg;
     }
     this.parentElement.appendChild(this.svgElement);
-  },
-});
+  }
+
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleGroup = Object.create(TwovilleShape);
-Object.assign(TwovilleGroup, {
-  create: function(env) {
-    let instance = TwovilleShape.create(env);
-    Object.setPrototypeOf(instance, TwovilleGroup);
-    instance = Object.assign(instance, {
-      svgElement: document.createElementNS(svgNamespace, 'group'),
-      children: []
-    });
+export class TwovilleGroup extends TwovilleShape {
+  constructor(env) {
+    super(env);
+    this.children = [];
+    this.svgElement = document.createElementNS(svgNamespace, 'group');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+  }
 
-    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    return instance;
-  },
-  draw: function(env, t) {
+  draw(env, t) {
     this.children.forEach(child => child.draw(env, t));
   }
-});
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleMask = Object.create(TwovilleShape);
-Object.assign(TwovilleMask, {
-  create: function(env) {
-    let instance = TwovilleShape.create(env);
-    Object.setPrototypeOf(instance, TwovilleMask);
-    instance = Object.assign(instance, {
-      svgElement: document.createElementNS(svgNamespace, 'mask'),
-      children: []
-    });
-    instance.bind('template', null, null, TwovilleBoolean.create(true));
-    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    return instance;
-  },
-  draw: function(env, t) {
+export class TwovilleMask extends TwovilleShape {
+  constructor(env) {
+    super(env);
+    this.children = [];
+    this.svgElement = document.createElementNS(svgNamespace, 'mask');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.bind('template', null, null, new TwovilleBoolean(true));
+  }
+
+  draw(env, t) {
     this.children.forEach(child => child.draw(env, t));
   }
-});
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleText = Object.create(TwovilleShape);
-Object.assign(TwovilleText, {
-  create: function(env) {
-    let instance = TwovilleShape.create(env);
-    Object.setPrototypeOf(instance, TwovilleText);
-    instance = Object.assign(instance, {
-      svgElement: document.createElementNS(svgNamespace, 'text')
-    });
-    instance.svgElement.setAttributeNS(null, 'font-size', 8);
-    instance.svgElement.setAttributeNS(null, 'text-anchor', 'middle');
-    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    instance.svgElement.appendChild(document.createTextNode('foo'));
-    return instance;
-  },
-  draw: function(env, t) {
+export class TwovilleText extends TwovilleShape {
+  constructor(env) {
+    super(env);
+    this.svgElement = document.createElementNS(svgNamespace, 'text');
+    this.svgElement.setAttributeNS(null, 'font-size', 8);
+    this.svgElement.setAttributeNS(null, 'text-anchor', 'middle');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.svgElement.appendChild(document.createTextNode('foo'));
+  }
+
+  draw(env, t) {
     if (!this.has('position')) {
-      throw new RuntimeException(null, null, 'This text\'s position property has not been set.')
+      throw new RuntimeException(null, null, 'This text\'s position property has not been set.');
     }
     
     if (!this.has('rgb')) {
-      throw new RuntimeException(null, null, 'This text\'s rgb property has not been set.')
+      throw new RuntimeException(null, null, 'This text\'s rgb property has not been set.');
     }
     
     if (!this.has('text')) {
-      throw new RuntimeException(null, null, 'This text\'s text property has not been set.')
+      throw new RuntimeException(null, null, 'This text\'s text property has not been set.');
     }
     
     let needsTransforming = false;
@@ -255,22 +242,18 @@ Object.assign(TwovilleText, {
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
-});
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleLine = Object.create(TwovilleShape);
-Object.assign(TwovilleLine, {
-  create: function(env) {
-    let instance = TwovilleShape.create(env);
-    Object.setPrototypeOf(instance, TwovilleLine);
-    instance = Object.assign(instance, {
-      svgElement: document.createElementNS(svgNamespace, 'line')
-    });
-    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    return instance;
-  },
-  draw: function(env, t) {
+export class TwovilleLine extends TwovilleShape {
+  constructor(env) {
+    super(env);
+    this.svgElement = document.createElementNS(svgNamespace, 'line');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+  }
+
+  draw(env, t) {
     if (!this.has('a')) {
       throw 'no a';
     }
@@ -335,36 +318,32 @@ Object.assign(TwovilleLine, {
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
-});
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleRectangle = Object.create(TwovilleShape);
-Object.assign(TwovilleRectangle, {
-  create: function(env) {
-    let instance = TwovilleShape.create(env);
-    Object.setPrototypeOf(instance, TwovilleRectangle);
-    instance = Object.assign(instance, {
-      svgElement: document.createElementNS(svgNamespace, 'rect')
-    });
-    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    return instance;
-  },
-  draw: function(env, t) {
+export class TwovilleRectangle extends TwovilleShape {
+  constructor(env) {
+    super(env);
+    this.svgElement = document.createElementNS(svgNamespace, 'rect');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+  }
+
+  draw(env, t) {
     if (this.has('corner') && this.has('center')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s location has been set with both corner and center. Define only one of these properties.')
+      throw new RuntimeException(null, null, 'This rectangle\'s location has been set with both corner and center. Define only one of these properties.');
     }
 
     if (!this.has('corner') && !this.has('center')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s location has not been set. Define one of the corner and center properties.')
+      throw new RuntimeException(null, null, 'This rectangle\'s location has not been set. Define one of the corner and center properties.');
     }
     
     if (!this.has('size')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s size property has not been set.')
+      throw new RuntimeException(null, null, 'This rectangle\'s size property has not been set.');
     }
     
     if (!this.has('rgb')) {
-      throw new RuntimeException(null, null, 'This rectangle\'s rgb property has not been set.')
+      throw new RuntimeException(null, null, 'This rectangle\'s rgb property has not been set.');
     }
     
     let needsTransforming = false;
@@ -384,9 +363,9 @@ Object.assign(TwovilleRectangle, {
       corner = this.valueAt(env, 'corner', t);
     } else {
       let center = this.valueAt(env, 'center', t);
-      corner = TwovilleVector.create([
-        TwovilleReal.create(center.get(0).get() - size.get(0).get() * 0.5),
-        TwovilleReal.create(center.get(1).get() - size.get(1).get() * 0.5),
+      corner = new TwovilleVector([
+        new TwovilleReal(center.get(0).get() - size.get(0).get() * 0.5),
+        new TwovilleReal(center.get(1).get() - size.get(1).get() * 0.5),
       ]);
     }
 
@@ -436,34 +415,28 @@ Object.assign(TwovilleRectangle, {
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
-});
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleCircle = Object.create(TwovilleShape);
-Object.assign(TwovilleCircle, {
-  create: function(env) {
-    let instance = TwovilleShape.create(env);
-    Object.setPrototypeOf(instance, TwovilleCircle);
-    instance = Object.assign(instance, {
-      svgElement: document.createElementNS(svgNamespace, 'circle')
-    });
-    instance.svgElement.setAttributeNS(null, 'id', 'element-' + instance.id);
-    // instance.parentElement.appendChild(instance.svgElement);
-    return instance;
-  },
+export class TwovilleCircle extends TwovilleShape {
+  constructor(env) {
+    super(env);
+    this.svgElement = document.createElementNS(svgNamespace, 'circle');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+  }
 
-  draw: function(env, t) {
+  draw(env, t) {
     if (!this.has('center')) {
-      throw new RuntimeException(null, null, 'This circle\'s center property has not been set.')
+      throw new RuntimeException(null, null, 'This circle\'s center property has not been set.');
     }
     
     if (!this.has('radius')) {
-      throw new RuntimeException(null, null, 'This circle\'s radius property has not been set.')
+      throw new RuntimeException(null, null, 'This circle\'s radius property has not been set.');
     }
     
     if (!this.has('rgb')) {
-      throw new RuntimeException(null, null, 'This circle\'s rgb property has not been set.')
+      throw new RuntimeException(null, null, 'This circle\'s rgb property has not been set.');
     }
     
     let needsTransforming = false;
@@ -517,240 +490,240 @@ Object.assign(TwovilleCircle, {
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
-});
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleData = {
-  create: function() {
-    return {};
-  },
-  bind: function(env, fromTime, toTime, id) {
+export class TwovilleData {
+  constructor() {
+  }
+
+  bind(env, fromTime, toTime, id) {
     env.bind(id, fromTime, toTime, this);
-  },
-  evaluate: function(env, fromTime, toTime) {
+  }
+
+  evaluate(env, fromTime, toTime) {
     return this;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleVector = Object.create(TwovilleData);
-Object.assign(TwovilleVector, {
-  create: function(elements) {
-    let instance = TwovilleData.create();
-    Object.setPrototypeOf(instance, TwovilleVector);
-    instance = Object.assign(instance, {
-      elements: elements
-    });
-    return instance;
-  },
-  bind: function(id, fromTime, toTime, value) {
+export class TwovilleVector extends TwovilleData {
+  constructor(elements) {
+    super();
+    this.elements = elements;
+  }
+
+  bind(id, fromTime, toTime, value) {
     this.elements.forEach(element => {
       element.bind(id, fromTime, toTime, value);
     });
-  },
-  forEach: function(each) {
+  }
+
+  forEach(each) {
     this.elements.forEach(each);
-  },
-  get: function(i) {
+  }
+
+  get(i) {
     return this.elements[i];
-  },
-  evaluate: function(env) {
+  }
+
+  evaluate(env) {
     return this;
-    // return TwovilleVector.create(this.elements.map(element => element.evaluate(env)));
-  },
-  toRGB: function(env) {
+  }
+
+  toRGB(env) {
     let r = Math.floor(this.elements[0].get() * 255);
     let g = Math.floor(this.elements[1].get() * 255);
     let b = Math.floor(this.elements[2].get() * 255);
     return 'rgb(' + r + ', ' + g + ', ' + b + ')';
-  },
-  toString: function(env) {
-    return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
-  },
-  interpolate: function(other, proportion) {
-    return TwovilleVector.create(this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
-  },
-});
-
-// --------------------------------------------------------------------------- 
-
-export let TwovilleString = Object.create(TwovilleData);
-Object.assign(TwovilleString, {
-  create: function(x) {
-    let instance = TwovilleData.create();
-    Object.setPrototypeOf(instance, TwovilleString);
-    instance = Object.assign(instance, {
-      x: x
-    });
-    return instance;
-  },
-  toString: function() {
-    return '' + this.x;
-  },
-  get: function() {
-    return this.x;
-  },
-  interpolate: function(other, proportion) {
-    return TwovilleString.create(proportion <= 0.5 ? this.get() : other.get());
   }
-});
+
+  toString(env) {
+    return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
+  }
+
+  interpolate(other, proportion) {
+    return new TwovilleVector(this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
+  }
+
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleInteger = Object.create(TwovilleData);
-Object.assign(TwovilleInteger, {
-  create: function(x) {
-    let instance = TwovilleData.create();
-    Object.setPrototypeOf(instance, TwovilleInteger);
-    instance = Object.assign(instance, {
-      x: x
-    });
-    return instance;
-  },
-  toString: function() {
+export class TwovilleString extends TwovilleData {
+  constructor(x) {
+    super();
+    this.x = x;
+  }
+
+  toString() {
     return '' + this.x;
-  },
-  get: function() {
+  }
+
+  get() {
     return this.x;
-  },
-  add: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger) {
-      return TwovilleInteger.create(this.get() + other.get());
-    } else if (Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() + other.get());
+  }
+
+  interpolate(other, proportion) {
+    return new TwovilleString(proportion <= 0.5 ? this.get() : other.get());
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovilleInteger extends TwovilleData {
+  constructor(x) {
+    super();
+    this.x = x;
+  }
+
+  toString() {
+    return '' + this.x;
+  }
+
+  get() {
+    return this.x;
+  }
+
+  add(other) {
+    if (other instanceof TwovilleInteger) {
+      return new TwovilleInteger(this.get() + other.get());
+    } else if (other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() + other.get());
     } else {
-      throw RuntimeError('Add failed');
+      throw new RuntimeException('Add failed');
     }
-  },
-  subtract: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger) {
-      return TwovilleInteger.create(this.get() - other.get());
-    } else if (Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() - other.get());
+  }
+
+  subtract(other) {
+    if (other instanceof TwovilleInteger) {
+      return new TwovilleInteger(this.get() - other.get());
+    } else if (other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() - other.get());
     } else {
-      throw RuntimeError('Subtract failed');
+      throw new RuntimeException('Subtract failed');
     }
-  },
-  multiply: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger) {
-      return TwovilleInteger.create(this.get() * other.get());
-    } else if (Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() * other.get());
+  }
+
+  multiply(other) {
+    if (other instanceof TwovilleInteger) {
+      return new TwovilleInteger(this.get() * other.get());
+    } else if (other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() * other.get());
     } else {
       throw 'bad ****';
     }
-  },
-  divide: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger) {
-      return TwovilleInteger.create(Math.trunc(this.get() / other.get()));
-    } else if (Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() / other.get());
+  }
+
+  divide(other) {
+    if (other instanceof TwovilleInteger) {
+      return new TwovilleInteger(Math.trunc(this.get() / other.get()));
+    } else if (other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() / other.get());
     } else {
       console.log("this:", this);
       console.log("other:", other);
-      throw RuntimeError('Divide failed');
+      throw new RuntimeException('Divide failed');
     }
-  },
-  remainder: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger) {
-      return TwovilleInteger.create(this.get() % other.get());
-    } else if (other === TwovilleReal) {
-      return TwovilleReal.create(this.get() % other.get());
-    } else {
-      throw RuntimeError('Remainder failed');
-    }
-  },
-  interpolate: function(other, proportion) {
-    return TwovilleReal.create(this.get() + proportion * (other.get() - this.get()));
   }
-});
+
+  remainder(other) {
+    if (other instanceof TwovilleInteger) {
+      return new TwovilleInteger(this.get() % other.get());
+    } else if (other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() % other.get());
+    } else {
+      throw new RuntimeException('Remainder failed');
+    }
+  }
+
+  interpolate(other, proportion) {
+    return new TwovilleReal(this.get() + proportion * (other.get() - this.get()));
+  }
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleReal = Object.create(TwovilleData);
-Object.assign(TwovilleReal, {
-  create: function(x) {
-    let instance = TwovilleData.create();
-    Object.setPrototypeOf(instance, TwovilleReal);
-    instance = Object.assign(instance, {
-      x: x
-    });
-    return instance;
-  },
-  toString: function() {
+export class TwovilleReal extends TwovilleData {
+  constructor(x) {
+    super();
+    this.x = x;
+  }
+
+  toString() {
     return '' + this.x;
-  },
-  get: function() {
+  }
+
+  get() {
     return this.x;
-  },
-  add: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger ||
-        Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() + other.get());
+  }
+
+  add(other) {
+    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() + other.get());
     } else {
       throw '...';
     }
-  },
-  subtract: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger ||
-        Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() - other.get());
+  }
+
+  subtract(other) {
+    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() - other.get());
     } else {
       throw '...';
     }
-  },
-  multiply: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger ||
-        Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() * other.get());
+  }
+
+  multiply(other) {
+    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() * other.get());
     } else {
       throw 'BAD *';
     }
-  },
-  divide: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger ||
-        Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() / other.get());
-    } else {
-      throw '...';
-    }
-  },
-  remainder: function(other) {
-    if (Object.getPrototypeOf(other) === TwovilleInteger ||
-        Object.getPrototypeOf(other) === TwovilleReal) {
-      return TwovilleReal.create(this.get() % other.get());
-    } else {
-      throw '...';
-    }
-  },
-  interpolate: function(other, proportion) {
-    return TwovilleReal.create(this.get() + proportion * (other.get() - this.get()));
   }
-});
+
+  divide(other) {
+    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() / other.get());
+    } else {
+      throw '...';
+    }
+  }
+
+  remainder(other) {
+    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
+      return new TwovilleReal(this.get() % other.get());
+    } else {
+      throw '...';
+    }
+  }
+
+  interpolate(other, proportion) {
+    return new TwovilleReal(this.get() + proportion * (other.get() - this.get()));
+  }
+}
 
 // --------------------------------------------------------------------------- 
 
-export let TwovilleBoolean = Object.create(TwovilleData);
-Object.assign(TwovilleBoolean, {
-  create: function(x) {
-    let instance = TwovilleData.create();
-    Object.setPrototypeOf(instance, TwovilleBoolean);
-    instance = Object.assign(instance, {
-      x: x
-    });
-    return instance;
-  },
-  toString: function() {
-    return '' + this.x;
-  },
-  get: function() {
-    return this.x;
-  },
-  interpolate: function(other, proportion) {
-    return TwovilleBoolean.create(proportion <= 0.5 ? this.get() : other.get());
+export class TwovilleBoolean extends TwovilleData {
+  constructor(x) {
+    super();
+    this.x = x;
   }
-});
+   
+  toString() {
+    return '' + this.x;
+  }
+
+  get() {
+    return this.x;
+  }
+
+  interpolate(other, proportion) {
+    return new TwovilleBoolean(proportion <= 0.5 ? this.get() : other.get());
+  }
+}
 
 // --------------------------------------------------------------------------- 

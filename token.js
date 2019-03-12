@@ -33,19 +33,17 @@ export let Tokens = Object.freeze({
   EOF: 'EOF'
 });
 
-export let SourceLocation = {
-  create: function(lineStart, lineEnd, columnStart, columnEnd, indexStart, indexEnd) {
-    let instance = Object.create(SourceLocation);
-    return Object.assign(instance, {
-      lineStart: lineStart,
-      lineEnd: lineEnd,
-      columnStart: columnStart,
-      columnEnd: columnEnd,
-      indexStart: indexStart,
-      indexEnd: indexEnd
-    });
-  },
-  debugPrefix: function() {
+export class SourceLocation {
+  constructor(lineStart, lineEnd, columnStart, columnEnd, indexStart, indexEnd) {
+    this.lineStart = lineStart;
+    this.lineEnd = lineEnd;
+    this.columnStart = columnStart;
+    this.columnEnd = columnEnd;
+    this.indexStart = indexStart;
+    this.indexEnd = indexEnd;
+  }
+
+  debugPrefix() {
     return this.lineStart + ':' +
            this.lineEnd + ':' +
            this.columnStart + ':' +
@@ -53,13 +51,10 @@ export let SourceLocation = {
   }
 }
 
-export let Token = {
-  create: function(type, source, where) {
-    let instance = Object.create(Token);
-    return Object.assign(instance, {
-      type: type,
-      source: source,
-      where: where
-    });
-  },
+export class Token {
+  constructor(type, source, where) {
+    this.type = type;
+    this.source = source;
+    this.where = where;
+  }
 }

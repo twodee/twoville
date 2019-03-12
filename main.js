@@ -56,7 +56,7 @@ function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.centerSelection();
 }
 
-function log(text) {
+export function log(text) {
   text = text.replace(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):/, (__, lineStart, lineEnd, columnStart, columnEnd) => {
     return '<a href="javascript:highlight(' + lineStart + ', ' + lineEnd + ', ' + columnStart + ', ' + columnEnd + ')">Line ' + (parseInt(lineEnd) + 1) + '</a>: '
   });
@@ -298,83 +298,83 @@ evalButton.addEventListener('click', () => {
     // log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
   // });
 
-  env = TwovilleEnvironment.create({svg: svg, shapes: [], bindings: [], parent: null});
+  env = new TwovilleEnvironment({svg: svg, shapes: [], bindings: [], parent: null});
   TwovilleShape.serial = 0;
 
-  env.bindings.time = TwovilleEnvironment.create(env);
-  env.bindings.time.bind('start', null, null, TwovilleInteger.create(0));
-  env.bindings.time.bind('stop', null, null, TwovilleInteger.create(100));
+  env.bindings.time = new TwovilleEnvironment(env);
+  env.bindings.time.bind('start', null, null, new TwovilleInteger(0));
+  env.bindings.time.bind('stop', null, null, new TwovilleInteger(100));
 
-  env.bindings.viewport = TwovilleEnvironment.create(env);
-  env.bindings.viewport.bind('size', null, null, TwovilleVector.create([
-    TwovilleInteger.create(100),
-    TwovilleInteger.create(100)
+  env.bindings.viewport = new TwovilleEnvironment(env);
+  env.bindings.viewport.bind('size', null, null, new TwovilleVector([
+    new TwovilleInteger(100),
+    new TwovilleInteger(100)
   ]));
 
   env.bindings['rectangle'] = {
     name: 'rectangle',
     formals: [],
-    body: ExpressionRectangle.create()
+    body: new ExpressionRectangle()
   };
 
   env.bindings['line'] = {
     name: 'line',
     formals: [],
-    body: ExpressionLine.create()
+    body: new ExpressionLine()
   };
 
   env.bindings['text'] = {
     name: 'text',
     formals: [],
-    body: ExpressionText.create()
+    body: new ExpressionText()
   };
 
   env.bindings['group'] = {
     name: 'group',
     formals: [],
-    body: ExpressionGroup.create()
+    body: new ExpressionGroup()
   };
 
   env.bindings['mask'] = {
     name: 'mask',
     formals: [],
-    body: ExpressionMask.create()
+    body: new ExpressionMask()
   };
 
   env.bindings['circle'] = {
     name: 'circle',
     formals: [],
-    body: ExpressionCircle.create()
+    body: new ExpressionCircle()
   };
 
   env.bindings['print'] = {
     name: 'print',
     formals: ['message'],
-    body: ExpressionPrint.create()
+    body: new ExpressionPrint()
   };
 
   env.bindings['random'] = {
     name: 'random',
     formals: ['min', 'max'],
-    body: ExpressionRandom.create()
+    body: new ExpressionRandom()
   };
 
   env.bindings['sin'] = {
     name: 'sin',
     formals: ['degrees'],
-    body: ExpressionSine.create()
+    body: new ExpressionSine()
   };
 
   env.bindings['cos'] = {
     name: 'cos',
     formals: ['degrees'],
-    body: ExpressionCosine.create()
+    body: new ExpressionCosine()
   };
 
   env.bindings['int'] = {
     name: 'int',
     formals: ['x'],
-    body: ExpressionInt.create()
+    body: new ExpressionInt()
   };
 
   try {
@@ -387,14 +387,14 @@ evalButton.addEventListener('click', () => {
       corner = env.get('viewport').get('corner');
     } else if (env.get('viewport').has('center')) {
       let center = env.get('viewport').get('center');
-      corner = TwovilleVector.create([
-        TwovilleReal.create(center.get(0).get() - size.get(0).get() * 0.5),
-        TwovilleReal.create(center.get(1).get() - size.get(1).get() * 0.5),
+      corner = new TwovilleVector([
+        new TwovilleReal(center.get(0).get() - size.get(0).get() * 0.5),
+        new TwovilleReal(center.get(1).get() - size.get(1).get() * 0.5),
       ]);
     } else {
-      corner = TwovilleVector.create([
-        TwovilleInteger.create(0),
-        TwovilleInteger.create(0),
+      corner = new TwovilleVector([
+        new TwovilleInteger(0),
+        new TwovilleInteger(0),
       ]);
     }
 

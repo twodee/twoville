@@ -79,7 +79,14 @@ export function parse(tokens) {
 
     indents.pop();
 
-    return ExpressionBlock.create(statements);
+    let sourceStart = null;
+    let sourceEnd = null;
+    if (statements.length > 0) {
+      sourceStart = statements[0].sourceStart;
+      sourceEnd = statements[statements.length - 1].sourceStart;
+    }
+
+    return new ExpressionBlock(sourceStart, sourceEnd, statements);
   }
 
   function statement() {
@@ -100,7 +107,7 @@ export function parse(tokens) {
           if (has(Tokens.Linebreak)) {
             consume();
             let b = block();
-            return StatementTo.create(e, b);
+            return new StatementTo(e.sourceStart, b.sourceEnd, e, b);
           } else if (has(Tokens.RightArrow)) {
             consume();
             if (has(Tokens.T)) {
@@ -108,7 +115,7 @@ export function parse(tokens) {
               if (has(Tokens.Linebreak)) {
                 consume();
                 let b = block();
-                return StatementThrough.create(e, b);
+                return new StatementThrough(e.sourceStart, b.sourceEnd, e, b);
               } else {
                 throw 'expected linebreak after through';
               }
@@ -136,14 +143,14 @@ export function parse(tokens) {
           if (has(Tokens.Linebreak)) {
             consume();
             let b = block();
-            return StatementFrom.create(from, b);
+            return new StatementFrom(from.sourceStart, b.sourceEnd, from, b);
           } else if (has(Tokens.RightArrow)) {
             consume();
             let to = expression();
             if (has(Tokens.Linebreak)) {
               consume();
               let b = block();
-              return StatementBetween.create(from, to, b);
+              return new StatementBetween(from.sourceStart, b.sourceEnd, from, to, b);
             } else {
               throw 'expected linebreak';
             }
@@ -175,7 +182,7 @@ export function parse(tokens) {
     if (has(Tokens.Assign)) {
       consume();
       let rhs = expressionAssignment();
-      lhs = ExpressionAssignment.create(lhs, rhs);
+      lhs = new ExpressionAssignment(lhs.sourceStart, rhs.sourceEnd, lhs, rhs);
     }
     return lhs;
   }
@@ -186,9 +193,9 @@ export function parse(tokens) {
       let operator = consume();
       let b = expressionMultiplicative();
       if (operator.type == Tokens.Plus) {
-        a = ExpressionAdd.create(a, b);
+        a = new ExpressionAdd(a.sourceStart, b.sourceEnd, a, b);
       } else {
-        a = ExpressionSubtract.create(a, b);
+        a = new ExpressionSubtract(a.sourceStart, b.sourceEnd, a, b);
       }
     }
     return a;
@@ -200,11 +207,11 @@ export function parse(tokens) {
       let operator = consume();
       let b = expressionProperty();
       if (operator.type == Tokens.Asterisk) {
-        a = ExpressionMultiply.create(a, b);
+        a = new ExpressionMultiply(a.sourceStart, b.sourceEnd, a, b);
       } else if (operator.type == Tokens.ForwardSlash) {
-        a = ExpressionDivide.create(a, b);
+        a = new ExpressionDivide(a.sourceStart, b.sourceEnd, a, b);
       } else {
-        a = ExpressionRemainder.create(a, b);
+        a = new ExpressionRemainder(a.sourceStart, b.sourceEnd, a, b);
       }
     }
     return a;
@@ -215,7 +222,7 @@ export function parse(tokens) {
     while (has(Tokens.Dot)) {
       consume(); 
       let property = atom();
-      base = ExpressionProperty.create(base, property);
+      base = new ExpressionProperty(base.sourceStart, property.sourceEnd, base, property);
     }
     return base;
   }
@@ -234,17 +241,18 @@ export function parse(tokens) {
   function atom() {
     if (has(Tokens.Integer)) {
       let token = consume();
-      return ExpressionInteger.create(Number(token.source));
+      return new ExpressionInteger(token.where, token.where, Number(token.source));
     } else if (has(Tokens.String)) {
       let token = consume();
-      return ExpressionString.create(token.source);
+      return new ExpressionString(token.where, token.where, token.source);
     } else if (has(Tokens.Real)) {
       let token = consume();
-      return ExpressionReal.create(Number(token.source));
+      return new ExpressionReal(token.where, token.where, Number(token.source));
     } else if (has(Tokens.Boolean)) {
       let token = consume();
-      return ExpressionBoolean.create(token.source == 'true');
+      return new ExpressionBoolean(token.where, token.where, token.source == 'true');
     } else if (has(Tokens.For)) {
+      let sourceStart = tokens[i].where;
       consume();
       if (isFirstOfExpression()) {
         let j = expression();
@@ -261,13 +269,14 @@ export function parse(tokens) {
             consume(); // eat linebreak
             let body = block();
 
-            let by = ExpressionInteger.create(1);
+            let by = new ExpressionInteger(null, null, 1);
 
-            return ExpressionFor.create(j, start, stop, by, body);
+            return new ExpressionFor(sourceStart, body.sourceEnd, j, start, stop, by, body);
           }
         }
       }
     } else if (has(Tokens.LeftSquareBracket)) {
+      let sourceStart = tokens[i].where;
       consume(); // eat [
       let elements = [];
       while (!has(Tokens.RightSquareBracket)) {
@@ -281,9 +290,12 @@ export function parse(tokens) {
           }
         }
       }
+      let sourceEnd = tokens[i].where;
       consume(); // eat ]
-      return ExpressionVector.create(elements);
+      return new ExpressionVector(sourceStart, sourceEnd, elements);
     } else if (has(Tokens.Identifier) && has(Tokens.LeftParenthesis, 1)) {
+      let sourceStart = tokens[i].where;
+
       let name = consume().source;
       consume(); // eat (
 
@@ -296,14 +308,16 @@ export function parse(tokens) {
         }
       }
 
+      let sourceEnd = tokens[i].where;
       if (has(Tokens.RightParenthesis)) {
         consume();
       } else {
         throw 'Missing )';
       }
 
-      return ExpressionFunctionCall.create(name, actuals);
+      return new ExpressionFunctionCall(sourceStart, sourceEnd, name, actuals);
     } else if (has(Tokens.Repeat)) {
+      let sourceStart = tokens[i].where;
       consume(); // eat repeat
       let count = expression();
       if (!has(Tokens.Linebreak)) {
@@ -311,11 +325,13 @@ export function parse(tokens) {
       }
       consume(); // eat linebreak
       let body = block();
-      return ExpressionRepeat.create(count, body);
+      return new ExpressionRepeat(sourceStart, body.sourceEnd, count, body);
     } else if (has(Tokens.Identifier) || has(Tokens.T)) {
+      let sourceStart = tokens[i].where;
       let id = consume();
-      return ExpressionIdentifier.create(id);
+      return new ExpressionIdentifier(sourceStart, sourceStart, id);
     } else if (has(Tokens.With)) {
+      let sourceStart = tokens[i].where;
       consume(); // eat with
       let scope = expression();
       if (!has(Tokens.Linebreak)) {
@@ -323,7 +339,7 @@ export function parse(tokens) {
       }
       consume(); // eat linebreak
       let body = block();
-      return ExpressionWith.create(scope, body);
+      return new ExpressionWith(sourceStart, body.sourceEnd, scope, body);
     } else {
       throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';
     }

@@ -47,7 +47,7 @@ export function lex(source) {
   }
 
   function emit(type) {
-    tokens.push(Token.create(type, tokenSoFar, SourceLocation.create(iStartLine, iEndLine, iStartColumn, iEndColumn, iStartIndex, iEndIndex)));
+    tokens.push(new Token(type, tokenSoFar, new SourceLocation(iStartLine, iEndLine, iStartColumn, iEndColumn, iStartIndex, iEndIndex)));
     resetToken();
   }
 
