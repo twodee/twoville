@@ -71,12 +71,15 @@ export function parse(tokens) {
     let indentation = tokens[i];
 
     if (indentation.source.length <= indents[indents.length - 1]) {
-      throw new LocatedException(intentation.where, 'I expected consistent indentation, but this indentation jumps around.');
+      throw new LocatedException(indentation.where, 'I expected the indentation to increase upon entering a block.');
     }
     indents.push(indentation.source.length);
 
     let statements = [];
-    while (has(Tokens.Indentation) && tokens[i].source.length == indentation.source.length) {
+    while (has(Tokens.Indentation)) {
+      if (tokens[i].source.length != indentation.source.length) {
+        throw new LocatedException(tokens[i].where, 'I expected consistent indentation within a block, but this indentation jumps around.');
+      }
       consume(); // eat indentation
       if (has(Tokens.Linebreak)) {
         consume();

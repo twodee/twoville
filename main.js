@@ -481,15 +481,12 @@ evalButton.addEventListener('click', () => {
 
     recordButton.disabled = false;
   } catch (e) {
-    if (e instanceof LocatedException) {
-      log(e.userMessage);
-      throw e;
-    } else if (e instanceof MessagedException) {
+    if (e instanceof MessagedException) {
       log(e.userMessage);
       throw e;
     } else {
       console.trace(e);
-      log(e);
+      log(e.message);
     }
   }
 });
