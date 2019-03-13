@@ -61,22 +61,29 @@ let env;
 let isDirty = false;
 
 export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
+
+  console.log("lineStart:", lineStart);
+  console.log("columnStart:", columnStart);
+  console.log("lineEnd:", lineEnd);
+  console.log("columnEnd:", columnEnd);
+
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
   editor.centerSelection();
 }
 
-export function log(text) {
+function clearConsole() {
   while (messager.lastChild) {
     messager.removeChild(messager.lastChild);
   }
+}
 
-  console.log("text:", text);
+export function log(text) {
   let matches = text.match(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):(.*)/);
   if (matches) {
-    let lineStart = matches[1];
-    let lineEnd = matches[2];
-    let columnStart = matches[3];
-    let columnEnd = matches[4];
+    let lineStart = parseInt(matches[1]);
+    let lineEnd = parseInt(matches[2]);
+    let columnStart = parseInt(matches[3]);
+    let columnEnd = parseInt(matches[4]);
     let message = matches[5];
 
     let linkNode = document.createElement('a');
@@ -94,6 +101,7 @@ export function log(text) {
     let textNode = document.createTextNode(text);
     messager.appendChild(textNode);
   }
+  messager.appendChild(document.createElement('br'));
 }
 
 // --------------------------------------------------------------------------- 
@@ -316,7 +324,7 @@ playLoopButton.addEventListener('click', e => {
 });
 
 evalButton.addEventListener('click', () => {
-  messager.innerHTML = '';
+  clearConsole();
 
   while (svg.lastChild) {
     svg.removeChild(svg.lastChild);
@@ -324,93 +332,93 @@ evalButton.addEventListener('click', () => {
   let defs = document.createElementNS(svgNamespace, 'defs');
   svg.appendChild(defs);
 
-  let tokens = lex(editor.getValue());
-  let ast = parse(tokens);
-
-  // tokens.forEach(token => {
-    // log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
-  // });
-
-  env = new TwovilleEnvironment({svg: svg, shapes: [], bindings: [], parent: null});
-  TwovilleShape.serial = 0;
-
-  env.bindings.time = new TwovilleEnvironment(env);
-  env.bindings.time.bind('start', null, null, new TwovilleInteger(0));
-  env.bindings.time.bind('stop', null, null, new TwovilleInteger(100));
-
-  env.bindings.viewport = new TwovilleEnvironment(env);
-  env.bindings.viewport.bind('size', null, null, new TwovilleVector([
-    new TwovilleInteger(100),
-    new TwovilleInteger(100)
-  ]));
-
-  env.bindings['rectangle'] = {
-    name: 'rectangle',
-    formals: [],
-    body: new ExpressionRectangle()
-  };
-
-  env.bindings['line'] = {
-    name: 'line',
-    formals: [],
-    body: new ExpressionLine()
-  };
-
-  env.bindings['label'] = {
-    name: 'label',
-    formals: [],
-    body: new ExpressionLabel()
-  };
-
-  env.bindings['group'] = {
-    name: 'group',
-    formals: [],
-    body: new ExpressionGroup()
-  };
-
-  env.bindings['mask'] = {
-    name: 'mask',
-    formals: [],
-    body: new ExpressionMask()
-  };
-
-  env.bindings['circle'] = {
-    name: 'circle',
-    formals: [],
-    body: new ExpressionCircle()
-  };
-
-  env.bindings['print'] = {
-    name: 'print',
-    formals: ['message'],
-    body: new ExpressionPrint()
-  };
-
-  env.bindings['random'] = {
-    name: 'random',
-    formals: ['min', 'max'],
-    body: new ExpressionRandom()
-  };
-
-  env.bindings['sin'] = {
-    name: 'sin',
-    formals: ['degrees'],
-    body: new ExpressionSine()
-  };
-
-  env.bindings['cos'] = {
-    name: 'cos',
-    formals: ['degrees'],
-    body: new ExpressionCosine()
-  };
-
-  env.bindings['int'] = {
-    name: 'int',
-    formals: ['x'],
-    body: new ExpressionInt()
-  };
-
   try {
+    let tokens = lex(editor.getValue());
+    let ast = parse(tokens);
+
+    // tokens.forEach(token => {
+      // log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
+    // });
+
+    env = new TwovilleEnvironment({svg: svg, shapes: [], bindings: [], parent: null});
+    TwovilleShape.serial = 0;
+
+    env.bindings.time = new TwovilleEnvironment(env);
+    env.bindings.time.bind('start', null, null, new TwovilleInteger(0));
+    env.bindings.time.bind('stop', null, null, new TwovilleInteger(100));
+
+    env.bindings.viewport = new TwovilleEnvironment(env);
+    env.bindings.viewport.bind('size', null, null, new TwovilleVector([
+      new TwovilleInteger(100),
+      new TwovilleInteger(100)
+    ]));
+
+    env.bindings['rectangle'] = {
+      name: 'rectangle',
+      formals: [],
+      body: new ExpressionRectangle()
+    };
+
+    env.bindings['line'] = {
+      name: 'line',
+      formals: [],
+      body: new ExpressionLine()
+    };
+
+    env.bindings['label'] = {
+      name: 'label',
+      formals: [],
+      body: new ExpressionLabel()
+    };
+
+    env.bindings['group'] = {
+      name: 'group',
+      formals: [],
+      body: new ExpressionGroup()
+    };
+
+    env.bindings['mask'] = {
+      name: 'mask',
+      formals: [],
+      body: new ExpressionMask()
+    };
+
+    env.bindings['circle'] = {
+      name: 'circle',
+      formals: [],
+      body: new ExpressionCircle()
+    };
+
+    env.bindings['print'] = {
+      name: 'print',
+      formals: ['message'],
+      body: new ExpressionPrint()
+    };
+
+    env.bindings['random'] = {
+      name: 'random',
+      formals: ['min', 'max'],
+      body: new ExpressionRandom()
+    };
+
+    env.bindings['sin'] = {
+      name: 'sin',
+      formals: ['degrees'],
+      body: new ExpressionSine()
+    };
+
+    env.bindings['cos'] = {
+      name: 'cos',
+      formals: ['degrees'],
+      body: new ExpressionCosine()
+    };
+
+    env.bindings['int'] = {
+      name: 'int',
+      formals: ['x'],
+      body: new ExpressionInt()
+    };
+
     ast.evaluate(env);
 
     let size = env.get('viewport').get('size');
@@ -477,7 +485,7 @@ evalButton.addEventListener('click', () => {
       log(e.userMessage);
       throw e;
     } else if (e instanceof MessagedException) {
-      log(e.message);
+      log(e.userMessage);
       throw e;
     } else {
       console.trace(e);

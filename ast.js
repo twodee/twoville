@@ -267,7 +267,7 @@ export class ExpressionFunctionCall extends Expression {
       throw 'no such func ' + name;
     }
     let f = env.get(this.name);
-    return f.body.isTimeSensitive(env);
+    return this.actuals.some((actual, i) => actual.isTimeSensitive(env)) || f.body.isTimeSensitive(env);
   }
 }
 

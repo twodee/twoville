@@ -4,6 +4,11 @@ import {
 } from './token.js';
 
 import {
+  LocatedException,
+  MessagedException,
+} from './types.js';
+
+import {
   ExpressionAdd,
   ExpressionAssignment,
   ExpressionBlock,
@@ -53,20 +58,20 @@ export function parse(tokens) {
   function program() {
     let b = block();
     if (!has(Tokens.EOF)) {
-      throw 'Expected EOF saw [' + tokens[i].type + '|' + tokens[i].source + ']';
+      throw new LocatedException(b.where, 'I expected the program to end after this, but it didn\'t.');
     }
     return b;
   }
 
   function block() {
     if (!has(Tokens.Indentation)) {
-      throw 'expected indent';
+      throw new LocatedException(tokens[i].where, 'I expected the code to be indented here, but it wasn\'t.');
     }
 
     let indentation = tokens[i];
 
     if (indentation.source.length <= indents[indents.length - 1]) {
-      throw 'not indented enough';
+      throw new LocatedException(intentation.where, 'I expected consistent indentation, but this indentation jumps around.');
     }
     indents.push(indentation.source.length);
 
@@ -95,43 +100,36 @@ export function parse(tokens) {
 
   function statement() {
     if (has(Tokens.T)) {
-      if (has(Tokens.Dot, 1)) {
-        let e = expression();
-        if (has(Tokens.Linebreak) || has(Tokens.EOF)) {
-          consume();
-          return e;
-        } else {
-          throw 'expected linebreak after t-expression';
-        }
-      } else {
+      let firstT = tokens[i];
+      consume();
+      if (has(Tokens.RightArrow)) { // t ->
         consume();
-        if (has(Tokens.RightArrow)) {
+        let e = expression();
+        if (has(Tokens.Linebreak)) { // t -> 10
           consume();
-          let e = expression();
-          if (has(Tokens.Linebreak)) {
+          let b = block();
+          return new StatementTo(SourceLocation.span(e.where, b.where), e, b);
+        } else if (has(Tokens.RightArrow)) { // t -> 10 ->
+          let arrow = tokens[i];
+          consume();
+          if (has(Tokens.T)) {
+            let secondT = tokens[i];
             consume();
-            let b = block();
-            return new StatementTo(SourceLocation.span(e.where, b.where), e, b);
-          } else if (has(Tokens.RightArrow)) {
-            consume();
-            if (has(Tokens.T)) {
+            if (has(Tokens.Linebreak)) {
               consume();
-              if (has(Tokens.Linebreak)) {
-                consume();
-                let b = block();
-                return new StatementThrough(SourceLocation.span(e.where, b.where), e, b);
-              } else {
-                throw 'expected linebreak after through';
-              }
+              let b = block();
+              return new StatementThrough(SourceLocation.span(e.where, b.where), e, b);
             } else {
-              throw 'expected t on through';
+              throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
             }
           } else {
-            throw 'expected linebreak';
+            throw new LocatedException(SourceLocation.span(firstT.where, arrow.where), 'I expected a second t in this through-interval.');
           }
         } else {
-          throw 'expected ->';
+          throw new LocatedException(SourceLocation.span(firstT.where, e.where), 'I expected either a to-interval or a through-interval, but that\'s not what I found.');
         }
+      } else {
+        throw new LocatedException(firstT.where, 'I expected either a to-interval or a through-interval, but that\'s not what I found.');
       }
     }
     
@@ -140,15 +138,17 @@ export function parse(tokens) {
       let e = expression();
 
       if (has(Tokens.RightArrow)) {
+        let arrow = tokens[i].where;
         let from = e;
         consume();
         if (has(Tokens.T)) {
+          let t = tokens[i];
           consume();
-          if (has(Tokens.Linebreak)) {
+          if (has(Tokens.Linebreak)) { // 10 -> t
             consume();
             let b = block();
             return new StatementFrom(SourceLocation.span(from.where, b.where), from, b);
-          } else if (has(Tokens.RightArrow)) {
+          } else if (has(Tokens.RightArrow)) { // 10 -> t -> 20
             consume();
             let to = expression();
             if (has(Tokens.Linebreak)) {
@@ -156,13 +156,13 @@ export function parse(tokens) {
               let b = block();
               return new StatementBetween(SourceLocation.span(from.where, b.where), from, to, b);
             } else {
-              throw 'expected linebreak';
+              throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected either a line break after this interval.');
             }
           } else {
-            throw 'expected linebreak';
+            throw new LocatedException(SourceLocation.span(e.where, t.where), 'I expected either a from-interval or a between-interval, but that\'s not what I found.');
           }
         } else {
-          throw 'expected t' 
+          throw new LocatedException(SourceLocation.span(e.where, arrow.where), 'I expected either a from-interval or a between-interval, but that\'s not what I found.');
         }
       } else {
         if (has(Tokens.Linebreak)) {
@@ -171,7 +171,7 @@ export function parse(tokens) {
         } else if (has(Tokens.EOF) || has(Tokens.Indentation)) { // Check for indentation because some expressions end in blocks, which have eaten their linebreak already
           return e;
         } else if (!has(Tokens.EOF)) {
-          throw 'Expected linebreak or EOF but had "' + tokens[i].source + '" (' + tokens[i].type + ')';
+          throw new LocatedException(tokens[i].where, 'I expected a line break or the end the program, but that\'s not what I found.');
         }
       }
     }
@@ -268,7 +268,7 @@ export function parse(tokens) {
             let stop = expression();
 
             if (!has(Tokens.Linebreak)) {
-              throw 'expected linebreak';
+              throw new LocatedException(SourceLocation.span(sourceStart, stop.where), 'I expected a linebreak after this loop\'s range.');
             }
             consume(); // eat linebreak
             let body = block();
@@ -290,7 +290,7 @@ export function parse(tokens) {
           if (has(Tokens.Comma)) {
             consume(); // eat ,
           } else {
-            throw 'bad bad bad';
+            throw new LocatedException(SourceLocation.span(e.where, tokens[i].where), 'I expected a comma between vector elements.');
           }
         }
       }
@@ -316,7 +316,7 @@ export function parse(tokens) {
       if (has(Tokens.RightParenthesis)) {
         consume();
       } else {
-        throw 'Missing )';
+        throw new LocatedException(SourceLocation.span(sourceStart, sourceEnd), 'I expected a right parenthesis to close the function call.');
       }
 
       return new ExpressionFunctionCall(SourceLocation.span(sourceStart, sourceEnd), name, actuals);
@@ -325,7 +325,7 @@ export function parse(tokens) {
       consume(); // eat repeat
       let count = expression();
       if (!has(Tokens.Linebreak)) {
-        throw 'expected linebreak';
+        throw new LocatedException(SourceLocation.span(sourceStart, count.where), 'I expected a linebreak after this repeat\'s count.');
       }
       consume(); // eat linebreak
       let body = block();
@@ -339,13 +339,15 @@ export function parse(tokens) {
       consume(); // eat with
       let scope = expression();
       if (!has(Tokens.Linebreak)) {
-        throw 'expected linebreak';
+        throw new LocatedException(SourceLocation.span(sourceStart, scope.where), 'I expected a linebreak after this with statement\'s scope expression.');
       }
       consume(); // eat linebreak
       let body = block();
       return new ExpressionWith(SourceLocation.span(sourceStart, body.where), scope, body);
     } else {
-      throw 'Don\'t know [' + tokens[i].source + ',' + tokens[i].type + ']';
+      if (!has(Tokens.Linebreak)) {
+        throw new LocatedException(tokens[i].where, `I don't know what "${tokens[i].source}" means here.`);
+      }
     }
   }
 

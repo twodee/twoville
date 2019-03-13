@@ -1,4 +1,12 @@
-import { Tokens, Token, SourceLocation } from './token.js';
+import {
+  Tokens,
+  Token,
+  SourceLocation
+} from './token.js';
+
+import {
+  LocatedException,
+} from './types.js';
 
 export function lex(source) {
   
@@ -230,7 +238,8 @@ export function lex(source) {
       }
       resetToken();
     } else {
-      throw 'unknowned! [' + source[i] + ']';
+      consume();
+      throw new LocatedException(new SourceLocation(iStartLine, iEndLine, iStartColumn, iEndColumn, iStartIndex, iEndIndex), `I encountered "${tokenSoFar}", and I don't know what it means.`);
     }
   }
 

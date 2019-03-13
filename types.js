@@ -8,6 +8,10 @@ export class MessagedException extends Error {
   constructor(message) {
     super(message);
   }
+
+  get userMessage() {
+    return this.message;
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -190,15 +194,15 @@ export class TwovilleLabel extends TwovilleShape {
 
   draw(env, t) {
     if (!this.has('position')) {
-      throw new LocatedException(this.callExpression.where, 'I found a label whose position property has not been defined.');
+      throw new LocatedException(this.callExpression.where, 'I found a label whose position property is not defined.');
     }
     
     if (!this.has('rgb')) {
-      throw new LocatedException(this.callExpression.where, 'I found a label whose rgb property has not been defined.');
+      throw new LocatedException(this.callExpression.where, 'I found a label whose rgb property is not defined.');
     }
     
     if (!this.has('text')) {
-      throw new LocatedException(this.callExpression.where, 'I found a label whose text property has not been defined.');
+      throw new LocatedException(this.callExpression.where, 'I found a label whose text property is not defined.');
     }
     
     let needsTransforming = false;
@@ -207,7 +211,7 @@ export class TwovilleLabel extends TwovilleShape {
       if (this.has('pivot')) {
         needsTransforming = true;
       } else {
-        throw 'rotation but not pivot';
+        throw new LocatedException(this.callExpression.where, 'I found a label that is rotated, but it\'s pivot property is not defined.');
       }
     }
 
@@ -267,15 +271,15 @@ export class TwovilleLine extends TwovilleShape {
 
   draw(env, t) {
     if (!this.has('a')) {
-      throw 'no a';
+      throw new LocatedException(this.callExpression.where, 'I found a line whose a property has not been defined.');
     }
     
     if (!this.has('b')) {
-      throw 'no b';
+      throw new LocatedException(this.callExpression.where, 'I found a line whose b property has not been defined.');
     }
     
     if (!this.has('rgb')) {
-      throw 'no rgb';
+      throw new LocatedException(this.callExpression.where, 'I found a line whose rgb property has not been defined.');
     }
     
     let needsTransforming = false;
@@ -284,7 +288,7 @@ export class TwovilleLine extends TwovilleShape {
       if (this.has('pivot')) {
         needsTransforming = true;
       } else {
-        throw 'rotation but not pivot';
+        throw new LocatedException(this.callExpression.where, 'I found a line that is rotated, but it\'s pivot property is not defined.');
       }
     }
 
@@ -351,11 +355,11 @@ export class TwovilleRectangle extends TwovilleShape {
     }
     
     if (!this.has('size')) {
-      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose size property has not been defined.');
+      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose size property is not defined.');
     }
     
     if (!this.has('rgb')) {
-      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose rgb property has not been defined.');
+      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose rgb property is not defined.');
     }
     
     let needsTransforming = false;
@@ -364,7 +368,7 @@ export class TwovilleRectangle extends TwovilleShape {
       if (this.has('pivot')) {
         needsTransforming = true;
       } else {
-        throw 'rotation but not pivot';
+        throw new LocatedException(this.callExpression.where, 'I found a rectangle that is rotated, but it\'s pivot property is not defined.');
       }
     }
 
@@ -440,15 +444,15 @@ export class TwovilleCircle extends TwovilleShape {
 
   draw(env, t) {
     if (!this.has('center')) {
-      throw new LocatedException(this.callExpression.where, 'I found a circle whose center property has not been defined.');
+      throw new LocatedException(this.callExpression.where, 'I found a circle whose center property is not defined.');
     }
     
     if (!this.has('radius')) {
-      throw new LocatedException(this.callExpression.where, 'I found a circle whose radius property has not been defined.');
+      throw new LocatedException(this.callExpression.where, 'I found a circle whose radius property is not defined.');
     }
     
     if (!this.has('rgb')) {
-      throw new LocatedException(this.callExpression.where, 'I found a circle whose rgb property has not been defined.');
+      throw new LocatedException(this.callExpression.where, 'I found a circle whose rgb property is not defined.');
     }
     
     let needsTransforming = false;
@@ -457,7 +461,7 @@ export class TwovilleCircle extends TwovilleShape {
       if (this.has('pivot')) {
         needsTransforming = true;
       } else {
-        throw 'rotation but not pivot';
+        throw new LocatedException(this.callExpression.where, 'I found a circle that is rotated, but it\'s pivot property is not defined.');
       }
     }
 
@@ -702,7 +706,7 @@ export class TwovilleReal extends TwovilleData {
     if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
       return new TwovilleReal(this.get() / other.get());
     } else {
-      throw '...';
+      throw new MessagedException('I can only divide integers and reals.');
     }
   }
 
@@ -710,7 +714,7 @@ export class TwovilleReal extends TwovilleData {
     if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
       return new TwovilleReal(this.get() % other.get());
     } else {
-      throw '...';
+      throw new MessagedException('I can only compute the remainder for integers and reals.');
     }
   }
 
