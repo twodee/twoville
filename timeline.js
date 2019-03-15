@@ -1,4 +1,4 @@
-import { TwovilleInteger } from './types.js';
+import { ExpressionInteger } from './ast.js';
 import { Interval } from './interval.js';
 
 export class Timeline {
@@ -29,7 +29,7 @@ export class Timeline {
       return interval.interpolate(env, t);
     } else if (this.defaultValue != null) {
       if ('isTimeSensitive' in this.defaultValue && this.defaultValue.isTimeSensitive(env)) {
-        env.bindings.t = new TwovilleInteger(t);
+        env.bindings.t = new ExpressionInteger(null, t);
         return this.defaultValue.evaluate(env);
       } else { 
         return this.defaultValue;
@@ -46,7 +46,7 @@ export class Timeline {
       let i = 0;
       while (i < this.intervals.length &&
              this.intervals[i].hasFrom() &&
-             this.intervals[i].fromTime.get() <= t.get()) {
+             this.intervals[i].fromTime.value <= t.value) {
         ++i;
       }
 
@@ -56,9 +56,9 @@ export class Timeline {
         this.intervals[i].setFrom(t, value);
       } else {
         --i;
-        if (this.intervals[i].fromTime.get() == t.get()) {
+        if (this.intervals[i].fromTime.value == t.value) {
           this.intervals[i].setFrom(t, value);
-        } else if (!this.intervals[i].hasTo() || this.intervals[i].toTime.get() <= t.get()) {
+        } else if (!this.intervals[i].hasTo() || this.intervals[i].toTime.value <= t.value) {
           this.intervals.splice(i + 1, 0, new Interval(t, value));
         } else {
           this.intervals.splice(i + 1, 0, new Interval(t, value, this.intervals[i].toTime, this.intervals[i].toValue));
@@ -75,7 +75,7 @@ export class Timeline {
       let i = 0;
       while (i < this.intervals.length &&
              this.intervals[i].hasFrom() &&
-             this.intervals[i].fromTime.get() <= t.get()) {
+             this.intervals[i].fromTime.value <= t.value) {
         ++i;
       }
 
@@ -89,9 +89,9 @@ export class Timeline {
         --i;
         if (!this.intervals[i].hasTo()) {
           this.intervals[i].setTo(t, value);
-        } else if (this.intervals[i].toTime.get() == t.get()) {
+        } else if (this.intervals[i].toTime.value == t.value) {
           this.intervals[i].setTo(t, value);
-        } else if (!this.intervals[i].hasTo() || this.intervals[i].toTime.get() <= t.get()) {
+        } else if (!this.intervals[i].hasTo() || this.intervals[i].toTime.value <= t.value) {
           this.intervals.splice(i + 1, 0, new Interval(null, null, t, value));
         } else {
           this.intervals.splice(i + 1, 0, new Interval(t, value, this.intervals[i].toTime, this.intervals[i].toValue));

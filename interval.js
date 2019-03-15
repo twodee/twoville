@@ -1,4 +1,6 @@
-import { TwovilleInteger } from './types.js';
+import {
+  ExpressionInteger
+} from './ast.js';
 
 export class Interval {
   constructor(fromTime, fromValue, toTime, toValue) {
@@ -29,31 +31,28 @@ export class Interval {
   }
 
   spans(t) {
-    return (this.hasFrom() && this.hasTo() && this.fromTime.get() <= t && t <= this.toTime.get()) ||
-           (this.hasFrom() && !this.hasTo() && this.fromTime.get() <= t) ||
-           (!this.hasFrom() && this.hasTo() && t <= this.toTime.get());
+    return (this.hasFrom() && this.hasTo() && this.fromTime.value <= t && t <= this.toTime.value) ||
+           (this.hasFrom() && !this.hasTo() && this.fromTime.value <= t) ||
+           (!this.hasFrom() && this.hasTo() && t <= this.toTime.value);
   }
 
   duration() {
-    return this.toTime.get() - this.fromTime.get();
+    return this.toTime.value - this.fromTime.value;
   }
 
   interpolate(env, t) {
-    // TODO I shouldn't have to check if isTimeSensitive is a property or not. Some expressions
-    // yield primitives, which don't have this property. Do I add it to them, or do I keep
-    // expressions from yielding primitives?
     if (!this.hasFrom()) {
       return this.toValue.evaluate(env);
-    } else if ('isTimeSensitive' in this.fromValue && this.fromValue.isTimeSensitive(env)) {
-      env.bindings.t = new TwovilleInteger(t);
+    } else if (this.fromValue.isTimeSensitive(env)) {
+      env.bindings.t = new ExpressionInteger(null, t);
       return this.fromValue.evaluate(env);
     } else if (!this.hasTo()) {
       return this.fromValue.evaluate(env);
-    } else if ('isTimeSensitive' in this.toValue && this.toValue.isTimeSensitive(env)) {
-      env.bindings.t = new TwovilleInteger(t);
+    } else if (this.toValue.isTimeSensitive(env)) {
+      env.bindings.t = new ExpressionInteger(null, t);
       return this.toValue.evaluate(env);
     } else {
-      let proportion = (t - this.fromTime.get()) / this.duration();
+      let proportion = (t - this.fromTime.value) / this.duration();
       return this.fromValue.interpolate(this.toValue, proportion);
     }
   }

@@ -227,7 +227,14 @@ export function lex(source) {
       emit(Tokens.Percent);
     } else if (has('/')) {
       consume();
-      emit(Tokens.ForwardSlash);
+      if (has('/')) {
+        // eat till end of line
+        do {
+          consume();
+        } while (i < source.length && !has('\n'));
+      } else {
+        emit(Tokens.ForwardSlash);
+      }
     } else if (has('\n')) {
       consume();
       emit(Tokens.Linebreak);

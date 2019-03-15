@@ -9,15 +9,16 @@ import {
 import {
   TwovilleEnvironment,
   TwovilleShape,
-  TwovilleInteger,
-  TwovilleReal,
-  TwovilleVector,
   MessagedException,
   LocatedException,
   svgNamespace,
+  initializeShapes,
 } from './types.js';
 
 import {
+  ExpressionInteger,
+  ExpressionReal,
+  ExpressionVector,
   ExpressionRectangle,
   ExpressionLine,
   ExpressionLabel,
@@ -52,7 +53,7 @@ let recordButton = document.getElementById('record');
 let spinner = document.getElementById('spinner');
 let saveButton = document.getElementById('save');
 let exportButton = document.getElementById('export');
-let svg = document.getElementById('svg');
+export let svg = document.getElementById('svg');
 let scrubber = document.getElementById('scrubber');
 let timeSpinner = document.getElementById('timeSpinner');
 let playOnceButton = document.getElementById('playOnceButton');
@@ -61,12 +62,6 @@ let env;
 let isDirty = false;
 
 export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
-
-  console.log("lineStart:", lineStart);
-  console.log("columnStart:", columnStart);
-  console.log("lineEnd:", lineEnd);
-  console.log("columnEnd:", columnEnd);
-
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
   editor.centerSelection();
 }
@@ -127,27 +122,30 @@ function registerResizeListener(bounds, gap, resize) {
 }
 
 function buildResizer(side, element) {
+  let measureGap;
+  let resize;
+
   if (side === 'right') {
-    let measureGap = (event, bounds) => event.clientX - bounds.right;
-    let resize = (event, bounds, gap) => {
+    measureGap = (event, bounds) => event.clientX - bounds.right;
+    resize = (event, bounds, gap) => {
       let width = event.clientX - bounds.x - gap;
       element.style.width = width + 'px';
     };
   } else if (side === 'left') {
-    let measureGap = (event, bounds) => event.clientX - bounds.left;
-    let resize = (event, bounds, gap) => {
+    measureGap = (event, bounds) => event.clientX - bounds.left;
+    resize = (event, bounds, gap) => {
       let width = bounds.right - event.clientX - gap;
       element.style.width = width + 'px';
     };
   } else if (side === 'top') {
-    let measureGap = (event, bounds) => event.clientY - bounds.top;
-    let resize = (event, bounds, gap) => {
+    measureGap = (event, bounds) => event.clientY - bounds.top;
+    resize = (event, bounds, gap) => {
       let height = bounds.bottom - event.clientY;
       messagerContainer.style.height = height + 'px';
     };
   } else if (side === 'bottom') {
-    let measureGap = (event, bounds) => event.clientY - bounds.bottom;
-    let resize = (event, bounds, gap) => {
+    measureGap = (event, bounds) => event.clientY - bounds.bottom;
+    resize = (event, bounds, gap) => {
       let height = bounds.bottom - event.clientY;
       messagerContainer.style.height = height + 'px';
     };
@@ -270,7 +268,13 @@ function downloadBlob(name, blob) {
 }
 
 exportButton.addEventListener('click', () => {
-  let data = new XMLSerializer().serializeToString(svg);
+  let clone = svg.cloneNode(true);
+
+  // Remove outline.
+  let outline = clone.getElementById('x-outline');
+  outline.parentNode.removeChild(outline);
+
+  let data = new XMLSerializer().serializeToString(clone);
   let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
   downloadBlob('download.svg', svgBlob);
 });
@@ -294,11 +298,12 @@ timeSpinner.addEventListener('input', () => {
 });
 
 let animateTask = null;
+let delay = 16;
 
 function animateFrame(i, isLoop = false) {
   scrubTo(i);
   if (i < parseInt(scrubber.max)) {
-    animateTask = setTimeout(() => animateFrame(i + 1, isLoop), 100);
+    animateTask = setTimeout(() => animateFrame(i + 1, isLoop), delay);
   } else if (isLoop) {
     animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop), 100);
   } else {
@@ -323,6 +328,8 @@ playLoopButton.addEventListener('click', e => {
   animateFrame(parseInt(scrubber.min), true);
 });
 
+export let ast;
+
 evalButton.addEventListener('click', () => {
   clearConsole();
 
@@ -333,24 +340,28 @@ evalButton.addEventListener('click', () => {
   svg.appendChild(defs);
 
   try {
+    initializeShapes();
+
     let tokens = lex(editor.getValue());
-    let ast = parse(tokens);
+    ast = parse(tokens);
 
     // tokens.forEach(token => {
       // log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
     // });
 
-    env = new TwovilleEnvironment({svg: svg, shapes: [], bindings: [], parent: null});
+    env = new TwovilleEnvironment(null);
+    env.svg = svg;
+    env.shapes = [];
     TwovilleShape.serial = 0;
 
     env.bindings.time = new TwovilleEnvironment(env);
-    env.bindings.time.bind('start', null, null, new TwovilleInteger(0));
-    env.bindings.time.bind('stop', null, null, new TwovilleInteger(100));
+    env.bindings.time.bind('start', null, null, new ExpressionInteger(null, 0));
+    env.bindings.time.bind('stop', null, null, new ExpressionInteger(null, 100));
 
     env.bindings.viewport = new TwovilleEnvironment(env);
-    env.bindings.viewport.bind('size', null, null, new TwovilleVector([
-      new TwovilleInteger(100),
-      new TwovilleInteger(100)
+    env.bindings.viewport.bind('size', null, null, new ExpressionVector(null, [
+      new ExpressionInteger(null, 100),
+      new ExpressionInteger(null, 100)
     ]));
 
     env.bindings['rectangle'] = {
@@ -428,32 +439,32 @@ evalButton.addEventListener('click', () => {
       corner = env.get('viewport').get('corner');
     } else if (env.get('viewport').has('center')) {
       let center = env.get('viewport').get('center');
-      corner = new TwovilleVector([
-        new TwovilleReal(center.get(0).get() - size.get(0).get() * 0.5),
-        new TwovilleReal(center.get(1).get() - size.get(1).get() * 0.5),
+      corner = new ExpressionVector(null, [
+        new ExpressionReal(null, center.get(0).value - size.get(0).value * 0.5),
+        new ExpressionReal(null, center.get(1).value - size.get(1).value * 0.5),
       ]);
     } else {
-      corner = new TwovilleVector([
-        new TwovilleInteger(0),
-        new TwovilleInteger(0),
+      corner = new ExpressionVector(null, [
+        new ExpressionInteger(null, 0),
+        new ExpressionInteger(null, 0),
       ]);
     }
 
-    env.svg.setAttributeNS(null, 'width', size.get(0).get());
-    env.svg.setAttributeNS(null, 'height', size.get(1).get());
+    env.svg.setAttributeNS(null, 'width', size.get(0).value);
+    env.svg.setAttributeNS(null, 'height', size.get(1).value);
     env.svg.setAttributeNS(null, 'viewBox',
-      corner.get(0).get() + ' ' +
-      corner.get(1).get() + ' ' + 
-      size.get(0).get() + ' ' +
-      size.get(1).get()
+      corner.get(0).value + ' ' +
+      corner.get(1).value + ' ' + 
+      size.get(0).value + ' ' +
+      size.get(1).value
     );
 
     let pageOutline = document.createElementNS(svgNamespace, 'rect');
     pageOutline.setAttributeNS(null, 'id', 'x-outline');
-    pageOutline.setAttributeNS(null, 'x', corner.get(0).get());
-    pageOutline.setAttributeNS(null, 'y', corner.get(1).get());
-    pageOutline.setAttributeNS(null, 'width', size.get(0).get());
-    pageOutline.setAttributeNS(null, 'height', size.get(1).get());
+    pageOutline.setAttributeNS(null, 'x', corner.get(0).value);
+    pageOutline.setAttributeNS(null, 'y', corner.get(1).value);
+    pageOutline.setAttributeNS(null, 'width', size.get(0).value);
+    pageOutline.setAttributeNS(null, 'height', size.get(1).value);
     pageOutline.setAttributeNS(null, 'fill', 'none');
     pageOutline.setAttributeNS(null, 'stroke', 'rgb(0, 0, 0)');
     pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
@@ -465,8 +476,8 @@ evalButton.addEventListener('click', () => {
       shape.domify(env.svg)
     });
 
-    let tmin = env.get('time').get('start').get();
-    let tmax = env.get('time').get('stop').get();
+    let tmin = env.get('time').get('start').value;
+    let tmax = env.get('time').get('stop').value;
     scrubber.min = tmin;
     scrubber.max = tmax;
 

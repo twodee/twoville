@@ -2,17 +2,13 @@ import { Tokens } from './token.js';
 import { log } from './main.js';
 
 import {
-  TwovilleBoolean,
-  TwovilleInteger,
-  TwovilleString,
-  TwovilleVector,
+  LocatedException,
   TwovilleRectangle,
   TwovilleLine,
   TwovilleLabel,
   TwovilleCircle,
   TwovilleGroup,
   TwovilleMask,
-  TwovilleReal,
 } from "./types.js";
 
 // --------------------------------------------------------------------------- 
@@ -29,53 +25,205 @@ export class Expression {
   }
 }
 
-export class ExpressionBoolean extends Expression {
-  constructor(where, x) {
+// --------------------------------------------------------------------------- 
+
+export class ExpressionData extends Expression {
+  constructor(where) {
     super(where);
-    this.x = x;
   }
 
-  evaluate(env, fromTime, toTime) {
-    return new TwovilleBoolean(this.x);
+  bind(env, fromTime, toTime, id) {
+    env.bind(id, fromTime, toTime, this);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionInteger extends Expression {
+export class ExpressionBoolean extends ExpressionData {
   constructor(where, x) {
     super(where);
     this.x = x;
   }
 
   evaluate(env, fromTime, toTime) {
-    return new TwovilleInteger(this.x);
+    return this;
+  }
+   
+  toString() {
+    return '' + this.x;
+  }
+
+  get value() {
+    return this.x;
+  }
+
+  interpolate(other, proportion) {
+    return new ExpressionBoolean(null, proportion <= 0.5 ? this.value : other.value);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionString extends Expression {
+export class ExpressionInteger extends ExpressionData {
   constructor(where, x) {
     super(where);
     this.x = x;
   }
 
   evaluate(env, fromTime, toTime) {
-    return new TwovilleString(this.x);
+    return this;
+  }
+
+  toString() {
+    return '' + this.x;
+  }
+
+  get value() {
+    return this.x;
+  }
+
+  add(other) {
+    if (other instanceof ExpressionInteger) {
+      return new ExpressionInteger(null, this.value + other.value);
+    } else if (other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value + other.value);
+    } else {
+      throw new MessagedException('Add failed');
+    }
+  }
+
+  subtract(other) {
+    if (other instanceof ExpressionInteger) {
+      return new ExpressionInteger(null, this.value - other.value);
+    } else if (other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value - other.value);
+    } else {
+      throw new MessagedException('Subtract failed');
+    }
+  }
+
+  multiply(other) {
+    if (other instanceof ExpressionInteger) {
+      return new ExpressionInteger(null, this.value * other.value);
+    } else if (other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value * other.value);
+    } else {
+      throw 'bad ****';
+    }
+  }
+
+  divide(other) {
+    if (other instanceof ExpressionInteger) {
+      return new ExpressionInteger(null, Math.trunc(this.value / other.value));
+    } else if (other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value / other.value);
+    } else {
+      throw new MessagedException('Divide failed');
+    }
+  }
+
+  remainder(other) {
+    if (other instanceof ExpressionInteger) {
+      return new ExpressionInteger(null, this.value % other.value);
+    } else if (other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value % other.value);
+    } else {
+      throw new MessagedException('Remainder failed');
+    }
+  }
+
+  interpolate(other, proportion) {
+    return new ExpressionReal(null, this.value + proportion * (other.value - this.value));
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionReal extends Expression {
+export class ExpressionString extends ExpressionData {
   constructor(where, x) {
     super(where);
     this.x = x;
   }
 
   evaluate(env, fromTime, toTime) {
-    return new TwovilleReal(this.x);
+    return this;
+  }
+
+  toString() {
+    return this.x;
+  }
+
+  get value() {
+    return this.x;
+  }
+
+  interpolate(other, proportion) {
+    return new ExpressionString(null, proportion <= 0.5 ? this.value : other.value);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionReal extends ExpressionData {
+  constructor(where, x) {
+    super(where);
+    this.x = x;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    return this;
+  }
+
+  toString() {
+    return '' + this.x;
+  }
+
+  get value() {
+    return this.x;
+  }
+
+  add(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value + other.value);
+    } else {
+      throw '...';
+    }
+  }
+
+  subtract(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value - other.value);
+    } else {
+      throw '...';
+    }
+  }
+
+  multiply(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value * other.value);
+    } else {
+      throw 'BAD *';
+    }
+  }
+
+  divide(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value / other.value);
+    } else {
+      throw new MessagedException('I can only divide integers and reals.');
+    }
+  }
+
+  remainder(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionReal(null, this.value % other.value);
+    } else {
+      throw new MessagedException('I can only compute the remainder for integers and reals.');
+    }
+  }
+
+  interpolate(other, proportion) {
+    return new ExpressionReal(null, this.value + proportion * (other.value - this.value));
   }
 }
 
@@ -213,7 +361,7 @@ export class ExpressionIdentifier extends Expression {
     if (value != null) {
       return value;
     } else {
-      throw this.token.where.debugPrefix() + "I'm sorry, but I don't know anything about " + this.token.source + ".";
+      throw new LocatedException(this.token.where, `I'm sorry, but I've never heard of this "${this.token.source}" before.`);
     }
   }
 
@@ -329,12 +477,12 @@ export class ExpressionFor extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let start = this.start.evaluate(env, fromTime, toTime).get();
-    let stop = this.stop.evaluate(env, fromTime, toTime).get();
-    let by = this.by.evaluate(env, fromTime, toTime).get();
+    let start = this.start.evaluate(env, fromTime, toTime).value;
+    let stop = this.stop.evaluate(env, fromTime, toTime).value;
+    let by = this.by.evaluate(env, fromTime, toTime).value;
 
     for (let i = start; i <= stop; i += by) {
-      new ExpressionAssignment(null, this.i, new TwovilleInteger(i)).evaluate(env, fromTime, toTime);
+      new ExpressionAssignment(null, this.i, new ExpressionInteger(null, i)).evaluate(env, fromTime, toTime);
       this.body.evaluate(env, fromTime, toTime);
     }
   }
@@ -360,14 +508,23 @@ export class ExpressionProperty extends Expression {
 
   assign(env, fromTime, toTime, rhs) {
     let object = this.base.evaluate(env, fromTime, toTime); 
-    let value = new ExpressionAssignment(null, this.property, rhs).evaluate(object, fromTime, toTime);
+
+    let value = null;
+    if (object instanceof ExpressionVector) {
+      object.forEach(element => {
+        value = new ExpressionAssignment(null, this.property, rhs).evaluate(element, fromTime, toTime);
+      });
+    } else {
+      value = new ExpressionAssignment(null, this.property, rhs).evaluate(object, fromTime, toTime);
+    }
+
     return value;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionVector extends Expression {
+export class ExpressionVector extends ExpressionData {
   constructor(where, elements) {
     super(where);
     this.elements = elements;
@@ -377,11 +534,40 @@ export class ExpressionVector extends Expression {
     let values = this.elements.map(element => {
       return element.evaluate(env, fromTime, toTime);
     });
-    return new TwovilleVector(values);
+    return new ExpressionVector(null, values);
   }
 
   isTimeSensitive(env) {
     return this.elements.some(e => e.isTimeSensitive(env));
+  }
+
+  bind(id, fromTime, toTime, value) {
+    this.elements.forEach(element => {
+      element.bind(id, fromTime, toTime, value);
+    });
+  }
+
+  forEach(each) {
+    this.elements.forEach(each);
+  }
+
+  get(i) {
+    return this.elements[i];
+  }
+
+  toRGB(env) {
+    let r = Math.floor(this.elements[0].value * 255);
+    let g = Math.floor(this.elements[1].value * 255);
+    let b = Math.floor(this.elements[2].value * 255);
+    return 'rgb(' + r + ', ' + g + ', ' + b + ')';
+  }
+
+  toString(env) {
+    return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
+  }
+
+  interpolate(other, proportion) {
+    return new ExpressionVector(null, this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
   }
 }
 
@@ -438,6 +624,7 @@ export class StatementThrough extends Expression {
   constructor(where, throughTimeExpression, block) {
     super(where);
     this.throughTimeExpression = throughTimeExpression;
+    this.block = block;
   }
 
   evaluate(env, fromTime, toTime) {
@@ -555,7 +742,7 @@ export class ExpressionPrint extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let message = env['message'].get();
+    let message = env['message'].value;
     log(message.toString(fromTime, toTime));
     return null;
   }
@@ -569,10 +756,10 @@ export class ExpressionRandom extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let min = env['min'].get();
-    let max = env['max'].get();
+    let min = env['min'].value;
+    let max = env['max'].value;
     let x = Math.random() * (max - min) + min;
-    return new TwovilleReal(x);
+    return new ExpressionReal(null, x);
   }
 }
 
@@ -584,9 +771,9 @@ export class ExpressionSine extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let degrees = env['degrees'].get();
+    let degrees = env['degrees'].value;
     let x = Math.sin(degrees * Math.PI / 180);
-    return new TwovilleReal(x);
+    return new ExpressionReal(null, x);
   }
 }
 
@@ -598,9 +785,9 @@ export class ExpressionCosine extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let degrees = env['degrees'].get();
+    let degrees = env['degrees'].value;
     let x = Math.cos(degrees * Math.PI / 180);
-    return new TwovilleReal(x);
+    return new ExpressionReal(null, x);
   }
 }
 
@@ -613,9 +800,9 @@ export class ExpressionInt extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let f = env['x'].get();
+    let f = env['x'].value;
     let i = Math.trunc(f);
-    return new TwovilleInteger(i);
+    return new ExpressionInteger(null, i);
   }
 }
 

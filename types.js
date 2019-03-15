@@ -1,5 +1,13 @@
 import { Timeline } from './timeline.js';
 
+import { 
+  ExpressionReal,
+  ExpressionInteger,
+  ExpressionBoolean,
+  ExpressionVector,
+  ExpressionString,
+} from './ast.js';
+
 export let svgNamespace = "http://www.w3.org/2000/svg";
 
 // --------------------------------------------------------------------------- 
@@ -32,9 +40,11 @@ export class LocatedException extends MessagedException {
 export class TwovilleEnvironment {
   constructor(parent) {
     this.bindings = {};
-    this.shapes = parent.shapes;
-    this.svg = parent.svg;
     this.parent = parent;
+    if (parent) {
+      this.shapes = parent.shapes;
+      this.svg = parent.svg;
+    }
   }
 
   get(id) {
@@ -105,7 +115,11 @@ export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-let serial = 0;
+export let serial = 0;
+
+export function initializeShapes() {
+  serial = 0;
+}
 
 export class TwovilleShape extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
@@ -113,7 +127,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.callExpression = callExpression;
     this.parentElement = null;
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
-    this.bind('opacity', null, null, new TwovilleReal(1));
+    this.bind('opacity', null, null, new ExpressionReal(null, 1));
     this.id = serial;
     ++serial;
   }
@@ -139,7 +153,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
 
     if (this.owns('parent')) {
       this.parentElement = this.get('parent').getDefault().svgElement;
-    } else if (this.owns('template') && this.get('template').getDefault().get()) {
+    } else if (this.owns('template') && this.get('template').getDefault().value) {
       this.parentElement = svg.firstChild;
     } else {
       this.parentElement = this.svg;
@@ -172,7 +186,7 @@ export class TwovilleMask extends TwovilleShape {
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.bind('template', null, null, new TwovilleBoolean(true));
+    this.bind('template', null, null, new ExpressionBoolean(null, true));
   }
 
   draw(env, t) {
@@ -188,6 +202,7 @@ export class TwovilleLabel extends TwovilleShape {
     this.svgElement = document.createElementNS(svgNamespace, 'text');
     this.svgElement.setAttributeNS(null, 'font-size', 8);
     this.svgElement.setAttributeNS(null, 'text-anchor', 'middle');
+    this.svgElement.setAttributeNS(null, 'alignment-baseline', 'middle');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.svgElement.appendChild(document.createTextNode('foo'));
   }
@@ -234,7 +249,7 @@ export class TwovilleLabel extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'opacity', 1);
 
       if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
+        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
       }
 
       if (this.has('stroke')) {
@@ -246,15 +261,15 @@ export class TwovilleLabel extends TwovilleShape {
           let strokeRGB = stroke.valueAt(env, 'rgb', t);
           let strokeOpacity = stroke.valueAt(env, 'opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
         }
       }
 
-      this.svgElement.childNodes[0].nodeValue = text.get();
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
-      this.svgElement.setAttributeNS(null, 'x', position.get(0).get());
-      this.svgElement.setAttributeNS(null, 'y', position.get(1).get());
+      this.svgElement.childNodes[0].nodeValue = text.value;
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+      this.svgElement.setAttributeNS(null, 'x', position.get(0).value);
+      this.svgElement.setAttributeNS(null, 'y', position.get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
@@ -309,7 +324,7 @@ export class TwovilleLine extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'opacity', 1);
 
       if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
+        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
       }
 
       if (this.has('stroke')) {
@@ -321,16 +336,16 @@ export class TwovilleLine extends TwovilleShape {
           let strokeRGB = stroke.valueAt(env, 'rgb', t);
           let strokeOpacity = stroke.valueAt(env, 'opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
         }
       }
 
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
-      this.svgElement.setAttributeNS(null, 'x1', a.get(0).get());
-      this.svgElement.setAttributeNS(null, 'y1', a.get(1).get());
-      this.svgElement.setAttributeNS(null, 'x2', b.get(0).get());
-      this.svgElement.setAttributeNS(null, 'y2', b.get(1).get());
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+      this.svgElement.setAttributeNS(null, 'x1', a.get(0).value);
+      this.svgElement.setAttributeNS(null, 'y1', a.get(1).value);
+      this.svgElement.setAttributeNS(null, 'x2', b.get(0).value);
+      this.svgElement.setAttributeNS(null, 'y2', b.get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
@@ -379,9 +394,9 @@ export class TwovilleRectangle extends TwovilleShape {
       corner = this.valueAt(env, 'corner', t);
     } else {
       let center = this.valueAt(env, 'center', t);
-      corner = new TwovilleVector([
-        new TwovilleReal(center.get(0).get() - size.get(0).get() * 0.5),
-        new TwovilleReal(center.get(1).get() - size.get(1).get() * 0.5),
+      corner = new ExpressionVector(null, [
+        new ExpressionReal(null, center.get(0).value - size.get(0).value * 0.5),
+        new ExpressionReal(null, center.get(1).value - size.get(1).value * 0.5),
       ]);
     }
 
@@ -400,7 +415,7 @@ export class TwovilleRectangle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'opacity', 1);
 
       if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
+        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
       }
 
       if (this.has('stroke')) {
@@ -412,22 +427,22 @@ export class TwovilleRectangle extends TwovilleShape {
           let strokeRGB = stroke.valueAt(env, 'rgb', t);
           let strokeOpacity = stroke.valueAt(env, 'opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
         }
       }
 
       if (this.has('rounding')) {
         let rounding = this.valueAt(env, 'rounding', t);
-        this.svgElement.setAttributeNS(null, 'rx', rounding.get());
-        this.svgElement.setAttributeNS(null, 'ry', rounding.get());
+        this.svgElement.setAttributeNS(null, 'rx', rounding.value);
+        this.svgElement.setAttributeNS(null, 'ry', rounding.value);
       }
 
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
-      this.svgElement.setAttributeNS(null, 'x', corner.get(0).get());
-      this.svgElement.setAttributeNS(null, 'y', corner.get(1).get());
-      this.svgElement.setAttributeNS(null, 'width', size.get(0).get());
-      this.svgElement.setAttributeNS(null, 'height', size.get(1).get());
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+      this.svgElement.setAttributeNS(null, 'x', corner.get(0).value);
+      this.svgElement.setAttributeNS(null, 'y', corner.get(1).value);
+      this.svgElement.setAttributeNS(null, 'width', size.get(0).value);
+      this.svgElement.setAttributeNS(null, 'height', size.get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
@@ -482,7 +497,7 @@ export class TwovilleCircle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'opacity', 1);
 
       if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.get() + ' ' + pivot.get(0).get() + ',' + pivot.get(1).get() + ')');
+        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
       }
 
       if (this.has('stroke')) {
@@ -494,253 +509,17 @@ export class TwovilleCircle extends TwovilleShape {
           let strokeRGB = stroke.valueAt(env, 'rgb', t);
           let strokeOpacity = stroke.valueAt(env, 'opacity', t);
           this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.get());
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.get());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
         }
       }
 
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).get());
-      this.svgElement.setAttributeNS(null, 'cx', center.get(0).get());
-      this.svgElement.setAttributeNS(null, 'cy', center.get(1).get());
-      this.svgElement.setAttributeNS(null, 'r', radius.get());
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+      this.svgElement.setAttributeNS(null, 'cx', center.get(0).value);
+      this.svgElement.setAttributeNS(null, 'cy', center.get(1).value);
+      this.svgElement.setAttributeNS(null, 'r', radius.value);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class TwovilleData {
-  constructor() {
-  }
-
-  bind(env, fromTime, toTime, id) {
-    env.bind(id, fromTime, toTime, this);
-  }
-
-  evaluate(env, fromTime, toTime) {
-    return this;
-  }
-
-  isTimeSensitive(env) {
-    return false;
-  } // TODO remove
-}
-
-// --------------------------------------------------------------------------- 
-
-export class TwovilleVector extends TwovilleData {
-  constructor(elements) {
-    super();
-    this.elements = elements;
-  }
-
-  bind(id, fromTime, toTime, value) {
-    this.elements.forEach(element => {
-      element.bind(id, fromTime, toTime, value);
-    });
-  }
-
-  forEach(each) {
-    this.elements.forEach(each);
-  }
-
-  get(i) {
-    return this.elements[i];
-  }
-
-  evaluate(env) {
-    return this;
-  }
-
-  toRGB(env) {
-    let r = Math.floor(this.elements[0].get() * 255);
-    let g = Math.floor(this.elements[1].get() * 255);
-    let b = Math.floor(this.elements[2].get() * 255);
-    return 'rgb(' + r + ', ' + g + ', ' + b + ')';
-  }
-
-  toString(env) {
-    return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
-  }
-
-  interpolate(other, proportion) {
-    return new TwovilleVector(this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
-  }
-
-}
-
-// --------------------------------------------------------------------------- 
-
-export class TwovilleString extends TwovilleData {
-  constructor(x) {
-    super();
-    this.x = x;
-  }
-
-  toString() {
-    return '' + this.x;
-  }
-
-  get() {
-    return this.x;
-  }
-
-  interpolate(other, proportion) {
-    return new TwovilleString(proportion <= 0.5 ? this.get() : other.get());
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class TwovilleInteger extends TwovilleData {
-  constructor(x) {
-    super();
-    this.x = x;
-  }
-
-  toString() {
-    return '' + this.x;
-  }
-
-  get() {
-    return this.x;
-  }
-
-  add(other) {
-    if (other instanceof TwovilleInteger) {
-      return new TwovilleInteger(this.get() + other.get());
-    } else if (other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() + other.get());
-    } else {
-      throw new MessagedException('Add failed');
-    }
-  }
-
-  subtract(other) {
-    if (other instanceof TwovilleInteger) {
-      return new TwovilleInteger(this.get() - other.get());
-    } else if (other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() - other.get());
-    } else {
-      throw new MessagedException('Subtract failed');
-    }
-  }
-
-  multiply(other) {
-    if (other instanceof TwovilleInteger) {
-      return new TwovilleInteger(this.get() * other.get());
-    } else if (other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() * other.get());
-    } else {
-      throw 'bad ****';
-    }
-  }
-
-  divide(other) {
-    if (other instanceof TwovilleInteger) {
-      return new TwovilleInteger(Math.trunc(this.get() / other.get()));
-    } else if (other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() / other.get());
-    } else {
-      throw new MessagedException('Divide failed');
-    }
-  }
-
-  remainder(other) {
-    if (other instanceof TwovilleInteger) {
-      return new TwovilleInteger(this.get() % other.get());
-    } else if (other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() % other.get());
-    } else {
-      throw new MessagedException('Remainder failed');
-    }
-  }
-
-  interpolate(other, proportion) {
-    return new TwovilleReal(this.get() + proportion * (other.get() - this.get()));
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class TwovilleReal extends TwovilleData {
-  constructor(x) {
-    super();
-    this.x = x;
-  }
-
-  toString() {
-    return '' + this.x;
-  }
-
-  get() {
-    return this.x;
-  }
-
-  add(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() + other.get());
-    } else {
-      throw '...';
-    }
-  }
-
-  subtract(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() - other.get());
-    } else {
-      throw '...';
-    }
-  }
-
-  multiply(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() * other.get());
-    } else {
-      throw 'BAD *';
-    }
-  }
-
-  divide(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() / other.get());
-    } else {
-      throw new MessagedException('I can only divide integers and reals.');
-    }
-  }
-
-  remainder(other) {
-    if (other instanceof TwovilleInteger || other instanceof TwovilleReal) {
-      return new TwovilleReal(this.get() % other.get());
-    } else {
-      throw new MessagedException('I can only compute the remainder for integers and reals.');
-    }
-  }
-
-  interpolate(other, proportion) {
-    return new TwovilleReal(this.get() + proportion * (other.get() - this.get()));
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class TwovilleBoolean extends TwovilleData {
-  constructor(x) {
-    super();
-    this.x = x;
-  }
-   
-  toString() {
-    return '' + this.x;
-  }
-
-  get() {
-    return this.x;
-  }
-
-  interpolate(other, proportion) {
-    return new TwovilleBoolean(proportion <= 0.5 ? this.get() : other.get());
   }
 }
 

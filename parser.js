@@ -56,6 +56,10 @@ export function parse(tokens) {
   }
 
   function program() {
+    if (has(Tokens.Indentation) && tokens[i].source.length != 0) {
+      throw new LocatedException(tokens[i].where, 'I expected no indentation at the top-level of the program.');
+    }
+
     let b = block();
     if (!has(Tokens.EOF)) {
       throw new LocatedException(b.where, 'I expected the program to end after this, but it didn\'t.');
@@ -76,10 +80,7 @@ export function parse(tokens) {
     indents.push(indentation.source.length);
 
     let statements = [];
-    while (has(Tokens.Indentation)) {
-      if (tokens[i].source.length != indentation.source.length) {
-        throw new LocatedException(tokens[i].where, 'I expected consistent indentation within a block, but this indentation jumps around.');
-      }
+    while (has(Tokens.Indentation) && tokens[i].source.length == indentation.source.length) {
       consume(); // eat indentation
       if (has(Tokens.Linebreak)) {
         consume();
@@ -87,6 +88,10 @@ export function parse(tokens) {
         let s = statement();
         statements.push(s);
       }
+    }
+
+    if (tokens[i].source.length > indentation.source.length) {
+      throw new LocatedException(tokens[i].where, `I expected consistent indentation within this block (which is indented with ${indentation.source.length} character${indentation.source.length == 1 ? '' : 's'}), but this indentation jumps around.`);
     }
 
     indents.pop();
