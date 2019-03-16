@@ -407,7 +407,6 @@ export class ExpressionFunctionCall extends Expression {
     this.actuals.forEach((actual, i) => {
       callEnvironment.bind(f.formals[i], null, null, actual.evaluate(env, fromTime, toTime));
     });
-    console.log("callEnvironment:", callEnvironment);
 
     let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, this);
     return returnValue;
