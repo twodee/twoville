@@ -405,8 +405,9 @@ export class ExpressionFunctionCall extends Expression {
 
     let callEnvironment = new TwovilleEnvironment(env);
     this.actuals.forEach((actual, i) => {
-      callEnvironment.bind(f.formals[i], actual.evaluate(env, fromTime, toTime));
+      callEnvironment.bind(f.formals[i], null, null, actual.evaluate(env, fromTime, toTime));
     });
+    console.log("callEnvironment:", callEnvironment);
 
     let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, this);
     return returnValue;
@@ -744,7 +745,7 @@ export class ExpressionPrint extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let message = env['message'].value;
+    let message = env.get('message').value;
     log(message.toString(fromTime, toTime));
     return null;
   }
@@ -758,8 +759,8 @@ export class ExpressionRandom extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let min = env['min'].value;
-    let max = env['max'].value;
+    let min = env.get('min').value;
+    let max = env.get('max').value;
     let x = Math.random() * (max - min) + min;
     return new ExpressionReal(null, x);
   }
@@ -773,7 +774,7 @@ export class ExpressionSine extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let degrees = env['degrees'].value;
+    let degrees = env.get('degrees').value;
     let x = Math.sin(degrees * Math.PI / 180);
     return new ExpressionReal(null, x);
   }
@@ -787,7 +788,7 @@ export class ExpressionCosine extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let degrees = env['degrees'].value;
+    let degrees = env.get('degrees').value;
     let x = Math.cos(degrees * Math.PI / 180);
     return new ExpressionReal(null, x);
   }
@@ -802,7 +803,7 @@ export class ExpressionInt extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let f = env['x'].value;
+    let f = env.get('x').value;
     let i = Math.trunc(f);
     return new ExpressionInteger(null, i);
   }
