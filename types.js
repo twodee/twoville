@@ -122,14 +122,36 @@ export function initializeShapes() {
 }
 
 export class TwovilleShape extends TwovilleTimelinedEnvironment {
-  constructor(env, callExpression) {
+  constructor(env, callExpression, type) {
     super(env, callExpression);
+    this.type = type;
     this.callExpression = callExpression;
     this.parentElement = null;
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
     this.bind('opacity', null, null, new ExpressionReal(null, 1));
     this.id = serial;
     ++serial;
+  }
+
+  getRGB(env, t) {
+    let isCutout = this.owns('parent') && this.get('parent').defaultValue instanceof TwovilleCutout;
+
+    if (!this.has('rgb') && !isCutout) {
+      throw new LocatedException(this.callExpression.where, `I found a ${this.type} whose rgb property is not defined.`);
+    }
+    
+    let rgb;
+    if (isCutout) {
+      rgb = new ExpressionVector(null, [
+        new ExpressionInteger(null, 0),
+        new ExpressionInteger(null, 0),
+        new ExpressionInteger(null, 0),
+      ]);
+    } else {
+      rgb = this.valueAt(env, 'rgb', t);
+    }
+
+    return rgb;
   }
 
   domify(svg) {
@@ -166,8 +188,8 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
 // --------------------------------------------------------------------------- 
 
 export class TwovilleGroup extends TwovilleShape {
-  constructor(env) {
-    super(env);
+  constructor(env, callExpression) {
+    super(env, callExpression, 'group');
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'group');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
@@ -182,7 +204,7 @@ export class TwovilleGroup extends TwovilleShape {
 
 export class TwovilleMask extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression);
+    super(env, callExpression, 'mask');
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
@@ -233,7 +255,7 @@ export class TwovilleCutout extends TwovilleMask {
 
 export class TwovilleLabel extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression);
+    super(env, callExpression, 'label');
     this.svgElement = document.createElementNS(svgNamespace, 'text');
     this.svgElement.setAttributeNS(null, 'font-size', 8);
     this.svgElement.setAttributeNS(null, 'text-anchor', 'middle');
@@ -245,10 +267,6 @@ export class TwovilleLabel extends TwovilleShape {
   draw(env, t) {
     if (!this.has('position')) {
       throw new LocatedException(this.callExpression.where, 'I found a label whose position property is not defined.');
-    }
-    
-    if (!this.has('rgb')) {
-      throw new LocatedException(this.callExpression.where, 'I found a label whose rgb property is not defined.');
     }
     
     if (!this.has('text')) {
@@ -268,7 +286,7 @@ export class TwovilleLabel extends TwovilleShape {
     // If we have rotation, but no pivot, error.
 
     let position = this.valueAt(env, 'position', t);
-    let rgb = this.valueAt(env, 'rgb', t);
+    let rgb = this.getRGB(env, t);
     let text = this.valueAt(env, 'text', t);
     let pivot = null;
     let rotation = null;
@@ -314,7 +332,7 @@ export class TwovilleLabel extends TwovilleShape {
 
 export class TwovilleLine extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression);
+    super(env, callExpression, 'line');
     this.svgElement = document.createElementNS(svgNamespace, 'line');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
   }
@@ -326,10 +344,6 @@ export class TwovilleLine extends TwovilleShape {
     
     if (!this.has('b')) {
       throw new LocatedException(this.callExpression.where, 'I found a line whose b property has not been defined.');
-    }
-    
-    if (!this.has('rgb')) {
-      throw new LocatedException(this.callExpression.where, 'I found a line whose rgb property has not been defined.');
     }
     
     let needsTransforming = false;
@@ -346,7 +360,7 @@ export class TwovilleLine extends TwovilleShape {
 
     let a = this.valueAt(env, 'a', t);
     let b = this.valueAt(env, 'b', t);
-    let rgb = this.valueAt(env, 'rgb', t);
+    let rgb = this.getRGB(env, t);
 
     if (needsTransforming) {
       let pivot = this.valueAt(env, 'pivot', t);
@@ -390,7 +404,7 @@ export class TwovilleLine extends TwovilleShape {
 
 export class TwovilleRectangle extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression);
+    super(env, callExpression, 'rectangle');
     this.svgElement = document.createElementNS(svgNamespace, 'rect');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
   }
@@ -406,10 +420,6 @@ export class TwovilleRectangle extends TwovilleShape {
     
     if (!this.has('size')) {
       throw new LocatedException(this.callExpression.where, 'I found a rectangle whose size property is not defined.');
-    }
-    
-    if (!this.has('rgb')) {
-      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose rgb property is not defined.');
     }
     
     let needsTransforming = false;
@@ -435,7 +445,7 @@ export class TwovilleRectangle extends TwovilleShape {
       ]);
     }
 
-    let rgb = this.valueAt(env, 'rgb', t);
+    let rgb = this.getRGB(env, t);
     let pivot = null;
     let rotation = null;
 
@@ -487,7 +497,7 @@ export class TwovilleRectangle extends TwovilleShape {
 
 export class TwovilleCircle extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression);
+    super(env, callExpression, 'circle');
     this.svgElement = document.createElementNS(svgNamespace, 'circle');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
   }
@@ -499,10 +509,6 @@ export class TwovilleCircle extends TwovilleShape {
     
     if (!this.has('radius')) {
       throw new LocatedException(this.callExpression.where, 'I found a circle whose radius property is not defined.');
-    }
-    
-    if (!this.has('rgb')) {
-      throw new LocatedException(this.callExpression.where, 'I found a circle whose rgb property is not defined.');
     }
     
     let needsTransforming = false;
@@ -517,7 +523,7 @@ export class TwovilleCircle extends TwovilleShape {
 
     let center = this.valueAt(env, 'center', t);
     let radius = this.valueAt(env, 'radius', t);
-    let rgb = this.valueAt(env, 'rgb', t);
+    let rgb = this.getRGB(env, t);
     let pivot = null;
     let rotation = null;
 

@@ -844,7 +844,6 @@ export class ExpressionCutout extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    console.log(">>> env:", env);
     let cutout = new TwovilleCutout(env, callExpression);
     env.shapes.push(cutout);
     return cutout;
