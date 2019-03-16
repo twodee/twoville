@@ -24,6 +24,7 @@ import {
   ExpressionLabel,
   ExpressionGroup,
   ExpressionMask,
+  ExpressionCutout,
   ExpressionCircle,
   ExpressionPrint,
   ExpressionRandom,
@@ -392,6 +393,12 @@ evalButton.addEventListener('click', () => {
       name: 'mask',
       formals: [],
       body: new ExpressionMask()
+    };
+
+    env.bindings['cutout'] = {
+      name: 'cutout',
+      formals: [],
+      body: new ExpressionCutout()
     };
 
     env.bindings['circle'] = {

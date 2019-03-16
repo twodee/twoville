@@ -196,6 +196,41 @@ export class TwovilleMask extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
+export class TwovilleCutout extends TwovilleMask {
+  constructor(env, callExpression) {
+    super(env, callExpression);
+
+    let size = env.get('viewport').get('size');
+
+    let corner;
+    if (env.get('viewport').has('corner')) {
+      corner = env.get('viewport').get('corner');
+    } else if (env.get('viewport').has('center')) {
+      let center = env.get('viewport').get('center');
+      corner = new ExpressionVector(null, [
+        new ExpressionReal(null, center.get(0).value - size.get(0).value * 0.5),
+        new ExpressionReal(null, center.get(1).value - size.get(1).value * 0.5),
+      ]);
+    } else {
+      corner = new ExpressionVector(null, [
+        new ExpressionInteger(null, 0),
+        new ExpressionInteger(null, 0),
+      ]);
+    }
+
+    let rectangle = document.createElementNS(svgNamespace, 'rect');
+    rectangle.setAttributeNS(null, 'x', corner.get(0).value);
+    rectangle.setAttributeNS(null, 'y', corner.get(1).value);
+    rectangle.setAttributeNS(null, 'width', '100%');
+    rectangle.setAttributeNS(null, 'height', '100%');
+    rectangle.setAttributeNS(null, 'fill', 'white');
+
+    this.svgElement.appendChild(rectangle);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TwovilleLabel extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression);

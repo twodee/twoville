@@ -3,12 +3,14 @@ import { log } from './main.js';
 
 import {
   LocatedException,
+  TwovilleEnvironment,
   TwovilleRectangle,
   TwovilleLine,
   TwovilleLabel,
   TwovilleCircle,
   TwovilleGroup,
   TwovilleMask,
+  TwovilleCutout,
 } from "./types.js";
 
 // --------------------------------------------------------------------------- 
@@ -401,9 +403,9 @@ export class ExpressionFunctionCall extends Expression {
       throw 'params mismatch!';
     }
 
-    let callEnvironment = {svg: env.svg, bindings: {}, parent: env, shapes: env.shapes};
+    let callEnvironment = new TwovilleEnvironment(env);
     this.actuals.forEach((actual, i) => {
-      callEnvironment[f.formals[i]] = actual.evaluate(env, fromTime, toTime);
+      callEnvironment.bind(f.formals[i], actual.evaluate(env, fromTime, toTime));
     });
 
     let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, this);
@@ -831,6 +833,21 @@ export class ExpressionMask extends Expression {
     let mask = new TwovilleMask(env, callExpression);
     env.shapes.push(mask);
     return mask;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionCutout extends Expression {
+  constructor() {
+    super(null, null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    console.log(">>> env:", env);
+    let cutout = new TwovilleCutout(env, callExpression);
+    env.shapes.push(cutout);
+    return cutout;
   }
 }
 
