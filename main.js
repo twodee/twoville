@@ -16,6 +16,7 @@ import {
 } from './types.js';
 
 import {
+  ExpressionArcTo,
   ExpressionCircle,
   ExpressionCosine,
   ExpressionCutout,
@@ -25,6 +26,7 @@ import {
   ExpressionLabel,
   ExpressionLine,
   ExpressionMask,
+  ExpressionPath,
   ExpressionPoint,
   ExpressionPolygon,
   ExpressionPrint,
@@ -377,6 +379,18 @@ evalButton.addEventListener('click', () => {
       name: 'line',
       formals: [],
       body: new ExpressionLine()
+    };
+
+    env.bindings['arcTo'] = {
+      name: 'arcTo',
+      formals: [],
+      body: new ExpressionArcTo()
+    };
+
+    env.bindings['path'] = {
+      name: 'path',
+      formals: [],
+      body: new ExpressionPath()
     };
 
     env.bindings['polygon'] = {

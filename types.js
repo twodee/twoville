@@ -286,8 +286,6 @@ export class TwovilleLabel extends TwovilleShape {
       }
     }
 
-    // If we have rotation, but no pivot, error.
-
     let position = this.valueAt(env, 'position', t);
     let rgb = this.getRGB(env, t);
     let text = this.valueAt(env, 'text', t);
@@ -347,6 +345,60 @@ export class TwovillePoint extends TwovilleShape {
 
     return position;
   }
+
+  evolveToPathVertex(env, t) {
+    if (!this.has('position')) {
+      throw new LocatedException(this.callExpression.where, 'I found a point whose position has not been defined.');
+    }
+    
+    let position = this.valueAt(env, 'position', t);
+    
+    // TODO
+    // if is jump, use M
+    // if is local, use lowercase
+
+    if (position) {
+      return `L${position.get(0).value},${position.get(1).value}`;
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovilleArcTo extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'arcTo');
+  }
+
+  evolveToPathVertex(env, t) {
+    if (!this.has('radii')) {
+      throw new LocatedException(this.callExpression.where, 'I found an arcTo whose radii property has not been defined.');
+    }
+
+    if (!this.has('position')) {
+      throw new LocatedException(this.callExpression.where, 'I found an arcTo whose position property has not been defined.');
+    }
+    
+    let position = this.valueAt(env, 'position', t);
+    let radii = this.valueAt(env, 'radii', t);
+
+    // TODO helper to assert property
+    
+    // TODO
+    // if is jump, use M
+    // if is local, use lowercase
+    
+    // TODO specify center
+    // eliminates radii, still need to specify direction: clockwise or counterclockwise
+
+    if (position) {
+      return `A${radii.get(0).value},${radii.get(1).value} 0 1 0 ${position.get(0).value},${position.get(1).value}`;
+    } else {
+      return null;
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -376,8 +428,6 @@ export class TwovilleLine extends TwovilleShape {
         throw new LocatedException(this.callExpression.where, 'I found a line that is rotated, but it\'s pivot property is not defined.');
       }
     }
-
-    // If we have rotation, but no pivot, error.
 
     let a = this.valueAt(env, 'a', t);
     let b = this.valueAt(env, 'b', t);
@@ -426,6 +476,72 @@ export class TwovilleLine extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
+export class TwovillePath extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'path');
+    this.svgElement = document.createElementNS(svgNamespace, 'path');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+  }
+
+  draw(env, t) {
+    if (!this.has('vertices')) {
+      throw new LocatedException(this.callExpression.where, 'I found a path whose vertices property has not been defined.');
+    }
+    
+    let needsTransforming = false;
+
+    if (this.has('rotation')) {
+      if (this.has('pivot')) {
+        needsTransforming = true;
+      } else {
+        throw new LocatedException(this.callExpression.where, 'I found a path that is rotated, but it\'s pivot property is not defined.');
+      }
+    }
+
+    let rgb = this.getRGB(env, t);
+    let vertices = this.valueAt(env, 'vertices', t);
+    vertices = vertices.map(vertex => vertex.evolveToPathVertex(env, t));
+
+    vertices[0] = vertices[0].replace(/^[Ll]/, 'M');
+
+    // TODO inner scope!
+    if (needsTransforming) {
+      let pivot = this.valueAt(env, 'pivot', t);
+      let rotation = this.valueAt(env, 'rotation', t);
+    }
+
+    if (vertices.some(v => v == null) || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
+      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    } else {
+      this.svgElement.setAttributeNS(null, 'opacity', 1);
+
+      if (needsTransforming) {
+        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
+      }
+
+      if (this.has('stroke')) {
+        let stroke = this.get('stroke');
+        if (stroke.owns('size') &&
+            stroke.owns('rgb') &&
+            stroke.owns('opacity')) {
+          let strokeSize = stroke.valueAt(env, 'size', t);
+          let strokeRGB = stroke.valueAt(env, 'rgb', t);
+          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
+          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
+        }
+      }
+
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+      this.svgElement.setAttributeNS(null, 'd', vertices.join(' '));
+      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TwovillePolygon extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'polygon');
@@ -447,8 +563,6 @@ export class TwovillePolygon extends TwovilleShape {
         throw new LocatedException(this.callExpression.where, 'I found a polygon that is rotated, but it\'s pivot property is not defined.');
       }
     }
-
-    // If we have rotation, but no pivot, error.
 
     let vertices = this.valueAt(env, 'vertices', t);
     vertices = vertices.map(vertex => vertex.evolve(env, t));

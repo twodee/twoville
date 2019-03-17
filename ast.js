@@ -3,6 +3,7 @@ import { log } from './main.js';
 
 import {
   LocatedException,
+  TwovilleArcTo,
   TwovilleCircle,
   TwovilleCutout,
   TwovilleEnvironment,
@@ -10,6 +11,7 @@ import {
   TwovilleLabel,
   TwovilleLine,
   TwovilleMask,
+  TwovillePath,
   TwovillePoint,
   TwovillePolygon,
   TwovilleRectangle,
@@ -714,6 +716,18 @@ export class ExpressionPoint extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionArcTo extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovilleArcTo(env, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionLine extends Expression {
   constructor() {
     super(null);
@@ -735,6 +749,20 @@ export class ExpressionPolygon extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     let r = new TwovillePolygon(env, callExpression);
+    env.shapes.push(r);
+    return r;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPath extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let r = new TwovillePath(env, callExpression);
     env.shapes.push(r);
     return r;
   }
