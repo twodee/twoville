@@ -16,21 +16,23 @@ import {
 } from './types.js';
 
 import {
-  ExpressionInteger,
-  ExpressionReal,
-  ExpressionVector,
-  ExpressionRectangle,
-  ExpressionLine,
-  ExpressionLabel,
-  ExpressionGroup,
-  ExpressionMask,
-  ExpressionCutout,
   ExpressionCircle,
+  ExpressionCosine,
+  ExpressionCutout,
+  ExpressionGroup,
+  ExpressionInt,
+  ExpressionInteger,
+  ExpressionLabel,
+  ExpressionLine,
+  ExpressionMask,
+  ExpressionPoint,
+  ExpressionPolygon,
   ExpressionPrint,
   ExpressionRandom,
+  ExpressionReal,
+  ExpressionRectangle,
   ExpressionSine,
-  ExpressionCosine,
-  ExpressionInt,
+  ExpressionVector,
 } from './ast.js';
 
 let editor = ace.edit('editor');
@@ -375,6 +377,18 @@ evalButton.addEventListener('click', () => {
       name: 'line',
       formals: [],
       body: new ExpressionLine()
+    };
+
+    env.bindings['polygon'] = {
+      name: 'polygon',
+      formals: [],
+      body: new ExpressionPolygon()
+    };
+
+    env.bindings['point'] = {
+      name: 'point',
+      formals: [],
+      body: new ExpressionPoint()
     };
 
     env.bindings['label'] = {

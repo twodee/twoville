@@ -183,6 +183,9 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.parentElement.appendChild(this.svgElement);
   }
 
+  isTimeSensitive(env) {
+    return false;
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -330,6 +333,24 @@ export class TwovilleLabel extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
+export class TwovillePoint extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'point');
+  }
+
+  evolve(env, t) {
+    if (!this.has('position')) {
+      throw new LocatedException(this.callExpression.where, 'I found a point whose position has not been defined.');
+    }
+    
+    let position = this.valueAt(env, 'position', t);
+
+    return position;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TwovilleLine extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'line');
@@ -390,11 +411,81 @@ export class TwovilleLine extends TwovilleShape {
         }
       }
 
+      let aa = a.evolve(env, t);
+      let bb = b.evolve(env, t);
+
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
-      this.svgElement.setAttributeNS(null, 'x1', a.get(0).value);
-      this.svgElement.setAttributeNS(null, 'y1', a.get(1).value);
-      this.svgElement.setAttributeNS(null, 'x2', b.get(0).value);
-      this.svgElement.setAttributeNS(null, 'y2', b.get(1).value);
+      this.svgElement.setAttributeNS(null, 'x1', aa.get(0).value);
+      this.svgElement.setAttributeNS(null, 'y1', aa.get(1).value);
+      this.svgElement.setAttributeNS(null, 'x2', bb.get(0).value);
+      this.svgElement.setAttributeNS(null, 'y2', bb.get(1).value);
+      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovillePolygon extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'polygon');
+    this.svgElement = document.createElementNS(svgNamespace, 'polygon');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+  }
+
+  draw(env, t) {
+    if (!this.has('vertices')) {
+      throw new LocatedException(this.callExpression.where, 'I found a polygon whose vertices property has not been defined.');
+    }
+    
+    let needsTransforming = false;
+
+    if (this.has('rotation')) {
+      if (this.has('pivot')) {
+        needsTransforming = true;
+      } else {
+        throw new LocatedException(this.callExpression.where, 'I found a polygon that is rotated, but it\'s pivot property is not defined.');
+      }
+    }
+
+    // If we have rotation, but no pivot, error.
+
+    let vertices = this.valueAt(env, 'vertices', t);
+    vertices = vertices.map(vertex => vertex.evolve(env, t));
+    let rgb = this.getRGB(env, t);
+
+    if (needsTransforming) {
+      let pivot = this.valueAt(env, 'pivot', t);
+      let rotation = this.valueAt(env, 'rotation', t);
+    }
+
+    if (vertices.some(v => v == null) || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
+      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    } else {
+      this.svgElement.setAttributeNS(null, 'opacity', 1);
+
+      if (needsTransforming) {
+        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
+      }
+
+      if (this.has('stroke')) {
+        let stroke = this.get('stroke');
+        if (stroke.owns('size') &&
+            stroke.owns('rgb') &&
+            stroke.owns('opacity')) {
+          let strokeSize = stroke.valueAt(env, 'size', t);
+          let strokeRGB = stroke.valueAt(env, 'rgb', t);
+          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
+          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
+          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
+        }
+      }
+
+      let pairs = vertices.map(v => `${v.get(0).value},${v.get(1).value}`).join(' ');
+
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+      this.svgElement.setAttributeNS(null, 'points', pairs);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }

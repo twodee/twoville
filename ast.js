@@ -3,14 +3,16 @@ import { log } from './main.js';
 
 import {
   LocatedException,
-  TwovilleEnvironment,
-  TwovilleRectangle,
-  TwovilleLine,
-  TwovilleLabel,
   TwovilleCircle,
-  TwovilleGroup,
-  TwovilleMask,
   TwovilleCutout,
+  TwovilleEnvironment,
+  TwovilleGroup,
+  TwovilleLabel,
+  TwovilleLine,
+  TwovilleMask,
+  TwovillePoint,
+  TwovillePolygon,
+  TwovilleRectangle,
 } from "./types.js";
 
 // --------------------------------------------------------------------------- 
@@ -394,7 +396,7 @@ export class ExpressionFunctionCall extends Expression {
 
   evaluate(env, fromTime, toTime) {
     if (!env.has(this.name)) {
-      throw 'no such func ' + name;
+      throw new LocatedException(this.where, `I've not heard of any function named "${this.name}"`);
     }
 
     let f = env.get(this.name);
@@ -414,7 +416,7 @@ export class ExpressionFunctionCall extends Expression {
 
   isTimeSensitive(env) {
     if (!env.has(this.name)) {
-      throw 'no such func ' + name;
+      throw new LocatedException(this.where, `I've not heard of any function named "${this.name}"`);
     }
     let f = env.get(this.name);
     return this.actuals.some((actual, i) => actual.isTimeSensitive(env)) || f.body.isTimeSensitive(env);
@@ -537,6 +539,10 @@ export class ExpressionVector extends ExpressionData {
       return element.evaluate(env, fromTime, toTime);
     });
     return new ExpressionVector(null, values);
+  }
+
+  map(transform) {
+    return this.elements.map(transform);
   }
 
   isTimeSensitive(env) {
@@ -684,7 +690,7 @@ export class ExpressionWith extends Expression {
 
 export class ExpressionRectangle extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -696,9 +702,21 @@ export class ExpressionRectangle extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionPoint extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovillePoint(env, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionLine extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -710,9 +728,23 @@ export class ExpressionLine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionPolygon extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let r = new TwovillePolygon(env, callExpression);
+    env.shapes.push(r);
+    return r;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionLabel extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -726,7 +758,7 @@ export class ExpressionLabel extends Expression {
 
 export class ExpressionCircle extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -740,7 +772,7 @@ export class ExpressionCircle extends Expression {
 
 export class ExpressionPrint extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -754,7 +786,7 @@ export class ExpressionPrint extends Expression {
 
 export class ExpressionRandom extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -769,7 +801,7 @@ export class ExpressionRandom extends Expression {
 
 export class ExpressionSine extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -783,7 +815,7 @@ export class ExpressionSine extends Expression {
 
 export class ExpressionCosine extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -798,7 +830,7 @@ export class ExpressionCosine extends Expression {
 // The casting function.
 export class ExpressionInt extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -812,7 +844,7 @@ export class ExpressionInt extends Expression {
 
 export class ExpressionGroup extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -826,7 +858,7 @@ export class ExpressionGroup extends Expression {
 
 export class ExpressionMask extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
@@ -840,7 +872,7 @@ export class ExpressionMask extends Expression {
 
 export class ExpressionCutout extends Expression {
   constructor() {
-    super(null, null);
+    super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
