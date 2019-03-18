@@ -65,6 +65,8 @@ let playOnceButton = document.getElementById('playOnceButton');
 let playLoopButton = document.getElementById('playLoopButton');
 let env;
 let isDirty = false;
+let animateTask = null;
+let delay = 16;
 
 export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
@@ -302,15 +304,12 @@ timeSpinner.addEventListener('input', () => {
   scrubTo(parseInt(timeSpinner.value));
 });
 
-let animateTask = null;
-let delay = 16;
-
 function animateFrame(i, isLoop = false) {
   scrubTo(i);
   if (i < parseInt(scrubber.max)) {
     animateTask = setTimeout(() => animateFrame(i + 1, isLoop), delay);
   } else if (isLoop) {
-    animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop), 100);
+    animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop), delay);
   } else {
     animateTask = null;
   }

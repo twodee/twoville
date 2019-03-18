@@ -1,36 +1,37 @@
 export let Tokens = Object.freeze({
-  Plus: 'Plus',
-  T: 'T',
-  Minus: 'Minus',
-  Indentation: 'Indentation',
-  Asterisk: 'Asterisk',
-  ForwardSlash: 'ForwardSlash',
-  Integer: 'Integer',
-  String: 'String',
-  Linebreak: 'Linebreak',
-  Dot: 'Dot',
   Assign: 'Assign',
-  Real: 'Real',
-  Percent: 'Percent',
-  With: 'With',
-  Comma: 'Comma',
-  RightArrow: 'RightArrow',
-  LeftParenthesis: 'LeftParenthesis',
-  RightParenthesis: 'RightParenthesis',
-  LeftCurlyBrace: 'LeftCurlyBrace',
-  RightCurlyBrace: 'RightCurlyBrace',
-  LeftSquareBracket: 'LeftSquareBracket',
-  RightSquareBracket: 'RightSquareBracket',
-  Circumflex: 'Circumflex',
-  Circle: 'Circle',
-  Identifier: 'Identifier',
-  Repeat: 'Repeat',
+  Asterisk: 'Asterisk',
   Boolean: 'Boolean',
-  From: 'From',
-  To: 'To',
   By: 'By',
+  Circle: 'Circle',
+  Circumflex: 'Circumflex',
+  Comma: 'Comma',
+  Dot: 'Dot',
+  EOF: 'EOF',
+  ForwardSlash: 'ForwardSlash',
+  From: 'From',
+  Identifier: 'Identifier',
+  Indentation: 'Indentation',
+  Integer: 'Integer',
+  LeftCurlyBrace: 'LeftCurlyBrace',
+  LeftParenthesis: 'LeftParenthesis',
+  LeftSquareBracket: 'LeftSquareBracket',
+  Linebreak: 'Linebreak',
+  Minus: 'Minus',
+  Percent: 'Percent',
+  Plus: 'Plus',
+  Real: 'Real',
+  Repeat: 'Repeat',
+  RightArrow: 'RightArrow',
+  RightCurlyBrace: 'RightCurlyBrace',
+  RightParenthesis: 'RightParenthesis',
+  RightSquareBracket: 'RightSquareBracket',
+  String: 'String',
+  Symbol: 'Symbol',
+  T: 'T',
   Through: 'Through',
-  EOF: 'EOF'
+  To: 'To',
+  With: 'With',
 });
 
 export class SourceLocation {
@@ -41,6 +42,10 @@ export class SourceLocation {
     this.columnEnd = columnEnd;
     this.indexStart = indexStart;
     this.indexEnd = indexEnd;
+  }
+
+  clone() {
+    return new SourceLocation(this.lineStart, this.lineEnd, this.columnStart, this.columnEnd, this.indexStart, this.indexEnd);
   }
 
   debugPrefix() {

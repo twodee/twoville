@@ -34,6 +34,21 @@ import {
 } from './ast.js';
 
 export function parse(tokens) {
+  let symbols = {
+    ':clockwise': new ExpressionInteger(null, 0),
+    ':counterclockwise': new ExpressionInteger(null, 1),
+
+    // for alignment-baseline on text elements
+    // See https://vanseodesign.com/web-design/svg-text-baseline-alignment for semantics.
+    ':top': new ExpressionString(null, 'hanging'),
+    ':center': new ExpressionString(null, 'middle'),
+    ':bottom': new ExpressionString(null, 'baseline'),
+
+    ':start': new ExpressionString(null, 'start'),
+    ':middle': new ExpressionString(null, 'middle'),
+    ':end': new ExpressionString(null, 'end'),
+  };
+
   let i = 0;
   let indents = [-1];
 
@@ -243,6 +258,7 @@ export function parse(tokens) {
     return has(Tokens.Integer, offset) ||
            has(Tokens.T, offset) ||
            has(Tokens.Boolean, offset) ||
+           has(Tokens.Symbol, offset) ||
            has(Tokens.String, offset) ||
            has(Tokens.Identifier, offset) ||
            has(Tokens.LeftSquareBracket, offset) ||
@@ -254,6 +270,15 @@ export function parse(tokens) {
     if (has(Tokens.Integer)) {
       let token = consume();
       return new ExpressionInteger(token.where, Number(token.source));
+    } else if (has(Tokens.Symbol)) {
+      let token = consume();
+      if (symbols.hasOwnProperty(token.source)) {
+        let e = symbols[token.source].clone();
+        e.where = token.where;
+        return e;
+      } else {
+        throw new LocatedException(token.where, `I don't recognize the symbol "${token.source}".`);
+      }
     } else if (has(Tokens.String)) {
       let token = consume();
       return new ExpressionString(token.where, token.source);

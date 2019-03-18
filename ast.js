@@ -51,6 +51,10 @@ export class ExpressionBoolean extends ExpressionData {
     this.x = x;
   }
 
+  clone() {
+    return new ExpressionBoolean(this.where.clone(), this.x);
+  }
+
   evaluate(env, fromTime, toTime) {
     return this;
   }
@@ -74,6 +78,10 @@ export class ExpressionInteger extends ExpressionData {
   constructor(where, x) {
     super(where);
     this.x = x;
+  }
+
+  clone() {
+    return new ExpressionString(this.where.clone(), this.x);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -149,6 +157,10 @@ export class ExpressionString extends ExpressionData {
   constructor(where, x) {
     super(where);
     this.x = x;
+  }
+
+  clone() {
+    return new ExpressionString(this.where == null ? null : this.where.clone(), this.x);
   }
 
   evaluate(env, fromTime, toTime) {

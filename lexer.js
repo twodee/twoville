@@ -81,8 +81,15 @@ export function lex(source) {
     }
     consume();
     tokenSoFar = tokenSoFar.substr(1, tokenSoFar.length - 2); // chop off "
-    console.log("tokenSoFar:", tokenSoFar);
     emit(Tokens.String);
+  }
+
+  function symbol() {
+    consume(); // eat symbol lead
+    while (has(/[-a-zA-Z0-9_]/)) {
+      consume();
+    }
+    emit(Tokens.Symbol);
   }
 
   function identifier() {
@@ -184,6 +191,8 @@ export function lex(source) {
       digits();
     } else if (has(/[a-zA-Z_]/)) {
       identifier();
+    } else if (has(':')) {
+      symbol();
     } else if (has('"')) {
       string();
     } else if (has('.')) {

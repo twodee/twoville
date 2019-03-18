@@ -186,6 +186,50 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
   isTimeSensitive(env) {
     return false;
   }
+
+  assertProperty(id) {
+    if (!this.has(id)) {
+      throw new LocatedException(this.callExpression.where, `I found a ${this.type} whose ${id} property is not defined.`);
+    }
+  }
+
+  show() {
+    this.svgElement.setAttributeNS(null, 'visibility', 'visible');
+  }
+
+  hide() {
+    this.svgElement.setAttributeNS(null, 'visibility', 'hidden');
+  }
+ 
+  setStroke(env, t) {
+    if (this.has('stroke')) {
+      let stroke = this.get('stroke');
+      if (stroke.owns('size') &&
+          stroke.owns('rgb') &&
+          stroke.owns('opacity')) {
+        let strokeSize = stroke.valueAt(env, 'size', t);
+        let strokeRGB = stroke.valueAt(env, 'rgb', t);
+        let strokeOpacity = stroke.valueAt(env, 'opacity', t);
+        this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
+        this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+        this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
+      }
+    }
+  }
+
+  setTransform(env, t) {
+    if (this.has('rotation')) {
+      if (this.has('pivot')) {
+        let pivot = this.valueAt(env, 'pivot', t);
+        let rotation = this.valueAt(env, 'rotation', t);
+        if (pivot && rotation) {
+          this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
+        }
+      } else {
+        throw new LocatedException(this.callExpression.where, `I found a ${this.type} that is rotated, but it\'s pivot property is not defined.`);
+      }
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -260,71 +304,53 @@ export class TwovilleLabel extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'label');
     this.svgElement = document.createElementNS(svgNamespace, 'text');
-    this.svgElement.setAttributeNS(null, 'font-size', 8);
-    this.svgElement.setAttributeNS(null, 'text-anchor', 'middle');
-    this.svgElement.setAttributeNS(null, 'alignment-baseline', 'middle');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.svgElement.appendChild(document.createTextNode('foo'));
   }
 
   draw(env, t) {
-    if (!this.has('position')) {
-      throw new LocatedException(this.callExpression.where, 'I found a label whose position property is not defined.');
-    }
+    this.assertProperty('position');
+    this.assertProperty('text');
     
-    if (!this.has('text')) {
-      throw new LocatedException(this.callExpression.where, 'I found a label whose text property is not defined.');
-    }
-    
-    let needsTransforming = false;
-
-    if (this.has('rotation')) {
-      if (this.has('pivot')) {
-        needsTransforming = true;
-      } else {
-        throw new LocatedException(this.callExpression.where, 'I found a label that is rotated, but it\'s pivot property is not defined.');
-      }
-    }
-
     let position = this.valueAt(env, 'position', t);
     let rgb = this.getRGB(env, t);
     let text = this.valueAt(env, 'text', t);
-    let pivot = null;
-    let rotation = null;
 
-    if (needsTransforming) {
-      pivot = this.valueAt(env, 'pivot', t);
-      rotation = this.valueAt(env, 'rotation', t);
+    let fontSize;
+    if (this.has('size')) {
+      fontSize = this.valueAt(env, 'size', t);
+    } else {
+      fontSize = new ExpressionInteger(null, 8);
     }
 
-    if (position == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
-      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    let anchor;
+    if (this.has('anchor')) {
+      anchor = this.valueAt(env, 'anchor', t);
     } else {
-      this.svgElement.setAttributeNS(null, 'opacity', 1);
+      anchor = new ExpressionString(null, 'middle');
+    }
 
-      if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
-      }
+    let baseline;
+    if (this.has('baseline')) {
+      baseline = this.valueAt(env, 'baseline', t);
+    } else {
+      baseline = new ExpressionString(null, 'middle');
+    }
 
-      if (this.has('stroke')) {
-        let stroke = this.get('stroke');
-        if (stroke.owns('size') &&
-            stroke.owns('rgb') &&
-            stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt(env, 'size', t);
-          let strokeRGB = stroke.valueAt(env, 'rgb', t);
-          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
-          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
-        }
-      }
-
+    if (position == null || rgb == null) {
+      this.hide();
+    } else {
+      this.show();
+      this.setStroke(env, t);
+      this.setTransform(env, t);
       this.svgElement.childNodes[0].nodeValue = text.value;
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'x', position.get(0).value);
       this.svgElement.setAttributeNS(null, 'y', position.get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'font-size', fontSize.value);
+      this.svgElement.setAttributeNS(null, 'text-anchor', anchor.value);
+      this.svgElement.setAttributeNS(null, 'alignment-baseline', baseline.value);
     }
   }
 }
@@ -337,20 +363,13 @@ export class TwovillePoint extends TwovilleShape {
   }
 
   evolve(env, t) {
-    if (!this.has('position')) {
-      throw new LocatedException(this.callExpression.where, 'I found a point whose position has not been defined.');
-    }
-    
+    this.assertProperty('position');
     let position = this.valueAt(env, 'position', t);
-
     return position;
   }
 
   evolveToPathVertex(env, t) {
-    if (!this.has('position')) {
-      throw new LocatedException(this.callExpression.where, 'I found a point whose position has not been defined.');
-    }
-    
+    this.assertProperty('position');
     let position = this.valueAt(env, 'position', t);
     
     // TODO
@@ -373,13 +392,8 @@ export class TwovilleArcTo extends TwovilleShape {
   }
 
   evolveToPathVertex(env, t) {
-    if (!this.has('radii')) {
-      throw new LocatedException(this.callExpression.where, 'I found an arcTo whose radii property has not been defined.');
-    }
-
-    if (!this.has('position')) {
-      throw new LocatedException(this.callExpression.where, 'I found an arcTo whose position property has not been defined.');
-    }
+    this.assertProperty('radii');
+    this.assertProperty('position');
     
     let position = this.valueAt(env, 'position', t);
     let radii = this.valueAt(env, 'radii', t);
@@ -411,55 +425,19 @@ export class TwovilleLine extends TwovilleShape {
   }
 
   draw(env, t) {
-    if (!this.has('a')) {
-      throw new LocatedException(this.callExpression.where, 'I found a line whose a property has not been defined.');
-    }
+    this.assertProperty('a');
+    this.assertProperty('b');
     
-    if (!this.has('b')) {
-      throw new LocatedException(this.callExpression.where, 'I found a line whose b property has not been defined.');
-    }
-    
-    let needsTransforming = false;
-
-    if (this.has('rotation')) {
-      if (this.has('pivot')) {
-        needsTransforming = true;
-      } else {
-        throw new LocatedException(this.callExpression.where, 'I found a line that is rotated, but it\'s pivot property is not defined.');
-      }
-    }
-
     let a = this.valueAt(env, 'a', t);
     let b = this.valueAt(env, 'b', t);
     let rgb = this.getRGB(env, t);
 
-    if (needsTransforming) {
-      let pivot = this.valueAt(env, 'pivot', t);
-      let rotation = this.valueAt(env, 'rotation', t);
-    }
-
-    if (a == null || b == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
-      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    if (a == null || b == null || rgb == null) {
+      this.hide();
     } else {
-      this.svgElement.setAttributeNS(null, 'opacity', 1);
-
-      if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
-      }
-
-      if (this.has('stroke')) {
-        let stroke = this.get('stroke');
-        if (stroke.owns('size') &&
-            stroke.owns('rgb') &&
-            stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt(env, 'size', t);
-          let strokeRGB = stroke.valueAt(env, 'rgb', t);
-          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
-          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
-        }
-      }
+      this.show();
+      this.setStroke(env, t);
+      this.setTransform(env, t);
 
       let aa = a.evolve(env, t);
       let bb = b.evolve(env, t);
@@ -484,57 +462,32 @@ export class TwovillePath extends TwovilleShape {
   }
 
   draw(env, t) {
-    if (!this.has('vertices')) {
-      throw new LocatedException(this.callExpression.where, 'I found a path whose vertices property has not been defined.');
-    }
+    this.assertProperty('vertices');
     
-    let needsTransforming = false;
-
-    if (this.has('rotation')) {
-      if (this.has('pivot')) {
-        needsTransforming = true;
-      } else {
-        throw new LocatedException(this.callExpression.where, 'I found a path that is rotated, but it\'s pivot property is not defined.');
-      }
+    let isClosed = true;
+    if (this.has('closed')) {
+      isClosed = this.valueAt(env, 'closed', t).value;
     }
 
     let rgb = this.getRGB(env, t);
     let vertices = this.valueAt(env, 'vertices', t);
     vertices = vertices.map(vertex => vertex.evolveToPathVertex(env, t));
-
     vertices[0] = vertices[0].replace(/^[Ll]/, 'M');
 
-    // TODO inner scope!
-    if (needsTransforming) {
-      let pivot = this.valueAt(env, 'pivot', t);
-      let rotation = this.valueAt(env, 'rotation', t);
-    }
-
-    if (vertices.some(v => v == null) || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
-      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    if (vertices.some(v => v == null) || rgb == null) {
+      this.hide();
     } else {
-      this.svgElement.setAttributeNS(null, 'opacity', 1);
-
-      if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
-      }
-
-      if (this.has('stroke')) {
-        let stroke = this.get('stroke');
-        if (stroke.owns('size') &&
-            stroke.owns('rgb') &&
-            stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt(env, 'size', t);
-          let strokeRGB = stroke.valueAt(env, 'rgb', t);
-          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
-          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
-        }
+      this.show();
+      this.setStroke(env, t);
+      this.setTransform(env, t);
+      
+      let commands = vertices.join(' ');
+      if (isClosed) {
+        commands += ' Z';
       }
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
-      this.svgElement.setAttributeNS(null, 'd', vertices.join(' '));
+      this.svgElement.setAttributeNS(null, 'd', commands);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
@@ -550,51 +503,18 @@ export class TwovillePolygon extends TwovilleShape {
   }
 
   draw(env, t) {
-    if (!this.has('vertices')) {
-      throw new LocatedException(this.callExpression.where, 'I found a polygon whose vertices property has not been defined.');
-    }
+    this.assertProperty('vertices');
     
-    let needsTransforming = false;
-
-    if (this.has('rotation')) {
-      if (this.has('pivot')) {
-        needsTransforming = true;
-      } else {
-        throw new LocatedException(this.callExpression.where, 'I found a polygon that is rotated, but it\'s pivot property is not defined.');
-      }
-    }
-
     let vertices = this.valueAt(env, 'vertices', t);
     vertices = vertices.map(vertex => vertex.evolve(env, t));
     let rgb = this.getRGB(env, t);
 
-    if (needsTransforming) {
-      let pivot = this.valueAt(env, 'pivot', t);
-      let rotation = this.valueAt(env, 'rotation', t);
-    }
-
-    if (vertices.some(v => v == null) || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
-      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    if (vertices.some(v => v == null) || rgb == null) {
+      this.hide();
     } else {
-      this.svgElement.setAttributeNS(null, 'opacity', 1);
-
-      if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
-      }
-
-      if (this.has('stroke')) {
-        let stroke = this.get('stroke');
-        if (stroke.owns('size') &&
-            stroke.owns('rgb') &&
-            stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt(env, 'size', t);
-          let strokeRGB = stroke.valueAt(env, 'rgb', t);
-          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
-          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
-        }
-      }
+      this.show();
+      this.setStroke(env, t);
+      this.setTransform(env, t);
 
       let pairs = vertices.map(v => `${v.get(0).value},${v.get(1).value}`).join(' ');
 
@@ -623,19 +543,7 @@ export class TwovilleRectangle extends TwovilleShape {
       throw new LocatedException(this.callExpression.where, 'I found a rectangle whose location I couldn\'t figure out. Please define its corner or center.');
     }
     
-    if (!this.has('size')) {
-      throw new LocatedException(this.callExpression.where, 'I found a rectangle whose size property is not defined.');
-    }
-    
-    let needsTransforming = false;
-
-    if (this.has('rotation')) {
-      if (this.has('pivot')) {
-        needsTransforming = true;
-      } else {
-        throw new LocatedException(this.callExpression.where, 'I found a rectangle that is rotated, but it\'s pivot property is not defined.');
-      }
-    }
+    this.assertProperty('size');
 
     let size = this.valueAt(env, 'size', t);
 
@@ -651,36 +559,13 @@ export class TwovilleRectangle extends TwovilleShape {
     }
 
     let rgb = this.getRGB(env, t);
-    let pivot = null;
-    let rotation = null;
 
-    if (needsTransforming) {
-      pivot = this.valueAt(env, 'pivot', t);
-      rotation = this.valueAt(env, 'rotation', t);
-    }
-
-    if (corner == null || size == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
-      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    if (corner == null || size == null || rgb == null) {
+      this.hide();
     } else {
-      this.svgElement.setAttributeNS(null, 'opacity', 1);
-
-      if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
-      }
-
-      if (this.has('stroke')) {
-        let stroke = this.get('stroke');
-        if (stroke.owns('size') &&
-            stroke.owns('rgb') &&
-            stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt(env, 'size', t);
-          let strokeRGB = stroke.valueAt(env, 'rgb', t);
-          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
-          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
-        }
-      }
+      this.show();
+      this.setStroke(env, t);
+      this.setTransform(env, t);
 
       if (this.has('rounding')) {
         let rounding = this.valueAt(env, 'rounding', t);
@@ -689,6 +574,7 @@ export class TwovilleRectangle extends TwovilleShape {
       }
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+
       this.svgElement.setAttributeNS(null, 'x', corner.get(0).value);
       this.svgElement.setAttributeNS(null, 'y', corner.get(1).value);
       this.svgElement.setAttributeNS(null, 'width', size.get(0).value);
@@ -708,58 +594,19 @@ export class TwovilleCircle extends TwovilleShape {
   }
 
   draw(env, t) {
-    if (!this.has('center')) {
-      throw new LocatedException(this.callExpression.where, 'I found a circle whose center property is not defined.');
-    }
+    this.assertProperty('center');
+    this.assertProperty('radius');
     
-    if (!this.has('radius')) {
-      throw new LocatedException(this.callExpression.where, 'I found a circle whose radius property is not defined.');
-    }
-    
-    let needsTransforming = false;
-
-    if (this.has('rotation')) {
-      if (this.has('pivot')) {
-        needsTransforming = true;
-      } else {
-        throw new LocatedException(this.callExpression.where, 'I found a circle that is rotated, but it\'s pivot property is not defined.');
-      }
-    }
-
     let center = this.valueAt(env, 'center', t);
     let radius = this.valueAt(env, 'radius', t);
     let rgb = this.getRGB(env, t);
-    let pivot = null;
-    let rotation = null;
 
-    if (needsTransforming) {
-      pivot = this.valueAt(env, 'pivot', t);
-      rotation = this.valueAt(env, 'rotation', t);
-    }
-
-    if (center == null || radius == null || rgb == null || (needsTransforming && (pivot == null || rotation == null))) {
-      this.svgElement.setAttributeNS(null, 'opacity', 0);
+    if (center == null || radius == null || rgb == null) {
+      this.hide();
     } else {
-      this.svgElement.setAttributeNS(null, 'opacity', 1);
-
-      if (needsTransforming) {
-        this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
-      }
-
-      if (this.has('stroke')) {
-        let stroke = this.get('stroke');
-        if (stroke.owns('size') &&
-            stroke.owns('rgb') &&
-            stroke.owns('opacity')) {
-          let strokeSize = stroke.valueAt(env, 'size', t);
-          let strokeRGB = stroke.valueAt(env, 'rgb', t);
-          let strokeOpacity = stroke.valueAt(env, 'opacity', t);
-          this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
-          this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
-          this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
-        }
-      }
-
+      this.show();
+      this.setTransform(env, t);
+      this.setStroke(env, t);
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'cx', center.get(0).value);
       this.svgElement.setAttributeNS(null, 'cy', center.get(1).value);
