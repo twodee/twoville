@@ -16,7 +16,6 @@ import {
 } from './types.js';
 
 import {
-  ExpressionArcTo,
   ExpressionCircle,
   ExpressionCosine,
   ExpressionCutout,
@@ -27,8 +26,8 @@ import {
   ExpressionLine,
   ExpressionMask,
   ExpressionPath,
-  ExpressionPoint,
   ExpressionPolygon,
+  ExpressionPolyline,
   ExpressionPrint,
   ExpressionRandom,
   ExpressionReal,
@@ -48,6 +47,7 @@ if (localStorage.getItem('src') !== null) {
   editor.setValue(localStorage.getItem('src'), 1);
 }
 editor.getSession().on('change', onSourceChanged);
+editor.getSession().setMode("ace/mode/twoville");
 let Range = ace.require('ace/range').Range;
 
 let left = document.getElementById('left');
@@ -380,12 +380,6 @@ evalButton.addEventListener('click', () => {
       body: new ExpressionLine()
     };
 
-    env.bindings['arcTo'] = {
-      name: 'arcTo',
-      formals: [],
-      body: new ExpressionArcTo()
-    };
-
     env.bindings['path'] = {
       name: 'path',
       formals: [],
@@ -398,10 +392,10 @@ evalButton.addEventListener('click', () => {
       body: new ExpressionPolygon()
     };
 
-    env.bindings['point'] = {
-      name: 'point',
+    env.bindings['polyline'] = {
+      name: 'polyline',
       formals: [],
-      body: new ExpressionPoint()
+      body: new ExpressionPolyline()
     };
 
     env.bindings['label'] = {

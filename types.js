@@ -1,11 +1,16 @@
 import { Timeline } from './timeline.js';
 
 import { 
-  ExpressionReal,
-  ExpressionInteger,
   ExpressionBoolean,
-  ExpressionVector,
+  ExpressionInteger,
+  ExpressionLine,
+  ExpressionPathArc,
+  ExpressionPathJump,
+  ExpressionPathLine,
+  ExpressionReal,
   ExpressionString,
+  ExpressionVector,
+  ExpressionVertex,
 } from './ast.js';
 
 export let svgNamespace = "http://www.w3.org/2000/svg";
@@ -357,24 +362,62 @@ export class TwovilleLabel extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovillePoint extends TwovilleShape {
+export class TwovilleVertex extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'point');
+    super(env, callExpression, 'vertex');
+    env.nodes.push(this);
+  }
+
+  evaluate(env, t) {
+    this.assertProperty('position');
+    return this.valueAt(env, 'position', t);
   }
 
   evolve(env, t) {
     this.assertProperty('position');
     let position = this.valueAt(env, 'position', t);
-    return position;
+    
+    if (position) {
+      return `${position.get(0).value},${position.get(1).value}`;
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovillePathJump extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'jump');
+    env.nodes.push(this);
   }
 
-  evolveToPathVertex(env, t) {
+  evolve(env, t) {
     this.assertProperty('position');
-    let position = this.valueAt(env, 'position', t);
     
-    // TODO
-    // if is jump, use M
-    // if is local, use lowercase
+    let position = this.valueAt(env, 'position', t);
+
+    if (position) {
+      return `M${position.get(0).value},${position.get(1).value}`;
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovillePathLine extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'line');
+    env.nodes.push(this);
+  }
+
+  evolve(env, t) {
+    this.assertProperty('position');
+    
+    let position = this.valueAt(env, 'position', t);
 
     if (position) {
       return `L${position.get(0).value},${position.get(1).value}`;
@@ -386,29 +429,49 @@ export class TwovillePoint extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovilleArcTo extends TwovilleShape {
+export class TwovillePathArc extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'arcTo');
+    super(env, callExpression, 'arc');
+    env.nodes.push(this);
   }
 
-  evolveToPathVertex(env, t) {
-    this.assertProperty('radii');
+  evolve(env, t, from) {
     this.assertProperty('position');
+    this.assertProperty('direction');
+    this.assertProperty('center');
     
     let position = this.valueAt(env, 'position', t);
-    let radii = this.valueAt(env, 'radii', t);
-
-    // TODO helper to assert property
-    
-    // TODO
-    // if is jump, use M
-    // if is local, use lowercase
-    
-    // TODO specify center
-    // eliminates radii, still need to specify direction: clockwise or counterclockwise
+    let direction = this.valueAt(env, 'direction', t);
+    let center = this.valueAt(env, 'center', t);
 
     if (position) {
-      return `A${radii.get(0).value},${radii.get(1).value} 0 1 0 ${position.get(0).value},${position.get(1).value}`;
+      let diff2 = position.subtract(center);
+      let diff1 = from.subtract(center);
+      let radius = diff1.magnitude;
+      let area = 0.5 * (diff1.get(0).value * diff2.get(1).value - diff2.get(0).value * diff1.get(1).value);
+
+      let large;
+      let sweep;
+
+      if (direction.value == 0) {
+        if (area < 0) {
+          large = 1;
+          sweep = 1;
+        } else {
+          large = 0;
+          sweep = 1;
+        }
+      } else {
+        if (area > 0) {
+          large = 1;
+          sweep = 0;
+        } else {
+          large = 0;
+          sweep = 0;
+        }
+      }
+
+      return `A${radius},${radius} 0 ${large} ${sweep} ${position.get(0).value},${position.get(1).value}`;
     } else {
       return null;
     }
@@ -422,31 +485,35 @@ export class TwovilleLine extends TwovilleShape {
     super(env, callExpression, 'line');
     this.svgElement = document.createElementNS(svgNamespace, 'line');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.nodes = [];
+
+    this.bindings['vertex'] = {
+      name: 'vertex',
+      formals: [],
+      body: new ExpressionVertex()
+    };
   }
 
   draw(env, t) {
-    this.assertProperty('a');
-    this.assertProperty('b');
+    if (this.nodes.length != 2) {
+      throw new LocatedException(this.callExpression.where, `I tried to draw a line that had ${this.nodes.length} ${this.nodes.size == 1 ? 'vertex' : 'vertices'}. Lines must only have two vertices.`);
+    }
     
-    let a = this.valueAt(env, 'a', t);
-    let b = this.valueAt(env, 'b', t);
+    let vertices = this.nodes.map(vertex => vertex.evaluate(env, t));
     let rgb = this.getRGB(env, t);
 
-    if (a == null || b == null || rgb == null) {
+    if (vertices.some(v => v == null) || rgb == null) {
       this.hide();
     } else {
       this.show();
       this.setStroke(env, t);
       this.setTransform(env, t);
 
-      let aa = a.evolve(env, t);
-      let bb = b.evolve(env, t);
-
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
-      this.svgElement.setAttributeNS(null, 'x1', aa.get(0).value);
-      this.svgElement.setAttributeNS(null, 'y1', aa.get(1).value);
-      this.svgElement.setAttributeNS(null, 'x2', bb.get(0).value);
-      this.svgElement.setAttributeNS(null, 'y2', bb.get(1).value);
+      this.svgElement.setAttributeNS(null, 'x1', vertices[0].get(0).value);
+      this.svgElement.setAttributeNS(null, 'y1', vertices[0].get(1).value);
+      this.svgElement.setAttributeNS(null, 'x2', vertices[1].get(0).value);
+      this.svgElement.setAttributeNS(null, 'y2', vertices[1].get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
     }
   }
@@ -459,20 +526,38 @@ export class TwovillePath extends TwovilleShape {
     super(env, callExpression, 'path');
     this.svgElement = document.createElementNS(svgNamespace, 'path');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.nodes = [];
+
+    this.bindings['arc'] = {
+      name: 'arc',
+      formals: [],
+      body: new ExpressionPathArc()
+    };
+
+    this.bindings['jump'] = {
+      name: 'jump',
+      formals: [],
+      body: new ExpressionPathJump()
+    };
+
+    this.bindings['line'] = {
+      name: 'line',
+      formals: [],
+      body: new ExpressionPathLine()
+    };
   }
 
   draw(env, t) {
-    this.assertProperty('vertices');
-    
     let isClosed = true;
     if (this.has('closed')) {
       isClosed = this.valueAt(env, 'closed', t).value;
     }
 
     let rgb = this.getRGB(env, t);
-    let vertices = this.valueAt(env, 'vertices', t);
-    vertices = vertices.map(vertex => vertex.evolveToPathVertex(env, t));
-    vertices[0] = vertices[0].replace(/^[Ll]/, 'M');
+    let vertices = this.nodes.map((vertex, i) => {
+      let from = i == 0 ? null : this.nodes[i - 1].valueAt(env, 'position', t);
+      return vertex.evolve(env, t, from);
+    });
 
     if (vertices.some(v => v == null) || rgb == null) {
       this.hide();
@@ -500,14 +585,18 @@ export class TwovillePolygon extends TwovilleShape {
     super(env, callExpression, 'polygon');
     this.svgElement = document.createElementNS(svgNamespace, 'polygon');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.nodes = [];
+
+    this.bindings['vertex'] = {
+      name: 'vertex',
+      formals: [],
+      body: new ExpressionVertex()
+    };
   }
 
   draw(env, t) {
-    this.assertProperty('vertices');
-    
-    let vertices = this.valueAt(env, 'vertices', t);
-    vertices = vertices.map(vertex => vertex.evolve(env, t));
     let rgb = this.getRGB(env, t);
+    let vertices = this.nodes.map(vertex => vertex.evolve(env, t));
 
     if (vertices.some(v => v == null) || rgb == null) {
       this.hide();
@@ -516,11 +605,52 @@ export class TwovillePolygon extends TwovilleShape {
       this.setStroke(env, t);
       this.setTransform(env, t);
 
-      let pairs = vertices.map(v => `${v.get(0).value},${v.get(1).value}`).join(' ');
+      let commands = vertices.join(' ');
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
-      this.svgElement.setAttributeNS(null, 'points', pairs);
+      this.svgElement.setAttributeNS(null, 'points', commands);
       this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovillePolyline extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'polyline');
+    this.svgElement = document.createElementNS(svgNamespace, 'polyline');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.nodes = [];
+
+    this.bindings['vertex'] = {
+      name: 'vertex',
+      formals: [],
+      body: new ExpressionVertex()
+    };
+  }
+
+  draw(env, t) {
+    this.assertProperty('size');
+
+    let size = this.valueAt(env, 'size', t);
+    let rgb = this.getRGB(env, t);
+    let vertices = this.nodes.map(vertex => vertex.evolve(env, t));
+
+    if (vertices.some(v => v == null) || rgb == null) {
+      this.hide();
+    } else {
+      this.show();
+      this.setStroke(env, t);
+      this.setTransform(env, t);
+
+      let commands = vertices.join(' ');
+
+      this.svgElement.setAttributeNS(null, 'stroke-width', size.value);
+      this.svgElement.setAttributeNS(null, 'stroke-opacity', this.valueAt(env, 'opacity', t).value);
+      this.svgElement.setAttributeNS(null, 'points', commands);
+      this.svgElement.setAttributeNS(null, 'stroke', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'fill', 'none');
     }
   }
 }

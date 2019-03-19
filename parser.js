@@ -47,6 +47,15 @@ export function parse(tokens) {
     ':start': new ExpressionString(null, 'start'),
     ':middle': new ExpressionString(null, 'middle'),
     ':end': new ExpressionString(null, 'end'),
+
+    // TODO colors
+
+    ':absolute': new ExpressionInteger(null, 0),
+    ':relative': new ExpressionInteger(null, 1),
+
+    // Polygon
+    ':open': new ExpressionInteger(null, 0),
+    ':closed': new ExpressionInteger(null, 1),
   };
 
   let i = 0;

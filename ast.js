@@ -3,7 +3,6 @@ import { log } from './main.js';
 
 import {
   LocatedException,
-  TwovilleArcTo,
   TwovilleCircle,
   TwovilleCutout,
   TwovilleEnvironment,
@@ -12,9 +11,13 @@ import {
   TwovilleLine,
   TwovilleMask,
   TwovillePath,
-  TwovillePoint,
+  TwovillePathArc,
+  TwovillePathJump,
+  TwovillePathLine,
   TwovillePolygon,
+  TwovillePolyline,
   TwovilleRectangle,
+  TwovilleVertex,
 } from "./types.js";
 
 // --------------------------------------------------------------------------- 
@@ -52,7 +55,7 @@ export class ExpressionBoolean extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionBoolean(this.where.clone(), this.x);
+    return new ExpressionBoolean(this.where == null ? null : this.where.clone(), this.x);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -81,7 +84,7 @@ export class ExpressionInteger extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionString(this.where.clone(), this.x);
+    return new ExpressionInteger(this.where == null ? null : this.where.clone(), this.x);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -591,6 +594,26 @@ export class ExpressionVector extends ExpressionData {
   interpolate(other, proportion) {
     return new ExpressionVector(null, this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
   }
+
+  get magnitude() {
+    let sum = 0;
+    for (let i = 0; i < this.elements.length; ++i) {
+      sum += this.get(i).value * this.get(i).value;
+    }
+    return Math.sqrt(sum);
+  }
+
+  subtract(other) {
+    if (other instanceof ExpressionVector) {
+      let diffs = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        diffs.push(this.get(i).subtract(other.get(i)));
+      }
+      return new ExpressionVector(null, diffs);
+    } else {
+      throw '...';
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -716,25 +739,50 @@ export class ExpressionRectangle extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPoint extends Expression {
+export class ExpressionVertex extends Expression {
   constructor() {
     super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePoint(env, callExpression);
+    return new TwovilleVertex(env.parent, callExpression);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionArcTo extends Expression {
+export class ExpressionPathArc extends Expression {
   constructor() {
     super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleArcTo(env, callExpression);
+    // Call has false env for local parameters. Execute inside parent.
+    return new TwovillePathArc(env.parent, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPathJump extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovillePathJump(env.parent, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPathLine extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovillePathLine(env.parent, callExpression);
   }
 }
 
@@ -761,6 +809,20 @@ export class ExpressionPolygon extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     let r = new TwovillePolygon(env, callExpression);
+    env.shapes.push(r);
+    return r;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPolyline extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let r = new TwovillePolyline(env, callExpression);
     env.shapes.push(r);
     return r;
   }
