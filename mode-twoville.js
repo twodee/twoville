@@ -67,7 +67,7 @@ var TwovilleHighlightRules = function() {
       },
       {
         token: "keyword",
-        regex: /\b(?:repeat|with|from|to)\b/,
+        regex: /\b(?:repeat|with|from|to|for|through|in)\b/,
         next: "start"
       },
       {

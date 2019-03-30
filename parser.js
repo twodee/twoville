@@ -302,24 +302,51 @@ export function parse(tokens) {
       consume();
       if (isFirstOfExpression()) {
         let j = expression();
-        if (has(Tokens.From) && isFirstOfExpression(1)) {
-          consume();
-          let start = expression();
-          if (has(Tokens.To) && isFirstOfExpression(1)) {
-            consume();
-            let stop = expression();
 
-            if (!has(Tokens.Linebreak)) {
-              throw new LocatedException(SourceLocation.span(sourceStart, stop.where), 'I expected a linebreak after this loop\'s range.');
-            }
-            consume(); // eat linebreak
-            let body = block();
+        // for i in 0..10
+        // for i to 10
+        // for i through 10
 
-            let by = new ExpressionInteger(null, 1);
-
-            return new ExpressionFor(SourceLocation.span(sourceStart, body.where), j, start, stop, by, body);
+        let start;
+        let stop;
+        let by;
+        
+        if (has(Tokens.In)) {
+          consume(); // eat in
+          start = expression();
+          if (has(Tokens.Range)) {
+            consume(); // eat ..
+            stop = expression();
+          } else {
+            throw new LocatedException(SourceLocation.span(sourceStart, start.where), 'I expected the range operator .. in a for-in loop.');
           }
+        } else if (has(Tokens.To)) {
+          consume(); // eat to
+          start = new ExpressionInteger(null, 0);
+          stop = expression();
+        } else if (has(Tokens.Through)) {
+          consume(); // eat through
+          start = new ExpressionInteger(null, 0);
+          stop = expression();
+          stop = new ExpressionAdd(null, stop, new ExpressionInteger(null, 1));
+        } else {
+          throw new LocatedException(sourceStart, 'I expected one of to, through, or in to specify the for loop\'s range.');
         }
+
+        if (has(Tokens.By)) {
+          consume(); // eat by
+          by = expression();
+        } else {
+          by = new ExpressionInteger(null, 1);
+        }
+
+        if (!has(Tokens.Linebreak)) {
+          throw new LocatedException(SourceLocation.span(sourceStart, stop.where), 'I expected a linebreak after this loop\'s range.');
+        }
+        consume(); // eat linebreak
+        let body = block();
+
+        return new ExpressionFor(SourceLocation.span(sourceStart, body.where), j, start, stop, by, body);
       }
     } else if (has(Tokens.LeftSquareBracket)) {
       let sourceStart = tokens[i].where;

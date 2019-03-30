@@ -502,7 +502,7 @@ export class ExpressionFor extends Expression {
     let stop = this.stop.evaluate(env, fromTime, toTime).value;
     let by = this.by.evaluate(env, fromTime, toTime).value;
 
-    for (let i = start; i <= stop; i += by) {
+    for (let i = start; i < stop; i += by) {
       new ExpressionAssignment(null, this.i, new ExpressionInteger(null, i)).evaluate(env, fromTime, toTime);
       this.body.evaluate(env, fromTime, toTime);
     }

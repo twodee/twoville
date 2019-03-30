@@ -110,10 +110,12 @@ export function lex(source) {
       emit(Tokens.With);
     } else if (tokenSoFar == 'for') {
       emit(Tokens.For);
-    } else if (tokenSoFar == 'from') {
-      emit(Tokens.From);
+    } else if (tokenSoFar == 'in') {
+      emit(Tokens.In);
     } else if (tokenSoFar == 'to') {
       emit(Tokens.To);
+    } else if (tokenSoFar == 'in') {
+      emit(Tokens.In);
     } else if (tokenSoFar == 'through') {
       emit(Tokens.Through);
     } else if (tokenSoFar == 'by') {
@@ -128,7 +130,7 @@ export function lex(source) {
       consume();
     }
 
-    if (has('.')) {
+    if (has('.') && !has('.', 1)) {
       decimal();
     } else {
       if (has('e') && has(/\d/, 1)) {
@@ -164,7 +166,12 @@ export function lex(source) {
       decimal();
     } else {
       consume();
-      emit(Tokens.Dot);
+      if (has(/\./)) {
+        consume();
+        emit(Tokens.Range);
+      } else {
+        emit(Tokens.Dot);
+      }
     }
   }
 
