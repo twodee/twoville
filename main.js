@@ -53,20 +53,21 @@ let Range = ace.require('ace/range').Range;
 let left = document.getElementById('left');
 let messager = document.getElementById('messager');
 let messagerContainer = document.getElementById('messagerContainer');
-let evalButton = document.getElementById('eval');
-let recordButton = document.getElementById('record');
-let spinner = document.getElementById('spinner');
-let saveButton = document.getElementById('save');
-let exportButton = document.getElementById('export');
-export let svg = document.getElementById('svg');
-let scrubber = document.getElementById('scrubber');
-let timeSpinner = document.getElementById('timeSpinner');
+let evaluateButton = document.getElementById('evaluateButton');
+let recordButton = document.getElementById('recordButton');
+let exportButton = document.getElementById('exportButton');
 let playOnceButton = document.getElementById('playOnceButton');
 let playLoopButton = document.getElementById('playLoopButton');
+let saveButton = document.getElementById('saveButton');
+let spinner = document.getElementById('spinner');
+let scrubber = document.getElementById('scrubber');
+let timeSpinner = document.getElementById('timeSpinner');
 let env;
 let isDirty = false;
 let animateTask = null;
 let delay = 16;
+
+export let svg = document.getElementById('svg');
 
 export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
@@ -200,7 +201,8 @@ function stopSpinning() {
   spinner.style.display = 'none';
 }
 
-recordButton.addEventListener('clock', () => {
+recordButton.addEventListener('click', () => {
+  console.log("hi");
   startSpinning();
   let box = svg.getBoundingClientRect();
 
@@ -334,7 +336,7 @@ playLoopButton.addEventListener('click', e => {
 
 export let ast;
 
-evalButton.addEventListener('click', () => {
+evaluateButton.addEventListener('click', () => {
   clearConsole();
 
   while (svg.lastChild) {
