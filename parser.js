@@ -17,6 +17,7 @@ import {
   ExpressionFor,
   ExpressionFunctionCall,
   ExpressionIdentifier,
+  ExpressionIf,
   ExpressionInteger,
   ExpressionMultiply,
   ExpressionProperty,
@@ -120,8 +121,8 @@ export function parse(tokens) {
 
     indents.pop();
 
-    let sourceStart = null;
-    let sourceEnd = null;
+    let sourceStart = indentation.where;
+    let sourceEnd = sourceStart;
     if (statements.length > 0) {
       sourceStart = statements[0].where;
       sourceEnd = statements[statements.length - 1].where;
@@ -265,6 +266,7 @@ export function parse(tokens) {
 
   function isFirstOfExpression(offset = 0) {
     return has(Tokens.Integer, offset) ||
+           has(Tokens.Real, offset) ||
            has(Tokens.T, offset) ||
            has(Tokens.Boolean, offset) ||
            has(Tokens.Symbol, offset) ||
@@ -272,7 +274,8 @@ export function parse(tokens) {
            has(Tokens.Identifier, offset) ||
            has(Tokens.LeftSquareBracket, offset) ||
            has(Tokens.Repeat, offset) ||
-           has(Tokens.For, offset);
+           has(Tokens.For, offset) ||
+           has(Tokens.If, offset);
   }
 
   function atom() {
@@ -297,6 +300,67 @@ export function parse(tokens) {
     } else if (has(Tokens.Boolean)) {
       let token = consume();
       return new ExpressionBoolean(token.where, token.source == 'true');
+    } else if (has(Tokens.If)) {
+      let sourceStart = tokens[i].where;
+      let sourceEnd = sourceStart;
+      consume(); // eat if
+
+      let conditions = [];
+      let thenBlocks = [];
+      let elseBlock = null;
+
+      if (isFirstOfExpression()) {
+        let condition = expression();
+
+        if (!has(Tokens.Linebreak)) {
+          throw new LocatedException(condition.where, 'I expected a linebreak after this if\'s condition.');
+        }
+        consume(); // eat linebreak
+        let thenBlock = block();
+
+        conditions.push(condition);
+        thenBlocks.push(thenBlock);
+        sourceEnd = thenBlock.where;
+      }
+
+      while (has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.ElseIf, 1)) {
+        consume(); // eat indent
+        let elseIfToken = tokens[i];
+        consume(); // eat else if
+
+        if (!isFirstOfExpression()) {
+          throw new LocatedException(elseIfToken.where, 'I expected a condition after this else-if.');
+        }
+
+        let condition = expression();
+
+        if (!has(Tokens.Linebreak)) {
+          throw new LocatedException(condition.where, 'I expected a linebreak after this if\'s condition.');
+        }
+        consume(); // eat linebreak
+        let thenBlock = block();
+
+        conditions.push(condition);
+        thenBlocks.push(thenBlock);
+        sourceEnd = thenBlock.where;
+      }
+
+      if (conditions.length == 0) {
+        throw new LocatedException(sourceStart, 'I expected this if statement to have at least one condition.');
+      }
+      
+      if (has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.Else, 1)) {
+        consume(); // eat indentation
+        let elseToken = consume(); // eat else
+        if (!has(Tokens.Linebreak)) {
+          throw new LocatedException(elseToken.where, 'I expected a linebreak after this if\'s else.');
+        }
+        consume(); // TODO linebreak
+        elseBlock = block();
+        sourceEnd = elseBlock.where;
+      }
+
+      return new ExpressionIf(SourceLocation.span(sourceStart, sourceEnd), conditions, thenBlocks, elseBlock);
     } else if (has(Tokens.For)) {
       let sourceStart = tokens[i].where;
       consume();
@@ -385,7 +449,7 @@ export function parse(tokens) {
       if (has(Tokens.RightParenthesis)) {
         consume();
       } else {
-        throw new LocatedException(SourceLocation.span(sourceStart, sourceEnd), 'I expected a right parenthesis to close the function call.');
+        throw new LocatedException(SourceLocation.span(sourceStart, sourceEnd), `I expected a right parenthesis to close the function call, but I encountered "${tokens[i].source}" (${tokens[i].type}) instead.`);
       }
 
       return new ExpressionFunctionCall(SourceLocation.span(sourceStart, sourceEnd), name, actuals);

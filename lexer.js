@@ -112,6 +112,19 @@ export function lex(source) {
       emit(Tokens.For);
     } else if (tokenSoFar == 'in') {
       emit(Tokens.In);
+    } else if (tokenSoFar == 'if') {
+      if (tokens.length > 0 && tokens[tokens.length - 1].type == Tokens.Else) {
+        let elseToken = tokens.pop();
+        iStartLine = elseToken.where.lineStart;
+        iStartColumn = elseToken.where.columnStart;
+        iStartIndex = elseToken.where.indexStart;
+        tokenSoFar = 'else if';
+        emit(Tokens.ElseIf);
+      } else {
+        emit(Tokens.If);
+      }
+    } else if (tokenSoFar == 'else') {
+      emit(Tokens.Else);
     } else if (tokenSoFar == 'to') {
       emit(Tokens.To);
     } else if (tokenSoFar == 'in') {

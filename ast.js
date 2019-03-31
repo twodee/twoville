@@ -487,6 +487,37 @@ export class ExpressionAssignment extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionIf extends Expression {
+  constructor(where, conditions, thenBlocks, elseBlock) {
+    super(where);
+    this.conditions = conditions;
+    this.thenBlocks = thenBlocks;
+    this.elseBlock = elseBlock;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    for (let [i, condition] of this.conditions.entries()) {
+      let conditionValue = condition.evaluate(env, fromTime, toTime).value;
+      // TODO assert boolean
+      if (conditionValue) {
+        return this.thenBlocks[i].evaluate(env, fromTime, toTime);
+      }
+    }
+
+    if (this.elseBlock) {
+      return this.elseBlock.evaluate(env, fromTime, toTime);
+    } else {
+      return null;
+    }
+  }
+
+  isTimeSensitive(env) {
+    return this.conditions.any(e => e.isTimeSensitive(env)) || this.thenBlocks.any(e => e.isTimeSensitive(env)) || (this.elseBlock != null && this.elseBlock.isTimeSensitive(env));
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionFor extends Expression {
   constructor(where, i, start, stop, by, body) {
     super(where);
