@@ -1,5 +1,5 @@
 import { Tokens } from './token.js';
-import { log } from './main.js';
+import { Messager } from './messager.js';
 
 import {
   LocatedException,
@@ -910,7 +910,7 @@ export class ExpressionPrint extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     let message = env.get('message').value;
-    log(message.toString(fromTime, toTime));
+    Messager.log(message.toString(fromTime, toTime));
     return null;
   }
 }

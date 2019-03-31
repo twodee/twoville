@@ -381,6 +381,7 @@ export function parse(tokens) {
           if (has(Tokens.Range)) {
             consume(); // eat ..
             stop = expression();
+            stop = new ExpressionAdd(null, stop, new ExpressionInteger(null, 1));
           } else {
             throw new LocatedException(SourceLocation.span(sourceStart, start.where), 'I expected the range operator .. in a for-in loop.');
           }

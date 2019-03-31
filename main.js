@@ -7,32 +7,21 @@ import {
 } from './parser.js';
 
 import {
+  Messager
+} from './messager.js';
+
+import {
+  GlobalEnvironment,
+  LocatedException,
+  MessagedException,
   TwovilleEnvironment,
   TwovilleShape,
-  MessagedException,
-  LocatedException,
-  svgNamespace,
   initializeShapes,
+  svgNamespace,
 } from './types.js';
 
 import {
-  ExpressionCircle,
-  ExpressionCosine,
-  ExpressionCutout,
-  ExpressionGroup,
-  ExpressionInt,
   ExpressionInteger,
-  ExpressionLabel,
-  ExpressionLine,
-  ExpressionMask,
-  ExpressionPath,
-  ExpressionPolygon,
-  ExpressionPolyline,
-  ExpressionPrint,
-  ExpressionRandom,
-  ExpressionReal,
-  ExpressionRectangle,
-  ExpressionSine,
   ExpressionVector,
 } from './ast.js';
 
@@ -51,7 +40,6 @@ editor.getSession().setMode("ace/mode/twoville");
 let Range = ace.require('ace/range').Range;
 
 let left = document.getElementById('left');
-let messager = document.getElementById('messager');
 let messagerContainer = document.getElementById('messagerContainer');
 let evaluateButton = document.getElementById('evaluateButton');
 let recordButton = document.getElementById('recordButton');
@@ -62,6 +50,8 @@ let saveButton = document.getElementById('saveButton');
 let spinner = document.getElementById('spinner');
 let scrubber = document.getElementById('scrubber');
 let timeSpinner = document.getElementById('timeSpinner');
+new Messager(document.getElementById('messager'), document);
+
 let env;
 let isDirty = false;
 let animateTask = null;
@@ -73,41 +63,6 @@ export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
   editor.centerSelection();
 }
-
-function clearConsole() {
-  while (messager.lastChild) {
-    messager.removeChild(messager.lastChild);
-  }
-}
-
-export function log(text) {
-  let matches = text.match(/^(-?\d+):(-?\d+):(-?\d+):(-?\d+):(.*)/);
-  if (matches) {
-    let lineStart = parseInt(matches[1]);
-    let lineEnd = parseInt(matches[2]);
-    let columnStart = parseInt(matches[3]);
-    let columnEnd = parseInt(matches[4]);
-    let message = matches[5];
-
-    let linkNode = document.createElement('a');
-    linkNode.setAttribute('href', '#');
-    linkNode.addEventListener('click', () => highlight(lineStart, lineEnd, columnStart, columnEnd));
-
-    let label = document.createTextNode('Line ' + (parseInt(lineEnd) + 1));
-    linkNode.appendChild(label);
-
-    messager.appendChild(linkNode);
-
-    let textNode = document.createTextNode(': ' + message);
-    messager.appendChild(textNode);
-  } else {
-    let textNode = document.createTextNode(text);
-    messager.appendChild(textNode);
-  }
-  messager.appendChild(document.createElement('br'));
-}
-
-// --------------------------------------------------------------------------- 
 
 function registerResizeListener(bounds, gap, resize) {
   let unlistener = (event) => {
@@ -202,7 +157,6 @@ function stopSpinning() {
 }
 
 recordButton.addEventListener('click', () => {
-  console.log("hi");
   startSpinning();
   let box = svg.getBoundingClientRect();
 
@@ -337,7 +291,7 @@ playLoopButton.addEventListener('click', e => {
 export let ast;
 
 evaluateButton.addEventListener('click', () => {
-  clearConsole();
+  Messager.clear();
 
   while (svg.lastChild) {
     svg.removeChild(svg.lastChild);
@@ -352,113 +306,11 @@ evaluateButton.addEventListener('click', () => {
     ast = parse(tokens);
 
     // tokens.forEach(token => {
-      // log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
+      // messager.log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
     // });
 
-    env = new TwovilleEnvironment(null);
-    env.svg = svg;
-    env.shapes = [];
     TwovilleShape.serial = 0;
-
-    env.bindings.time = new TwovilleEnvironment(env);
-    env.bindings.time.bind('start', null, null, new ExpressionInteger(null, 0));
-    env.bindings.time.bind('stop', null, null, new ExpressionInteger(null, 100));
-
-    env.bindings.viewport = new TwovilleEnvironment(env);
-    env.bindings.viewport.bind('size', null, null, new ExpressionVector(null, [
-      new ExpressionInteger(null, 100),
-      new ExpressionInteger(null, 100)
-    ]));
-
-    env.bindings['rectangle'] = {
-      name: 'rectangle',
-      formals: [],
-      body: new ExpressionRectangle()
-    };
-
-    env.bindings['line'] = {
-      name: 'line',
-      formals: [],
-      body: new ExpressionLine()
-    };
-
-    env.bindings['path'] = {
-      name: 'path',
-      formals: [],
-      body: new ExpressionPath()
-    };
-
-    env.bindings['polygon'] = {
-      name: 'polygon',
-      formals: [],
-      body: new ExpressionPolygon()
-    };
-
-    env.bindings['polyline'] = {
-      name: 'polyline',
-      formals: [],
-      body: new ExpressionPolyline()
-    };
-
-    env.bindings['label'] = {
-      name: 'label',
-      formals: [],
-      body: new ExpressionLabel()
-    };
-
-    env.bindings['group'] = {
-      name: 'group',
-      formals: [],
-      body: new ExpressionGroup()
-    };
-
-    env.bindings['mask'] = {
-      name: 'mask',
-      formals: [],
-      body: new ExpressionMask()
-    };
-
-    env.bindings['cutout'] = {
-      name: 'cutout',
-      formals: [],
-      body: new ExpressionCutout()
-    };
-
-    env.bindings['circle'] = {
-      name: 'circle',
-      formals: [],
-      body: new ExpressionCircle()
-    };
-
-    env.bindings['print'] = {
-      name: 'print',
-      formals: ['message'],
-      body: new ExpressionPrint()
-    };
-
-    env.bindings['random'] = {
-      name: 'random',
-      formals: ['min', 'max'],
-      body: new ExpressionRandom()
-    };
-
-    env.bindings['sin'] = {
-      name: 'sin',
-      formals: ['degrees'],
-      body: new ExpressionSine()
-    };
-
-    env.bindings['cos'] = {
-      name: 'cos',
-      formals: ['degrees'],
-      body: new ExpressionCosine()
-    };
-
-    env.bindings['int'] = {
-      name: 'int',
-      formals: ['x'],
-      body: new ExpressionInt()
-    };
+    env = new GlobalEnvironment(svg);
 
     ast.evaluate(env);
 
@@ -523,11 +375,11 @@ evaluateButton.addEventListener('click', () => {
     recordButton.disabled = false;
   } catch (e) {
     if (e instanceof MessagedException) {
-      log(e.userMessage);
+      Messager.log(e.userMessage);
       throw e;
     } else {
       console.trace(e);
-      log(e.message);
+      Messager.log(e.message);
     }
   }
 });

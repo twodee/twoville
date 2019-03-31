@@ -2,12 +2,26 @@ import { Timeline } from './timeline.js';
 
 import { 
   ExpressionBoolean,
+  ExpressionCircle,
+  ExpressionCosine,
+  ExpressionCutout,
+  ExpressionGroup,
+  ExpressionInt,
   ExpressionInteger,
+  ExpressionLabel,
   ExpressionLine,
+  ExpressionMask,
+  ExpressionPath,
   ExpressionPathArc,
   ExpressionPathJump,
   ExpressionPathLine,
+  ExpressionPolygon,
+  ExpressionPolyline,
+  ExpressionPrint,
+  ExpressionRandom,
   ExpressionReal,
+  ExpressionRectangle,
+  ExpressionSine,
   ExpressionString,
   ExpressionVector,
   ExpressionVertex,
@@ -747,3 +761,114 @@ export class TwovilleCircle extends TwovilleShape {
 }
 
 // --------------------------------------------------------------------------- 
+
+export class GlobalEnvironment extends TwovilleEnvironment {
+  constructor(svg) {
+    super(null);
+    this.svg = svg;
+    this.shapes = [];
+
+    this.bindings.time = new TwovilleEnvironment(this);
+    this.bindings.time.bind('start', null, null, new ExpressionInteger(null, 0));
+    this.bindings.time.bind('stop', null, null, new ExpressionInteger(null, 100));
+
+    this.bindings.viewport = new TwovilleEnvironment(this);
+    this.bindings.viewport.bind('size', null, null, new ExpressionVector(null, [
+      new ExpressionInteger(null, 100),
+      new ExpressionInteger(null, 100)
+    ]));
+
+    this.bindings['rectangle'] = {
+      name: 'rectangle',
+      formals: [],
+      body: new ExpressionRectangle()
+    };
+
+    this.bindings['line'] = {
+      name: 'line',
+      formals: [],
+      body: new ExpressionLine()
+    };
+
+    this.bindings['path'] = {
+      name: 'path',
+      formals: [],
+      body: new ExpressionPath()
+    };
+
+    this.bindings['polygon'] = {
+      name: 'polygon',
+      formals: [],
+      body: new ExpressionPolygon()
+    };
+
+    this.bindings['polyline'] = {
+      name: 'polyline',
+      formals: [],
+      body: new ExpressionPolyline()
+    };
+
+    this.bindings['label'] = {
+      name: 'label',
+      formals: [],
+      body: new ExpressionLabel()
+    };
+
+    this.bindings['group'] = {
+      name: 'group',
+      formals: [],
+      body: new ExpressionGroup()
+    };
+
+    this.bindings['mask'] = {
+      name: 'mask',
+      formals: [],
+      body: new ExpressionMask()
+    };
+
+    this.bindings['cutout'] = {
+      name: 'cutout',
+      formals: [],
+      body: new ExpressionCutout()
+    };
+
+    this.bindings['circle'] = {
+      name: 'circle',
+      formals: [],
+      body: new ExpressionCircle()
+    };
+
+    this.bindings['print'] = {
+      name: 'print',
+      formals: ['message'],
+      body: new ExpressionPrint()
+    };
+
+    this.bindings['random'] = {
+      name: 'random',
+      formals: ['min', 'max'],
+      body: new ExpressionRandom()
+    };
+
+    this.bindings['sin'] = {
+      name: 'sin',
+      formals: ['degrees'],
+      body: new ExpressionSine()
+    };
+
+    this.bindings['cos'] = {
+      name: 'cos',
+      formals: ['degrees'],
+      body: new ExpressionCosine()
+    };
+
+    this.bindings['int'] = {
+      name: 'int',
+      formals: ['x'],
+      body: new ExpressionInt()
+    };
+  }
+}
+
+// --------------------------------------------------------------------------- 
+

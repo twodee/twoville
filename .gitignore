@@ -2,3 +2,4 @@ foo.*
 jsgif
 gif.js*
 gif.worker.js
+node_modules
