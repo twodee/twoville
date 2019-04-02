@@ -25,7 +25,7 @@ import {
 // --------------------------------------------------------------------------- 
 
 export class Expression {
-  constructor(where) {
+  constructor(where = null) {
     this.where = where;
   }
 
@@ -37,7 +37,7 @@ export class Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionData extends Expression {
-  constructor(where) {
+  constructor(where = null) {
     super(where);
   }
 
@@ -49,13 +49,13 @@ export class ExpressionData extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionBoolean extends ExpressionData {
-  constructor(where, x) {
+  constructor(x, where = null) {
     super(where);
     this.x = x;
   }
 
   clone() {
-    return new ExpressionBoolean(this.where == null ? null : this.where.clone(), this.x);
+    return new ExpressionBoolean(this.x, this.where == null ? null : this.where.clone());
   }
 
   evaluate(env, fromTime, toTime) {
@@ -71,20 +71,20 @@ export class ExpressionBoolean extends ExpressionData {
   }
 
   interpolate(other, proportion) {
-    return new ExpressionBoolean(null, proportion <= 0.5 ? this.value : other.value);
+    return new ExpressionBoolean(proportion <= 0.5 ? this.value : other.value);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionInteger extends ExpressionData {
-  constructor(where, x) {
+  constructor(x, where = null) {
     super(where);
     this.x = x;
   }
 
   clone() {
-    return new ExpressionInteger(this.where == null ? null : this.where.clone(), this.x);
+    return new ExpressionInteger(this.x, this.where == null ? null : this.where.clone());
   }
 
   evaluate(env, fromTime, toTime) {
@@ -101,9 +101,9 @@ export class ExpressionInteger extends ExpressionData {
 
   add(other) {
     if (other instanceof ExpressionInteger) {
-      return new ExpressionInteger(null, this.value + other.value);
+      return new ExpressionInteger(this.value + other.value);
     } else if (other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value + other.value);
+      return new ExpressionReal(this.value + other.value);
     } else {
       throw new MessagedException('Add failed');
     }
@@ -111,9 +111,9 @@ export class ExpressionInteger extends ExpressionData {
 
   subtract(other) {
     if (other instanceof ExpressionInteger) {
-      return new ExpressionInteger(null, this.value - other.value);
+      return new ExpressionInteger(this.value - other.value);
     } else if (other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value - other.value);
+      return new ExpressionReal(this.value - other.value);
     } else {
       throw new MessagedException('Subtract failed');
     }
@@ -121,9 +121,9 @@ export class ExpressionInteger extends ExpressionData {
 
   multiply(other) {
     if (other instanceof ExpressionInteger) {
-      return new ExpressionInteger(null, this.value * other.value);
+      return new ExpressionInteger(this.value * other.value);
     } else if (other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value * other.value);
+      return new ExpressionReal(this.value * other.value);
     } else {
       throw 'bad ****';
     }
@@ -131,9 +131,9 @@ export class ExpressionInteger extends ExpressionData {
 
   divide(other) {
     if (other instanceof ExpressionInteger) {
-      return new ExpressionInteger(null, Math.trunc(this.value / other.value));
+      return new ExpressionInteger(Math.trunc(this.value / other.value));
     } else if (other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value / other.value);
+      return new ExpressionReal(this.value / other.value);
     } else {
       throw new MessagedException('Divide failed');
     }
@@ -141,29 +141,29 @@ export class ExpressionInteger extends ExpressionData {
 
   remainder(other) {
     if (other instanceof ExpressionInteger) {
-      return new ExpressionInteger(null, this.value % other.value);
+      return new ExpressionInteger(this.value % other.value);
     } else if (other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value % other.value);
+      return new ExpressionReal(this.value % other.value);
     } else {
       throw new MessagedException('Remainder failed');
     }
   }
 
   interpolate(other, proportion) {
-    return new ExpressionReal(null, this.value + proportion * (other.value - this.value));
+    return new ExpressionReal(this.value + proportion * (other.value - this.value));
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionString extends ExpressionData {
-  constructor(where, x) {
+  constructor(x, where = null) {
     super(where);
     this.x = x;
   }
 
   clone() {
-    return new ExpressionString(this.where == null ? null : this.where.clone(), this.x);
+    return new ExpressionString(this.x, this.where == null ? null : this.where.clone());
   }
 
   evaluate(env, fromTime, toTime) {
@@ -179,14 +179,14 @@ export class ExpressionString extends ExpressionData {
   }
 
   interpolate(other, proportion) {
-    return new ExpressionString(null, proportion <= 0.5 ? this.value : other.value);
+    return new ExpressionString(proportion <= 0.5 ? this.value : other.value);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionReal extends ExpressionData {
-  constructor(where, x) {
+  constructor(x, where = null) {
     super(where);
     this.x = x;
   }
@@ -205,7 +205,7 @@ export class ExpressionReal extends ExpressionData {
 
   add(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value + other.value);
+      return new ExpressionReal(this.value + other.value);
     } else {
       throw '...';
     }
@@ -213,7 +213,7 @@ export class ExpressionReal extends ExpressionData {
 
   subtract(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value - other.value);
+      return new ExpressionReal(this.value - other.value);
     } else {
       throw '...';
     }
@@ -221,7 +221,7 @@ export class ExpressionReal extends ExpressionData {
 
   multiply(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value * other.value);
+      return new ExpressionReal(this.value * other.value);
     } else {
       throw 'BAD *';
     }
@@ -229,7 +229,7 @@ export class ExpressionReal extends ExpressionData {
 
   divide(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value / other.value);
+      return new ExpressionReal(this.value / other.value);
     } else {
       throw new MessagedException('I can only divide integers and reals.');
     }
@@ -237,14 +237,14 @@ export class ExpressionReal extends ExpressionData {
 
   remainder(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      return new ExpressionReal(null, this.value % other.value);
+      return new ExpressionReal(this.value % other.value);
     } else {
       throw new MessagedException('I can only compute the remainder for integers and reals.');
     }
   }
 
   interpolate(other, proportion) {
-    return new ExpressionReal(null, this.value + proportion * (other.value - this.value));
+    return new ExpressionReal(this.value + proportion * (other.value - this.value));
   }
 }
 
@@ -253,7 +253,7 @@ export class ExpressionReal extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAdd extends Expression {
-  constructor(where, a, b) {
+  constructor(a, b, where = null) {
     super(where);
     this.a = a;
     this.b = b;
@@ -273,7 +273,7 @@ export class ExpressionAdd extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSubtract extends Expression {
-  constructor(where, a, b) {
+  constructor(a, b, where = null) {
     super(where);
     this.a = a;
     this.b = b;
@@ -293,7 +293,7 @@ export class ExpressionSubtract extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMultiply extends Expression {
-  constructor(where, a, b) {
+  constructor(a, b, where = null) {
     super(where);
     this.a = a;
     this.b = b;
@@ -313,7 +313,7 @@ export class ExpressionMultiply extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionDivide extends Expression {
-  constructor(where, a, b) {
+  constructor(a, b, where = null) {
     super(where);
     this.a = a;
     this.b = b;
@@ -333,7 +333,7 @@ export class ExpressionDivide extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRemainder extends Expression {
-  constructor(where, a, b) {
+  constructor(a, b, where = null) {
     super(where);
     this.a = a;
     this.b = b;
@@ -353,7 +353,7 @@ export class ExpressionRemainder extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionDefinition extends Expression {
-  constructor(where, name, formals, body) {
+  constructor(name, formals, body, where = null) {
     super(where);
     this.name = name;
     this.formals = formals;
@@ -361,7 +361,8 @@ export class ExpressionFunctionDefinition extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    env.bindings[name] = {
+    // TODO: should definition be capturing parent for a closure?
+    env.bindings[this.name] = {
       name: this.name,
       formals: this.formals,
       body: this.body
@@ -372,7 +373,7 @@ export class ExpressionFunctionDefinition extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionIdentifier extends Expression {
-  constructor(where, token) {
+  constructor(token, where = null) {
     super(where);
     this.token = token;
   }
@@ -405,7 +406,7 @@ export class ExpressionIdentifier extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionCall extends Expression {
-  constructor(where, name, actuals) {
+  constructor(name, actuals, where = null) {
     super(where);
     this.name = name;
     this.actuals = actuals;
@@ -413,7 +414,7 @@ export class ExpressionFunctionCall extends Expression {
 
   evaluate(env, fromTime, toTime) {
     if (!env.has(this.name)) {
-      throw new LocatedException(this.where, `I've not heard of any function named "${this.name}"`);
+      throw new LocatedException(this.where, `I've not heard of any function named "${this.name}".`);
     }
 
     let f = env.get(this.name);
@@ -433,7 +434,7 @@ export class ExpressionFunctionCall extends Expression {
 
   isTimeSensitive(env) {
     if (!env.has(this.name)) {
-      throw new LocatedException(this.where, `I've not heard of any function named "${this.name}"`);
+      throw new LocatedException(this.where, `I've not heard of any function named "${this.name}".`);
     }
     let f = env.get(this.name);
     return this.actuals.some((actual, i) => actual.isTimeSensitive(env)) || f.body.isTimeSensitive(env);
@@ -445,7 +446,7 @@ export class ExpressionFunctionCall extends Expression {
 // ---------------------------------------------------------------------------
 
 export class ExpressionBlock extends Expression {
-  constructor(where, statements) {
+  constructor(statements, where = null) {
     super(where);
     this.statements = statements;
   }
@@ -466,7 +467,7 @@ export class ExpressionBlock extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAssignment extends Expression {
-  constructor(where, l, r) {
+  constructor(l, r, where = null) {
     super(where);
     this.l = l;
     this.r = r;
@@ -488,7 +489,7 @@ export class ExpressionAssignment extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionIf extends Expression {
-  constructor(where, conditions, thenBlocks, elseBlock) {
+  constructor(conditions, thenBlocks, elseBlock, where = null) {
     super(where);
     this.conditions = conditions;
     this.thenBlocks = thenBlocks;
@@ -519,7 +520,7 @@ export class ExpressionIf extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFor extends Expression {
-  constructor(where, i, start, stop, by, body) {
+  constructor(i, start, stop, by, body, where = null) {
     super(where);
     this.i = i;
     this.start = start;
@@ -534,7 +535,7 @@ export class ExpressionFor extends Expression {
     let by = this.by.evaluate(env, fromTime, toTime).value;
 
     for (let i = start; i < stop; i += by) {
-      new ExpressionAssignment(null, this.i, new ExpressionInteger(null, i)).evaluate(env, fromTime, toTime);
+      new ExpressionAssignment(this.i, new ExpressionInteger(i)).evaluate(env, fromTime, toTime);
       this.body.evaluate(env, fromTime, toTime);
     }
   }
@@ -547,7 +548,7 @@ export class ExpressionFor extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionProperty extends Expression {
-  constructor(where, base, property) {
+  constructor(base, property, where = null) {
     super(where);
     this.base = base;
     this.property = property;
@@ -564,10 +565,10 @@ export class ExpressionProperty extends Expression {
     let value = null;
     if (object instanceof ExpressionVector) {
       object.forEach(element => {
-        value = new ExpressionAssignment(null, this.property, rhs).evaluate(element, fromTime, toTime);
+        value = new ExpressionAssignment(this.property, rhs).evaluate(element, fromTime, toTime);
       });
     } else {
-      value = new ExpressionAssignment(null, this.property, rhs).evaluate(object, fromTime, toTime);
+      value = new ExpressionAssignment(this.property, rhs).evaluate(object, fromTime, toTime);
     }
 
     return value;
@@ -577,7 +578,7 @@ export class ExpressionProperty extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVector extends ExpressionData {
-  constructor(where, elements) {
+  constructor(elements, where = null) {
     super(where);
     this.elements = elements;
   }
@@ -586,7 +587,7 @@ export class ExpressionVector extends ExpressionData {
     let values = this.elements.map(element => {
       return element.evaluate(env, fromTime, toTime);
     });
-    return new ExpressionVector(null, values);
+    return new ExpressionVector(values);
   }
 
   map(transform) {
@@ -623,7 +624,7 @@ export class ExpressionVector extends ExpressionData {
   }
 
   interpolate(other, proportion) {
-    return new ExpressionVector(null, this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
+    return new ExpressionVector(this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
   }
 
   get magnitude() {
@@ -640,7 +641,7 @@ export class ExpressionVector extends ExpressionData {
       for (let i = 0; i < this.elements.length; ++i) {
         diffs.push(this.get(i).subtract(other.get(i)));
       }
-      return new ExpressionVector(null, diffs);
+      return new ExpressionVector(diffs);
     } else {
       throw '...';
     }
@@ -650,7 +651,7 @@ export class ExpressionVector extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class StatementFrom extends Expression {
-  constructor(where, fromTimeExpression, block) {
+  constructor(fromTimeExpression, block, where = null) {
     super(where);
     this.fromTimeExpression = fromTimeExpression;
     this.block = block;
@@ -665,7 +666,7 @@ export class StatementFrom extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementTo extends Expression {
-  constructor(where, toTimeExpression, block) {
+  constructor(toTimeExpression, block, where = null) {
     super(where);
     this.toTimeExpression = toTimeExpression;
     this.block = block;
@@ -680,7 +681,7 @@ export class StatementTo extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementBetween extends Expression {
-  constructor(where, fromTimeExpression, toTimeExpression, block) {
+  constructor(fromTimeExpression, toTimeExpression, block, where = null) {
     super(where);
     this.fromTimeExpression = fromTimeExpression;
     this.toTimeExpression = toTimeExpression;
@@ -697,7 +698,7 @@ export class StatementBetween extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementThrough extends Expression {
-  constructor(where, throughTimeExpression, block) {
+  constructor(throughTimeExpression, block, where) {
     super(where);
     this.throughTimeExpression = throughTimeExpression;
     this.block = block;
@@ -713,7 +714,7 @@ export class StatementThrough extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRepeat extends Expression {
-  constructor(where, count, body) {
+  constructor(count, body, where = null) {
     super(where);
     this.count = count;
     this.body = body;
@@ -736,7 +737,7 @@ export class ExpressionRepeat extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionWith extends Expression {
-  constructor(where, scope, body) {
+  constructor(scope, body, where = null) {
     super(where);
     this.scope = scope;
     this.body = body;
@@ -926,7 +927,7 @@ export class ExpressionRandom extends Expression {
     let min = env.get('min').value;
     let max = env.get('max').value;
     let x = Math.random() * (max - min) + min;
-    return new ExpressionReal(null, x);
+    return new ExpressionReal(x);
   }
 }
 
@@ -940,7 +941,7 @@ export class ExpressionSine extends Expression {
   evaluate(env, fromTime, toTime, callExpression) {
     let degrees = env.get('degrees').value;
     let x = Math.sin(degrees * Math.PI / 180);
-    return new ExpressionReal(null, x);
+    return new ExpressionReal(x);
   }
 }
 
@@ -954,7 +955,7 @@ export class ExpressionCosine extends Expression {
   evaluate(env, fromTime, toTime, callExpression) {
     let degrees = env.get('degrees').value;
     let x = Math.cos(degrees * Math.PI / 180);
-    return new ExpressionReal(null, x);
+    return new ExpressionReal(x);
   }
 }
 
@@ -969,7 +970,7 @@ export class ExpressionInt extends Expression {
   evaluate(env, fromTime, toTime, callExpression) {
     let f = env.get('x').value;
     let i = Math.trunc(f);
-    return new ExpressionInteger(null, i);
+    return new ExpressionInteger(i);
   }
 }
 

@@ -147,7 +147,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.callExpression = callExpression;
     this.parentElement = null;
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
-    this.bind('opacity', null, null, new ExpressionReal(null, 1));
+    this.bind('opacity', null, null, new ExpressionReal(1));
     this.id = serial;
     ++serial;
   }
@@ -161,10 +161,10 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     
     let rgb;
     if (isCutout) {
-      rgb = new ExpressionVector(null, [
-        new ExpressionInteger(null, 0),
-        new ExpressionInteger(null, 0),
-        new ExpressionInteger(null, 0),
+      rgb = new ExpressionVector([
+        new ExpressionInteger(0),
+        new ExpressionInteger(0),
+        new ExpressionInteger(0),
       ]);
     } else {
       rgb = this.valueAt(env, 'rgb', t);
@@ -295,14 +295,14 @@ export class TwovilleCutout extends TwovilleMask {
       corner = env.get('viewport').get('corner');
     } else if (env.get('viewport').has('center')) {
       let center = env.get('viewport').get('center');
-      corner = new ExpressionVector(null, [
-        new ExpressionReal(null, center.get(0).value - size.get(0).value * 0.5),
-        new ExpressionReal(null, center.get(1).value - size.get(1).value * 0.5),
+      corner = new ExpressionVector([
+        new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
+        new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
       ]);
     } else {
-      corner = new ExpressionVector(null, [
-        new ExpressionInteger(null, 0),
-        new ExpressionInteger(null, 0),
+      corner = new ExpressionVector([
+        new ExpressionInteger(0),
+        new ExpressionInteger(0),
       ]);
     }
 
@@ -339,21 +339,21 @@ export class TwovilleLabel extends TwovilleShape {
     if (this.has('size')) {
       fontSize = this.valueAt(env, 'size', t);
     } else {
-      fontSize = new ExpressionInteger(null, 8);
+      fontSize = new ExpressionInteger(8);
     }
 
     let anchor;
     if (this.has('anchor')) {
       anchor = this.valueAt(env, 'anchor', t);
     } else {
-      anchor = new ExpressionString(null, 'middle');
+      anchor = new ExpressionString('middle');
     }
 
     let baseline;
     if (this.has('baseline')) {
       baseline = this.valueAt(env, 'baseline', t);
     } else {
-      baseline = new ExpressionString(null, 'middle');
+      baseline = new ExpressionString('middle');
     }
 
     if (position == null || rgb == null) {
@@ -696,9 +696,9 @@ export class TwovilleRectangle extends TwovilleShape {
       corner = this.valueAt(env, 'corner', t);
     } else {
       let center = this.valueAt(env, 'center', t);
-      corner = new ExpressionVector(null, [
-        new ExpressionReal(null, center.get(0).value - size.get(0).value * 0.5),
-        new ExpressionReal(null, center.get(1).value - size.get(1).value * 0.5),
+      corner = new ExpressionVector([
+        new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
+        new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
       ]);
     }
 
@@ -769,13 +769,13 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     this.shapes = [];
 
     this.bindings.time = new TwovilleEnvironment(this);
-    this.bindings.time.bind('start', null, null, new ExpressionInteger(null, 0));
-    this.bindings.time.bind('stop', null, null, new ExpressionInteger(null, 100));
+    this.bindings.time.bind('start', null, null, new ExpressionInteger(0));
+    this.bindings.time.bind('stop', null, null, new ExpressionInteger(100));
 
     this.bindings.viewport = new TwovilleEnvironment(this);
-    this.bindings.viewport.bind('size', null, null, new ExpressionVector(null, [
-      new ExpressionInteger(null, 100),
-      new ExpressionInteger(null, 100)
+    this.bindings.viewport.bind('size', null, null, new ExpressionVector([
+      new ExpressionInteger(100),
+      new ExpressionInteger(100)
     ]));
 
     this.bindings['rectangle'] = {

@@ -50,7 +50,7 @@ let saveButton = document.getElementById('saveButton');
 let spinner = document.getElementById('spinner');
 let scrubber = document.getElementById('scrubber');
 let timeSpinner = document.getElementById('timeSpinner');
-new Messager(document.getElementById('messager'), document);
+new Messager(document.getElementById('messager'), document, highlight);
 
 let env;
 let isDirty = false;
@@ -321,14 +321,14 @@ evaluateButton.addEventListener('click', () => {
       corner = env.get('viewport').get('corner');
     } else if (env.get('viewport').has('center')) {
       let center = env.get('viewport').get('center');
-      corner = new ExpressionVector(null, [
-        new ExpressionReal(null, center.get(0).value - size.get(0).value * 0.5),
-        new ExpressionReal(null, center.get(1).value - size.get(1).value * 0.5),
+      corner = new ExpressionVector([
+        new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
+        new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
       ]);
     } else {
-      corner = new ExpressionVector(null, [
-        new ExpressionInteger(null, 0),
-        new ExpressionInteger(null, 0),
+      corner = new ExpressionVector([
+        new ExpressionInteger(0),
+        new ExpressionInteger(0),
       ]);
     }
 

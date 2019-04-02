@@ -24,7 +24,7 @@ function evaluateOutput(src, lines) {
 }
 
 test('gets true from boolean literal', () => {
-  let a = new ExpressionBoolean(null, true);
+  let a = new ExpressionBoolean(true);
   expect(a.value).toBe(true);
 });
 
@@ -110,6 +110,22 @@ for i in 0..6 by 2
   print(i)
 `.substring(1);
   let lines = ['0', '2', '4', '6'];
+  evaluateOutput(src, lines);
+});
+
+// --------------------------------------------------------------------------- 
+
+test('functions don\'t violate parent\'s scope', () => {
+  let src = `
+to foo(a, b)
+  print(a + b)
+  a = 11
+
+a = 9
+foo(a, 7)
+print(a)
+`.substring(1);
+  let lines = ['16', '9'];
   evaluateOutput(src, lines);
 });
 

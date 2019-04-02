@@ -1,10 +1,12 @@
 let messagerElement;
 let messagerDocument;
+let highlight;
 
 export class Messager {
-  constructor(element, doc) {
+  constructor(element, doc, onHighlight) {
     messagerElement = element;
     messagerDocument = doc;
+    highlight = onHighlight;
   }
 
   static log(text) {
