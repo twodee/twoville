@@ -290,7 +290,7 @@ playLoopButton.addEventListener('click', e => {
 
 export let ast;
 
-evaluateButton.addEventListener('click', () => {
+function interpret() {
   Messager.clear();
 
   while (svg.lastChild) {
@@ -382,7 +382,9 @@ evaluateButton.addEventListener('click', () => {
       Messager.log(e.message);
     }
   }
-});
+}
+
+evaluateButton.addEventListener('click', interpret);
 
 function onSourceChanged() {
   isDirty = true;
@@ -391,4 +393,11 @@ function onSourceChanged() {
 
 function syncTitle() {
   document.title = 'Twoville' + (isDirty ? '*' : '');
+}
+
+if (source0) {
+  editor.setValue(source0, 1);
+  if (isAutorun0) {
+    interpret();
+  }
 }
