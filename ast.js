@@ -420,7 +420,7 @@ export class ExpressionFunctionCall extends Expression {
     let f = env.get(this.name);
 
     if (this.actuals.length != f.formals.length) {
-      throw 'params mismatch!';
+      throw new LocatedException(this.where, `I expected function ${this.name} to be called with ${f.formals.length} parameter${f.formals.length == 1 ? '' : 's'}.`);
     }
 
     let callEnvironment = new TwovilleEnvironment(env);

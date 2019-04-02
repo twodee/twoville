@@ -338,12 +338,17 @@ export function parse(tokens) {
       }
       consume();
 
-      if (!has(Tokens.Linebreak)) {
-        throw new LocatedException(tokens[i].where, 'I expected a linebreak after a function header.');
+      let body;
+      if (has(Tokens.Assign)) {
+        consume();
+        body = statement();
+      } else {
+        if (!has(Tokens.Linebreak)) {
+          throw new LocatedException(tokens[i].where, 'I expected a linebreak after a function header.');
+        }
+        consume();
+        body = block();
       }
-      consume();
-
-      let body = block();
 
       return new ExpressionFunctionDefinition(idToken.source, formals, body, SourceLocation.span(sourceStart, body.where));
 
