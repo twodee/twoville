@@ -22,6 +22,7 @@ import {
 
 import {
   ExpressionInteger,
+  ExpressionReal,
   ExpressionVector,
 } from './ast.js';
 

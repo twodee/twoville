@@ -653,11 +653,14 @@ export class ExpressionVector extends ExpressionData {
 export class StatementFrom extends Expression {
   constructor(fromTimeExpression, block, where = null) {
     super(where);
+    console.log("fromTimeExpression:", fromTimeExpression);
+    console.log("block:", block);
     this.fromTimeExpression = fromTimeExpression;
     this.block = block;
   }
 
   evaluate(env, fromTime, toTime) {
+    console.log("this:", this);
     let realFromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, realFromTime, null);
   }
@@ -698,7 +701,7 @@ export class StatementBetween extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementThrough extends Expression {
-  constructor(throughTimeExpression, block, where) {
+  constructor(throughTimeExpression, block, where = null) {
     super(where);
     this.throughTimeExpression = throughTimeExpression;
     this.block = block;

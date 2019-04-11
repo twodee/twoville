@@ -142,7 +142,7 @@ export function parse(tokens) {
         if (has(Tokens.Linebreak)) { // t -> 10
           consume();
           let b = block();
-          return new StatementTo(SourceLocation.span(e.where, b.where), e, b);
+          return new StatementTo(e, b, SourceLocation.span(e.where, b.where));
         } else if (has(Tokens.RightArrow)) { // t -> 10 ->
           let arrow = tokens[i];
           consume();
@@ -152,7 +152,7 @@ export function parse(tokens) {
             if (has(Tokens.Linebreak)) {
               consume();
               let b = block();
-              return new StatementThrough(SourceLocation.span(e.where, b.where), e, b);
+              return new StatementThrough(e, b, SourceLocation.span(e.where, b.where));
             } else {
               throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
             }
@@ -181,14 +181,14 @@ export function parse(tokens) {
           if (has(Tokens.Linebreak)) { // 10 -> t
             consume();
             let b = block();
-            return new StatementFrom(SourceLocation.span(from.where, b.where), from, b);
+            return new StatementFrom(from, b, SourceLocation.span(from.where, b.where));
           } else if (has(Tokens.RightArrow)) { // 10 -> t -> 20
             consume();
             let to = expression();
             if (has(Tokens.Linebreak)) {
               consume();
               let b = block();
-              return new StatementBetween(SourceLocation.span(from.where, b.where), from, to, b);
+              return new StatementBetween(from, to, b, SourceLocation.span(from.where, b.where));
             } else {
               throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected either a line break after this interval.');
             }
