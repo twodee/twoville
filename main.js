@@ -29,10 +29,11 @@ import {
 let editor = ace.edit('editor');
 editor.setTheme('ace/theme/twilight');
 editor.setOptions({
-  fontSize: '14pt',
+  fontSize: source0 ? '10pt' : '14pt',
   tabSize: 2,
   useSoftTabs: true
 });
+
 if (localStorage.getItem('src') !== null) {
   editor.setValue(localStorage.getItem('src'), 1);
 }
@@ -57,6 +58,12 @@ let env;
 let isDirty = false;
 let animateTask = null;
 let delay = 16;
+
+if (source0) {
+  left.style.width = '300px';
+  messagerContainer.style.height = '50px';
+  editor.resize();
+}
 
 export let svg = document.getElementById('svg');
 
@@ -349,7 +356,7 @@ function interpret() {
     pageOutline.setAttributeNS(null, 'width', size.get(0).value);
     pageOutline.setAttributeNS(null, 'height', size.get(1).value);
     pageOutline.setAttributeNS(null, 'fill', 'none');
-    pageOutline.setAttributeNS(null, 'stroke', 'rgb(0, 0, 0)');
+    pageOutline.setAttributeNS(null, 'stroke', 'rgb(180, 180, 180)');
     pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
     pageOutline.setAttributeNS(null, 'stroke-width', '1px');
     pageOutline.setAttributeNS(null, 'stroke-opacity', 1);
