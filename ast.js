@@ -149,6 +149,20 @@ export class ExpressionInteger extends ExpressionData {
     }
   }
 
+  negative() {
+    return new ExpressionInteger(-this.value);
+  }
+
+  power(other) {
+    if (other instanceof ExpressionInteger) {
+      return new ExpressionInteger(Math.pow(this.value, other.value));
+    } else if (other instanceof ExpressionReal) {
+      return new ExpressionReal(Math.pow(this.value, other.value));
+    } else {
+      throw new MessagedException('I can only compute powers for integers and reals.');
+    }
+  }
+
   interpolate(other, proportion) {
     return new ExpressionReal(this.value + proportion * (other.value - this.value));
   }
@@ -195,6 +209,10 @@ export class ExpressionReal extends ExpressionData {
     return this;
   }
 
+  clone() {
+    return new ExpressionReal(this.x, this.where == null ? null : this.where.clone());
+  }
+
   toString() {
     return '' + this.x;
   }
@@ -235,11 +253,15 @@ export class ExpressionReal extends ExpressionData {
     }
   }
 
-  remainder(other) {
+  negative() {
+    return new ExpressionReal(-this.value);
+  }
+
+  power(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      return new ExpressionReal(this.value % other.value);
+      return new ExpressionReal(Math.pow(this.value, other.value));
     } else {
-      throw new MessagedException('I can only compute the remainder for integers and reals.');
+      throw new MessagedException('I can only compute powers for integers and reals.');
     }
   }
 
@@ -347,6 +369,44 @@ export class ExpressionRemainder extends Expression {
 
   isTimeSensitive(env) {
     return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPower extends Expression {
+  constructor(a, b, where = null) {
+    super(where);
+    this.a = a;
+    this.b = b;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
+    return evalA.power(evalB);
+  }
+
+  isTimeSensitive(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionNegative extends Expression {
+  constructor(a, where = null) {
+    super(where);
+    this.a = a;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    return evalA.negative();
+  }
+
+  isTimeSensitive(env) {
+    return this.a.isTimeSensitive(env);
   }
 }
 
@@ -583,6 +643,10 @@ export class ExpressionVector extends ExpressionData {
     this.elements = elements;
   }
 
+  clone() {
+    return new ExpressionVector(this.elements.map(e => e.clone()), this.where == null ? null : this.where.clone());
+  }
+
   evaluate(env, fromTime, toTime) {
     let values = this.elements.map(element => {
       return element.evaluate(env, fromTime, toTime);
@@ -642,6 +706,12 @@ export class ExpressionVector extends ExpressionData {
         diffs.push(this.get(i).subtract(other.get(i)));
       }
       return new ExpressionVector(diffs);
+    } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      let diffs = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        diffs.push(this.get(i).subtract(other));
+      }
+      return new ExpressionVector(diffs);
     } else {
       throw '...';
     }
@@ -653,14 +723,11 @@ export class ExpressionVector extends ExpressionData {
 export class StatementFrom extends Expression {
   constructor(fromTimeExpression, block, where = null) {
     super(where);
-    console.log("fromTimeExpression:", fromTimeExpression);
-    console.log("block:", block);
     this.fromTimeExpression = fromTimeExpression;
     this.block = block;
   }
 
   evaluate(env, fromTime, toTime) {
-    console.log("this:", this);
     let realFromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, realFromTime, null);
   }

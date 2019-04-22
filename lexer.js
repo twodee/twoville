@@ -261,6 +261,7 @@ export function lex(source) {
         do {
           consume();
         } while (i < source.length && !has('\n'));
+        resetToken();
       } else {
         emit(Tokens.ForwardSlash);
       }

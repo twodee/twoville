@@ -40,6 +40,9 @@ export class Timeline {
   }
 
   setFromValue(t, value) {
+    // console.log("t:", t);
+    // console.log("value:", value);
+
     if (this.intervals.length == 0) {
       this.intervals.push(new Interval(t, value));
     } else {
@@ -49,6 +52,7 @@ export class Timeline {
              this.intervals[i].fromTime.value <= t.value) {
         ++i;
       }
+      // console.log("i:", i);
 
       if (i == 0) {
         this.intervals.unshift(new Interval(t, value));
@@ -58,7 +62,11 @@ export class Timeline {
         --i;
         if (this.intervals[i].fromTime.value == t.value) {
           this.intervals[i].setFrom(t, value);
-        } else if (!this.intervals[i].hasTo() || this.intervals[i].toTime.value <= t.value) {
+        } else if (!this.intervals[i].hasTo()) {
+          // close off predecessor // TODO
+          this.intervals[i].setTo(t, value);
+          this.intervals.splice(i + 1, 0, new Interval(t, value));
+        } else if (this.intervals[i].toTime.value <= t.value) {
           this.intervals.splice(i + 1, 0, new Interval(t, value));
         } else {
           this.intervals.splice(i + 1, 0, new Interval(t, value, this.intervals[i].toTime, this.intervals[i].toValue));

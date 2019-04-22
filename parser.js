@@ -21,7 +21,9 @@ import {
   ExpressionIf,
   ExpressionInteger,
   ExpressionMultiply,
+  ExpressionNegative,
   ExpressionProperty,
+  ExpressionPower,
   ExpressionReal,
   ExpressionRemainder,
   ExpressionRepeat,
@@ -50,7 +52,16 @@ export function parse(tokens) {
     ':middle': new ExpressionString('middle'),
     ':end': new ExpressionString('end'),
 
-    // TODO colors
+    // Colors
+    ':black': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
+    ':red': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0), new ExpressionReal(0)]),
+    ':green': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1), new ExpressionReal(0)]),
+    ':blue': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(1)]),
+    ':white': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(1), new ExpressionReal(1)]),
+    ':yellow': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(1), new ExpressionReal(0)]),
+    ':orange': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0.5), new ExpressionReal(0)]),
+    ':cyan': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1), new ExpressionReal(1)]),
+    ':magenta': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0), new ExpressionReal(1)]),
 
     ':absolute': new ExpressionInteger(0),
     ':relative': new ExpressionInteger(1),
@@ -240,10 +251,10 @@ export function parse(tokens) {
   }
 
   function expressionMultiplicative() {
-    let a = expressionProperty();
+    let a = expressionUnary();
     while (has(Tokens.Asterisk) || has(Tokens.ForwardSlash) || has(Tokens.Percent)) {
       let operator = consume();
-      let b = expressionProperty();
+      let b = expressionUnary();
       if (operator.type == Tokens.Asterisk) {
         a = new ExpressionMultiply(a, b, SourceLocation.span(a.where, b.where));
       } else if (operator.type == Tokens.ForwardSlash) {
@@ -251,6 +262,28 @@ export function parse(tokens) {
       } else {
         a = new ExpressionRemainder(a, b, SourceLocation.span(a.where, b.where));
       }
+    }
+    return a;
+  }
+
+  function expressionUnary() {
+    let a;
+    if (has(Tokens.Minus)) {
+      consume(); // eat operator
+      a = expressionUnary();
+      a = new ExpressionNegative(a, a.where);
+    } else {
+      a = expressionPower();
+    }
+    return a;
+  }
+
+  function expressionPower() {
+    let a = expressionProperty();
+    while (has(Tokens.Circumflex)) {
+      let operator = consume();
+      let b = expressionProperty();
+      a = new ExpressionPower(a, b, SourceLocation.span(a.where, b.where));
     }
     return a;
   }
@@ -269,6 +302,7 @@ export function parse(tokens) {
     return has(Tokens.Integer, offset) ||
            has(Tokens.Real, offset) ||
            has(Tokens.T, offset) ||
+           has(Tokens.Minus, offset) ||
            has(Tokens.Boolean, offset) ||
            has(Tokens.Symbol, offset) ||
            has(Tokens.String, offset) ||
@@ -283,6 +317,15 @@ export function parse(tokens) {
     if (has(Tokens.Integer)) {
       let token = consume();
       return new ExpressionInteger(Number(token.source), token.where);
+    } else if (has(Tokens.LeftParenthesis)) {
+      let leftToken = consume();
+      let a = atom();
+      if (has(Tokens.RightParenthesis)) {
+        consume();
+        return a;
+      } else {
+        throw new LocatedException(SourceLocation.span(leftToken.where, a.where), 'I expected a right parenthesis after this expression.');
+      }
     } else if (has(Tokens.Symbol)) {
       let token = consume();
       if (symbols.hasOwnProperty(token.source)) {

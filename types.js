@@ -147,6 +147,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.callExpression = callExpression;
     this.parentElement = null;
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
+    this.bindings.stroke.bind('opacity', null, null, new ExpressionReal(1));
     this.bind('opacity', null, null, new ExpressionReal(1));
     this.id = serial;
     ++serial;
@@ -702,9 +703,14 @@ export class TwovilleRectangle extends TwovilleShape {
       ]);
     }
 
-    let rgb = this.getRGB(env, t);
+    let opacity = this.valueAt(env, 'opacity', t).value;
+    let isVisible = opacity > 0.0001;
+    let rgb = null;
+    if (isVisible) {
+      rgb = this.getRGB(env, t);
+    }
 
-    if (corner == null || size == null || rgb == null) {
+    if (corner == null || size == null || (rgb == null && isVisible)) {
       this.hide();
     } else {
       this.show();
@@ -717,13 +723,12 @@ export class TwovilleRectangle extends TwovilleShape {
         this.svgElement.setAttributeNS(null, 'ry', rounding.value);
       }
 
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
-
       this.svgElement.setAttributeNS(null, 'x', corner.get(0).value);
       this.svgElement.setAttributeNS(null, 'y', corner.get(1).value);
       this.svgElement.setAttributeNS(null, 'width', size.get(0).value);
       this.svgElement.setAttributeNS(null, 'height', size.get(1).value);
-      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'fill', isVisible ? rgb.toRGB() : 'none');
+      this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
     }
   }
 }
@@ -741,21 +746,27 @@ export class TwovilleCircle extends TwovilleShape {
     this.assertProperty('center');
     this.assertProperty('radius');
     
+    let opacity = this.valueAt(env, 'opacity', t).value;
     let center = this.valueAt(env, 'center', t);
     let radius = this.valueAt(env, 'radius', t);
-    let rgb = this.getRGB(env, t);
 
-    if (center == null || radius == null || rgb == null) {
+    let isVisible = opacity > 0.0001;
+    let rgb = null;
+    if (isVisible) {
+      rgb = this.getRGB(env, t);
+    }
+
+    if (center == null || radius == null || (rgb == null && isVisible)) {
       this.hide();
     } else {
       this.show();
       this.setTransform(env, t);
       this.setStroke(env, t);
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'cx', center.get(0).value);
       this.svgElement.setAttributeNS(null, 'cy', center.get(1).value);
       this.svgElement.setAttributeNS(null, 'r', radius.value);
-      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'fill', isVisible ? rgb.toRGB() : 'none');
+      this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
     }
   }
 }
@@ -771,6 +782,8 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     this.bindings.time = new TwovilleEnvironment(this);
     this.bindings.time.bind('start', null, null, new ExpressionInteger(0));
     this.bindings.time.bind('stop', null, null, new ExpressionInteger(100));
+    this.bindings.time.bind('delay', null, null, new ExpressionInteger(16));
+    this.bindings.time.bind('resolution', null, null, new ExpressionInteger(1));
 
     this.bindings.viewport = new TwovilleEnvironment(this);
     this.bindings.viewport.bind('size', null, null, new ExpressionVector([

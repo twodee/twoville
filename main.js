@@ -54,10 +54,10 @@ let scrubber = document.getElementById('scrubber');
 let timeSpinner = document.getElementById('timeSpinner');
 new Messager(document.getElementById('messager'), document, highlight);
 
-let env;
+export let env;
 let isDirty = false;
 let animateTask = null;
-let delay = 16;
+let delay;
 
 if (source0) {
   left.style.width = '300px';
@@ -250,9 +250,19 @@ exportButton.addEventListener('click', () => {
   downloadBlob('download.svg', svgBlob);
 });
 
-function scrubTo(t) {
+function tickToTime(tick) {
+  let proportion = tick / nTicks;
+  return tmin + proportion * (tmax - tmin);
+}
+
+function timeToTick(time) {
+  return Math.round((time - tmin) / (tmax - tmin) * nTicks);
+}
+
+function scrubTo(tick) {
+  let t = tickToTime(tick);
   timeSpinner.value = t;
-  scrubber.value = t;
+  scrubber.value = tick;
   env.shapes.forEach(shape => {
     shape.draw(env, t);
   });
@@ -265,7 +275,8 @@ scrubber.addEventListener('input', () => {
 
 timeSpinner.addEventListener('input', () => {
   stopAnimation();
-  scrubTo(parseInt(timeSpinner.value));
+  let tick = timeToTick(parseFloat(timeSpinner.value));
+  scrubTo(tick);
 });
 
 function animateFrame(i, isLoop = false) {
@@ -366,18 +377,23 @@ function interpret() {
       shape.domify(env.svg)
     });
 
-    let tmin = env.get('time').get('start').value;
-    let tmax = env.get('time').get('stop').value;
-    scrubber.min = tmin;
-    scrubber.max = tmax;
+    delay = env.get('time').get('delay').value;
 
-    let t = parseFloat(scrubber.value);
+    tmin = env.get('time').get('start').value;
+    tmax = env.get('time').get('stop').value;
+    resolution = env.get('time').get('resolution').value;
+    nTicks = (tmax - tmin) * resolution;
+
+    scrubber.min = 0;
+    scrubber.max = nTicks;
+
+    let t = getT();
     if (t < tmin) {
-      scrubTo(tmin);
+      scrubTo(0);
     } else if (t > tmax) {
-      scrubTo(tmax);
+      scrubTo((tmax - tmin) * resolution);
     } else {
-      scrubTo(t);
+      scrubTo(parseInt(scrubber.value));
     }
 
     recordButton.disabled = false;
@@ -391,6 +407,16 @@ function interpret() {
     }
   }
 }
+
+function getT() {
+  let tick = parseInt(scrubber.value);
+  return tmin + tick / resolution;
+}
+
+let tmin;
+let tmax;
+let resolution;
+let nTicks;
 
 evaluateButton.addEventListener('click', interpret);
 

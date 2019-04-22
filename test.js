@@ -4,7 +4,7 @@ const { document } = (new JSDOM(`...`)).window;
 const {} = require('./messager');
 
 const {Messager} = require('./messager');
-const {ExpressionBoolean} = require('./ast');
+const {ExpressionBoolean, ExpressionInteger, ExpressionReal} = require('./ast');
 const {GlobalEnvironment} = require('./types');
 const {lex} = require('./lexer');
 const {parse} = require('./parser');
@@ -21,6 +21,25 @@ function evaluateOutput(src, lines) {
   let html = lines.join('<br>') + '<br>';
 
   expect(root.innerHTML).toBe(html);
+}
+
+function evaluateExpression(src, expected) {
+  let root = document.createElement('div');
+  
+  new Messager(root, document);
+  let tokens = lex(src);
+ 
+  // console.log("---------------------");
+  // for (let token of tokens) {
+    // console.log(token);
+  // }
+
+  let ast = parse(tokens);
+  let env = new GlobalEnvironment();
+  let result = ast.evaluate(env);
+
+  expect(Object.getPrototypeOf(result)).toBe(Object.getPrototypeOf(expected));
+  expect(result.x).toBe(expected.x);
 }
 
 test('gets true from boolean literal', () => {
@@ -127,6 +146,22 @@ print(a)
 `.substring(1);
   let lines = ['16', '9'];
   evaluateOutput(src, lines);
+});
+
+// --------------------------------------------------------------------------- 
+// Operators
+// ---------------------------------------------------------------------------
+
+test('operator ^', () => {
+  evaluateExpression('5 ^ 2', new ExpressionInteger(25));
+  evaluateExpression('100 ^ 0.5', new ExpressionReal(10));
+  evaluateExpression('2 ^ 0.5', new ExpressionReal(1.4142135623730951));
+});
+
+// --------------------------------------------------------------------------- 
+
+test('operator -', () => {
+  evaluateExpression('-(5)', new ExpressionInteger(-5));
 });
 
 // --------------------------------------------------------------------------- 

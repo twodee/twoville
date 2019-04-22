@@ -12,7 +12,7 @@ var Mode = function() {
 oop.inherits(Mode, TextMode);
 
 (function() {
-  this.lineCommentStart = "--";
+  this.lineCommentStart = "//";
     
   this.getNextLineIndent = function(state, line, tab) {
     var match = line.match(/^\s*/);
