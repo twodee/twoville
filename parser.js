@@ -31,10 +31,12 @@ import {
   ExpressionSubtract,
   ExpressionVector,
   ExpressionWith,
-  StatementTo,
-  StatementThrough,
-  StatementFrom,
   StatementBetween,
+  StatementFrom,
+  StatementFromStasis,
+  StatementTo,
+  StatementToStasis,
+  StatementThrough,
 } from './ast.js';
 
 export function parse(tokens) {
@@ -163,12 +165,20 @@ export function parse(tokens) {
             if (has(Tokens.Linebreak)) {
               consume();
               let b = block();
-              return new StatementThrough(e, b, SourceLocation.span(e.where, b.where));
+              return new StatementThrough(e, b, SourceLocation.span(firstT.where, b.where));
             } else {
               throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
             }
           } else {
-            throw new LocatedException(SourceLocation.span(firstT.where, arrow.where), 'I expected a second t in this through-interval.');
+            let e2 = expression();
+            if (has(Tokens.Linebreak)) {
+              consume();
+              let b = block();
+              return new StatementToStasis(e, e2, b, SourceLocation.span(firstT.where, b.where));
+            } else {
+              throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
+            }
+            // throw new LocatedException(SourceLocation.span(firstT.where, arrow.where), 'I expected a second t in this through-interval.');
           }
         } else {
           throw new LocatedException(SourceLocation.span(firstT.where, e.where), 'I expected either a to-interval or a through-interval, but that\'s not what I found.');
@@ -201,10 +211,29 @@ export function parse(tokens) {
               let b = block();
               return new StatementBetween(from, to, b, SourceLocation.span(from.where, b.where));
             } else {
-              throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected either a line break after this interval.');
+              throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a line break after this interval.');
             }
           } else {
             throw new LocatedException(SourceLocation.span(e.where, t.where), 'I expected either a from-interval or a between-interval, but that\'s not what I found.');
+          }
+        } else if (isFirstOfExpression()) {
+          let to = expression();
+          if (has(Tokens.RightArrow)) { // 10 -> 20 ->
+            consume();
+            if (has(Tokens.T)) {
+              consume();
+              if (has(Tokens.Linebreak)) {
+                consume();
+                let b = block();
+                return new StatementFromStasis(from, to, b, SourceLocation.span(from.where, b.where));
+              } else {
+                throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a line break after this interval.');
+              }
+            } else {
+              throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a from-stasis-interval, but that\'s not what I found.');
+            }
+          } else {
+            throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a from-stasis-interval, but that\'s not what I found.');
           }
         } else {
           throw new LocatedException(SourceLocation.span(e.where, arrow.where), 'I expected either a from-interval or a between-interval, but that\'s not what I found.');

@@ -30,6 +30,14 @@ export class Interval {
     return this.toTime != null;
   }
 
+  endsBefore(t) {
+    return this.hasTo() && this.toTime.value <= t;
+  }
+
+  startsAfter(t) {
+    return this.hasFrom() && this.fromTime.value >= t;
+  }
+
   spans(t) {
     return (this.hasFrom() && this.hasTo() && this.fromTime.value <= t && t <= this.toTime.value) ||
            (this.hasFrom() && !this.hasTo() && this.fromTime.value <= t) ||

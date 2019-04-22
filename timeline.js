@@ -40,38 +40,39 @@ export class Timeline {
   }
 
   setFromValue(t, value) {
-    // console.log("t:", t);
-    // console.log("value:", value);
+    console.log("t:", t);
+    console.log("value:", value);
 
     if (this.intervals.length == 0) {
       this.intervals.push(new Interval(t, value));
     } else {
       let i = 0;
-      while (i < this.intervals.length &&
-             this.intervals[i].hasFrom() &&
-             this.intervals[i].fromTime.value <= t.value) {
+      while (i < this.intervals.length && this.intervals[i].endsBefore(t.value)) {
         ++i;
       }
-      // console.log("i:", i);
 
-      if (i == 0) {
-        this.intervals.unshift(new Interval(t, value));
-      } else if (i < this.intervals.length && !this.intervals[i].hasFrom()) {
+      // This logic gets really confusing. I'm going to spell everything out.
+      // i points to an interval that either starts after or spans t.
+
+      // If all the intervals end before the new one, append a new open from interval.
+      if (i >= this.intervals.length) {
+        this.intervals.push(new Interval(t, value));
+      }
+
+      // If from is open, close it.
+      if (!this.intervals[i].hasFrom()) {
         this.intervals[i].setFrom(t, value);
-      } else {
-        --i;
-        if (this.intervals[i].fromTime.value == t.value) {
-          this.intervals[i].setFrom(t, value);
-        } else if (!this.intervals[i].hasTo()) {
-          // close off predecessor // TODO
-          this.intervals[i].setTo(t, value);
-          this.intervals.splice(i + 1, 0, new Interval(t, value));
-        } else if (this.intervals[i].toTime.value <= t.value) {
-          this.intervals.splice(i + 1, 0, new Interval(t, value));
-        } else {
-          this.intervals.splice(i + 1, 0, new Interval(t, value, this.intervals[i].toTime, this.intervals[i].toValue));
-          this.intervals[i].setTo(null, null);
-        }
+      }
+      
+      // If from is same, update existing.
+      else if (this.intervals[i].fromTime.value == t.value) {
+        this.intervals[i].setFrom(t, value);
+      }
+      
+      // Otherwise, split the spanning interval. Open the to-end and splice in a new closed interval.
+      else {
+        this.intervals[i].setTo(null, null);
+        this.intervals.splice(i + 1, 0, new Interval(t, value, this.intervals[i].toTime, this.intervals[i].toValue));
       }
     }
   }
@@ -79,32 +80,35 @@ export class Timeline {
   setToValue(t, value) {
     if (this.intervals.length == 0) {
       this.intervals.push(new Interval(null, null, t, value));
+      console.log("this.intervals[this.intervals.length - 1].toString():", this.intervals[this.intervals.length - 1].toString());
     } else {
-      let i = 0;
-      while (i < this.intervals.length &&
-             this.intervals[i].hasFrom() &&
-             this.intervals[i].fromTime.value <= t.value) {
-        ++i;
+      let i = this.intervals.length - 1;
+      while (i >= 0 && this.intervals[i].startsAfter(t.value)) {
+        --i;
       }
 
-      // i points to interval that starts after 
+      // This logic gets really confusing. I'm going to spell everything out.
+      // i points to an interval that either ends before or spans t.
 
-      if (i == 0) {
+      // If all the intervals start after the new one, prepend a new open to interval.
+      if (i < 0) {
         this.intervals.unshift(new Interval(null, null, t, value));
-      // } else if (i < this.intervals.length && !this.intervals[i].hasTo()) {
-        // this.intervals[i].setTo(t, value);
-      } else {
-        --i;
-        if (!this.intervals[i].hasTo()) {
-          this.intervals[i].setTo(t, value);
-        } else if (this.intervals[i].toTime.value == t.value) {
-          this.intervals[i].setTo(t, value);
-        } else if (!this.intervals[i].hasTo() || this.intervals[i].toTime.value <= t.value) {
-          this.intervals.splice(i + 1, 0, new Interval(null, null, t, value));
-        } else {
-          this.intervals.splice(i + 1, 0, new Interval(t, value, this.intervals[i].toTime, this.intervals[i].toValue));
-          this.intervals[i].setTo(null, null);
-        }
+      }
+
+      // If to is open, close it.
+      if (!this.intervals[i].hasTo()) {
+        this.intervals[i].setTo(t, value);
+      }
+      
+      // If to is same, update existing.
+      else if (this.intervals[i].toTime.value == t.value) {
+        this.intervals[i].setTo(t, value);
+      }
+      
+      // Otherwise, split the spanning interval. Open the from-end and splice in a new closed interval predecessor.
+      else {
+        this.intervals[i].setFrom(null, null);
+        this.intervals.splice(i, 0, new Interval(this.intervals[i].fromTime, this.intervals[i].fromValue, t, value));
       }
     }
   }

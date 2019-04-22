@@ -153,25 +153,25 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     ++serial;
   }
 
-  getRGB(env, t) {
+  getColor(env, t) {
     let isCutout = this.owns('parent') && this.get('parent').defaultValue instanceof TwovilleCutout;
 
-    if (!this.has('rgb') && !isCutout) {
-      throw new LocatedException(this.callExpression.where, `I found a ${this.type} whose rgb property is not defined.`);
+    if (!this.has('color') && !isCutout) {
+      throw new LocatedException(this.callExpression.where, `I found a ${this.type} whose color property is not defined.`);
     }
     
-    let rgb;
+    let color;
     if (isCutout) {
-      rgb = new ExpressionVector([
+      color = new ExpressionVector([
         new ExpressionInteger(0),
         new ExpressionInteger(0),
         new ExpressionInteger(0),
       ]);
     } else {
-      rgb = this.valueAt(env, 'rgb', t);
+      color = this.valueAt(env, 'color', t);
     }
 
-    return rgb;
+    return color;
   }
 
   domify(svg) {
@@ -225,12 +225,12 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     if (this.has('stroke')) {
       let stroke = this.get('stroke');
       if (stroke.owns('size') &&
-          stroke.owns('rgb') &&
+          stroke.owns('color') &&
           stroke.owns('opacity')) {
         let strokeSize = stroke.valueAt(env, 'size', t);
-        let strokeRGB = stroke.valueAt(env, 'rgb', t);
+        let strokeColor = stroke.valueAt(env, 'color', t);
         let strokeOpacity = stroke.valueAt(env, 'opacity', t);
-        this.svgElement.setAttributeNS(null, 'stroke', strokeRGB.toRGB());
+        this.svgElement.setAttributeNS(null, 'stroke', strokeColor.toColor());
         this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
         this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
       }
@@ -333,7 +333,7 @@ export class TwovilleLabel extends TwovilleShape {
     this.assertProperty('text');
     
     let position = this.valueAt(env, 'position', t);
-    let rgb = this.getRGB(env, t);
+    let color = this.getColor(env, t);
     let text = this.valueAt(env, 'text', t);
 
     let fontSize;
@@ -357,7 +357,7 @@ export class TwovilleLabel extends TwovilleShape {
       baseline = new ExpressionString('middle');
     }
 
-    if (position == null || rgb == null) {
+    if (position == null || color == null) {
       this.hide();
     } else {
       this.show();
@@ -367,7 +367,7 @@ export class TwovilleLabel extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'x', position.get(0).value);
       this.svgElement.setAttributeNS(null, 'y', position.get(1).value);
-      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'fill', color.toColor());
       this.svgElement.setAttributeNS(null, 'font-size', fontSize.value);
       this.svgElement.setAttributeNS(null, 'text-anchor', anchor.value);
       this.svgElement.setAttributeNS(null, 'alignment-baseline', baseline.value);
@@ -515,9 +515,9 @@ export class TwovilleLine extends TwovilleShape {
     }
     
     let vertices = this.nodes.map(vertex => vertex.evaluate(env, t));
-    let rgb = this.getRGB(env, t);
+    let color = this.getColor(env, t);
 
-    if (vertices.some(v => v == null) || rgb == null) {
+    if (vertices.some(v => v == null) || color == null) {
       this.hide();
     } else {
       this.show();
@@ -529,7 +529,7 @@ export class TwovilleLine extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'y1', vertices[0].get(1).value);
       this.svgElement.setAttributeNS(null, 'x2', vertices[1].get(0).value);
       this.svgElement.setAttributeNS(null, 'y2', vertices[1].get(1).value);
-      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'fill', color.toColor());
     }
   }
 }
@@ -568,13 +568,19 @@ export class TwovillePath extends TwovilleShape {
       isClosed = this.valueAt(env, 'closed', t).value;
     }
 
-    let rgb = this.getRGB(env, t);
     let vertices = this.nodes.map((vertex, i) => {
       let from = i == 0 ? null : this.nodes[i - 1].valueAt(env, 'position', t);
       return vertex.evolve(env, t, from);
     });
 
-    if (vertices.some(v => v == null) || rgb == null) {
+    let opacity = this.valueAt(env, 'opacity', t).value;
+    let isVisible = opacity > 0.0001;
+    let color = null;
+    if (isVisible) {
+      color = this.getColor(env, t);
+    }
+
+    if (vertices.some(v => v == null) || (color == null && isVisible)) {
       this.hide();
     } else {
       this.show();
@@ -586,9 +592,9 @@ export class TwovillePath extends TwovilleShape {
         commands += ' Z';
       }
 
-      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'd', commands);
-      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
+      this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
     }
   }
 }
@@ -610,10 +616,10 @@ export class TwovillePolygon extends TwovilleShape {
   }
 
   draw(env, t) {
-    let rgb = this.getRGB(env, t);
+    let color = this.getColor(env, t);
     let vertices = this.nodes.map(vertex => vertex.evolve(env, t));
 
-    if (vertices.some(v => v == null) || rgb == null) {
+    if (vertices.some(v => v == null) || color == null) {
       this.hide();
     } else {
       this.show();
@@ -624,7 +630,7 @@ export class TwovillePolygon extends TwovilleShape {
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'points', commands);
-      this.svgElement.setAttributeNS(null, 'fill', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'fill', color.toColor());
     }
   }
 }
@@ -649,10 +655,10 @@ export class TwovillePolyline extends TwovilleShape {
     this.assertProperty('size');
 
     let size = this.valueAt(env, 'size', t);
-    let rgb = this.getRGB(env, t);
+    let color = this.getColor(env, t);
     let vertices = this.nodes.map(vertex => vertex.evolve(env, t));
 
-    if (vertices.some(v => v == null) || rgb == null) {
+    if (vertices.some(v => v == null) || color == null) {
       this.hide();
     } else {
       this.show();
@@ -664,7 +670,7 @@ export class TwovillePolyline extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'stroke-width', size.value);
       this.svgElement.setAttributeNS(null, 'stroke-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'points', commands);
-      this.svgElement.setAttributeNS(null, 'stroke', rgb.toRGB());
+      this.svgElement.setAttributeNS(null, 'stroke', color.toColor());
       this.svgElement.setAttributeNS(null, 'fill', 'none');
     }
   }
@@ -705,12 +711,12 @@ export class TwovilleRectangle extends TwovilleShape {
 
     let opacity = this.valueAt(env, 'opacity', t).value;
     let isVisible = opacity > 0.0001;
-    let rgb = null;
+    let color = null;
     if (isVisible) {
-      rgb = this.getRGB(env, t);
+      color = this.getColor(env, t);
     }
 
-    if (corner == null || size == null || (rgb == null && isVisible)) {
+    if (corner == null || size == null || (color == null && isVisible)) {
       this.hide();
     } else {
       this.show();
@@ -727,7 +733,7 @@ export class TwovilleRectangle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'y', corner.get(1).value);
       this.svgElement.setAttributeNS(null, 'width', size.get(0).value);
       this.svgElement.setAttributeNS(null, 'height', size.get(1).value);
-      this.svgElement.setAttributeNS(null, 'fill', isVisible ? rgb.toRGB() : 'none');
+      this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
     }
   }
@@ -751,12 +757,12 @@ export class TwovilleCircle extends TwovilleShape {
     let radius = this.valueAt(env, 'radius', t);
 
     let isVisible = opacity > 0.0001;
-    let rgb = null;
+    let color = null;
     if (isVisible) {
-      rgb = this.getRGB(env, t);
+      color = this.getColor(env, t);
     }
 
-    if (center == null || radius == null || (rgb == null && isVisible)) {
+    if (center == null || radius == null || (color == null && isVisible)) {
       this.hide();
     } else {
       this.show();
@@ -765,7 +771,7 @@ export class TwovilleCircle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'cx', center.get(0).value);
       this.svgElement.setAttributeNS(null, 'cy', center.get(1).value);
       this.svgElement.setAttributeNS(null, 'r', radius.value);
-      this.svgElement.setAttributeNS(null, 'fill', isVisible ? rgb.toRGB() : 'none');
+      this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
     }
   }

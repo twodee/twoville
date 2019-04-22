@@ -676,7 +676,7 @@ export class ExpressionVector extends ExpressionData {
     return this.elements[i];
   }
 
-  toRGB(env) {
+  toColor(env) {
     let r = Math.floor(this.elements[0].value * 255);
     let g = Math.floor(this.elements[1].value * 255);
     let b = Math.floor(this.elements[2].value * 255);
@@ -778,6 +778,44 @@ export class StatementThrough extends Expression {
     let throughTime = this.throughTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, null, throughTime);
     this.block.evaluate(env, throughTime, null);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class StatementToStasis extends Expression {
+  constructor(startTimeExpression, endTimeExpression, block, where = null) {
+    super(where);
+    this.startTimeExpression = startTimeExpression;
+    this.endTimeExpression = endTimeExpression;
+    this.block = block;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let startTime = this.startTimeExpression.evaluate(env, fromTime, toTime);
+    let endTime = this.endTimeExpression.evaluate(env, fromTime, toTime);
+    console.log("startTime:", startTime);
+    console.log("endTime:", endTime);
+    this.block.evaluate(env, null, startTime);
+    this.block.evaluate(env, startTime, endTime);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class StatementFromStasis extends Expression {
+  constructor(startTimeExpression, endTimeExpression, block, where = null) {
+    super(where);
+    this.startTimeExpression = startTimeExpression;
+    this.endTimeExpression = endTimeExpression;
+    this.block = block;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let startTime = this.startTimeExpression.evaluate(env, fromTime, toTime);
+    let endTime = this.endTimeExpression.evaluate(env, fromTime, toTime);
+    this.block.evaluate(env, startTime, endTime);
+    this.block.evaluate(env, endTime, null);
   }
 }
 
