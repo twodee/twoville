@@ -13,8 +13,10 @@ import {
   ExpressionMask,
   ExpressionPath,
   ExpressionPathArc,
+  ExpressionPathBezier,
   ExpressionPathJump,
   ExpressionPathLine,
+  ExpressionPathQuadratic,
   ExpressionPolygon,
   ExpressionPolyline,
   ExpressionPrint,
@@ -434,8 +436,90 @@ export class TwovillePathLine extends TwovilleShape {
     
     let position = this.valueAt(env, 'position', t);
 
+    let isDelta = false;
+    if (this.has('delta')) {
+      isDelta = this.valueAt(env, 'delta', t).value;
+    }
+    let letter = isDelta ? 'l' : 'L';
+
     if (position) {
-      return `L${position.get(0).value},${position.get(1).value}`;
+      return `${letter}${position.get(0).value},${position.get(1).value}`;
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovillePathBezier extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'bezier');
+    env.nodes.push(this);
+  }
+
+  evolve(env, t) {
+    this.assertProperty('position');
+    this.assertProperty('control2');
+    
+    let position = this.valueAt(env, 'position', t);
+    let control1;
+    if (this.has('control1')) {
+      control1 = this.valueAt(env, 'control1', t);
+    }
+    let control2 = this.valueAt(env, 'control2', t);
+    console.log("control1:", control1);
+    console.log("control2:", control2);
+
+    let isDelta = false;
+    if (this.has('delta')) {
+      isDelta = this.valueAt(env, 'delta', t).value;
+    }
+
+    if (position) {
+      if (control1) {
+        let letter = isDelta ? 'c' : 'C';
+        return `${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+      } else {
+        let letter = isDelta ? 's' : 'S';
+        return `${letter} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+      }
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovillePathQuadratic extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'quadratic');
+    env.nodes.push(this);
+  }
+
+  evolve(env, t) {
+    this.assertProperty('position');
+    
+    let position = this.valueAt(env, 'position', t);
+    let control;
+    if (this.has('control')) {
+      control = this.valueAt(env, 'control', t);
+    }
+
+    let isDelta = false;
+    if (this.has('delta')) {
+      isDelta = this.valueAt(env, 'delta', t).value;
+    }
+
+    if (position) {
+      if (control) {
+        let letter = isDelta ? 'q' : 'Q';
+        return `${letter} ${control.get(0).value},${control.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+      } else {
+        let letter = isDelta ? 't' : 'T';
+        return `${letter}${position.get(0).value},${position.get(1).value}`;
+      }
     } else {
       return null;
     }
@@ -549,6 +633,12 @@ export class TwovillePath extends TwovilleShape {
       body: new ExpressionPathArc()
     };
 
+    this.bindings['bezier'] = {
+      name: 'bezier',
+      formals: [],
+      body: new ExpressionPathBezier()
+    };
+
     this.bindings['jump'] = {
       name: 'jump',
       formals: [],
@@ -559,6 +649,12 @@ export class TwovillePath extends TwovilleShape {
       name: 'line',
       formals: [],
       body: new ExpressionPathLine()
+    };
+
+    this.bindings['quadratic'] = {
+      name: 'quadratic',
+      formals: [],
+      body: new ExpressionPathQuadratic()
     };
   }
 
@@ -790,6 +886,20 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     this.bindings.time.bind('stop', null, null, new ExpressionInteger(100));
     this.bindings.time.bind('delay', null, null, new ExpressionInteger(16));
     this.bindings.time.bind('resolution', null, null, new ExpressionInteger(1));
+
+    this.bindings.gif = new TwovilleEnvironment(this);
+    this.bindings.gif.bind('size', null, null, new ExpressionVector([
+      new ExpressionInteger(100),
+      new ExpressionInteger(100)
+    ]));
+    this.bindings.gif.bind('name', null, null, new ExpressionString('twoville.gif'));
+    this.bindings.gif.bind('transparency', null, null, new ExpressionVector([
+      new ExpressionReal(0),
+      new ExpressionReal(0),
+      new ExpressionReal(0),
+    ]));
+    this.bindings.gif.bind('repeat', null, null, new ExpressionInteger(0));
+    this.bindings.gif.bind('delay', null, null, new ExpressionInteger(10));
 
     this.bindings.viewport = new TwovilleEnvironment(this);
     this.bindings.viewport.bind('size', null, null, new ExpressionVector([

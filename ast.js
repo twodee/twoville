@@ -14,6 +14,8 @@ import {
   TwovillePathArc,
   TwovillePathJump,
   TwovillePathLine,
+  TwovillePathBezier,
+  TwovillePathQuadratic,
   TwovillePolygon,
   TwovillePolyline,
   TwovilleRectangle,
@@ -683,6 +685,22 @@ export class ExpressionVector extends ExpressionData {
     return 'rgb(' + r + ', ' + g + ', ' + b + ')';
   }
 
+  toHexColor(env) {
+    let r = Math.floor(this.elements[0].value * 255).toString(16);
+    let g = Math.floor(this.elements[1].value * 255).toString(16);
+    let b = Math.floor(this.elements[2].value * 255).toString(16);
+    if (r.length == 1) {
+      r = '0' + r;
+    }
+    if (g.length == 1) {
+      g = '0' + g;
+    }
+    if (b.length == 1) {
+      b = '0' + b;
+    }
+    return `#${r}${g}${b}`;
+  }
+
   toString(env) {
     return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
   }
@@ -923,6 +941,30 @@ export class ExpressionPathLine extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovillePathLine(env.parent, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPathBezier extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovillePathBezier(env.parent, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPathQuadratic extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovillePathQuadratic(env.parent, callExpression);
   }
 }
 

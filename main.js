@@ -168,21 +168,34 @@ recordButton.addEventListener('click', () => {
   startSpinning();
   let box = svg.getBoundingClientRect();
 
+  let pageOutline = document.getElementById('x-outline');
+  pageOutline.setAttributeNS(null, 'visibility', 'hidden');
+
+  let size = env.get('gif').get('size');
+  let transparentColor = env.get('gif').get('transparency');
+  let name = env.get('gif').get('name');
+  let repeat = env.get('gif').get('repeat');
+  let delay = env.get('gif').get('delay');
+
   // I don't know why I need to set the viewport explicitly. Setting the size
   // of the image isn't sufficient.
-  svg.setAttribute('width', box.width);
-  svg.setAttribute('height', box.height);
+  svg.setAttribute('width', size.get(0).value);
+  svg.setAttribute('height', size.get(1).value);
 
+  console.log("repeat:", repeat);
+  console.log("transparentColor.toHexColor():", transparentColor.toHexColor());
   let gif = new GIF({
     workers: 3,
     quality: 1,
-    // transparent: '#000000',
-    // background: '#FFFFFF'
-    repeat: 0
+    background: '#FFFFFF',
+    transparent: transparentColor.toHexColor(),
+    repeat: repeat.value,
+    width: size.get(0).value,
+    height: size.get(1).value,
   });
 
   gif.on('finished', (blob) => {
-    downloadBlob('download.gif', blob);
+    downloadBlob(name.value, blob);
     stopSpinning();
   });
 
@@ -201,7 +214,7 @@ recordButton.addEventListener('click', () => {
         let img = new Image();
         img.onload = () => {
           gif.addFrame(img, {
-            delay: 10,
+            delay: delay.value,
             copy: true
           });
           URL.revokeObjectURL(url);
@@ -351,21 +364,24 @@ function interpret() {
       ]);
     }
 
+    let svgBounds = {
+      x: corner.get(0).value,
+      y: corner.get(1).value,
+      width: size.get(0).value,
+      height: size.get(1).value,
+    };
+
     env.svg.setAttributeNS(null, 'width', size.get(0).value);
     env.svg.setAttributeNS(null, 'height', size.get(1).value);
-    env.svg.setAttributeNS(null, 'viewBox',
-      corner.get(0).value + ' ' +
-      corner.get(1).value + ' ' + 
-      size.get(0).value + ' ' +
-      size.get(1).value
-    );
+    env.svg.setAttributeNS(null, 'viewBox', `${svgBounds.x} ${svgBounds.y} ${svgBounds.width} ${svgBounds.height}`)
 
     let pageOutline = document.createElementNS(svgNamespace, 'rect');
     pageOutline.setAttributeNS(null, 'id', 'x-outline');
-    pageOutline.setAttributeNS(null, 'x', corner.get(0).value);
-    pageOutline.setAttributeNS(null, 'y', corner.get(1).value);
-    pageOutline.setAttributeNS(null, 'width', size.get(0).value);
-    pageOutline.setAttributeNS(null, 'height', size.get(1).value);
+    pageOutline.setAttributeNS(null, 'visibility', 'visible');
+    pageOutline.setAttributeNS(null, 'x', svgBounds.x);
+    pageOutline.setAttributeNS(null, 'y', svgBounds.y);
+    pageOutline.setAttributeNS(null, 'width', svgBounds.width);
+    pageOutline.setAttributeNS(null, 'height', svgBounds.height);
     pageOutline.setAttributeNS(null, 'fill', 'none');
     pageOutline.setAttributeNS(null, 'stroke', 'rgb(180, 180, 180)');
     pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
