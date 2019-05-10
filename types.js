@@ -190,11 +190,6 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       this.svgElement.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
     }
 
-    if (this.owns('mask')) {
-      let mask = this.get('mask').getDefault();
-      this.svgElement.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
-    }
-
     if (this.owns('parent')) {
       this.parentElement = this.get('parent').getDefault().svgElement;
     } else if (this.owns('template') && this.get('template').getDefault().value) {
@@ -202,7 +197,18 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     } else {
       this.parentElement = this.svg;
     }
-    this.parentElement.appendChild(this.svgElement);
+
+    if (this.owns('mask')) {
+      let mask = this.get('mask').getDefault();
+
+      let maskParent = document.createElementNS(svgNamespace, 'g');
+      maskParent.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
+
+      maskParent.appendChild(this.svgElement);
+      this.parentElement.appendChild(maskParent);
+    } else {
+      this.parentElement.appendChild(this.svgElement);
+    }
   }
 
   isTimeSensitive(env) {
@@ -260,11 +266,12 @@ export class TwovilleGroup extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'group');
     this.children = [];
-    this.svgElement = document.createElementNS(svgNamespace, 'group');
+    this.svgElement = document.createElementNS(svgNamespace, 'g');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
   }
 
   draw(env, t) {
+    this.setTransform(env, t);
     this.children.forEach(child => child.draw(env, t));
   }
 }
