@@ -390,6 +390,7 @@ function interpret() {
     env.svg.appendChild(pageOutline);
 
     env.shapes.forEach(shape => {
+      console.log("shape:", shape);
       shape.domify(env.svg)
     });
 

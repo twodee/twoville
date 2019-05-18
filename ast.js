@@ -9,6 +9,7 @@ import {
   TwovilleGroup,
   TwovilleLabel,
   TwovilleLine,
+  TwovilleMarker,
   TwovilleMask,
   TwovillePath,
   TwovillePathArc,
@@ -165,6 +166,30 @@ export class ExpressionInteger extends ExpressionData {
     }
   }
 
+  isLess(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionBoolean(this.value < other.value);
+    } else {
+      throw new MessagedException('I can only compare integers to other numbers.');
+    }
+  }
+
+  isMore(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionBoolean(this.value > other.value);
+    } else {
+      throw new MessagedException('I can only compare integers to other numbers.');
+    }
+  }
+
+  isSame(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionBoolean(this.value == other.value);
+    } else {
+      throw new MessagedException('I can only compare integers to other numbers.');
+    }
+  }
+
   interpolate(other, proportion) {
     return new ExpressionReal(this.value + proportion * (other.value - this.value));
   }
@@ -259,16 +284,160 @@ export class ExpressionReal extends ExpressionData {
     return new ExpressionReal(-this.value);
   }
 
+  isLess(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionBoolean(this.value < other.value);
+    } else {
+      throw new MessagedException('I can only compare integers to other numbers.');
+    }
+  }
+
+  isMore(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionBoolean(this.value > other.value);
+    } else {
+      throw new MessagedException('I can only compare reals to other numbers.');
+    }
+  }
+
+  isSame(other) {
+    if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      return new ExpressionBoolean(this.value == other.value);
+    } else {
+      throw new MessagedException('I can only compare reals to other numbers.');
+    }
+  }
+
   power(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
       return new ExpressionReal(Math.pow(this.value, other.value));
     } else {
-      throw new MessagedException('I can only compute powers for integers and reals.');
+      throw new MessagedException('I can only compute reals for integers and reals.');
     }
   }
 
   interpolate(other, proportion) {
     return new ExpressionReal(this.value + proportion * (other.value - this.value));
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionSame extends Expression {
+  constructor(a, b, where = null) {
+    super(where);
+    this.a = a;
+    this.b = b;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
+    return evalA.isSame(evalB);
+  }
+
+  isTimeSensitive(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionNotSame extends Expression {
+  constructor(a, b, where = null) {
+    super(where);
+    this.a = a;
+    this.b = b;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
+    return !evalA.isSame(evalB);
+  }
+
+  isTimeSensitive(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionLess extends Expression {
+  constructor(a, b, where = null) {
+    super(where);
+    this.a = a;
+    this.b = b;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
+    return evalA.isLess(evalB);
+  }
+
+  isTimeSensitive(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionLessEqual extends Expression {
+  constructor(a, b, where = null) {
+    super(where);
+    this.a = a;
+    this.b = b;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
+    return evalA.isLess(evalB) || evalA.isSame(evalB);
+  }
+
+  isTimeSensitive(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionMore extends Expression {
+  constructor(a, b, where = null) {
+    super(where);
+    this.a = a;
+    this.b = b;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
+    return evalA.isMore(evalB);
+  }
+
+  isTimeSensitive(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionMoreEqual extends Expression {
+  constructor(a, b, where = null) {
+    super(where);
+    this.a = a;
+    this.b = b;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evalA = this.a.evaluate(env, fromTime, toTime);
+    let evalB = this.b.evaluate(env, fromTime, toTime);
+    return evalA.isMore(evalB) || evalA.isSame(evalB);
+  }
+
+  isTimeSensitive(env) {
+    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 }
 
@@ -575,7 +744,7 @@ export class ExpressionIf extends Expression {
   }
 
   isTimeSensitive(env) {
-    return this.conditions.any(e => e.isTimeSensitive(env)) || this.thenBlocks.any(e => e.isTimeSensitive(env)) || (this.elseBlock != null && this.elseBlock.isTimeSensitive(env));
+    return this.conditions.some(e => e.isTimeSensitive(env)) || this.thenBlocks.some(e => e.isTimeSensitive(env)) || (this.elseBlock != null && this.elseBlock.isTimeSensitive(env));
   }
 }
 
@@ -705,6 +874,10 @@ export class ExpressionVector extends ExpressionData {
     return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
   }
 
+  toSpacedString(env) {
+    return this.elements.map(element => element.toString()).join(' ');
+  }
+
   interpolate(other, proportion) {
     return new ExpressionVector(this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
   }
@@ -812,8 +985,6 @@ export class StatementToStasis extends Expression {
   evaluate(env, fromTime, toTime) {
     let startTime = this.startTimeExpression.evaluate(env, fromTime, toTime);
     let endTime = this.endTimeExpression.evaluate(env, fromTime, toTime);
-    console.log("startTime:", startTime);
-    console.log("endTime:", endTime);
     this.block.evaluate(env, null, startTime);
     this.block.evaluate(env, startTime, endTime);
   }
@@ -1135,6 +1306,20 @@ export class ExpressionGroup extends Expression {
     let group = new TwovilleGroup(env, callExpression);
     env.shapes.push(group);
     return group;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionMarker extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let marker = new TwovilleMarker(env, callExpression);
+    env.shapes.push(marker);
+    return marker;
   }
 }
 

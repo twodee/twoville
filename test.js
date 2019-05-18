@@ -149,6 +149,20 @@ print(a)
 });
 
 // --------------------------------------------------------------------------- 
+
+test('if as expression', () => {
+  let src = `
+a = if 0 == 1
+  "then"
+else
+  "else"
+print(a)
+`.substring(1);
+  let lines = ['else'];
+  evaluateOutput(src, lines);
+});
+
+// --------------------------------------------------------------------------- 
 // Operators
 // ---------------------------------------------------------------------------
 
@@ -160,8 +174,16 @@ test('operator ^', () => {
 
 // --------------------------------------------------------------------------- 
 
-test('operator -', () => {
+test('unary operator -', () => {
   evaluateExpression('-(5)', new ExpressionInteger(-5));
+});
+
+// --------------------------------------------------------------------------- 
+
+test('binary operator -', () => {
+  evaluateExpression('5 - 3', new ExpressionInteger(2));
+  evaluateExpression('3 - 5', new ExpressionInteger(-2));
+  evaluateExpression('(5 - 3)', new ExpressionInteger(2));
 });
 
 // --------------------------------------------------------------------------- 

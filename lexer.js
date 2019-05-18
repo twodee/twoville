@@ -199,9 +199,37 @@ export function lex(source) {
     consume();
     if (has('=')) {
       consume();
-      emit(Tokens.Equality);
+      emit(Tokens.Same);
     } else {
       emit(Tokens.Assign);
+    }
+  }
+
+  function bang() {
+    consume();
+    if (has('=')) {
+      consume();
+      emit(Tokens.Same);
+    }
+  }
+
+  function less() {
+    consume();
+    if (has('=')) {
+      consume();
+      emit(Tokens.LessEqual);
+    } else {
+      emit(Tokens.Less);
+    }
+  }
+
+  function more() {
+    consume();
+    if (has('=')) {
+      consume();
+      emit(Tokens.MoreEqual);
+    } else {
+      emit(Tokens.More);
     }
   }
 
@@ -221,6 +249,12 @@ export function lex(source) {
       dash();
     } else if (has('=')) {
       equals();
+    } else if (has('<')) {
+      less();
+    } else if (has('>')) {
+      more();
+    } else if (has('!')) {
+      bang();
     } else if (has(',')) {
       consume();
       emit(Tokens.Comma);

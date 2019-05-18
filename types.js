@@ -10,6 +10,7 @@ import {
   ExpressionInteger,
   ExpressionLabel,
   ExpressionLine,
+  ExpressionMarker,
   ExpressionMask,
   ExpressionPath,
   ExpressionPathArc,
@@ -241,6 +242,10 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
         this.svgElement.setAttributeNS(null, 'stroke', strokeColor.toColor());
         this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
         this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
+        if (stroke.owns('dashes')) {
+          let dashes = stroke.valueAt(env, 'dashes', t).toSpacedString();
+          this.svgElement.setAttributeNS(null, 'stroke-dasharray', dashes);
+        }
       }
     }
   }
@@ -278,13 +283,70 @@ export class TwovilleGroup extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
+export class TwovilleMarker extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'marker');
+    this.children = [];
+    this.svgElement = document.createElementNS(svgNamespace, 'marker');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.svgElement.setAttributeNS(null, 'orient', 'auto');
+    this.svgElement.setAttributeNS(null, 'markerUnits', 'strokeWidth');
+    this.bind('template', null, null, new ExpressionBoolean(true));
+  }
+
+  draw(env, t) {
+    this.assertProperty('size');
+    this.assertProperty('anchor');
+
+    if (this.has('corner') && this.has('center')) {
+      throw new LocatedException(this.callExpression.where, 'I found a marker whose corner and center properties were both set. Define only one of these.');
+    }
+
+    if (!this.has('corner') && !this.has('center')) {
+      throw new LocatedException(this.callExpression.where, 'I found a marker whose location I couldn\'t figure out. Please define its corner or center.');
+    }
+    
+    let anchor = this.valueAt(env, 'anchor', t);
+    let size = this.valueAt(env, 'size', t);
+
+    let corner;
+    if (this.has('corner')) {
+      corner = this.valueAt(env, 'corner', t);
+    } else {
+      let center = this.valueAt(env, 'center', t);
+      corner = new ExpressionVector([
+        new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
+        new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
+      ]);
+    }
+
+    let bounds = {
+      x: corner.get(0).value,
+      y: corner.get(1).value,
+      width: size.get(0).value,
+      height: size.get(1).value,
+    };
+
+    this.svgElement.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`)
+
+    this.svgElement.setAttributeNS(null, 'markerWidth', size.get(0).value);
+    this.svgElement.setAttributeNS(null, 'markerHeight', size.get(1).value);
+    this.svgElement.setAttributeNS(null, 'refX', anchor.get(0).value);
+    this.svgElement.setAttributeNS(null, 'refY', anchor.get(1).value);
+
+    this.children.forEach(child => child.draw(env, t));
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TwovilleMask extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'mask');
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.bind('template', null, null, new ExpressionBoolean(null, true));
+    this.bind('template', null, null, new ExpressionBoolean(true));
   }
 
   draw(env, t) {
@@ -577,7 +639,13 @@ export class TwovillePathArc extends TwovilleShape {
         }
       }
 
-      return `A${radius},${radius} 0 ${large} ${sweep} ${position.get(0).value},${position.get(1).value}`;
+      let isDelta = false;
+      if (this.has('delta')) {
+        isDelta = this.valueAt(env, 'delta', t).value;
+      }
+      let letter = isDelta ? 'a' : 'A';
+
+      return `${letter}${radius},${radius} 0 ${large} ${sweep} ${position.get(0).value},${position.get(1).value}`;
     } else {
       return null;
     }
@@ -586,7 +654,34 @@ export class TwovillePathArc extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovilleLine extends TwovilleShape {
+export class TwovilleMarkerable extends TwovilleShape {
+  constructor(env, callExpression, name) {
+    super(env, callExpression, name);
+  }
+
+  draw(env, t) {
+    // Difference between owns and has? TODO
+
+    if (this.owns('tip')) {
+      let tip = this.get('tip').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + tip.id + ')');
+    }
+
+    if (this.owns('nock')) {
+      let nock = this.get('nock').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + nock.id + ')');
+    }
+
+    if (this.owns('join')) {
+      let join = this.get('join').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-mid', 'url(#element-' + join.id + ')');
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovilleLine extends TwovilleMarkerable {
   constructor(env, callExpression) {
     super(env, callExpression, 'line');
     this.svgElement = document.createElementNS(svgNamespace, 'line');
@@ -601,6 +696,8 @@ export class TwovilleLine extends TwovilleShape {
   }
 
   draw(env, t) {
+    super.draw(env, t);
+
     if (this.nodes.length != 2) {
       throw new LocatedException(this.callExpression.where, `I tried to draw a line that had ${this.nodes.length} ${this.nodes.size == 1 ? 'vertex' : 'vertices'}. Lines must only have two vertices.`);
     }
@@ -627,7 +724,7 @@ export class TwovilleLine extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovillePath extends TwovilleShape {
+export class TwovillePath extends TwovilleMarkerable {
   constructor(env, callExpression) {
     super(env, callExpression, 'path');
     this.svgElement = document.createElementNS(svgNamespace, 'path');
@@ -666,6 +763,8 @@ export class TwovillePath extends TwovilleShape {
   }
 
   draw(env, t) {
+    super.draw(env, t);
+
     let isClosed = true;
     if (this.has('closed')) {
       isClosed = this.valueAt(env, 'closed', t).value;
@@ -704,7 +803,7 @@ export class TwovillePath extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovillePolygon extends TwovilleShape {
+export class TwovillePolygon extends TwovilleMarkerable {
   constructor(env, callExpression) {
     super(env, callExpression, 'polygon');
     this.svgElement = document.createElementNS(svgNamespace, 'polygon');
@@ -719,6 +818,8 @@ export class TwovillePolygon extends TwovilleShape {
   }
 
   draw(env, t) {
+    super.draw(env, t);
+
     let color = this.getColor(env, t);
     let vertices = this.nodes.map(vertex => vertex.evolve(env, t));
 
@@ -740,7 +841,7 @@ export class TwovillePolygon extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovillePolyline extends TwovilleShape {
+export class TwovillePolyline extends TwovilleMarkerable {
   constructor(env, callExpression) {
     super(env, callExpression, 'polyline');
     this.svgElement = document.createElementNS(svgNamespace, 'polyline');
@@ -755,6 +856,8 @@ export class TwovillePolyline extends TwovilleShape {
   }
 
   draw(env, t) {
+    super.draw(env, t);
+
     this.assertProperty('size');
 
     let size = this.valueAt(env, 'size', t);
@@ -954,6 +1057,12 @@ export class GlobalEnvironment extends TwovilleEnvironment {
       name: 'group',
       formals: [],
       body: new ExpressionGroup()
+    };
+
+    this.bindings['marker'] = {
+      name: 'marker',
+      formals: [],
+      body: new ExpressionMarker()
     };
 
     this.bindings['mask'] = {
