@@ -17,16 +17,22 @@ import {
   ExpressionFor,
   ExpressionFunctionCall,
   ExpressionFunctionDefinition,
+  ExpressionMore,
+  ExpressionMoreEqual,
   ExpressionIdentifier,
   ExpressionIf,
   ExpressionInteger,
+  ExpressionLess,
+  ExpressionLessEqual,
   ExpressionMultiply,
   ExpressionNegative,
+  ExpressionNotSame,
   ExpressionProperty,
   ExpressionPower,
   ExpressionReal,
   ExpressionRemainder,
   ExpressionRepeat,
+  ExpressionSame,
   ExpressionString,
   ExpressionSubtract,
   ExpressionVector,
@@ -245,7 +251,7 @@ export function parse(tokens) {
         } else if (has(Tokens.EOF) || has(Tokens.Indentation)) { // Check for indentation because some expressions end in blocks, which have eaten their linebreak already
           return e;
         } else if (!has(Tokens.EOF)) {
-          throw new LocatedException(tokens[i].where, 'I expected a line break or the end the program, but that\'s not what I found.');
+          throw new LocatedException(tokens[i].where, `I expected a line break or the end the program, but I found ${tokens[i].source}.`);
         }
       }
     }
@@ -256,13 +262,41 @@ export function parse(tokens) {
   }
 
   function expressionAssignment() {
-    let lhs = expressionAdditive(); 
+    let lhs = expressionEquality(); 
     if (has(Tokens.Assign)) {
       consume();
       let rhs = expressionAssignment();
       lhs = new ExpressionAssignment(lhs, rhs, SourceLocation.span(lhs.where, rhs.where));
     }
     return lhs;
+  }
+
+  function expressionEquality() {
+    let a = expressionRelational();
+    while (has(Tokens.Same) || has(Tokens.NotSame)) {
+      let operator = consume();
+      let b = expressionRelational();
+      if (operator.type == Tokens.Same) {
+        a = new ExpressionSame(a, b, SourceLocation.span(a.where, b.where));
+      } else {
+        a = new ExpressionNotSame(a, b, SourceLocation.span(a.where, b.where));
+      }
+    }
+    return a;
+  }
+
+  function expressionRelational() {
+    let a = expressionAdditive();
+    while (has(Tokens.Less) || has(Tokens.More)) {
+      let operator = consume();
+      let b = expressionAdditive();
+      if (operator.type == Tokens.Less) {
+        a = new ExpressionLess(a, b, SourceLocation.span(a.where, b.where));
+      } else {
+        a = new ExpressionMore(a, b, SourceLocation.span(a.where, b.where));
+      }
+    }
+    return a;
   }
 
   function expressionAdditive() {
@@ -348,7 +382,7 @@ export function parse(tokens) {
       return new ExpressionInteger(Number(token.source), token.where);
     } else if (has(Tokens.LeftParenthesis)) {
       let leftToken = consume();
-      let a = atom();
+      let a = expression();
       if (has(Tokens.RightParenthesis)) {
         consume();
         return a;
