@@ -298,14 +298,17 @@ function stopAnimation() {
 }
 
 playOnceButton.addEventListener('click', (e) => {
-  stopAnimation();
-  animateFrame(parseInt(scrubber.min), false);
+  play(false);
 });
 
 playLoopButton.addEventListener('click', e => {
-  stopAnimation();
-  animateFrame(parseInt(scrubber.min), true);
+  play(true);
 });
+
+function play(isLoop) {
+  stopAnimation();
+  animateFrame(0, isLoop);
+}
 
 export let ast;
 
@@ -431,7 +434,10 @@ function syncTitle() {
 
 if (source0) {
   editor.setValue(source0, 1);
-  if (isAutorun0) {
+  if (runZeroMode) {
     interpret();
+    if (runZeroMode == 'loop') {
+      play(true);
+    }
   }
 }
