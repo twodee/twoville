@@ -229,6 +229,23 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
   hide() {
     this.svgElement.setAttributeNS(null, 'visibility', 'hidden');
   }
+
+  setStrokelessStroke(env, t) {
+    if (this.owns('size') &&
+        this.owns('color') &&
+        this.owns('opacity')) {
+      let strokeSize = this.valueAt(env, 'size', t);
+      let strokeColor = this.valueAt(env, 'color', t);
+      let strokeOpacity = this.valueAt(env, 'opacity', t);
+      this.svgElement.setAttributeNS(null, 'stroke', strokeColor.toColor());
+      this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+      this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
+      if (this.owns('dashes')) {
+        let dashes = this.valueAt(env, 'dashes', t).toSpacedString();
+        this.svgElement.setAttributeNS(null, 'stroke-dasharray', dashes);
+      }
+    }
+  }
  
   setStroke(env, t) {
     if (this.has('stroke')) {
@@ -662,19 +679,21 @@ export class TwovilleMarkerable extends TwovilleShape {
   draw(env, t) {
     // Difference between owns and has? TODO
 
-    if (this.owns('tip')) {
-      let tip = this.get('tip').getDefault();
-      this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + tip.id + ')');
+    if (this.owns('node')) {
+      let node = this.get('node').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-mid', 'url(#element-' + node.id + ')');
+      this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + node.id + ')');
+      this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + node.id + ')');
     }
 
-    if (this.owns('nock')) {
-      let nock = this.get('nock').getDefault();
-      this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + nock.id + ')');
+    if (this.owns('head')) {
+      let head = this.get('head').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + head.id + ')');
     }
 
-    if (this.owns('join')) {
-      let join = this.get('join').getDefault();
-      this.svgElement.setAttributeNS(null, 'marker-mid', 'url(#element-' + join.id + ')');
+    if (this.owns('tail')) {
+      let tail = this.get('tail').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
     }
   }
 }
@@ -709,7 +728,7 @@ export class TwovilleLine extends TwovilleMarkerable {
       this.hide();
     } else {
       this.show();
-      this.setStroke(env, t);
+      this.setStrokelessStroke(env, t);
       this.setTransform(env, t);
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
@@ -868,15 +887,12 @@ export class TwovillePolyline extends TwovilleMarkerable {
       this.hide();
     } else {
       this.show();
-      this.setStroke(env, t);
+      this.setStrokelessStroke(env, t);
       this.setTransform(env, t);
 
       let commands = vertices.join(' ');
 
-      this.svgElement.setAttributeNS(null, 'stroke-width', size.value);
-      this.svgElement.setAttributeNS(null, 'stroke-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'points', commands);
-      this.svgElement.setAttributeNS(null, 'stroke', color.toColor());
       this.svgElement.setAttributeNS(null, 'fill', 'none');
     }
   }
