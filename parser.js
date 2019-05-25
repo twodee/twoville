@@ -466,23 +466,36 @@ export function parse(tokens) {
       let conditions = [];
       let thenBlocks = [];
       let elseBlock = null;
+      let isOneLiner;
 
       if (isFirstOfExpression()) {
         let condition = expression();
 
-        if (!has(Tokens.Linebreak)) {
-          throw new LocatedException(condition.where, 'I expected a linebreak after this if\'s condition.');
+        let thenBlock;
+        if (has(Tokens.Linebreak)) {
+          consume(); // eat linebreak
+          thenBlock = block();
+          isOneLiner = false;
+        } else if (has(Tokens.Then)) {
+          consume(); // eat then
+          thenBlock = expression();
+          isOneLiner = true;
+        } else {
+          throw new LocatedException(sourceStart, 'I expected either a linebreak or then after the condition.');
         }
-        consume(); // eat linebreak
-        let thenBlock = block();
 
         conditions.push(condition);
         thenBlocks.push(thenBlock);
         sourceEnd = thenBlock.where;
+      } else {
+        throw new LocatedException(sourceStart, 'I expected a condition for this if.');
       }
 
-      while (has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.ElseIf, 1)) {
-        consume(); // eat indent
+      while ((isOneLiner && has(Tokens.ElseIf)) ||
+             (!isOneLiner && has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.ElseIf, 1))) {
+        if (!isOneLiner) {
+          consume(); // eat indent
+        }
         let elseIfToken = tokens[i];
         consume(); // eat else if
 
@@ -492,11 +505,18 @@ export function parse(tokens) {
 
         let condition = expression();
 
-        if (!has(Tokens.Linebreak)) {
-          throw new LocatedException(condition.where, 'I expected a linebreak after this if\'s condition.');
+        let thenBlock;
+        if (has(Tokens.Linebreak)) {
+          consume(); // eat linebreak
+          thenBlock = block();
+          isOneLiner = false;
+        } else if (has(Tokens.Then)) {
+          consume(); // eat then
+          thenBlock = expression();
+          isOneLiner = true;
+        } else {
+          throw new LocatedException(sourceStart, 'I expected either a linebreak or then after the condition.');
         }
-        consume(); // eat linebreak
-        let thenBlock = block();
 
         conditions.push(condition);
         thenBlocks.push(thenBlock);
@@ -507,14 +527,22 @@ export function parse(tokens) {
         throw new LocatedException(sourceStart, 'I expected this if statement to have at least one condition.');
       }
       
-      if (has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.Else, 1)) {
-        consume(); // eat indentation
-        let elseToken = consume(); // eat else
-        if (!has(Tokens.Linebreak)) {
-          throw new LocatedException(elseToken.where, 'I expected a linebreak after this if\'s else.');
+      if ((isOneLiner && has(Tokens.Else)) ||
+          (!isOneLiner && has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.Else, 1))) {
+        if (!isOneLiner) {
+          consume(); // eat indentation
         }
-        consume(); // TODO linebreak
-        elseBlock = block();
+        let elseToken = consume(); // eat else
+
+        if (has(Tokens.Linebreak)) {
+          consume(); // eat linebreak
+          elseBlock = block();
+          isOneLiner = false;
+        } else {
+          elseBlock = expression();
+          isOneLiner = true;
+        }
+
         sourceEnd = elseBlock.where;
       }
 

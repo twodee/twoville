@@ -39,6 +39,7 @@ export let Tokens = Object.freeze({
   String: 'String',
   Symbol: 'Symbol',
   T: 'T',
+  Then: 'Then',
   Through: 'Through',
   To: 'To',
   With: 'With',

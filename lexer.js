@@ -129,6 +129,8 @@ export function lex(source) {
       emit(Tokens.To);
     } else if (tokenSoFar == 'in') {
       emit(Tokens.In);
+    } else if (tokenSoFar == 'then') {
+      emit(Tokens.Then);
     } else if (tokenSoFar == 'through') {
       emit(Tokens.Through);
     } else if (tokenSoFar == 'by') {
