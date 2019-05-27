@@ -14,7 +14,6 @@ import {
   GlobalEnvironment,
   LocatedException,
   MessagedException,
-  TwovilleEnvironment,
   TwovilleShape,
   initializeShapes,
   svgNamespace,
@@ -335,11 +334,13 @@ function interpret() {
     initializeShapes();
 
     let tokens = lex(editor.getValue());
-    ast = parse(tokens);
 
+    console.log("tokens:", tokens);
     // tokens.forEach(token => {
-      // messager.log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
+      // Messager.log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
     // });
+
+    ast = parse(tokens);
 
     TwovilleShape.serial = 0;
     env = new GlobalEnvironment(svg);

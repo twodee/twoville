@@ -2,10 +2,12 @@ import { Tokens } from './token.js';
 import { Messager } from './messager.js';
 
 import {
+  TwovilleEnvironment,
+  TwovilleTimelinedEnvironment,
+  MessagedException,
   LocatedException,
   TwovilleCircle,
   TwovilleCutout,
-  TwovilleEnvironment,
   TwovilleGroup,
   TwovilleLabel,
   TwovilleLine,
@@ -197,10 +199,51 @@ export class ExpressionInteger extends ExpressionData {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionCharacter extends ExpressionData {
+  constructor(x, where = null) {
+    super(where);
+    this.x = x;
+  }
+
+  clone() {
+    return new ExpressionCharacter(this.x, this.where == null ? null : this.where.clone());
+  }
+
+  evaluate(env, fromTime, toTime) {
+    return this;
+  }
+
+  toString() {
+    return this.x;
+  }
+
+  get value() {
+    return this.x;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionString extends ExpressionData {
   constructor(x, where = null) {
     super(where);
     this.x = x;
+
+    this.bindings = [];
+
+    this.bindings['size'] = {
+      name: 'size',
+      formals: [],
+      body: new ExpressionStringSize(this)
+    };
+  }
+
+  has(id) {
+    return this.bindings.hasOwnProperty(id);
+  }
+
+  getFunction(id) {
+    return this.bindings[id];
   }
 
   clone() {
@@ -219,8 +262,30 @@ export class ExpressionString extends ExpressionData {
     return this.x;
   }
 
+  set(i, value) {
+    // assert value is character
+    this.x = this.x.substr(0, i) + value + this.x.substr(i + 1);
+  }
+
+  get(i) {
+    return new ExpressionCharacter(this.x.charAt(i));
+  }
+
   interpolate(other, proportion) {
     return new ExpressionString(proportion <= 0.5 ? this.value : other.value);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionStringSize extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new ExpressionInteger(this.instance.x.length);
   }
 }
 
@@ -604,17 +669,17 @@ export class ExpressionFunctionDefinition extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionIdentifier extends Expression {
-  constructor(token, where = null) {
+  constructor(nameToken, where = null) {
     super(where);
-    this.token = token;
+    this.nameToken = nameToken;
   }
 
   evaluate(env, fromTime, toTime) {
-    let value = env.get(this.token.source);
+    let value = env.get(this.nameToken.source);
     if (value != null) {
       return value;
     } else {
-      throw new LocatedException(this.token.where, `I'm sorry, but I've never heard of this "${this.token.source}" before.`);
+      throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of this "${this.nameToken.source}" before.`);
     }
   }
 
@@ -625,38 +690,77 @@ export class ExpressionIdentifier extends Expression {
     } else {
       value = rhs.evaluate(env, fromTime, toTime);
     }
-    env.bind(this.token.source, fromTime, toTime, value);
+    env.bind(this.nameToken.source, fromTime, toTime, value);
     return value;
   }
 
   isTimeSensitive(env) {
-    return this.token.type == Tokens.T;
+    return this.nameToken.type == Tokens.T;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionMemberIdentifier extends ExpressionIdentifier {
+  constructor(base, nameToken, where = null) {
+    super(nameToken, where);
+    this.base = base;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime);
+    let value = baseValue.get(this.nameToken.source);
+    if (value != null) {
+      return value;
+    } else {
+      throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of this "${this.nameToken.source}" before.`);
+    }
+  }
+
+  assign(env, fromTime, toTime, rhs) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+
+    let rhsValue;
+    if (rhs.isTimeSensitive(env)) {
+      rhsValue = rhs;
+    } else {
+      rhsValue = rhs.evaluate(env, fromTime, toTime);
+    }
+
+    baseValue.bind(this.nameToken.source, fromTime, toTime, rhsValue);
+
+    return rhsValue;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionCall extends Expression {
-  constructor(name, actuals, where = null) {
+  constructor(nameToken, actuals, where = null) {
     super(where);
-    this.name = name;
+    this.nameToken = nameToken;
     this.actuals = actuals;
   }
 
-  evaluate(env, fromTime, toTime) {
-    if (!env.has(this.name)) {
-      throw new LocatedException(this.where, `I've not heard of any function named "${this.name}".`);
+  lookup(env, fromTime, toTime) {
+    let f = env.get(this.nameToken.source);
+    if (!f) {
+      throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
     }
+    return f;
+  }
 
-    let f = env.get(this.name);
+  evaluate(env, fromTime, toTime) {
+    let f = this.lookup(env, fromTime, toTime);
 
     if (this.actuals.length != f.formals.length) {
-      throw new LocatedException(this.where, `I expected function ${this.name} to be called with ${f.formals.length} parameter${f.formals.length == 1 ? '' : 's'}.`);
+      throw new LocatedException(this.where, `I expected function ${this.nameToken.source} to be called with ${f.formals.length} parameter${f.formals.length == 1 ? '' : 's'}.`);
     }
 
     let callEnvironment = new TwovilleEnvironment(env);
     this.actuals.forEach((actual, i) => {
-      callEnvironment.bind(f.formals[i], null, null, actual.evaluate(env, fromTime, toTime));
+      let value = actual.evaluate(env, fromTime, toTime);
+      callEnvironment.bind(f.formals[i], null, null, value);
     });
 
     let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, this);
@@ -664,16 +768,33 @@ export class ExpressionFunctionCall extends Expression {
   }
 
   isTimeSensitive(env) {
-    if (!env.has(this.name)) {
-      throw new LocatedException(this.where, `I've not heard of any function named "${this.name}".`);
+    let f = env.get(this.nameToken.source);
+    if (!f) {
+      throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
     }
-    let f = env.get(this.name);
     return this.actuals.some((actual, i) => actual.isTimeSensitive(env)) || f.body.isTimeSensitive(env);
   }
 }
 
 // --------------------------------------------------------------------------- 
-//
+
+export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
+  constructor(host, nameToken, actuals, where = null) {
+    super(nameToken, actuals, where);
+    this.host = host;
+  }
+
+  lookup(env, fromTime, toTime) {
+    let hostValue = this.host.evaluate(env, fromTime, toTime);
+
+    if (!hostValue.has(this.nameToken.source)) {
+      throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
+    }
+
+    return hostValue.getFunction(this.nameToken.source);
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 export class ExpressionBlock extends Expression {
@@ -705,7 +826,9 @@ export class ExpressionAssignment extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    if ('assign' in this.l) {
+    if ('assign' in env) {
+      return env.assign(this.l, this.r);
+    } else if ('assign' in this.l) {
       return this.l.assign(env, fromTime, toTime, this.r);
     } else {
       throw 'unassignable';
@@ -778,134 +901,108 @@ export class ExpressionFor extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionProperty extends Expression {
-  constructor(base, property, where = null) {
+export class ExpressionSubscript extends Expression {
+  constructor(base, index, where = null) {
     super(where);
     this.base = base;
-    this.property = property;
+    this.index = index;
   }
 
   evaluate(env, fromTime, toTime) {
-    let object = this.base.evaluate(env, fromTime, toTime); 
-    return this.property.evaluate(object);
+    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+    if (!(baseValue instanceof ExpressionVector) && !(baseValue instanceof ExpressionString)) {
+      throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors.`);
+    }
+
+    let indexValue = this.index.evaluate(env, fromTime, toTime); 
+    if (!(indexValue instanceof ExpressionInteger)) {
+      throw new LocatedException(this.index.where, `I'm sorry, but the index must be an integer.`);
+    }
+
+    let element = baseValue.get(indexValue.value);
+    return element;
   }
 
   assign(env, fromTime, toTime, rhs) {
-    let object = this.base.evaluate(env, fromTime, toTime); 
-
-    let value = null;
-    if (object instanceof ExpressionVector) {
-      object.forEach(element => {
-        value = new ExpressionAssignment(this.property, rhs).evaluate(element, fromTime, toTime);
-      });
-    } else {
-      value = new ExpressionAssignment(this.property, rhs).evaluate(object, fromTime, toTime);
+    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+    if (!(baseValue instanceof ExpressionVector) && !(baseValue instanceof ExpressionString)) {
+      throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors.`);
     }
 
-    return value;
+    let indexValue = this.index.evaluate(env, fromTime, toTime); 
+    if (!(indexValue instanceof ExpressionInteger)) {
+      throw new LocatedException(this.index.where, `I'm sorry, but the index must be an integer.`);
+    }
+
+    let rhsValue = rhs.evaluate(env, fromTime, toTime); 
+    baseValue.set(indexValue.value, rhsValue);
+    return rhsValue;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionVector extends ExpressionData {
-  constructor(elements, where = null) {
-    super(where);
-    this.elements = elements;
+export class ExpressionVectorAdd extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
   }
 
-  clone() {
-    return new ExpressionVector(this.elements.map(e => e.clone()), this.where == null ? null : this.where.clone());
+  evaluate(env, fromTime, toTime, callExpression) {
+    let item = env.get('item');
+    return this.instance.insert(item);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionVectorSize extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime) {
-    let values = this.elements.map(element => {
-      return element.evaluate(env, fromTime, toTime);
-    });
-    return new ExpressionVector(values);
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new ExpressionInteger(this.instance.elements.length);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionVectorToCartesian extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
   }
 
-  map(transform) {
-    return this.elements.map(transform);
+  evaluate(env, fromTime, toTime, callExpression) {
+    return this.instance.toCartesian();
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionVectorMagnitude extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
   }
 
-  isTimeSensitive(env) {
-    return this.elements.some(e => e.isTimeSensitive(env));
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new ExpressionReal(this.instance.magnitude);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionVectorNormalize extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
   }
 
-  bind(id, fromTime, toTime, value) {
-    this.elements.forEach(element => {
-      element.bind(id, fromTime, toTime, value);
-    });
-  }
-
-  forEach(each) {
-    this.elements.forEach(each);
-  }
-
-  get(i) {
-    return this.elements[i];
-  }
-
-  toColor(env) {
-    let r = Math.floor(this.elements[0].value * 255);
-    let g = Math.floor(this.elements[1].value * 255);
-    let b = Math.floor(this.elements[2].value * 255);
-    return 'rgb(' + r + ', ' + g + ', ' + b + ')';
-  }
-
-  toHexColor(env) {
-    let r = Math.floor(this.elements[0].value * 255).toString(16);
-    let g = Math.floor(this.elements[1].value * 255).toString(16);
-    let b = Math.floor(this.elements[2].value * 255).toString(16);
-    if (r.length == 1) {
-      r = '0' + r;
-    }
-    if (g.length == 1) {
-      g = '0' + g;
-    }
-    if (b.length == 1) {
-      b = '0' + b;
-    }
-    return `#${r}${g}${b}`;
-  }
-
-  toString(env) {
-    return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
-  }
-
-  toSpacedString(env) {
-    return this.elements.map(element => element.toString()).join(' ');
-  }
-
-  interpolate(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
-  }
-
-  get magnitude() {
-    let sum = 0;
-    for (let i = 0; i < this.elements.length; ++i) {
-      sum += this.get(i).value * this.get(i).value;
-    }
-    return Math.sqrt(sum);
-  }
-
-  subtract(other) {
-    if (other instanceof ExpressionVector) {
-      let diffs = [];
-      for (let i = 0; i < this.elements.length; ++i) {
-        diffs.push(this.get(i).subtract(other.get(i)));
-      }
-      return new ExpressionVector(diffs);
-    } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      let diffs = [];
-      for (let i = 0; i < this.elements.length; ++i) {
-        diffs.push(this.get(i).subtract(other));
-      }
-      return new ExpressionVector(diffs);
-    } else {
-      throw '...';
-    }
+  evaluate(env, fromTime, toTime, callExpression) {
+    return this.instance.normalize();
   }
 }
 
@@ -1231,7 +1328,7 @@ export class ExpressionPrint extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let message = env.get('message').value;
+    let message = env.get('message').toString();
     Messager.log(message.toString(fromTime, toTime));
     return null;
   }
@@ -1348,6 +1445,272 @@ export class ExpressionCutout extends Expression {
     let cutout = new TwovilleCutout(env, callExpression);
     env.shapes.push(cutout);
     return cutout;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionVector extends ExpressionData {
+  constructor(elements, where = null) {
+    super(where);
+    this.elements = elements;
+    this.bindings = [];
+
+    this.bindings['normalize'] = {
+      name: 'normalize',
+      formals: [],
+      body: new ExpressionVectorNormalize(this)
+    };
+
+    this.bindings['size'] = {
+      name: 'size',
+      formals: [],
+      body: new ExpressionVectorSize(this)
+    };
+
+    this.bindings['magnitude'] = {
+      name: 'magnitude',
+      formals: [],
+      body: new ExpressionVectorMagnitude(this)
+    };
+
+    this.bindings['toCartesian'] = {
+      name: 'toCartesian',
+      formals: [],
+      body: new ExpressionVectorToCartesian(this)
+    };
+
+    this.bindings['add'] = {
+      name: 'add',
+      formals: ['item'],
+      body: new ExpressionVectorAdd(this)
+    };
+  }
+
+  has(id) {
+    return this.bindings.hasOwnProperty(id);
+  }
+
+  assign(index, rhs) {
+    if (index instanceof ExpressionIdentifier) {
+      let id = index.token.source;
+      if (id == 'x' || id == 'r') {
+        this.elements[0] = rhs;
+      } else if (id == 'y' || id == 'g') {
+        this.elements[1] = rhs;
+      } else if (id == 'z' || id == 'b') {
+        this.elements[2] = rhs;
+      }
+    } else if (index instanceof ExpressionInteger) {
+      this.elements[index.value] = rhs;
+    }
+    return rhs;
+  }
+
+  clone() {
+    return new ExpressionVector(this.elements.map(e => e.clone()), this.where == null ? null : this.where.clone());
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let values = this.elements.map(element => {
+      return element.evaluate(env, fromTime, toTime);
+    });
+    return new ExpressionVector(values);
+  }
+
+  insert(item) {
+    this.elements.push(item);
+  }
+
+  map(transform) {
+    return this.elements.map(transform);
+  }
+
+  isTimeSensitive(env) {
+    return this.elements.some(e => e.isTimeSensitive(env));
+  }
+
+  bind(id, fromTime, toTime, value) {
+    if (id == 'x' || id == 'r') {
+      this.elements[0] = value;
+    } else if (id == 'y' || id == 'g') {
+      this.elements[1] = value;
+    } else if (id == 'z' || id == 'b') {
+      this.elements[2] = value;
+    }
+    // this.elements.forEach(element => {
+      // element.bind(id, fromTime, toTime, value);
+    // });
+  }
+
+  forEach(each) {
+    this.elements.forEach(each);
+  }
+
+  getFunction(id) {
+    return this.bindings[id];
+  }
+
+  set(i, value) {
+    this.elements[i] = value;
+  }
+
+  get(i) {
+    if (i == 'x' || i == 'r') {
+      return this.elements[0];
+    } else if (i == 'y' || i == 'g') {
+      return this.elements[1];
+    } else if (i == 'z' || i == 'b') {
+      return this.elements[2];
+    } else if (i instanceof ExpressionFunctionCall && this.bindings.hasOwnProperty(i.name)) {
+      return this.bindings[i.name];
+    } else if (typeof i == 'number') {
+      return this.elements[i];
+    } else if (i instanceof ExpressionInteger) {
+      return this.elements[i.value];
+    } else {
+      throw new MessagedException('uh oh');
+      return super.get(i);
+    }
+  }
+
+  toColor(env) {
+    let r = Math.floor(this.elements[0].value * 255);
+    let g = Math.floor(this.elements[1].value * 255);
+    let b = Math.floor(this.elements[2].value * 255);
+    return 'rgb(' + r + ', ' + g + ', ' + b + ')';
+  }
+
+  toHexColor(env) {
+    let r = Math.floor(this.elements[0].value * 255).toString(16);
+    let g = Math.floor(this.elements[1].value * 255).toString(16);
+    let b = Math.floor(this.elements[2].value * 255).toString(16);
+    if (r.length == 1) {
+      r = '0' + r;
+    }
+    if (g.length == 1) {
+      g = '0' + g;
+    }
+    if (b.length == 1) {
+      b = '0' + b;
+    }
+    return `#${r}${g}${b}`;
+  }
+
+  toString(env) {
+    return '[' + this.elements.map(element => element.toString()).join(', ') + ']';
+  }
+
+  toSpacedString(env) {
+    return this.elements.map(element => element.toString()).join(' ');
+  }
+
+  interpolate(other, proportion) {
+    return new ExpressionVector(this.elements.map((element, i) => element.interpolate(other.get(i), proportion)));
+  }
+
+  get magnitude() {
+    let sum = 0;
+    for (let i = 0; i < this.elements.length; ++i) {
+      sum += this.get(i).value * this.get(i).value;
+    }
+    return Math.sqrt(sum);
+  }
+
+  normalize() {
+    let magnitude = this.magnitude;
+    for (let i = 0; i < this.elements.length; ++i) {
+      this.elements[i] = new ExpressionReal(this.elements[i].value / magnitude);
+    }
+    return this;
+  }
+
+  toCartesian() {
+    if (this.elements.length != 2) {
+      throw new MessagedException("only toCartesian() for 2D");
+    }
+
+    let radius = this.get(0).value;
+    let degrees = this.get(1).value;
+    let radians = degrees * Math.PI / 180;
+    let xy = [
+      new ExpressionReal(radius * Math.cos(radians)),
+      new ExpressionReal(radius * Math.sin(radians))
+    ];
+
+    return new ExpressionVector(xy);
+  }
+
+  multiply(other) {
+    if (other instanceof ExpressionVector) {
+      let result = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        result.push(this.get(i).multiply(other.get(i)));
+      }
+      return new ExpressionVector(result);
+    } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      let result = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        result.push(this.get(i).multiply(other));
+      }
+      return new ExpressionVector(result);
+    } else {
+      throw '...';
+    }
+  }
+
+  divide(other) {
+    if (other instanceof ExpressionVector) {
+      let result = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        result.push(this.get(i).divide(other.get(i)));
+      }
+      return new ExpressionVector(result);
+    } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      let result = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        result.push(this.get(i).divide(other));
+      }
+      return new ExpressionVector(result);
+    } else {
+      throw '...';
+    }
+  }
+
+  add(other) {
+    if (other instanceof ExpressionVector) {
+      let result = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        result.push(this.get(i).add(other.get(i)));
+      }
+      return new ExpressionVector(result);
+    } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      let result = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        result.push(this.get(i).add(other));
+      }
+      return new ExpressionVector(result);
+    } else {
+      throw '...';
+    }
+  }
+
+  subtract(other) {
+    if (other instanceof ExpressionVector) {
+      let result = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        result.push(this.get(i).subtract(other.get(i)));
+      }
+      return new ExpressionVector(result);
+    } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      let result = [];
+      for (let i = 0; i < this.elements.length; ++i) {
+        result.push(this.get(i).subtract(other));
+      }
+      return new ExpressionVector(result);
+    } else {
+      throw '...';
+    }
   }
 }
 

@@ -1,4 +1,6 @@
-import { Timeline } from './timeline.js';
+import { 
+  Timeline
+} from './timeline.js';
 
 import { 
   ExpressionBoolean,
@@ -6,6 +8,7 @@ import {
   ExpressionCosine,
   ExpressionCutout,
   ExpressionGroup,
+  ExpressionIdentifier,
   ExpressionInt,
   ExpressionInteger,
   ExpressionLabel,
@@ -27,6 +30,11 @@ import {
   ExpressionSine,
   ExpressionString,
   ExpressionVector,
+  ExpressionVectorAdd,
+  ExpressionVectorToCartesian,
+  ExpressionVectorMagnitude,
+  ExpressionVectorNormalize,
+  ExpressionVectorSize,
   ExpressionVertex,
 } from './ast.js';
 

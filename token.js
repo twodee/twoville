@@ -3,6 +3,7 @@ export let Tokens = Object.freeze({
   Asterisk: 'Asterisk',
   Boolean: 'Boolean',
   By: 'By',
+  Character: 'Character',
   Circle: 'Circle',
   Circumflex: 'Circumflex',
   Comma: 'Comma',

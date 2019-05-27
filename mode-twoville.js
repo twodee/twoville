@@ -81,6 +81,11 @@ var TwovilleHighlightRules = function() {
         next: "start"
       },
       {
+        token: "constant.character",
+        regex: /'[^']'/,
+        next: "start"
+      },
+      {
         token: "string",
         regex: /"[^"]*"/,
         next: "start"

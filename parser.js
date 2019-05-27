@@ -13,6 +13,7 @@ import {
   ExpressionAssignment,
   ExpressionBlock,
   ExpressionBoolean,
+  ExpressionCharacter,
   ExpressionDivide,
   ExpressionFor,
   ExpressionFunctionCall,
@@ -24,16 +25,18 @@ import {
   ExpressionInteger,
   ExpressionLess,
   ExpressionLessEqual,
+  ExpressionMemberFunctionCall,
+  ExpressionMemberIdentifier,
   ExpressionMultiply,
   ExpressionNegative,
   ExpressionNotSame,
-  ExpressionProperty,
   ExpressionPower,
   ExpressionReal,
   ExpressionRemainder,
   ExpressionRepeat,
   ExpressionSame,
   ExpressionString,
+  ExpressionSubscript,
   ExpressionSubtract,
   ExpressionVector,
   ExpressionWith,
@@ -44,6 +47,10 @@ import {
   StatementToStasis,
   StatementThrough,
 } from './ast.js';
+
+// import {
+  // ExpressionVector
+// } from './types.js';
 
 export function parse(tokens) {
   let symbols = {
@@ -105,10 +112,17 @@ export function parse(tokens) {
       throw new LocatedException(tokens[i].where, 'I expected no indentation at the top-level of the program.');
     }
 
-    let b = block();
-    if (!has(Tokens.EOF)) {
-      throw new LocatedException(b.where, 'I expected the program to end after this, but it didn\'t.');
+    let b;
+    if (has(Tokens.EOF)) {
+      let eofToken = consume();
+      b = new ExpressionBlock([], eofToken.where);
+    } else {
+      b = block();
+      if (!has(Tokens.EOF)) {
+        throw new LocatedException(b.where, 'I expected the program to end after this, but it didn\'t.');
+      }
     }
+
     return b;
   }
 
@@ -342,21 +356,58 @@ export function parse(tokens) {
   }
 
   function expressionPower() {
-    let a = expressionProperty();
+    let a = expressionMember();
     while (has(Tokens.Circumflex)) {
       let operator = consume();
-      let b = expressionProperty();
+      let b = expressionMember();
       a = new ExpressionPower(a, b, SourceLocation.span(a.where, b.where));
     }
     return a;
   }
 
-  function expressionProperty() {
+  function expressionMember() {
     let base = atom();
-    while (has(Tokens.Dot)) {
-      consume(); 
-      let property = atom();
-      base = new ExpressionProperty(base, property, SourceLocation.span(base.where, property.where));
+    while (has(Tokens.Dot) || has(Tokens.LeftSquareBracket)) {
+      if (has(Tokens.Dot)) {
+        let dotToken = consume(); // eat .
+
+        if (!has(Tokens.Identifier)) {
+          throw new LocatedException(dotToken.where, `expected ID`);
+        }
+
+        let nameToken = consume();
+
+        if (has(Tokens.LeftParenthesis)) {
+          consume(); // eat (
+
+          let actuals = [];
+          if (isFirstOfExpression()) {
+            actuals.push(expression());
+            while (has(Tokens.Comma) && isFirstOfExpression(1)) {
+              consume(); // eat ,
+              actuals.push(expression());
+            }
+          }
+
+          let sourceEnd = tokens[i].where;
+          if (!has(Tokens.RightParenthesis)) {
+            throw new LocatedException(SourceLocation.span(sourceStart, sourceEnd), `I expected a right parenthesis to close the function call, but I encountered "${tokens[i].source}" (${tokens[i].type}) instead.`);
+          }
+          consume();
+
+          base = new ExpressionMemberFunctionCall(base, nameToken, actuals, SourceLocation.span(base.where, sourceEnd));
+        } else {
+          base = new ExpressionMemberIdentifier(base, nameToken, SourceLocation.span(base.where, nameToken.where));
+        }
+      } else {
+        consume(); // eat [
+        let index = expression();
+        if (!has(Tokens.RightSquareBracket)) {
+          throw new LocatedException(index.where, `I expected a ] after this subscript.`);
+        }
+        consume(); // eat ]
+        base = new ExpressionSubscript(base, index, SourceLocation.span(base.where, index.where));
+      }
     }
     return base;
   }
@@ -401,6 +452,9 @@ export function parse(tokens) {
     } else if (has(Tokens.String)) {
       let token = consume();
       return new ExpressionString(token.source, token.where);
+    } else if (has(Tokens.Character)) {
+      let token = consume();
+      return new ExpressionCharacter(token.source, token.where);
     } else if (has(Tokens.Real)) {
       let token = consume();
       return new ExpressionReal(Number(token.source), token.where);
@@ -620,7 +674,7 @@ export function parse(tokens) {
     } else if (has(Tokens.Identifier) && has(Tokens.LeftParenthesis, 1)) {
       let sourceStart = tokens[i].where;
 
-      let name = consume().source;
+      let nameToken = consume();
       consume(); // eat (
 
       let actuals = [];
@@ -639,7 +693,7 @@ export function parse(tokens) {
         throw new LocatedException(SourceLocation.span(sourceStart, sourceEnd), `I expected a right parenthesis to close the function call, but I encountered "${tokens[i].source}" (${tokens[i].type}) instead.`);
       }
 
-      return new ExpressionFunctionCall(name, actuals, SourceLocation.span(sourceStart, sourceEnd));
+      return new ExpressionFunctionCall(nameToken, actuals, SourceLocation.span(sourceStart, sourceEnd));
     } else if (has(Tokens.Repeat)) {
       let sourceStart = tokens[i].where;
       consume(); // eat repeat
