@@ -768,10 +768,7 @@ export class ExpressionFunctionCall extends Expression {
   }
 
   isTimeSensitive(env) {
-    let f = env.get(this.nameToken.source);
-    if (!f) {
-      throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
-    }
+    let f = this.lookup(env);
     return this.actuals.some((actual, i) => actual.isTimeSensitive(env)) || f.body.isTimeSensitive(env);
   }
 }
@@ -791,6 +788,7 @@ export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
       throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
     }
 
+    console.log("hostValue:", hostValue);
     return hostValue.getFunction(this.nameToken.source);
   }
 }
@@ -826,9 +824,7 @@ export class ExpressionAssignment extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    if ('assign' in env) {
-      return env.assign(this.l, this.r);
-    } else if ('assign' in this.l) {
+    if ('assign' in this.l) {
       return this.l.assign(env, fromTime, toTime, this.r);
     } else {
       throw 'unassignable';
@@ -1166,73 +1162,79 @@ export class ExpressionRectangle extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVertex extends Expression {
-  constructor() {
+  constructor(instance) {
     super(null);
+    this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleVertex(env.parent, callExpression);
+    return new TwovilleVertex(this.instance, callExpression);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathArc extends Expression {
-  constructor() {
+  constructor(instance) {
     super(null);
+    this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
     // Call has false env for local parameters. Execute inside parent.
-    return new TwovillePathArc(env.parent, callExpression);
+    return new TwovillePathArc(this.instance, callExpression);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathJump extends Expression {
-  constructor() {
+  constructor(instance) {
     super(null);
+    this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathJump(env.parent, callExpression);
+    return new TwovillePathJump(this.instance, callExpression);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathLine extends Expression {
-  constructor() {
+  constructor(instance) {
     super(null);
+    this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathLine(env.parent, callExpression);
+    return new TwovillePathLine(this.instance, callExpression);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathBezier extends Expression {
-  constructor() {
+  constructor(instance) {
     super(null);
+    this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathBezier(env.parent, callExpression);
+    return new TwovillePathBezier(this.instance, callExpression);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathQuadratic extends Expression {
-  constructor() {
+  constructor(instance) {
     super(null);
+    this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathQuadratic(env.parent, callExpression);
+    return new TwovillePathQuadratic(this.instance, callExpression);
   }
 }
 

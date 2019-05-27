@@ -185,6 +185,10 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     return color;
   }
 
+  getFunction(id) {
+    return this.bindings[id];
+  }
+
   domify(svg) {
     if (this.has('clippers')) {
       let clipPath = document.createElementNS(svgNamespace, 'clipPath');
@@ -718,7 +722,7 @@ export class TwovilleLine extends TwovilleMarkerable {
     this.bindings['vertex'] = {
       name: 'vertex',
       formals: [],
-      body: new ExpressionVertex()
+      body: new ExpressionVertex(this)
     };
   }
 
@@ -761,31 +765,31 @@ export class TwovillePath extends TwovilleMarkerable {
     this.bindings['arc'] = {
       name: 'arc',
       formals: [],
-      body: new ExpressionPathArc()
+      body: new ExpressionPathArc(this)
     };
 
     this.bindings['bezier'] = {
       name: 'bezier',
       formals: [],
-      body: new ExpressionPathBezier()
+      body: new ExpressionPathBezier(this)
     };
 
     this.bindings['jump'] = {
       name: 'jump',
       formals: [],
-      body: new ExpressionPathJump()
+      body: new ExpressionPathJump(this)
     };
 
     this.bindings['line'] = {
       name: 'line',
       formals: [],
-      body: new ExpressionPathLine()
+      body: new ExpressionPathLine(this)
     };
 
     this.bindings['quadratic'] = {
       name: 'quadratic',
       formals: [],
-      body: new ExpressionPathQuadratic()
+      body: new ExpressionPathQuadratic(this)
     };
   }
 
@@ -840,7 +844,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
     this.bindings['vertex'] = {
       name: 'vertex',
       formals: [],
-      body: new ExpressionVertex()
+      body: new ExpressionVertex(this)
     };
   }
 
@@ -878,7 +882,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
     this.bindings['vertex'] = {
       name: 'vertex',
       formals: [],
-      body: new ExpressionVertex()
+      body: new ExpressionVertex(this)
     };
   }
 
