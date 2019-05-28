@@ -735,6 +735,32 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
+  constructor(base, nameToken, where = null) {
+    super(nameToken, where);
+    this.base = base;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    throw 'not supported yet';
+  }
+
+  assign(env, fromTime, toTime, rhs) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+    // assert vector
+
+    let rhsValue = rhs.evaluate(env, fromTime, toTime);
+
+    baseValue.forEach(element => {
+      element.bind(this.nameToken.source, fromTime, toTime, rhsValue);
+    });
+
+    return rhsValue;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionFunctionCall extends Expression {
   constructor(nameToken, actuals, where = null) {
     super(where);

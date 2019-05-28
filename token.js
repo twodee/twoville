@@ -7,6 +7,7 @@ export let Tokens = Object.freeze({
   Circle: 'Circle',
   Circumflex: 'Circumflex',
   Comma: 'Comma',
+  Distribute: 'Distribute',
   Dot: 'Dot',
   EOF: 'EOF',
   Else: 'Else',

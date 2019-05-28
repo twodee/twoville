@@ -15,6 +15,7 @@ import {
   ExpressionBoolean,
   ExpressionCharacter,
   ExpressionDivide,
+  ExpressionDistributedIdentifier,
   ExpressionFor,
   ExpressionFunctionCall,
   ExpressionFunctionDefinition,
@@ -367,7 +368,7 @@ export function parse(tokens) {
 
   function expressionMember() {
     let base = atom();
-    while (has(Tokens.Dot) || has(Tokens.LeftSquareBracket)) {
+    while (has(Tokens.Dot) || has(Tokens.Distribute) || has(Tokens.LeftSquareBracket)) {
       if (has(Tokens.Dot)) {
         let dotToken = consume(); // eat .
 
@@ -399,6 +400,15 @@ export function parse(tokens) {
         } else {
           base = new ExpressionMemberIdentifier(base, nameToken, SourceLocation.span(base.where, nameToken.where));
         }
+      } else if (has(Tokens.Distribute)) {
+        let hashToken = consume(); // eat #
+
+        if (!has(Tokens.Identifier)) {
+          throw new LocatedException(hashToken.where, `expected ID`);
+        }
+
+        let nameToken = consume();
+        base = new ExpressionDistributedIdentifier(base, nameToken, SourceLocation.span(base.where, nameToken.where));
       } else {
         consume(); // eat [
         let index = expression();

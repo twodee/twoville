@@ -290,6 +290,9 @@ export function lex(source) {
       more();
     } else if (has('!')) {
       bang();
+    } else if (has('#')) {
+      consume();
+      emit(Tokens.Distribute);
     } else if (has(',')) {
       consume();
       emit(Tokens.Comma);
