@@ -742,7 +742,14 @@ export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
   }
 
   evaluate(env, fromTime, toTime) {
-    throw 'not supported yet';
+    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+    // assert vector
+
+    console.log("baseValue:", baseValue);
+    let elements = baseValue.map(element => element.get(this.nameToken.source));
+    console.log("elements:", elements);
+
+    return new ExpressionVector(elements);
   }
 
   assign(env, fromTime, toTime, rhs) {
