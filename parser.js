@@ -68,6 +68,10 @@ export function parse(tokens) {
     ':middle': new ExpressionString('middle'),
     ':end': new ExpressionString('end'),
 
+    // 
+    ':zero2': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]),
+    ':zero3': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
+
     // Colors
     ':black': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
     ':red': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0), new ExpressionReal(0)]),
@@ -668,13 +672,19 @@ export function parse(tokens) {
       consume(); // eat [
       let elements = [];
       while (!has(Tokens.RightSquareBracket)) {
-        let e = expression();
+        let e;
+        if (has(Tokens.Tilde)) {
+          e = elements[elements.length - 1];
+          consume();
+        } else {
+          e = expression();
+        }
         elements.push(e);
         if (!has(Tokens.RightSquareBracket)) {
           if (has(Tokens.Comma)) {
             consume(); // eat ,
           } else {
-            throw new LocatedException(SourceLocation.span(e.where, tokens[i].where), 'I expected a comma between vector elements.');
+            throw new LocatedException(tokens[i].where, 'I expected a comma between vector elements.');
           }
         }
       }
