@@ -346,6 +346,7 @@ function interpret() {
     env = new GlobalEnvironment(svg);
 
     ast.evaluate(env);
+    console.log("env:", env);
 
     let size = env.get('viewport').get('size');
 

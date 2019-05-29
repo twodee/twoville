@@ -48,8 +48,8 @@ export class ExpressionData extends Expression {
     this.article = article;
   }
 
-  bind(env, fromTime, toTime, id) {
-    env.bind(id, fromTime, toTime, this);
+  bind(env, id, fromTime, toTime) {
+    env.bind(id, this, fromTime, toTime);
   }
 }
 
@@ -678,6 +678,7 @@ export class ExpressionIdentifier extends Expression {
 
   evaluate(env, fromTime, toTime) {
     let value = env.get(this.nameToken.source);
+    console.log("env:", env);
     if (value != null) {
       return value;
     } else {
@@ -692,7 +693,7 @@ export class ExpressionIdentifier extends Expression {
     } else {
       value = rhs.evaluate(env, fromTime, toTime);
     }
-    env.bind(this.nameToken.source, fromTime, toTime, value);
+    env.bind(this.nameToken.source, value, fromTime, toTime);
     return value;
   }
 
@@ -729,7 +730,7 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
       rhsValue = rhs.evaluate(env, fromTime, toTime);
     }
 
-    baseValue.bind(this.nameToken.source, fromTime, toTime, rhsValue);
+    baseValue.bind(this.nameToken.source, rhsValue, fromTime, toTime);
 
     return rhsValue;
   }
@@ -761,7 +762,7 @@ export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
     let rhsValue = rhs.evaluate(env, fromTime, toTime);
 
     baseValue.forEach(element => {
-      element.bind(this.nameToken.source, fromTime, toTime, rhsValue);
+      element.bind(this.nameToken.source, rhsValue, fromTime, toTime);
     });
 
     return rhsValue;
@@ -795,7 +796,7 @@ export class ExpressionFunctionCall extends Expression {
     let callEnvironment = new TwovilleEnvironment(env);
     this.actuals.forEach((actual, i) => {
       let value = actual.evaluate(env, fromTime, toTime);
-      callEnvironment.bind(f.formals[i], null, null, value);
+      callEnvironment.bind(f.formals[i], value);
     });
 
     let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, this);
@@ -1567,7 +1568,7 @@ export class ExpressionVector extends ExpressionData {
     return this.elements.some(e => e.isTimeSensitive(env));
   }
 
-  bind(id, fromTime, toTime, value) {
+  bind(id, value) {
     if (id == 'x' || id == 'r') {
       this.elements[0] = value;
     } else if (id == 'y' || id == 'g') {
@@ -1575,9 +1576,6 @@ export class ExpressionVector extends ExpressionData {
     } else if (id == 'z' || id == 'b') {
       this.elements[2] = value;
     }
-    // this.elements.forEach(element => {
-      // element.bind(id, fromTime, toTime, value);
-    // });
   }
 
   forEach(each) {

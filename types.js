@@ -103,7 +103,7 @@ export class TwovilleEnvironment {
     return false;
   }
 
-  bind(id, fromTime, toTime, value) {
+  bind(id, value) {
     this.bindings[id] = value;
   }
 
@@ -124,12 +124,27 @@ export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
     super(env);
   }
 
-  bind(id, fromTime, toTime, value) {
+  bind(id, value, fromTime = null, toTime = null) {
     if (!this.bindings.hasOwnProperty(id)) {
       this.bindings[id] = new Timeline();
     }
 
-    if (fromTime != null && toTime != null) {
+    // We are assigning one timeline to another...
+    if (value instanceof Timeline) {
+      let timeline = value;
+      if (fromTime != null && toTime != null) {
+        this.bindings[id].setFromValue(fromTime, timeline.intervalFrom(fromTime).fromValue);
+        this.bindings[id].setToValue(toTime, timeline.intervalTo(toTime).toValue);
+      }  if (fromTime != null) {
+        this.bindings[id].setFromValue(fromTime, timeline.intervalFrom(fromTime).fromValue);
+      } else if (toTime != null) {
+        this.bindings[id].setToValue(toTime, timeline.intervalTo(toTime).toValue);
+      } else {
+        this.bindings[id].setDefault(timeline.getDefault());
+      }
+    }
+    
+    else if (fromTime != null && toTime != null) {
       this.bindings[id].setFromValue(fromTime, value);
       this.bindings[id].setToValue(toTime, value);
     } else if (fromTime != null) {
@@ -140,7 +155,6 @@ export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
       this.bindings[id].setDefault(value);
     }
   }
-
 }
 
 // --------------------------------------------------------------------------- 
@@ -158,8 +172,8 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.callExpression = callExpression;
     this.parentElement = null;
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
-    this.bindings.stroke.bind('opacity', null, null, new ExpressionReal(1));
-    this.bind('opacity', null, null, new ExpressionReal(1));
+    this.bindings.stroke.bind('opacity', new ExpressionReal(1));
+    this.bind('opacity', new ExpressionReal(1));
     this.id = serial;
     ++serial;
   }
@@ -320,7 +334,7 @@ export class TwovilleMarker extends TwovilleShape {
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.svgElement.setAttributeNS(null, 'orient', 'auto');
     this.svgElement.setAttributeNS(null, 'markerUnits', 'strokeWidth');
-    this.bind('template', null, null, new ExpressionBoolean(true));
+    this.bind('template', new ExpressionBoolean(true));
   }
 
   draw(env, t) {
@@ -375,7 +389,7 @@ export class TwovilleMask extends TwovilleShape {
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.bind('template', null, null, new ExpressionBoolean(true));
+    this.bind('template', new ExpressionBoolean(true));
   }
 
   draw(env, t) {
@@ -635,23 +649,25 @@ export class TwovillePathArc extends TwovilleShape {
   evolve(env, t, from) {
     this.assertProperty('position');
     this.assertProperty('direction');
-    this.assertProperty('center');
+    this.assertProperty('length');
+    this.assertProperty('radius');
     
     let position = this.valueAt(env, 'position', t);
     let direction = this.valueAt(env, 'direction', t);
-    let center = this.valueAt(env, 'center', t);
+    let length = this.valueAt(env, 'length', t);
+    let radius = this.valueAt(env, 'radius', t);
 
     if (position) {
-      let diff2 = position.subtract(center);
-      let diff1 = from.subtract(center);
-      let radius = diff1.magnitude;
-      let area = 0.5 * (diff1.get(0).value * diff2.get(1).value - diff2.get(0).value * diff1.get(1).value);
+      let diff = position.subtract(from).magnitude;
+      if (radius < diff * 0.5) {
+        throw new LocatedException(this.callExpression.where, "This radius of this arc's circle is too small.");
+      }
 
       let large;
       let sweep;
 
       if (direction.value == 0) {
-        if (area < 0) {
+        if (length.value == 1) {
           large = 1;
           sweep = 1;
         } else {
@@ -659,7 +675,7 @@ export class TwovillePathArc extends TwovilleShape {
           sweep = 1;
         }
       } else {
-        if (area > 0) {
+        if (length.value == 1) {
           large = 1;
           sweep = 0;
         } else {
@@ -674,7 +690,7 @@ export class TwovillePathArc extends TwovilleShape {
       }
       let letter = isDelta ? 'a' : 'A';
 
-      return `${letter}${radius},${radius} 0 ${large} ${sweep} ${position.get(0).value},${position.get(1).value}`;
+      return `${letter}${radius.value},${radius.value} 0 ${large} ${sweep} ${position.get(0).value},${position.get(1).value}`;
     } else {
       return null;
     }
@@ -1020,27 +1036,27 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     this.shapes = [];
 
     this.bindings.time = new TwovilleEnvironment(this);
-    this.bindings.time.bind('start', null, null, new ExpressionInteger(0));
-    this.bindings.time.bind('stop', null, null, new ExpressionInteger(100));
-    this.bindings.time.bind('delay', null, null, new ExpressionInteger(16));
-    this.bindings.time.bind('resolution', null, null, new ExpressionInteger(1));
+    this.bindings.time.bind('start', new ExpressionInteger(0));
+    this.bindings.time.bind('stop', new ExpressionInteger(100));
+    this.bindings.time.bind('delay', new ExpressionInteger(16));
+    this.bindings.time.bind('resolution', new ExpressionInteger(1));
 
     this.bindings.gif = new TwovilleEnvironment(this);
-    this.bindings.gif.bind('size', null, null, new ExpressionVector([
+    this.bindings.gif.bind('size', new ExpressionVector([
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));
-    this.bindings.gif.bind('name', null, null, new ExpressionString('twoville.gif'));
-    this.bindings.gif.bind('transparency', null, null, new ExpressionVector([
+    this.bindings.gif.bind('name', new ExpressionString('twoville.gif'));
+    this.bindings.gif.bind('transparency', new ExpressionVector([
       new ExpressionReal(0),
       new ExpressionReal(0),
       new ExpressionReal(0),
     ]));
-    this.bindings.gif.bind('repeat', null, null, new ExpressionInteger(0));
-    this.bindings.gif.bind('delay', null, null, new ExpressionInteger(10));
+    this.bindings.gif.bind('repeat', new ExpressionInteger(0));
+    this.bindings.gif.bind('delay', new ExpressionInteger(10));
 
     this.bindings.viewport = new TwovilleEnvironment(this);
-    this.bindings.viewport.bind('size', null, null, new ExpressionVector([
+    this.bindings.viewport.bind('size', new ExpressionVector([
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));

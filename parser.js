@@ -68,6 +68,9 @@ export function parse(tokens) {
     ':middle': new ExpressionString('middle'),
     ':end': new ExpressionString('end'),
 
+    ':short': new ExpressionInteger(0),
+    ':long': new ExpressionInteger(1),
+
     // 
     ':zero2': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]),
     ':zero3': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),

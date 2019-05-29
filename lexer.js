@@ -203,7 +203,6 @@ export function lex(source) {
   }
 
   function indentation() {
-    console.log("indentation");
     while (has(/[ \t]/)) {
       consume();
     }
@@ -212,7 +211,6 @@ export function lex(source) {
       consume();
       consume();
       comment();
-      console.log("is comment");
     } else {
       emit(Tokens.Indentation);
     }
