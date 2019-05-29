@@ -42,8 +42,10 @@ export class Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionData extends Expression {
-  constructor(where = null) {
+  constructor(type, article, where = null) {
     super(where);
+    this.type = type;
+    this.article = article;
   }
 
   bind(env, fromTime, toTime, id) {
@@ -55,7 +57,7 @@ export class ExpressionData extends Expression {
 
 export class ExpressionBoolean extends ExpressionData {
   constructor(x, where = null) {
-    super(where);
+    super('boolean', 'a', where);
     this.x = x;
   }
 
@@ -84,7 +86,7 @@ export class ExpressionBoolean extends ExpressionData {
 
 export class ExpressionInteger extends ExpressionData {
   constructor(x, where = null) {
-    super(where);
+    super('integer', 'an', where);
     this.x = x;
   }
 
@@ -201,7 +203,7 @@ export class ExpressionInteger extends ExpressionData {
 
 export class ExpressionCharacter extends ExpressionData {
   constructor(x, where = null) {
-    super(where);
+    super('character', 'a', where);
     this.x = x;
   }
 
@@ -226,7 +228,7 @@ export class ExpressionCharacter extends ExpressionData {
 
 export class ExpressionString extends ExpressionData {
   constructor(x, where = null) {
-    super(where);
+    super('string', 'a', where);
     this.x = x;
 
     this.bindings = [];
@@ -293,7 +295,7 @@ export class ExpressionStringSize extends Expression {
 
 export class ExpressionReal extends ExpressionData {
   constructor(x, where = null) {
-    super(where);
+    super('real', 'a', where);
     this.x = x;
   }
 
@@ -940,7 +942,7 @@ export class ExpressionSubscript extends Expression {
   evaluate(env, fromTime, toTime) {
     let baseValue = this.base.evaluate(env, fromTime, toTime); 
     if (!(baseValue instanceof ExpressionVector) && !(baseValue instanceof ExpressionString)) {
-      throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors.`);
+      throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors and strings. This expression has type ${baseValue.type}.`);
     }
 
     let indexValue = this.index.evaluate(env, fromTime, toTime); 
@@ -955,7 +957,7 @@ export class ExpressionSubscript extends Expression {
   assign(env, fromTime, toTime, rhs) {
     let baseValue = this.base.evaluate(env, fromTime, toTime); 
     if (!(baseValue instanceof ExpressionVector) && !(baseValue instanceof ExpressionString)) {
-      throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors.`);
+      throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors and strings. This expression has type ${baseValue.type}.`);
     }
 
     let indexValue = this.index.evaluate(env, fromTime, toTime); 
@@ -1487,7 +1489,7 @@ export class ExpressionCutout extends Expression {
 
 export class ExpressionVector extends ExpressionData {
   constructor(elements, where = null) {
-    super(where);
+    super('vector', 'a', where);
     this.elements = elements;
     this.bindings = [];
 

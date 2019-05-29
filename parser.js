@@ -419,8 +419,8 @@ export function parse(tokens) {
         if (!has(Tokens.RightSquareBracket)) {
           throw new LocatedException(index.where, `I expected a ] after this subscript.`);
         }
-        consume(); // eat ]
-        base = new ExpressionSubscript(base, index, SourceLocation.span(base.where, index.where));
+        let rightBracketToken = consume(); // eat ]
+        base = new ExpressionSubscript(base, index, SourceLocation.span(base.where, rightBracketToken.where));
       }
     }
     return base;
@@ -674,8 +674,11 @@ export function parse(tokens) {
       while (!has(Tokens.RightSquareBracket)) {
         let e;
         if (has(Tokens.Tilde)) {
+          let tildeToken = consume();
+          if (elements.length == 0) {
+            throw new LocatedException(tildeToken.where, 'I found ~ at index 0 of this vector. Operator ~ repeats the previous element and can only appear after index 0.');
+          }
           e = elements[elements.length - 1];
-          consume();
         } else {
           e = expression();
         }
