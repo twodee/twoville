@@ -646,19 +646,13 @@ export class TwovillePathArc extends TwovilleShape {
 
   evolve(env, t, from) {
     this.assertProperty('center');
-    this.assertProperty('direction');
     this.assertProperty('degrees');
     
     let center = this.valueAt(env, 'center', t);
-    let direction = this.valueAt(env, 'direction', t);
     let degrees = this.valueAt(env, 'degrees', t);
 
     if (!center) {
       return null;
-    }
-
-    if (direction.value == 1) {
-      degrees = new ExpressionReal(360 - degrees.value);
     }
 
     let radians = degrees * Math.PI / 180;
@@ -673,22 +667,12 @@ export class TwovillePathArc extends TwovilleShape {
     let large;
     let sweep;
 
-    if (direction.value == 0) {
-      if (degrees.value >= 180) {
-        large = 1;
-        sweep = 1;
-      } else {
-        large = 0;
-        sweep = 1;
-      }
+    if (degrees.value >= 0) {
+      large = degrees.value >= 180 ? 1 : 0;
+      sweep = 1;
     } else {
-      if (degrees.value >= 180) {
-        large = 0;
-        sweep = 0;
-      } else {
-        large = 1;
-        sweep = 0;
-      }
+      large = degrees.value <= -180 ? 1 : 0;
+      sweep = 0;
     }
 
     let isDelta = false;
