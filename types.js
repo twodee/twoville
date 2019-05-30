@@ -528,7 +528,7 @@ export class TwovillePathJump extends TwovilleShape {
     let position = this.valueAt(env, 'position', t);
 
     if (position) {
-      return `M${position.get(0).value},${position.get(1).value}`;
+      return [`M${position.get(0).value},${position.get(1).value}`, position];
     } else {
       return null;
     }
@@ -555,7 +555,7 @@ export class TwovillePathLine extends TwovilleShape {
     let letter = isDelta ? 'l' : 'L';
 
     if (position) {
-      return `${letter}${position.get(0).value},${position.get(1).value}`;
+      return [`${letter}${position.get(0).value},${position.get(1).value}`, position];
     } else {
       return null;
     }
@@ -580,8 +580,6 @@ export class TwovillePathBezier extends TwovilleShape {
       control1 = this.valueAt(env, 'control1', t);
     }
     let control2 = this.valueAt(env, 'control2', t);
-    console.log("control1:", control1);
-    console.log("control2:", control2);
 
     let isDelta = false;
     if (this.has('delta')) {
@@ -591,10 +589,10 @@ export class TwovillePathBezier extends TwovilleShape {
     if (position) {
       if (control1) {
         let letter = isDelta ? 'c' : 'C';
-        return `${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+        return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`, position];
       } else {
         let letter = isDelta ? 's' : 'S';
-        return `${letter} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+        return [`${letter} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`, position];
       }
     } else {
       return null;
@@ -627,10 +625,10 @@ export class TwovillePathQuadratic extends TwovilleShape {
     if (position) {
       if (control) {
         let letter = isDelta ? 'q' : 'Q';
-        return `${letter} ${control.get(0).value},${control.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+        return [`${letter} ${control.get(0).value},${control.get(1).value} ${position.get(0).value},${position.get(1).value}`, position];
       } else {
         let letter = isDelta ? 't' : 'T';
-        return `${letter}${position.get(0).value},${position.get(1).value}`;
+        return [`${letter}${position.get(0).value},${position.get(1).value}`, position];
       }
     } else {
       return null;
@@ -647,53 +645,59 @@ export class TwovillePathArc extends TwovilleShape {
   }
 
   evolve(env, t, from) {
-    this.assertProperty('position');
+    this.assertProperty('center');
     this.assertProperty('direction');
-    this.assertProperty('length');
-    this.assertProperty('radius');
+    this.assertProperty('degrees');
     
-    let position = this.valueAt(env, 'position', t);
+    let center = this.valueAt(env, 'center', t);
     let direction = this.valueAt(env, 'direction', t);
-    let length = this.valueAt(env, 'length', t);
-    let radius = this.valueAt(env, 'radius', t);
+    let degrees = this.valueAt(env, 'degrees', t);
 
-    if (position) {
-      let diff = position.subtract(from).magnitude;
-      if (radius < diff * 0.5) {
-        throw new LocatedException(this.callExpression.where, "This radius of this arc's circle is too small.");
-      }
-
-      let large;
-      let sweep;
-
-      if (direction.value == 0) {
-        if (length.value == 1) {
-          large = 1;
-          sweep = 1;
-        } else {
-          large = 0;
-          sweep = 1;
-        }
-      } else {
-        if (length.value == 1) {
-          large = 1;
-          sweep = 0;
-        } else {
-          large = 0;
-          sweep = 0;
-        }
-      }
-
-      let isDelta = false;
-      if (this.has('delta')) {
-        isDelta = this.valueAt(env, 'delta', t).value;
-      }
-      let letter = isDelta ? 'a' : 'A';
-
-      return `${letter}${radius.value},${radius.value} 0 ${large} ${sweep} ${position.get(0).value},${position.get(1).value}`;
-    } else {
+    if (!center) {
       return null;
     }
+
+    if (direction.value == 1) {
+      degrees = new ExpressionReal(360 - degrees.value);
+    }
+
+    let radians = degrees * Math.PI / 180;
+    let toFrom = from.subtract(center);
+    let toTo = new ExpressionVector([
+      new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
+      new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
+    ]);
+    let to = center.add(toTo);
+
+    let radius = toFrom.magnitude;
+    let large;
+    let sweep;
+
+    if (direction.value == 0) {
+      if (degrees.value >= 180) {
+        large = 1;
+        sweep = 1;
+      } else {
+        large = 0;
+        sweep = 1;
+      }
+    } else {
+      if (degrees.value >= 180) {
+        large = 0;
+        sweep = 0;
+      } else {
+        large = 1;
+        sweep = 0;
+      }
+    }
+
+    let isDelta = false;
+    if (this.has('delta')) {
+      isDelta = this.valueAt(env, 'delta', t).value;
+    }
+    let letter = isDelta ? 'a' : 'A';
+
+    return [`${letter}${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, to];
   }
 }
 
@@ -817,9 +821,11 @@ export class TwovillePath extends TwovilleMarkerable {
       isClosed = this.valueAt(env, 'closed', t).value;
     }
 
+    let last = null;
     let vertices = this.nodes.map((vertex, i) => {
-      let from = i == 0 ? null : this.nodes[i - 1].valueAt(env, 'position', t);
-      return vertex.evolve(env, t, from);
+      let result = vertex.evolve(env, t, last);
+      last = result[1];
+      return result[0];
     });
 
     let opacity = this.valueAt(env, 'opacity', t).value;
