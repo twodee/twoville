@@ -270,7 +270,11 @@ export class ExpressionString extends ExpressionData {
   }
 
   get(i) {
-    return new ExpressionCharacter(this.x.charAt(i));
+    if (i < 0 || i >= this.x.length) {
+      throw new MessagedException(`I can't get character ${i} of this string because ${i} is not a legal index in a string of length ${this.x.length}.`)
+    } else {
+      return new ExpressionCharacter(this.x.charAt(i));
+    }
   }
 
   interpolate(other, proportion) {
@@ -951,8 +955,12 @@ export class ExpressionSubscript extends Expression {
       throw new LocatedException(this.index.where, `I'm sorry, but the index must be an integer.`);
     }
 
-    let element = baseValue.get(indexValue.value);
-    return element;
+    try {
+      let element = baseValue.get(indexValue.value);
+      return element;
+    } catch (e) {
+      throw new LocatedException(this.index.where, e.message);
+    }
   }
 
   assign(env, fromTime, toTime, rhs) {
@@ -1600,7 +1608,11 @@ export class ExpressionVector extends ExpressionData {
     } else if (i instanceof ExpressionFunctionCall && this.bindings.hasOwnProperty(i.name)) {
       return this.bindings[i.name];
     } else if (typeof i == 'number') {
-      return this.elements[i];
+      if (i < 0 || i >= this.elements.length) {
+        throw new MessagedException(`I can't get element ${i} of this vector because ${i} is not a legal index in a vector of length ${this.elements.length}.`)
+      } else {
+        return this.elements[i];
+      }
     } else if (i instanceof ExpressionInteger) {
       return this.elements[i.value];
     } else {

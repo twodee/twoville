@@ -543,19 +543,28 @@ export class TwovillePathLine extends TwovilleShape {
     env.nodes.push(this);
   }
 
-  evolve(env, t) {
+  evolve(env, t, fromPosition) {
     this.assertProperty('position');
     
-    let position = this.valueAt(env, 'position', t);
+    let toPosition = this.valueAt(env, 'position', t);
 
     let isDelta = false;
     if (this.has('delta')) {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
-    let letter = isDelta ? 'l' : 'L';
 
-    if (position) {
-      return [`${letter}${position.get(0).value},${position.get(1).value}`, position];
+    let absoluteToPosition;
+    let letter;
+    if (isDelta) {
+      absoluteToPosition = fromPosition.add(toPosition);
+      letter = 'l';
+    } else {
+      absoluteToPosition = toPosition;
+      letter = 'L';
+    }
+
+    if (toPosition) {
+      return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
     } else {
       return null;
     }
@@ -570,11 +579,11 @@ export class TwovillePathBezier extends TwovilleShape {
     env.nodes.push(this);
   }
 
-  evolve(env, t) {
+  evolve(env, t, fromPosition) {
     this.assertProperty('position');
     this.assertProperty('control2');
     
-    let position = this.valueAt(env, 'position', t);
+    let toPosition = this.valueAt(env, 'position', t);
     let control1;
     if (this.has('control1')) {
       control1 = this.valueAt(env, 'control1', t);
@@ -586,13 +595,20 @@ export class TwovillePathBezier extends TwovilleShape {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
 
-    if (position) {
+    if (toPosition) {
+      let absoluteToPosition;
+      if (isDelta) {
+        absoluteToPosition = fromPosition.add(toPosition);
+      } else {
+        absoluteToPosition = toPosition;
+      }
+
       if (control1) {
         let letter = isDelta ? 'c' : 'C';
-        return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`, position];
+        return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       } else {
         let letter = isDelta ? 's' : 'S';
-        return [`${letter} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`, position];
+        return [`${letter} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       }
     } else {
       return null;
@@ -608,10 +624,10 @@ export class TwovillePathQuadratic extends TwovilleShape {
     env.nodes.push(this);
   }
 
-  evolve(env, t) {
+  evolve(env, t, fromPosition) {
     this.assertProperty('position');
     
-    let position = this.valueAt(env, 'position', t);
+    let toPosition = this.valueAt(env, 'position', t);
     let control;
     if (this.has('control')) {
       control = this.valueAt(env, 'control', t);
@@ -622,13 +638,20 @@ export class TwovillePathQuadratic extends TwovilleShape {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
 
-    if (position) {
+    if (toPosition) {
+      let absoluteToPosition;
+      if (isDelta) {
+        absoluteToPosition = fromPosition.add(toPosition);
+      } else {
+        absoluteToPosition = toPosition;
+      }
+
       if (control) {
         let letter = isDelta ? 'q' : 'Q';
-        return [`${letter} ${control.get(0).value},${control.get(1).value} ${position.get(0).value},${position.get(1).value}`, position];
+        return [`${letter} ${control.get(0).value},${control.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       } else {
         let letter = isDelta ? 't' : 'T';
-        return [`${letter}${position.get(0).value},${position.get(1).value}`, position];
+        return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       }
     } else {
       return null;
@@ -644,7 +667,7 @@ export class TwovillePathArc extends TwovilleShape {
     env.nodes.push(this);
   }
 
-  evolve(env, t, from) {
+  evolve(env, t, fromPosition) {
     this.assertProperty('center');
     this.assertProperty('degrees');
     
@@ -655,8 +678,17 @@ export class TwovillePathArc extends TwovilleShape {
       return null;
     }
 
+    let isDelta = false;
+    if (this.has('delta')) {
+      isDelta = this.valueAt(env, 'delta', t).value;
+    }
+
+    if (isDelta) {
+      center = center.add(fromPosition);
+    }
+
     let radians = degrees * Math.PI / 180;
-    let toFrom = from.subtract(center);
+    let toFrom = fromPosition.subtract(center);
     let toTo = new ExpressionVector([
       new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
       new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
@@ -675,13 +707,7 @@ export class TwovillePathArc extends TwovilleShape {
       sweep = 0;
     }
 
-    let isDelta = false;
-    if (this.has('delta')) {
-      isDelta = this.valueAt(env, 'delta', t).value;
-    }
-    let letter = isDelta ? 'a' : 'A';
-
-    return [`${letter}${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, to];
+    return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, to];
   }
 }
 
