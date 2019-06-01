@@ -181,8 +181,6 @@ recordButton.addEventListener('click', () => {
   svg.setAttribute('width', size.get(0).value);
   svg.setAttribute('height', size.get(1).value);
 
-  console.log("repeat:", repeat);
-  console.log("transparentColor.toHexColor():", transparentColor.toHexColor());
   let gif = new GIF({
     workers: 3,
     quality: 1,
@@ -335,7 +333,7 @@ function interpret() {
 
     let tokens = lex(editor.getValue());
 
-    console.log("tokens:", tokens);
+    // console.log("tokens:", tokens);
     // tokens.forEach(token => {
       // Messager.log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
     // });
@@ -346,7 +344,6 @@ function interpret() {
     env = new GlobalEnvironment(svg);
 
     ast.evaluate(env);
-    console.log("env:", env);
 
     let size = env.get('viewport').get('size');
 
@@ -392,7 +389,7 @@ function interpret() {
     env.svg.appendChild(pageOutline);
 
     env.shapes.forEach(shape => {
-      console.log("shape:", shape);
+      // console.log("shape:", shape);
       shape.domify(env.svg)
     });
 

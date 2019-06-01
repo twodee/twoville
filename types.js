@@ -668,26 +668,42 @@ export class TwovillePathArc extends TwovilleShape {
   }
 
   evolve(env, t, fromPosition) {
-    this.assertProperty('center');
-    this.assertProperty('degrees');
-    
-    let center = this.valueAt(env, 'center', t);
-    let degrees = this.valueAt(env, 'degrees', t);
-
-    if (!center) {
-      return null;
+    if (this.has('position') && this.has('center')) {
+      throw new LocatedException(this.callExpression.where, 'I found an arc whose position and center properties were both set. Define only one of these.');
     }
+
+    if (!this.has('position') && !this.has('center')) {
+      throw new LocatedException(this.callExpression.where, 'I found an arc whose curvature I couldn\'t figure out. Please define its center or position.');
+    }
+
+    this.assertProperty('degrees');
+    let degrees = this.valueAt(env, 'degrees', t);
+    let radians = degrees * Math.PI / 180;
 
     let isDelta = false;
     if (this.has('delta')) {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
 
-    if (isDelta) {
-      center = center.add(fromPosition);
+    let center;
+    if (this.has('center')) {
+      center = this.valueAt(env, 'center', t);
+      if (isDelta) {
+        center = center.add(fromPosition);
+      }
+    } else {
+      let toPosition = this.valueAt(env, 'position', t);
+      if (isDelta) {
+        toPosition = fromPosition.add(toPosition);
+      }
+
+      let diff = toPosition.subtract(fromPosition);
+      let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
+      let halfway = fromPosition.add(toPosition).multiply(new ExpressionReal(0.5));
+      let normal = diff.rotate90().normalize();
+      center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
     }
 
-    let radians = degrees * Math.PI / 180;
     let toFrom = fromPosition.subtract(center);
     let toTo = new ExpressionVector([
       new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),

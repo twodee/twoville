@@ -682,7 +682,6 @@ export class ExpressionIdentifier extends Expression {
 
   evaluate(env, fromTime, toTime) {
     let value = env.get(this.nameToken.source);
-    console.log("env:", env);
     if (value != null) {
       return value;
     } else {
@@ -752,9 +751,7 @@ export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
     let baseValue = this.base.evaluate(env, fromTime, toTime); 
     // assert vector
 
-    console.log("baseValue:", baseValue);
     let elements = baseValue.map(element => element.get(this.nameToken.source));
-    console.log("elements:", elements);
 
     return new ExpressionVector(elements);
   }
@@ -828,7 +825,6 @@ export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
       throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
     }
 
-    console.log("hostValue:", hostValue);
     return hostValue.getFunction(this.nameToken.source);
   }
 }
@@ -1666,10 +1662,13 @@ export class ExpressionVector extends ExpressionData {
 
   normalize() {
     let magnitude = this.magnitude;
-    for (let i = 0; i < this.elements.length; ++i) {
-      this.elements[i] = new ExpressionReal(this.elements[i].value / magnitude);
-    }
-    return this;
+    let newElements = this.elements.map(element => new ExpressionReal(element.value / magnitude));
+    return new ExpressionVector(newElements);
+  }
+
+  rotate90() {
+    let newElements = [this.elements[1], this.elements[0].negative()];
+    return new ExpressionVector(newElements);
   }
 
   toCartesian() {
