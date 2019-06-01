@@ -689,14 +689,22 @@ export class ExpressionIdentifier extends Expression {
     }
   }
 
-  assign(env, fromTime, toTime, rhs) {
+  assign(env, fromTime, toTime, rhs, isGlobal) {
     let value;
     if (rhs.isTimeSensitive(env)) {
       value = rhs;
     } else {
       value = rhs.evaluate(env, fromTime, toTime);
     }
-    env.bind(this.nameToken.source, value, fromTime, toTime);
+
+    let targetEnv = env;
+    if (isGlobal) {
+      while (targetEnv.parent != null) {
+        targetEnv = targetEnv.parent;
+      }
+    }
+    targetEnv.bind(this.nameToken.source, value, fromTime, toTime);
+
     return value;
   }
 
@@ -853,15 +861,16 @@ export class ExpressionBlock extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAssignment extends Expression {
-  constructor(l, r, where = null) {
+  constructor(l, r, isGlobal, where = null) {
     super(where);
     this.l = l;
     this.r = r;
+    this.isGlobal = isGlobal;
   }
 
   evaluate(env, fromTime, toTime) {
     if ('assign' in this.l) {
-      return this.l.assign(env, fromTime, toTime, this.r);
+      return this.l.assign(env, fromTime, toTime, this.r, this.isGlobal);
     } else {
       throw 'unassignable';
     }
@@ -921,7 +930,7 @@ export class ExpressionFor extends Expression {
     let by = this.by.evaluate(env, fromTime, toTime).value;
 
     for (let i = start; i < stop; i += by) {
-      new ExpressionAssignment(this.i, new ExpressionInteger(i)).evaluate(env, fromTime, toTime);
+      new ExpressionAssignment(this.i, new ExpressionInteger(i), true).evaluate(env, fromTime, toTime);
       this.body.evaluate(env, fromTime, toTime);
     }
   }

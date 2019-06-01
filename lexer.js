@@ -320,7 +320,12 @@ export function lex(source) {
       emit(Tokens.Plus);
     } else if (has('^')) {
       consume();
-      emit(Tokens.Circumflex);
+      if (has('=')) {
+        consume();
+        emit(Tokens.UpAssign);
+      } else {
+        emit(Tokens.Circumflex);
+      }
     } else if (has('*')) {
       consume();
       emit(Tokens.Asterisk);

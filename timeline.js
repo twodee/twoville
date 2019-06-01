@@ -85,7 +85,6 @@ export class Timeline {
   setToValue(t, value) {
     if (this.intervals.length == 0) {
       this.intervals.push(new Interval(null, null, t, value));
-      console.log("this.intervals[this.intervals.length - 1].toString():", this.intervals[this.intervals.length - 1].toString());
     } else {
       let i = this.intervals.length - 1;
       while (i >= 0 && this.intervals[i].startsAfter(t.value)) {

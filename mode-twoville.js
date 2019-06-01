@@ -62,7 +62,7 @@ var TwovilleHighlightRules = function() {
       },
       {
         token: "keyword.operator",
-        regex: /->|[-#+~/%*=]/,
+        regex: /->|\^=|[-#+~/%*=]/,
         next: "start"
       },
       {

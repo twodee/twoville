@@ -285,10 +285,11 @@ export function parse(tokens) {
 
   function expressionAssignment() {
     let lhs = expressionEquality(); 
-    if (has(Tokens.Assign)) {
+    if (has(Tokens.Assign) || has(Tokens.UpAssign)) {
+      let isGlobal = has(Tokens.UpAssign);
       consume();
       let rhs = expressionAssignment();
-      lhs = new ExpressionAssignment(lhs, rhs, SourceLocation.span(lhs.where, rhs.where));
+      lhs = new ExpressionAssignment(lhs, rhs, isGlobal, SourceLocation.span(lhs.where, rhs.where));
     }
     return lhs;
   }

@@ -45,6 +45,7 @@ export let Tokens = Object.freeze({
   Through: 'Through',
   Tilde: 'Tilde',
   To: 'To',
+  UpAssign: 'UpAssign',
   With: 'With',
 });
 
