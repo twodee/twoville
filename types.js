@@ -685,23 +685,33 @@ export class TwovillePathArc extends TwovilleShape {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
 
+    console.log("degrees:", degrees);
+
     let center;
     if (this.has('center')) {
       center = this.valueAt(env, 'center', t);
+      console.log("center:", center.toString());
       if (isDelta) {
         center = center.add(fromPosition);
       }
     } else {
       let toPosition = this.valueAt(env, 'position', t);
+      console.log("fromPosition:", fromPosition.toString());
+      console.log("toPosition:", toPosition.toString());
       if (isDelta) {
         toPosition = fromPosition.add(toPosition);
       }
 
       let diff = toPosition.subtract(fromPosition);
+      console.log("diff:", diff.toString());
       let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
+      console.log("distance:", distance);
       let halfway = fromPosition.add(toPosition).multiply(new ExpressionReal(0.5));
+      console.log("halfway:", halfway.toString());
       let normal = diff.rotate90().normalize();
+      console.log("normal:", normal.toString());
       center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
+      console.log("center:", center.toString());
     }
 
     let toFrom = fromPosition.subtract(center);
@@ -722,6 +732,7 @@ export class TwovillePathArc extends TwovilleShape {
       large = degrees.value <= -180 ? 1 : 0;
       sweep = 0;
     }
+    console.log("to.toString():", to.toString());
 
     return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, to];
   }

@@ -440,6 +440,7 @@ export function parse(tokens) {
            has(Tokens.String, offset) ||
            has(Tokens.Identifier, offset) ||
            has(Tokens.LeftSquareBracket, offset) ||
+           has(Tokens.LeftParenthesis, offset) ||
            has(Tokens.Repeat, offset) ||
            has(Tokens.For, offset) ||
            has(Tokens.If, offset);

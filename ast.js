@@ -1053,6 +1053,48 @@ export class ExpressionVectorNormalize extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionVectorRotate extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let degrees = env.get('degrees');
+    return this.instance.rotate(degrees);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionVectorRotateAround extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let pivot = env.get('pivot');
+    let degrees = env.get('degrees');
+    return this.instance.rotateAround(pivot, degrees);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionVectorRotate90 extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return this.instance.rotate90();
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class StatementFrom extends Expression {
   constructor(fromTimeExpression, block, where = null) {
     super(where);
@@ -1395,8 +1437,15 @@ export class ExpressionRandom extends Expression {
   evaluate(env, fromTime, toTime, callExpression) {
     let min = env.get('min').value;
     let max = env.get('max').value;
-    let x = Math.random() * (max - min) + min;
-    return new ExpressionReal(x);
+
+    let x;
+    if (env.get('min') instanceof ExpressionInteger && env.get('max') instanceof ExpressionInteger) {
+      let x = Math.floor(Math.random() * (max - min) + min);
+      return new ExpressionInteger(x);
+    } else {
+      let x = Math.random() * (max - min) + min;
+      return new ExpressionReal(x);
+    }
   }
 }
 
@@ -1535,6 +1584,24 @@ export class ExpressionVector extends ExpressionData {
       name: 'add',
       formals: ['item'],
       body: new ExpressionVectorAdd(this)
+    };
+
+    this.bindings['rotateAround'] = {
+      name: 'rotateAround',
+      formals: ['pivot', 'degrees'],
+      body: new ExpressionVectorRotateAround(this)
+    };
+
+    this.bindings['rotate'] = {
+      name: 'rotate',
+      formals: ['degrees'],
+      body: new ExpressionVectorRotate(this)
+    };
+
+    this.bindings['rotate90'] = {
+      name: 'rotate90',
+      formals: [],
+      body: new ExpressionVectorRotate90(this)
     };
   }
 
@@ -1678,6 +1745,25 @@ export class ExpressionVector extends ExpressionData {
   rotate90() {
     let newElements = [this.elements[1], this.elements[0].negative()];
     return new ExpressionVector(newElements);
+  }
+
+  rotate(degrees) {
+    let radians = degrees * Math.PI / 180;
+    let newVector = new ExpressionVector([
+      new ExpressionReal(this.get(0).value * Math.cos(radians) - this.get(1).value * Math.sin(radians)),
+      new ExpressionReal(this.get(0).value * Math.sin(radians) + this.get(1).value * Math.cos(radians)),
+    ]);
+    return newVector;
+  }
+
+  rotateAround(pivot, degrees) {
+    let radians = degrees * Math.PI / 180;
+    let diff = this.subtract(pivot);
+    let newVector = new ExpressionVector([
+      new ExpressionReal(diff.get(0).value * Math.cos(radians) - diff.get(1).value * Math.sin(radians)),
+      new ExpressionReal(diff.get(0).value * Math.sin(radians) + diff.get(1).value * Math.cos(radians)),
+    ]);
+    return newVector.add(pivot);
   }
 
   toCartesian() {
