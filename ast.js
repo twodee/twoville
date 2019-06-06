@@ -789,6 +789,7 @@ export class ExpressionFunctionCall extends Expression {
 
   lookup(env, fromTime, toTime) {
     let f = env.get(this.nameToken.source);
+    console.trace("lookup env:", this.nameToken.source, env);
     if (!f) {
       throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
     }
@@ -1225,14 +1226,19 @@ export class ExpressionWith extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
+    console.log("pre env:", env);
+    console.log("this.scope:", this.scope);
     let withEnv = this.scope.evaluate(env, fromTime, toTime);
+    console.log("with env:", env);
     withEnv.parent = env;
     this.body.evaluate(withEnv, fromTime, toTime);
     return withEnv;
   }
 
   isTimeSensitive(env) {
-    return this.scope.isTimeSensitive(env) || this.body.isTimeSensitive(env);
+    return false;
+    // console.log("haaa");
+    // return this.scope.isTimeSensitive(env) || this.body.isTimeSensitive(env);
   }
 }
 
