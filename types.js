@@ -1,4 +1,6 @@
-import { Timeline } from './timeline.js';
+import { 
+  Timeline
+} from './timeline.js';
 
 import { 
   ExpressionBoolean,
@@ -6,6 +8,7 @@ import {
   ExpressionCosine,
   ExpressionCutout,
   ExpressionGroup,
+  ExpressionIdentifier,
   ExpressionInt,
   ExpressionInteger,
   ExpressionLabel,
@@ -27,6 +30,11 @@ import {
   ExpressionSine,
   ExpressionString,
   ExpressionVector,
+  ExpressionVectorAdd,
+  ExpressionVectorToCartesian,
+  ExpressionVectorMagnitude,
+  ExpressionVectorNormalize,
+  ExpressionVectorSize,
   ExpressionVertex,
 } from './ast.js';
 
@@ -95,7 +103,7 @@ export class TwovilleEnvironment {
     return false;
   }
 
-  bind(id, fromTime, toTime, value) {
+  bind(id, value) {
     this.bindings[id] = value;
   }
 
@@ -116,12 +124,27 @@ export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
     super(env);
   }
 
-  bind(id, fromTime, toTime, value) {
+  bind(id, value, fromTime = null, toTime = null) {
     if (!this.bindings.hasOwnProperty(id)) {
       this.bindings[id] = new Timeline();
     }
 
-    if (fromTime != null && toTime != null) {
+    // We are assigning one timeline to another...
+    if (value instanceof Timeline) {
+      let timeline = value;
+      if (fromTime != null && toTime != null) {
+        this.bindings[id].setFromValue(fromTime, timeline.intervalFrom(fromTime).fromValue);
+        this.bindings[id].setToValue(toTime, timeline.intervalTo(toTime).toValue);
+      }  if (fromTime != null) {
+        this.bindings[id].setFromValue(fromTime, timeline.intervalFrom(fromTime).fromValue);
+      } else if (toTime != null) {
+        this.bindings[id].setToValue(toTime, timeline.intervalTo(toTime).toValue);
+      } else {
+        this.bindings[id].setDefault(timeline.getDefault());
+      }
+    }
+    
+    else if (fromTime != null && toTime != null) {
       this.bindings[id].setFromValue(fromTime, value);
       this.bindings[id].setToValue(toTime, value);
     } else if (fromTime != null) {
@@ -132,7 +155,6 @@ export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
       this.bindings[id].setDefault(value);
     }
   }
-
 }
 
 // --------------------------------------------------------------------------- 
@@ -150,8 +172,8 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.callExpression = callExpression;
     this.parentElement = null;
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
-    this.bindings.stroke.bind('opacity', null, null, new ExpressionReal(1));
-    this.bind('opacity', null, null, new ExpressionReal(1));
+    this.bindings.stroke.bind('opacity', new ExpressionReal(1));
+    this.bind('opacity', new ExpressionReal(1));
     this.id = serial;
     ++serial;
   }
@@ -175,6 +197,10 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     }
 
     return color;
+  }
+
+  getFunction(id) {
+    return this.bindings[id];
   }
 
   domify(svg) {
@@ -228,6 +254,23 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
 
   hide() {
     this.svgElement.setAttributeNS(null, 'visibility', 'hidden');
+  }
+
+  setStrokelessStroke(env, t) {
+    if (this.owns('size') &&
+        this.owns('color') &&
+        this.owns('opacity')) {
+      let strokeSize = this.valueAt(env, 'size', t);
+      let strokeColor = this.valueAt(env, 'color', t);
+      let strokeOpacity = this.valueAt(env, 'opacity', t);
+      this.svgElement.setAttributeNS(null, 'stroke', strokeColor.toColor());
+      this.svgElement.setAttributeNS(null, 'stroke-width', strokeSize.value);
+      this.svgElement.setAttributeNS(null, 'stroke-opacity', strokeOpacity.value);
+      if (this.owns('dashes')) {
+        let dashes = this.valueAt(env, 'dashes', t).toSpacedString();
+        this.svgElement.setAttributeNS(null, 'stroke-dasharray', dashes);
+      }
+    }
   }
  
   setStroke(env, t) {
@@ -291,7 +334,7 @@ export class TwovilleMarker extends TwovilleShape {
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.svgElement.setAttributeNS(null, 'orient', 'auto');
     this.svgElement.setAttributeNS(null, 'markerUnits', 'strokeWidth');
-    this.bind('template', null, null, new ExpressionBoolean(true));
+    this.bind('template', new ExpressionBoolean(true));
   }
 
   draw(env, t) {
@@ -346,7 +389,7 @@ export class TwovilleMask extends TwovilleShape {
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.bind('template', null, null, new ExpressionBoolean(true));
+    this.bind('template', new ExpressionBoolean(true));
   }
 
   draw(env, t) {
@@ -485,7 +528,7 @@ export class TwovillePathJump extends TwovilleShape {
     let position = this.valueAt(env, 'position', t);
 
     if (position) {
-      return `M${position.get(0).value},${position.get(1).value}`;
+      return [`M${position.get(0).value},${position.get(1).value}`, position];
     } else {
       return null;
     }
@@ -500,19 +543,28 @@ export class TwovillePathLine extends TwovilleShape {
     env.nodes.push(this);
   }
 
-  evolve(env, t) {
+  evolve(env, t, fromPosition) {
     this.assertProperty('position');
     
-    let position = this.valueAt(env, 'position', t);
+    let toPosition = this.valueAt(env, 'position', t);
 
     let isDelta = false;
     if (this.has('delta')) {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
-    let letter = isDelta ? 'l' : 'L';
 
-    if (position) {
-      return `${letter}${position.get(0).value},${position.get(1).value}`;
+    let absoluteToPosition;
+    let letter;
+    if (isDelta) {
+      absoluteToPosition = fromPosition.add(toPosition);
+      letter = 'l';
+    } else {
+      absoluteToPosition = toPosition;
+      letter = 'L';
+    }
+
+    if (toPosition) {
+      return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
     } else {
       return null;
     }
@@ -527,31 +579,36 @@ export class TwovillePathBezier extends TwovilleShape {
     env.nodes.push(this);
   }
 
-  evolve(env, t) {
+  evolve(env, t, fromPosition) {
     this.assertProperty('position');
     this.assertProperty('control2');
     
-    let position = this.valueAt(env, 'position', t);
+    let toPosition = this.valueAt(env, 'position', t);
     let control1;
     if (this.has('control1')) {
       control1 = this.valueAt(env, 'control1', t);
     }
     let control2 = this.valueAt(env, 'control2', t);
-    console.log("control1:", control1);
-    console.log("control2:", control2);
 
     let isDelta = false;
     if (this.has('delta')) {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
 
-    if (position) {
+    if (toPosition) {
+      let absoluteToPosition;
+      if (isDelta) {
+        absoluteToPosition = fromPosition.add(toPosition);
+      } else {
+        absoluteToPosition = toPosition;
+      }
+
       if (control1) {
         let letter = isDelta ? 'c' : 'C';
-        return `${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+        return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       } else {
         let letter = isDelta ? 's' : 'S';
-        return `${letter} ${control2.get(0).value},${control2.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+        return [`${letter} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       }
     } else {
       return null;
@@ -567,10 +624,10 @@ export class TwovillePathQuadratic extends TwovilleShape {
     env.nodes.push(this);
   }
 
-  evolve(env, t) {
+  evolve(env, t, fromPosition) {
     this.assertProperty('position');
     
-    let position = this.valueAt(env, 'position', t);
+    let toPosition = this.valueAt(env, 'position', t);
     let control;
     if (this.has('control')) {
       control = this.valueAt(env, 'control', t);
@@ -581,13 +638,20 @@ export class TwovillePathQuadratic extends TwovilleShape {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
 
-    if (position) {
+    if (toPosition) {
+      let absoluteToPosition;
+      if (isDelta) {
+        absoluteToPosition = fromPosition.add(toPosition);
+      } else {
+        absoluteToPosition = toPosition;
+      }
+
       if (control) {
         let letter = isDelta ? 'q' : 'Q';
-        return `${letter} ${control.get(0).value},${control.get(1).value} ${position.get(0).value},${position.get(1).value}`;
+        return [`${letter} ${control.get(0).value},${control.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       } else {
         let letter = isDelta ? 't' : 'T';
-        return `${letter}${position.get(0).value},${position.get(1).value}`;
+        return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       }
     } else {
       return null;
@@ -603,52 +667,74 @@ export class TwovillePathArc extends TwovilleShape {
     env.nodes.push(this);
   }
 
-  evolve(env, t, from) {
-    this.assertProperty('position');
-    this.assertProperty('direction');
-    this.assertProperty('center');
-    
-    let position = this.valueAt(env, 'position', t);
-    let direction = this.valueAt(env, 'direction', t);
-    let center = this.valueAt(env, 'center', t);
-
-    if (position) {
-      let diff2 = position.subtract(center);
-      let diff1 = from.subtract(center);
-      let radius = diff1.magnitude;
-      let area = 0.5 * (diff1.get(0).value * diff2.get(1).value - diff2.get(0).value * diff1.get(1).value);
-
-      let large;
-      let sweep;
-
-      if (direction.value == 0) {
-        if (area < 0) {
-          large = 1;
-          sweep = 1;
-        } else {
-          large = 0;
-          sweep = 1;
-        }
-      } else {
-        if (area > 0) {
-          large = 1;
-          sweep = 0;
-        } else {
-          large = 0;
-          sweep = 0;
-        }
-      }
-
-      let isDelta = false;
-      if (this.has('delta')) {
-        isDelta = this.valueAt(env, 'delta', t).value;
-      }
-      let letter = isDelta ? 'a' : 'A';
-
-      return `${letter}${radius},${radius} 0 ${large} ${sweep} ${position.get(0).value},${position.get(1).value}`;
-    } else {
-      return null;
+  evolve(env, t, fromPosition) {
+    if (this.has('position') && this.has('center')) {
+      throw new LocatedException(this.callExpression.where, 'I found an arc whose position and center properties were both set. Define only one of these.');
     }
+
+    if (!this.has('position') && !this.has('center')) {
+      throw new LocatedException(this.callExpression.where, 'I found an arc whose curvature I couldn\'t figure out. Please define its center or position.');
+    }
+
+    this.assertProperty('degrees');
+    let degrees = this.valueAt(env, 'degrees', t);
+    let radians = degrees * Math.PI / 180;
+
+    let isDelta = false;
+    if (this.has('delta')) {
+      isDelta = this.valueAt(env, 'delta', t).value;
+    }
+
+    console.log("degrees:", degrees);
+
+    let center;
+    if (this.has('center')) {
+      center = this.valueAt(env, 'center', t);
+      console.log("center:", center.toString());
+      if (isDelta) {
+        center = center.add(fromPosition);
+      }
+    } else {
+      let toPosition = this.valueAt(env, 'position', t);
+      console.log("fromPosition:", fromPosition.toString());
+      console.log("toPosition:", toPosition.toString());
+      if (isDelta) {
+        toPosition = fromPosition.add(toPosition);
+      }
+
+      let diff = toPosition.subtract(fromPosition);
+      console.log("diff:", diff.toString());
+      let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
+      console.log("distance:", distance);
+      let halfway = fromPosition.add(toPosition).multiply(new ExpressionReal(0.5));
+      console.log("halfway:", halfway.toString());
+      let normal = diff.rotate90().normalize();
+      console.log("normal:", normal.toString());
+      center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
+      console.log("center:", center.toString());
+    }
+
+    let toFrom = fromPosition.subtract(center);
+    let toTo = new ExpressionVector([
+      new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
+      new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
+    ]);
+    let to = center.add(toTo);
+
+    let radius = toFrom.magnitude;
+    let large;
+    let sweep;
+
+    if (degrees.value >= 0) {
+      large = degrees.value >= 180 ? 1 : 0;
+      sweep = 1;
+    } else {
+      large = degrees.value <= -180 ? 1 : 0;
+      sweep = 0;
+    }
+    console.log("to.toString():", to.toString());
+
+    return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, to];
   }
 }
 
@@ -662,19 +748,21 @@ export class TwovilleMarkerable extends TwovilleShape {
   draw(env, t) {
     // Difference between owns and has? TODO
 
-    if (this.owns('tip')) {
-      let tip = this.get('tip').getDefault();
-      this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + tip.id + ')');
+    if (this.owns('node')) {
+      let node = this.get('node').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-mid', 'url(#element-' + node.id + ')');
+      this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + node.id + ')');
+      this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + node.id + ')');
     }
 
-    if (this.owns('nock')) {
-      let nock = this.get('nock').getDefault();
-      this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + nock.id + ')');
+    if (this.owns('head')) {
+      let head = this.get('head').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + head.id + ')');
     }
 
-    if (this.owns('join')) {
-      let join = this.get('join').getDefault();
-      this.svgElement.setAttributeNS(null, 'marker-mid', 'url(#element-' + join.id + ')');
+    if (this.owns('tail')) {
+      let tail = this.get('tail').getDefault();
+      this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
     }
   }
 }
@@ -691,7 +779,7 @@ export class TwovilleLine extends TwovilleMarkerable {
     this.bindings['vertex'] = {
       name: 'vertex',
       formals: [],
-      body: new ExpressionVertex()
+      body: new ExpressionVertex(this)
     };
   }
 
@@ -709,7 +797,7 @@ export class TwovilleLine extends TwovilleMarkerable {
       this.hide();
     } else {
       this.show();
-      this.setStroke(env, t);
+      this.setStrokelessStroke(env, t);
       this.setTransform(env, t);
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
@@ -734,31 +822,31 @@ export class TwovillePath extends TwovilleMarkerable {
     this.bindings['arc'] = {
       name: 'arc',
       formals: [],
-      body: new ExpressionPathArc()
+      body: new ExpressionPathArc(this)
     };
 
     this.bindings['bezier'] = {
       name: 'bezier',
       formals: [],
-      body: new ExpressionPathBezier()
+      body: new ExpressionPathBezier(this)
     };
 
     this.bindings['jump'] = {
       name: 'jump',
       formals: [],
-      body: new ExpressionPathJump()
+      body: new ExpressionPathJump(this)
     };
 
     this.bindings['line'] = {
       name: 'line',
       formals: [],
-      body: new ExpressionPathLine()
+      body: new ExpressionPathLine(this)
     };
 
     this.bindings['quadratic'] = {
       name: 'quadratic',
       formals: [],
-      body: new ExpressionPathQuadratic()
+      body: new ExpressionPathQuadratic(this)
     };
   }
 
@@ -770,9 +858,11 @@ export class TwovillePath extends TwovilleMarkerable {
       isClosed = this.valueAt(env, 'closed', t).value;
     }
 
+    let last = null;
     let vertices = this.nodes.map((vertex, i) => {
-      let from = i == 0 ? null : this.nodes[i - 1].valueAt(env, 'position', t);
-      return vertex.evolve(env, t, from);
+      let result = vertex.evolve(env, t, last);
+      last = result[1];
+      return result[0];
     });
 
     let opacity = this.valueAt(env, 'opacity', t).value;
@@ -813,7 +903,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
     this.bindings['vertex'] = {
       name: 'vertex',
       formals: [],
-      body: new ExpressionVertex()
+      body: new ExpressionVertex(this)
     };
   }
 
@@ -851,7 +941,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
     this.bindings['vertex'] = {
       name: 'vertex',
       formals: [],
-      body: new ExpressionVertex()
+      body: new ExpressionVertex(this)
     };
   }
 
@@ -868,15 +958,12 @@ export class TwovillePolyline extends TwovilleMarkerable {
       this.hide();
     } else {
       this.show();
-      this.setStroke(env, t);
+      this.setStrokelessStroke(env, t);
       this.setTransform(env, t);
 
       let commands = vertices.join(' ');
 
-      this.svgElement.setAttributeNS(null, 'stroke-width', size.value);
-      this.svgElement.setAttributeNS(null, 'stroke-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'points', commands);
-      this.svgElement.setAttributeNS(null, 'stroke', color.toColor());
       this.svgElement.setAttributeNS(null, 'fill', 'none');
     }
   }
@@ -992,27 +1079,27 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     this.shapes = [];
 
     this.bindings.time = new TwovilleEnvironment(this);
-    this.bindings.time.bind('start', null, null, new ExpressionInteger(0));
-    this.bindings.time.bind('stop', null, null, new ExpressionInteger(100));
-    this.bindings.time.bind('delay', null, null, new ExpressionInteger(16));
-    this.bindings.time.bind('resolution', null, null, new ExpressionInteger(1));
+    this.bindings.time.bind('start', new ExpressionInteger(0));
+    this.bindings.time.bind('stop', new ExpressionInteger(100));
+    this.bindings.time.bind('delay', new ExpressionInteger(16));
+    this.bindings.time.bind('resolution', new ExpressionInteger(1));
 
     this.bindings.gif = new TwovilleEnvironment(this);
-    this.bindings.gif.bind('size', null, null, new ExpressionVector([
+    this.bindings.gif.bind('size', new ExpressionVector([
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));
-    this.bindings.gif.bind('name', null, null, new ExpressionString('twoville.gif'));
-    this.bindings.gif.bind('transparency', null, null, new ExpressionVector([
+    this.bindings.gif.bind('name', new ExpressionString('twoville.gif'));
+    this.bindings.gif.bind('transparency', new ExpressionVector([
       new ExpressionReal(0),
       new ExpressionReal(0),
       new ExpressionReal(0),
     ]));
-    this.bindings.gif.bind('repeat', null, null, new ExpressionInteger(0));
-    this.bindings.gif.bind('delay', null, null, new ExpressionInteger(10));
+    this.bindings.gif.bind('repeat', new ExpressionInteger(0));
+    this.bindings.gif.bind('delay', new ExpressionInteger(10));
 
     this.bindings.viewport = new TwovilleEnvironment(this);
-    this.bindings.viewport.bind('size', null, null, new ExpressionVector([
+    this.bindings.viewport.bind('size', new ExpressionVector([
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));

@@ -14,7 +14,6 @@ import {
   GlobalEnvironment,
   LocatedException,
   MessagedException,
-  TwovilleEnvironment,
   TwovilleShape,
   initializeShapes,
   svgNamespace,
@@ -182,8 +181,6 @@ recordButton.addEventListener('click', () => {
   svg.setAttribute('width', size.get(0).value);
   svg.setAttribute('height', size.get(1).value);
 
-  console.log("repeat:", repeat);
-  console.log("transparentColor.toHexColor():", transparentColor.toHexColor());
   let gif = new GIF({
     workers: 3,
     quality: 1,
@@ -338,11 +335,13 @@ function interpret() {
     initializeShapes();
 
     let tokens = lex(editor.getValue());
-    ast = parse(tokens);
 
+    // console.log("tokens:", tokens);
     // tokens.forEach(token => {
-      // messager.log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
+      // Messager.log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
     // });
+
+    ast = parse(tokens);
 
     TwovilleShape.serial = 0;
     env = new GlobalEnvironment(svg);
@@ -393,7 +392,7 @@ function interpret() {
     env.svg.appendChild(pageOutline);
 
     env.shapes.forEach(shape => {
-      console.log("shape:", shape);
+      // console.log("shape:", shape);
       shape.domify(env.svg)
     });
 

@@ -11,7 +11,7 @@ export class Timeline {
     return '[default: ' + this.defaultValue + ', intervals: ' + this.intervals.map(interval => interval.toString()).join(',') + ']';
   }
 
-  getDefault(env, t) {
+  getDefault() {
     return this.defaultValue;
   }
 
@@ -21,6 +21,14 @@ export class Timeline {
 
   intervalAt(t) {
     return this.intervals.find(interval => interval.spans(t));
+  }
+
+  intervalFrom(t) {
+    return this.intervals.find(interval => interval.fromTime == t);
+  }
+
+  intervalTo(t) {
+    return this.intervals.find(interval => interval.toTime == t);
   }
 
   valueAt(env, t) {
@@ -40,9 +48,6 @@ export class Timeline {
   }
 
   setFromValue(t, value) {
-    console.log("t:", t);
-    console.log("value:", value);
-
     if (this.intervals.length == 0) {
       this.intervals.push(new Interval(t, value));
     } else {
@@ -80,7 +85,6 @@ export class Timeline {
   setToValue(t, value) {
     if (this.intervals.length == 0) {
       this.intervals.push(new Interval(null, null, t, value));
-      console.log("this.intervals[this.intervals.length - 1].toString():", this.intervals[this.intervals.length - 1].toString());
     } else {
       let i = this.intervals.length - 1;
       while (i >= 0 && this.intervals[i].startsAfter(t.value)) {

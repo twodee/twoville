@@ -3,9 +3,11 @@ export let Tokens = Object.freeze({
   Asterisk: 'Asterisk',
   Boolean: 'Boolean',
   By: 'By',
+  Character: 'Character',
   Circle: 'Circle',
   Circumflex: 'Circumflex',
   Comma: 'Comma',
+  Distribute: 'Distribute',
   Dot: 'Dot',
   EOF: 'EOF',
   Else: 'Else',
@@ -39,8 +41,11 @@ export let Tokens = Object.freeze({
   String: 'String',
   Symbol: 'Symbol',
   T: 'T',
+  Then: 'Then',
   Through: 'Through',
+  Tilde: 'Tilde',
   To: 'To',
+  UpAssign: 'UpAssign',
   With: 'With',
 });
 

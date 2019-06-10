@@ -17,7 +17,7 @@ oop.inherits(Mode, TextMode);
   this.getNextLineIndent = function(state, line, tab) {
     var match = line.match(/^\s*/);
     var currentIndent = match[0];
-    if (/^\s*(if|else|to|for|repeat|while|around)\b/.test(line)) {
+    if (/^\s*(if|else|to|for|repeat|while|then)\b/.test(line)) {
       return currentIndent + '  ';
     } else {
       return currentIndent;
@@ -62,12 +62,12 @@ var TwovilleHighlightRules = function() {
       },
       {
         token: "keyword.operator",
-        regex: /->|[-+/%*=]/,
+        regex: /->|\^=|[-#+~/%*=]/,
         next: "start"
       },
       {
         token: "keyword",
-        regex: /\b(?:repeat|with|from|to|for|through|in|else|if)\b/,
+        regex: /\b(?:repeat|with|from|to|for|through|in|else|if|then)\b/,
         next: "start"
       },
       {
@@ -78,6 +78,11 @@ var TwovilleHighlightRules = function() {
       {
         token: "variable",
         regex: /[a-zA-Z]\w*/,
+        next: "start"
+      },
+      {
+        token: "constant.character",
+        regex: /'[^']'/,
         next: "start"
       },
       {

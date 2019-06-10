@@ -13,7 +13,9 @@ import {
   ExpressionAssignment,
   ExpressionBlock,
   ExpressionBoolean,
+  ExpressionCharacter,
   ExpressionDivide,
+  ExpressionDistributedIdentifier,
   ExpressionFor,
   ExpressionFunctionCall,
   ExpressionFunctionDefinition,
@@ -24,16 +26,18 @@ import {
   ExpressionInteger,
   ExpressionLess,
   ExpressionLessEqual,
+  ExpressionMemberFunctionCall,
+  ExpressionMemberIdentifier,
   ExpressionMultiply,
   ExpressionNegative,
   ExpressionNotSame,
-  ExpressionProperty,
   ExpressionPower,
   ExpressionReal,
   ExpressionRemainder,
   ExpressionRepeat,
   ExpressionSame,
   ExpressionString,
+  ExpressionSubscript,
   ExpressionSubtract,
   ExpressionVector,
   ExpressionWith,
@@ -44,6 +48,10 @@ import {
   StatementToStasis,
   StatementThrough,
 } from './ast.js';
+
+// import {
+  // ExpressionVector
+// } from './types.js';
 
 export function parse(tokens) {
   let symbols = {
@@ -59,6 +67,13 @@ export function parse(tokens) {
     ':start': new ExpressionString('start'),
     ':middle': new ExpressionString('middle'),
     ':end': new ExpressionString('end'),
+
+    ':short': new ExpressionInteger(0),
+    ':long': new ExpressionInteger(1),
+
+    // 
+    ':zero2': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]),
+    ':zero3': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
 
     // Colors
     ':black': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
@@ -105,10 +120,17 @@ export function parse(tokens) {
       throw new LocatedException(tokens[i].where, 'I expected no indentation at the top-level of the program.');
     }
 
-    let b = block();
-    if (!has(Tokens.EOF)) {
-      throw new LocatedException(b.where, 'I expected the program to end after this, but it didn\'t.');
+    let b;
+    if (has(Tokens.EOF)) {
+      let eofToken = consume();
+      b = new ExpressionBlock([], eofToken.where);
+    } else {
+      b = block();
+      if (!has(Tokens.EOF)) {
+        throw new LocatedException(b.where, 'I expected the program to end after this, but it didn\'t.');
+      }
     }
+
     return b;
   }
 
@@ -263,10 +285,11 @@ export function parse(tokens) {
 
   function expressionAssignment() {
     let lhs = expressionEquality(); 
-    if (has(Tokens.Assign)) {
+    if (has(Tokens.Assign) || has(Tokens.UpAssign)) {
+      let isGlobal = has(Tokens.UpAssign);
       consume();
       let rhs = expressionAssignment();
-      lhs = new ExpressionAssignment(lhs, rhs, SourceLocation.span(lhs.where, rhs.where));
+      lhs = new ExpressionAssignment(lhs, rhs, isGlobal, SourceLocation.span(lhs.where, rhs.where));
     }
     return lhs;
   }
@@ -342,21 +365,67 @@ export function parse(tokens) {
   }
 
   function expressionPower() {
-    let a = expressionProperty();
+    let a = expressionMember();
     while (has(Tokens.Circumflex)) {
       let operator = consume();
-      let b = expressionProperty();
+      let b = expressionMember();
       a = new ExpressionPower(a, b, SourceLocation.span(a.where, b.where));
     }
     return a;
   }
 
-  function expressionProperty() {
+  function expressionMember() {
     let base = atom();
-    while (has(Tokens.Dot)) {
-      consume(); 
-      let property = atom();
-      base = new ExpressionProperty(base, property, SourceLocation.span(base.where, property.where));
+    while (has(Tokens.Dot) || has(Tokens.Distribute) || has(Tokens.LeftSquareBracket)) {
+      if (has(Tokens.Dot)) {
+        let dotToken = consume(); // eat .
+
+        if (!has(Tokens.Identifier)) {
+          throw new LocatedException(dotToken.where, `expected ID`);
+        }
+
+        let nameToken = consume();
+
+        if (has(Tokens.LeftParenthesis)) {
+          consume(); // eat (
+
+          let actuals = [];
+          if (isFirstOfExpression()) {
+            actuals.push(expression());
+            while (has(Tokens.Comma) && isFirstOfExpression(1)) {
+              consume(); // eat ,
+              actuals.push(expression());
+            }
+          }
+
+          let sourceEnd = tokens[i].where;
+          if (!has(Tokens.RightParenthesis)) {
+            throw new LocatedException(SourceLocation.span(sourceStart, sourceEnd), `I expected a right parenthesis to close the function call, but I encountered "${tokens[i].source}" (${tokens[i].type}) instead.`);
+          }
+          consume();
+
+          base = new ExpressionMemberFunctionCall(base, nameToken, actuals, SourceLocation.span(base.where, sourceEnd));
+        } else {
+          base = new ExpressionMemberIdentifier(base, nameToken, SourceLocation.span(base.where, nameToken.where));
+        }
+      } else if (has(Tokens.Distribute)) {
+        let hashToken = consume(); // eat #
+
+        if (!has(Tokens.Identifier)) {
+          throw new LocatedException(hashToken.where, `expected ID`);
+        }
+
+        let nameToken = consume();
+        base = new ExpressionDistributedIdentifier(base, nameToken, SourceLocation.span(base.where, nameToken.where));
+      } else {
+        consume(); // eat [
+        let index = expression();
+        if (!has(Tokens.RightSquareBracket)) {
+          throw new LocatedException(index.where, `I expected a ] after this subscript.`);
+        }
+        let rightBracketToken = consume(); // eat ]
+        base = new ExpressionSubscript(base, index, SourceLocation.span(base.where, rightBracketToken.where));
+      }
     }
     return base;
   }
@@ -371,6 +440,7 @@ export function parse(tokens) {
            has(Tokens.String, offset) ||
            has(Tokens.Identifier, offset) ||
            has(Tokens.LeftSquareBracket, offset) ||
+           has(Tokens.LeftParenthesis, offset) ||
            has(Tokens.Repeat, offset) ||
            has(Tokens.For, offset) ||
            has(Tokens.If, offset);
@@ -401,6 +471,9 @@ export function parse(tokens) {
     } else if (has(Tokens.String)) {
       let token = consume();
       return new ExpressionString(token.source, token.where);
+    } else if (has(Tokens.Character)) {
+      let token = consume();
+      return new ExpressionCharacter(token.source, token.where);
     } else if (has(Tokens.Real)) {
       let token = consume();
       return new ExpressionReal(Number(token.source), token.where);
@@ -466,23 +539,36 @@ export function parse(tokens) {
       let conditions = [];
       let thenBlocks = [];
       let elseBlock = null;
+      let isOneLiner;
 
       if (isFirstOfExpression()) {
         let condition = expression();
 
-        if (!has(Tokens.Linebreak)) {
-          throw new LocatedException(condition.where, 'I expected a linebreak after this if\'s condition.');
+        let thenBlock;
+        if (has(Tokens.Linebreak)) {
+          consume(); // eat linebreak
+          thenBlock = block();
+          isOneLiner = false;
+        } else if (has(Tokens.Then)) {
+          consume(); // eat then
+          thenBlock = expression();
+          isOneLiner = true;
+        } else {
+          throw new LocatedException(sourceStart, 'I expected either a linebreak or then after the condition.');
         }
-        consume(); // eat linebreak
-        let thenBlock = block();
 
         conditions.push(condition);
         thenBlocks.push(thenBlock);
         sourceEnd = thenBlock.where;
+      } else {
+        throw new LocatedException(sourceStart, 'I expected a condition for this if.');
       }
 
-      while (has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.ElseIf, 1)) {
-        consume(); // eat indent
+      while ((isOneLiner && has(Tokens.ElseIf)) ||
+             (!isOneLiner && has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.ElseIf, 1))) {
+        if (!isOneLiner) {
+          consume(); // eat indent
+        }
         let elseIfToken = tokens[i];
         consume(); // eat else if
 
@@ -492,11 +578,18 @@ export function parse(tokens) {
 
         let condition = expression();
 
-        if (!has(Tokens.Linebreak)) {
-          throw new LocatedException(condition.where, 'I expected a linebreak after this if\'s condition.');
+        let thenBlock;
+        if (has(Tokens.Linebreak)) {
+          consume(); // eat linebreak
+          thenBlock = block();
+          isOneLiner = false;
+        } else if (has(Tokens.Then)) {
+          consume(); // eat then
+          thenBlock = expression();
+          isOneLiner = true;
+        } else {
+          throw new LocatedException(sourceStart, 'I expected either a linebreak or then after the condition.');
         }
-        consume(); // eat linebreak
-        let thenBlock = block();
 
         conditions.push(condition);
         thenBlocks.push(thenBlock);
@@ -507,14 +600,22 @@ export function parse(tokens) {
         throw new LocatedException(sourceStart, 'I expected this if statement to have at least one condition.');
       }
       
-      if (has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.Else, 1)) {
-        consume(); // eat indentation
-        let elseToken = consume(); // eat else
-        if (!has(Tokens.Linebreak)) {
-          throw new LocatedException(elseToken.where, 'I expected a linebreak after this if\'s else.');
+      if ((isOneLiner && has(Tokens.Else)) ||
+          (!isOneLiner && has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.Else, 1))) {
+        if (!isOneLiner) {
+          consume(); // eat indentation
         }
-        consume(); // TODO linebreak
-        elseBlock = block();
+        let elseToken = consume(); // eat else
+
+        if (has(Tokens.Linebreak)) {
+          consume(); // eat linebreak
+          elseBlock = block();
+          isOneLiner = false;
+        } else {
+          elseBlock = expression();
+          isOneLiner = true;
+        }
+
         sourceEnd = elseBlock.where;
       }
 
@@ -576,13 +677,22 @@ export function parse(tokens) {
       consume(); // eat [
       let elements = [];
       while (!has(Tokens.RightSquareBracket)) {
-        let e = expression();
+        let e;
+        if (has(Tokens.Tilde)) {
+          let tildeToken = consume();
+          if (elements.length == 0) {
+            throw new LocatedException(tildeToken.where, 'I found ~ at index 0 of this vector. Operator ~ repeats the previous element and can only appear after index 0.');
+          }
+          e = elements[elements.length - 1];
+        } else {
+          e = expression();
+        }
         elements.push(e);
         if (!has(Tokens.RightSquareBracket)) {
           if (has(Tokens.Comma)) {
             consume(); // eat ,
           } else {
-            throw new LocatedException(SourceLocation.span(e.where, tokens[i].where), 'I expected a comma between vector elements.');
+            throw new LocatedException(tokens[i].where, 'I expected a comma between vector elements.');
           }
         }
       }
@@ -592,7 +702,7 @@ export function parse(tokens) {
     } else if (has(Tokens.Identifier) && has(Tokens.LeftParenthesis, 1)) {
       let sourceStart = tokens[i].where;
 
-      let name = consume().source;
+      let nameToken = consume();
       consume(); // eat (
 
       let actuals = [];
@@ -611,7 +721,7 @@ export function parse(tokens) {
         throw new LocatedException(SourceLocation.span(sourceStart, sourceEnd), `I expected a right parenthesis to close the function call, but I encountered "${tokens[i].source}" (${tokens[i].type}) instead.`);
       }
 
-      return new ExpressionFunctionCall(name, actuals, SourceLocation.span(sourceStart, sourceEnd));
+      return new ExpressionFunctionCall(nameToken, actuals, SourceLocation.span(sourceStart, sourceEnd));
     } else if (has(Tokens.Repeat)) {
       let sourceStart = tokens[i].where;
       consume(); // eat repeat
