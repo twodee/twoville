@@ -6,8 +6,8 @@ if (array_key_exists('src', $_REQUEST)) {
   $src = str_replace(array("\r\n", "\n", "\r"), "\\n", $_REQUEST['src']);
   $src = str_replace("'", "\\'", $src);
   $script = "source0 = '$src';";
-  if (array_key_exists('isAutorun0', $_REQUEST)) {
-    $script .= "\nisAutorun0 = '{$_REQUEST['isAutorun0']}';";
+  if (array_key_exists('runZeroMode', $_REQUEST)) {
+    $script .= "\nrunZeroMode = '{$_REQUEST['runZeroMode']}';";
   }
   $html = str_replace('// SRC:PHP', $script, $html);
 }
