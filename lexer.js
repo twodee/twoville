@@ -210,7 +210,7 @@ export function lex(source) {
     if (has('/') && has('/', 1)) {
       consume();
       consume();
-      comment();
+      wholeLineComment();
     } else {
       emit(Tokens.Indentation);
     }
@@ -254,8 +254,16 @@ export function lex(source) {
     }
   }
 
-  function comment() {
+  function inlineComment() {
     // eat till end of line
+    while (i < source.length && !has('\n')) {
+      consume();
+    }
+    resetToken();
+  }
+
+  function wholeLineComment() {
+    // eat through end of line
     while (i < source.length && !has('\n')) {
       consume();
     }
@@ -336,7 +344,7 @@ export function lex(source) {
       consume();
       if (has('/')) {
         consume();
-        comment();
+        inlineComment();
       } else {
         emit(Tokens.ForwardSlash);
       }
