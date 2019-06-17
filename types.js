@@ -171,11 +171,17 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.type = type;
     this.callExpression = callExpression;
     this.parentElement = null;
+    this.annotationElements = [];
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
     this.bindings.stroke.bind('opacity', new ExpressionReal(1));
     this.bind('opacity', new ExpressionReal(1));
     this.id = serial;
     ++serial;
+  }
+
+  addAnnotation(element) {
+    console.log("hi");
+    this.annotationElements.push(element);
   }
 
   getColor(env, t) {
@@ -235,6 +241,12 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       this.parentElement.appendChild(maskParent);
     } else {
       this.parentElement.appendChild(this.svgElement);
+    }
+
+    console.log("FOOOO this.annotationElements:", this.annotationElements);
+    for (let element of this.annotationElements) {
+      console.log("element:", element);
+      this.parentElement.appendChild(element);
     }
   }
 
@@ -520,6 +532,11 @@ export class TwovillePathJump extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'jump');
     env.nodes.push(this);
+
+    this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
+
+    env.addAnnotation(this.positionElement);
   }
 
   evolve(env, t) {
@@ -528,6 +545,7 @@ export class TwovillePathJump extends TwovilleShape {
     let position = this.valueAt(env, 'position', t);
 
     if (position) {
+      setVertexAnnotationAttributes(this.positionElement, position);
       return [`M${position.get(0).value},${position.get(1).value}`, position];
     } else {
       return null;
@@ -541,6 +559,14 @@ export class TwovillePathLine extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'line');
     env.nodes.push(this);
+
+    this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
+
+    this.lineElement = document.createElementNS(svgNamespace, 'line');
+
+    env.addAnnotation(this.positionElement);
+    env.addAnnotation(this.lineElement);
   }
 
   evolve(env, t, fromPosition) {
@@ -564,6 +590,19 @@ export class TwovillePathLine extends TwovilleShape {
     }
 
     if (toPosition) {
+      setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
+
+      this.lineElement.setAttributeNS(null, 'x1', fromPosition.get(0).value);
+      this.lineElement.setAttributeNS(null, 'y1', fromPosition.get(1).value);
+      this.lineElement.setAttributeNS(null, 'x2', absoluteToPosition.get(0).value);
+      this.lineElement.setAttributeNS(null, 'y2', absoluteToPosition.get(1).value);
+      this.lineElement.setAttributeNS(null, 'stroke-width', 1);
+      this.lineElement.setAttributeNS(null, 'stroke-opacity', 1);
+      this.lineElement.setAttributeNS(null, 'stroke', 'gray');
+      this.lineElement.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+      this.lineElement.setAttributeNS(null, 'fill', 'none');
+      this.lineElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
+
       return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
     } else {
       return null;
@@ -577,6 +616,24 @@ export class TwovillePathBezier extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'bezier');
     env.nodes.push(this);
+
+    this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
+
+    this.control1Element = document.createElementNS(svgNamespace, 'circle');
+    this.control1Element.setAttributeNS(null, 'id', `element-${this.id}-control1`);
+
+    this.control2Element = document.createElementNS(svgNamespace, 'circle');
+    this.control2Element.setAttributeNS(null, 'id', `element-${this.id}-control2`);
+
+    this.line1Element = document.createElementNS(svgNamespace, 'line');
+    this.line2Element = document.createElementNS(svgNamespace, 'line');
+
+    env.addAnnotation(this.positionElement);
+    env.addAnnotation(this.control1Element);
+    env.addAnnotation(this.control2Element);
+    env.addAnnotation(this.line1Element);
+    env.addAnnotation(this.line2Element);
   }
 
   evolve(env, t, fromPosition) {
@@ -603,7 +660,34 @@ export class TwovillePathBezier extends TwovilleShape {
         absoluteToPosition = toPosition;
       }
 
+      setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
+      setVertexAnnotationAttributes(this.control2Element, control2);
+
+      this.line2Element.setAttributeNS(null, 'x1', control2.get(0).value);
+      this.line2Element.setAttributeNS(null, 'y1', control2.get(1).value);
+      this.line2Element.setAttributeNS(null, 'x2', absoluteToPosition.get(0).value);
+      this.line2Element.setAttributeNS(null, 'y2', absoluteToPosition.get(1).value);
+      this.line2Element.setAttributeNS(null, 'stroke-width', 1);
+      this.line2Element.setAttributeNS(null, 'stroke-opacity', 1);
+      this.line2Element.setAttributeNS(null, 'stroke', 'gray');
+      this.line2Element.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+      this.line2Element.setAttributeNS(null, 'fill', 'none');
+      this.line2Element.setAttributeNS(null, 'stroke-dasharray', '2 2');
+
       if (control1) {
+        setVertexAnnotationAttributes(this.control1Element, control1);
+ 
+        this.line1Element.setAttributeNS(null, 'x1', control1.get(0).value);
+        this.line1Element.setAttributeNS(null, 'y1', control1.get(1).value);
+        this.line1Element.setAttributeNS(null, 'x2', fromPosition.get(0).value);
+        this.line1Element.setAttributeNS(null, 'y2', fromPosition.get(1).value);
+        this.line1Element.setAttributeNS(null, 'stroke-width', 1);
+        this.line1Element.setAttributeNS(null, 'stroke-opacity', 1);
+        this.line1Element.setAttributeNS(null, 'stroke', 'gray');
+        this.line1Element.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+        this.line1Element.setAttributeNS(null, 'fill', 'none');
+        this.line1Element.setAttributeNS(null, 'stroke-dasharray', '2 2');
+
         let letter = isDelta ? 'c' : 'C';
         return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       } else {
@@ -622,6 +706,18 @@ export class TwovillePathQuadratic extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'quadratic');
     env.nodes.push(this);
+
+    this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
+
+    this.controlElement = document.createElementNS(svgNamespace, 'circle');
+    this.controlElement.setAttributeNS(null, 'id', `element-${this.id}-control`);
+
+    this.lineElement = document.createElementNS(svgNamespace, 'line');
+
+    env.addAnnotation(this.positionElement);
+    env.addAnnotation(this.controlElement);
+    env.addAnnotation(this.lineElement);
   }
 
   evolve(env, t, fromPosition) {
@@ -646,7 +742,22 @@ export class TwovillePathQuadratic extends TwovilleShape {
         absoluteToPosition = toPosition;
       }
 
+      setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
+
       if (control) {
+        setVertexAnnotationAttributes(this.controlElement, control);
+
+        this.lineElement.setAttributeNS(null, 'x1', control.get(0).value);
+        this.lineElement.setAttributeNS(null, 'y1', control.get(1).value);
+        this.lineElement.setAttributeNS(null, 'x2', absoluteToPosition.get(0).value);
+        this.lineElement.setAttributeNS(null, 'y2', absoluteToPosition.get(1).value);
+        this.lineElement.setAttributeNS(null, 'stroke-width', 1);
+        this.lineElement.setAttributeNS(null, 'stroke-opacity', 1);
+        this.lineElement.setAttributeNS(null, 'stroke', 'gray');
+        this.lineElement.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+        this.lineElement.setAttributeNS(null, 'fill', 'none');
+        this.lineElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
+
         let letter = isDelta ? 'q' : 'Q';
         return [`${letter} ${control.get(0).value},${control.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       } else {
@@ -665,6 +776,19 @@ export class TwovillePathArc extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'arc');
     env.nodes.push(this);
+
+    this.centerElement = document.createElementNS(svgNamespace, 'circle');
+    this.centerElement.setAttributeNS(null, 'id', `element-${this.id}-center`);
+
+    this.circleElement = document.createElementNS(svgNamespace, 'circle');
+    this.circleElement.setAttributeNS(null, 'id', `element-${this.id}-circle`);
+
+    this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
+
+    env.addAnnotation(this.centerElement);
+    env.addAnnotation(this.circleElement);
+    env.addAnnotation(this.positionElement);
   }
 
   evolve(env, t, fromPosition) {
@@ -685,33 +809,23 @@ export class TwovillePathArc extends TwovilleShape {
       isDelta = this.valueAt(env, 'delta', t).value;
     }
 
-    console.log("degrees:", degrees);
-
     let center;
     if (this.has('center')) {
       center = this.valueAt(env, 'center', t);
-      console.log("center:", center.toString());
       if (isDelta) {
         center = center.add(fromPosition);
       }
     } else {
       let toPosition = this.valueAt(env, 'position', t);
-      console.log("fromPosition:", fromPosition.toString());
-      console.log("toPosition:", toPosition.toString());
       if (isDelta) {
         toPosition = fromPosition.add(toPosition);
       }
 
       let diff = toPosition.subtract(fromPosition);
-      console.log("diff:", diff.toString());
       let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
-      console.log("distance:", distance);
       let halfway = fromPosition.add(toPosition).multiply(new ExpressionReal(0.5));
-      console.log("halfway:", halfway.toString());
       let normal = diff.rotate90().normalize();
-      console.log("normal:", normal.toString());
       center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
-      console.log("center:", center.toString());
     }
 
     let toFrom = fromPosition.subtract(center);
@@ -732,10 +846,33 @@ export class TwovillePathArc extends TwovilleShape {
       large = degrees.value <= -180 ? 1 : 0;
       sweep = 0;
     }
-    console.log("to.toString():", to.toString());
+
+    this.circleElement.setAttributeNS(null, 'cx', center.get(0).value);
+    this.circleElement.setAttributeNS(null, 'cy', center.get(1).value);
+    this.circleElement.setAttributeNS(null, 'r', radius);
+    this.circleElement.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+    this.circleElement.setAttributeNS(null, 'fill', 'none');
+    this.circleElement.setAttributeNS(null, 'stroke', 'gray');
+    this.circleElement.setAttributeNS(null, 'stroke-opacity', 1);
+    this.circleElement.setAttributeNS(null, 'stroke-width', 1);
+    this.circleElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
+
+    setVertexAnnotationAttributes(this.centerElement, center);
+    setVertexAnnotationAttributes(this.positionElement, to);
 
     return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, to];
   }
+}
+
+function setVertexAnnotationAttributes(vertex, position) {
+  vertex.setAttributeNS(null, 'cx', position.get(0).value);
+  vertex.setAttributeNS(null, 'cy', position.get(1).value);
+  vertex.setAttributeNS(null, 'r', '0.1');
+  vertex.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+  vertex.setAttributeNS(null, 'fill', 'none');
+  vertex.setAttributeNS(null, 'stroke', 'gray');
+  vertex.setAttributeNS(null, 'stroke-opacity', 1);
+  vertex.setAttributeNS(null, 'stroke-width', 1);
 }
 
 // --------------------------------------------------------------------------- 
