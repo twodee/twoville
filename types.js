@@ -311,7 +311,11 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
         let pivot = this.valueAt(env, 'pivot', t);
         let rotation = this.valueAt(env, 'rotation', t);
         if (pivot && rotation) {
-          this.svgElement.setAttributeNS(null, 'transform', 'rotate(' + rotation.value + ' ' + pivot.get(0).value + ',' + pivot.get(1).value + ')');
+          let xform = `rotate(${rotation.value} ${pivot.get(0).value},${pivot.get(1).value})`;
+          this.svgElement.setAttributeNS(null, 'transform', xform);
+          for (let annotation of this.annotationElements) {
+            annotation.setAttributeNS(null, 'transform', xform);
+          }
         }
       } else {
         throw new LocatedException(this.callExpression.where, `I found a ${this.type} that is rotated, but it\'s pivot property is not defined.`);
@@ -602,6 +606,7 @@ export class TwovillePathLine extends TwovilleShape {
       this.lineElement.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
       this.lineElement.setAttributeNS(null, 'fill', 'none');
       this.lineElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
+      this.lineElement.classList.add('annotation');
 
       return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
     } else {
@@ -673,6 +678,7 @@ export class TwovillePathBezier extends TwovilleShape {
       this.line2Element.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
       this.line2Element.setAttributeNS(null, 'fill', 'none');
       this.line2Element.setAttributeNS(null, 'stroke-dasharray', '2 2');
+      this.line2Element.classList.add('annotation');
 
       if (control1) {
         setVertexAnnotationAttributes(this.control1Element, control1);
@@ -687,6 +693,7 @@ export class TwovillePathBezier extends TwovilleShape {
         this.line1Element.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
         this.line1Element.setAttributeNS(null, 'fill', 'none');
         this.line1Element.setAttributeNS(null, 'stroke-dasharray', '2 2');
+        this.line1Element.classList.add('annotation');
 
         let letter = isDelta ? 'c' : 'C';
         return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
@@ -757,6 +764,7 @@ export class TwovillePathQuadratic extends TwovilleShape {
         this.lineElement.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
         this.lineElement.setAttributeNS(null, 'fill', 'none');
         this.lineElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
+        this.lineElement.classList.add('annotation');
 
         let letter = isDelta ? 'q' : 'Q';
         return [`${letter} ${control.get(0).value},${control.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
@@ -856,6 +864,7 @@ export class TwovillePathArc extends TwovilleShape {
     this.circleElement.setAttributeNS(null, 'stroke-opacity', 1);
     this.circleElement.setAttributeNS(null, 'stroke-width', 1);
     this.circleElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
+    this.circleElement.classList.add('annotation');
 
     setVertexAnnotationAttributes(this.centerElement, center);
     setVertexAnnotationAttributes(this.positionElement, to);
@@ -873,6 +882,7 @@ function setVertexAnnotationAttributes(vertex, position) {
   vertex.setAttributeNS(null, 'stroke', 'gray');
   vertex.setAttributeNS(null, 'stroke-opacity', 1);
   vertex.setAttributeNS(null, 'stroke-width', 1);
+  vertex.classList.add('annotation');
 }
 
 // --------------------------------------------------------------------------- 

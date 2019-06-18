@@ -163,12 +163,17 @@ function stopSpinning() {
   spinner.style.display = 'none';
 }
 
+function hideAnnotations() {
+  document.querySelectorAll('.annotation').forEach(element => {
+    element.setAttributeNS(null, 'visibility', 'hidden');
+  });
+}
+
 recordButton.addEventListener('click', () => {
   startSpinning();
   let box = svg.getBoundingClientRect();
 
-  let pageOutline = document.getElementById('x-outline');
-  pageOutline.setAttributeNS(null, 'visibility', 'hidden');
+  hideAnnotations();
 
   let size = env.get('gif').get('size');
   let transparentColor = env.get('gif').get('transparency');
@@ -249,16 +254,16 @@ function downloadBlob(name, blob) {
 }
 
 exportButton.addEventListener('click', () => {
-  let clone = svg.cloneNode(true);
+  // let clone = svg.cloneNode(true);
+  hideAnnotations();
+  serializeThenDownload();
+});
 
-  // Remove outline.
-  let outline = clone.getElementById('x-outline');
-  outline.parentNode.removeChild(outline);
-
-  let data = new XMLSerializer().serializeToString(clone);
+function serializeThenDownload() {
+  let data = new XMLSerializer().serializeToString(svg);
   let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
   downloadBlob('download.svg', svgBlob);
-});
+}
 
 function tickToTime(tick) {
   let proportion = tick / nTicks;
@@ -389,6 +394,7 @@ function interpret() {
     pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
     pageOutline.setAttributeNS(null, 'stroke-width', '1px');
     pageOutline.setAttributeNS(null, 'stroke-opacity', 1);
+    pageOutline.classList.add('annotation');
     env.svg.appendChild(pageOutline);
 
     env.shapes.forEach(shape => {
