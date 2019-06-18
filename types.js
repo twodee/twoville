@@ -179,6 +179,10 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     ++serial;
   }
 
+  getParentingElement() {
+    return this.svgElement;
+  }
+
   addAnnotation(element) {
     this.annotationElements.push(element);
   }
@@ -223,7 +227,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     }
 
     if (this.owns('parent')) {
-      this.parentElement = this.get('parent').getDefault().svgElement;
+      this.parentElement = this.get('parent').getDefault().getParentingElement();
     } else if (this.owns('template') && this.get('template').getDefault().value) {
       this.parentElement = svg.firstChild;
     } else {
@@ -403,6 +407,13 @@ export class TwovilleMask extends TwovilleShape {
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.bind('template', new ExpressionBoolean(true));
+
+    this.maskGroup = document.createElementNS(svgNamespace, 'g');
+    this.svgElement.appendChild(this.maskGroup);
+  }
+
+  getParentingElement() {
+    return this.maskGroup;
   }
 
   draw(env, t) {
@@ -441,7 +452,7 @@ export class TwovilleCutout extends TwovilleMask {
     rectangle.setAttributeNS(null, 'height', '100%');
     rectangle.setAttributeNS(null, 'fill', 'white');
 
-    this.svgElement.appendChild(rectangle);
+    this.getParentingElement().appendChild(rectangle);
   }
 }
 
