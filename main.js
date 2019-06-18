@@ -257,6 +257,7 @@ exportButton.addEventListener('click', exportSvg);
 
 function exportSvg() {
   let clone = svg.cloneNode(true);
+  console.log("clone:", clone);
   removeAnnotations(clone);
   serializeThenDownload(clone);
 }
@@ -269,7 +270,9 @@ function removeAnnotations(root) {
     root.parentNode.removeChild(root);
   } else {
     for (let i = root.childNodes.length - 1; i >= 0; --i) {
-      removeAnnotations(root.childNodes[i]);
+      if (root.childNodes[i].nodeType == Node.ELEMENT_NODE) {
+        removeAnnotations(root.childNodes[i]);
+      }
     }
   }
 }
