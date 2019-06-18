@@ -253,14 +253,29 @@ function downloadBlob(name, blob) {
   });
 }
 
-exportButton.addEventListener('click', () => {
-  // let clone = svg.cloneNode(true);
-  hideAnnotations();
-  serializeThenDownload();
-});
+exportButton.addEventListener('click', exportSvg);
 
-function serializeThenDownload() {
-  let data = new XMLSerializer().serializeToString(svg);
+function exportSvg() {
+  let clone = svg.cloneNode(true);
+  removeAnnotations(clone);
+  serializeThenDownload(clone);
+}
+
+// Inkscape doesn't honor the visibility: hidden attribute. As a workaround,
+// we forcibly remove them from the SVG.
+// https://bugs.launchpad.net/inkscape/+bug/166181
+function removeAnnotations(root) {
+  if (root.classList.contains('annotation')) {
+    root.parentNode.removeChild(root);
+  } else {
+    for (let i = root.childNodes.length - 1; i >= 0; --i) {
+      removeAnnotations(root.childNodes[i]);
+    }
+  }
+}
+
+function serializeThenDownload(root) {
+  let data = new XMLSerializer().serializeToString(root);
   let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
   downloadBlob('download.svg', svgBlob);
 }

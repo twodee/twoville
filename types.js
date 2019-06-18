@@ -180,7 +180,6 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
   }
 
   addAnnotation(element) {
-    console.log("hi");
     this.annotationElements.push(element);
   }
 
@@ -243,9 +242,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       this.parentElement.appendChild(this.svgElement);
     }
 
-    console.log("FOOOO this.annotationElements:", this.annotationElements);
     for (let element of this.annotationElements) {
-      console.log("element:", element);
       this.parentElement.appendChild(element);
     }
   }
