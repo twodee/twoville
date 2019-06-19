@@ -253,11 +253,14 @@ function downloadBlob(name, blob) {
   });
 }
 
-exportButton.addEventListener('click', exportSvg);
+exportButton.addEventListener('click', exportSvgWithoutAnnotations);
 
-function exportSvg() {
+export function exportSvgWithAnnotations() {
+  serializeThenDownload(svg);
+}
+
+export function exportSvgWithoutAnnotations() {
   let clone = svg.cloneNode(true);
-  console.log("clone:", clone);
   removeAnnotations(clone);
   serializeThenDownload(clone);
 }
