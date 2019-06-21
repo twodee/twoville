@@ -1114,13 +1114,21 @@ export class TwovillePolygon extends TwovilleMarkerable {
       formals: [],
       body: new ExpressionVertex(this)
     };
+
+    this.annotations = {
+      polygon: document.createElementNS(svgNamespace, 'polygon'),
+      vertexGroup: document.createElementNS(svgNamespace, 'g'),
+      vertices: [],
+    };
+    this.addAnnotation(this.annotations.polygon);
+    this.addAnnotation(this.annotations.vertexGroup);
   }
 
   draw(env, t) {
     super.draw(env, t);
 
     let color = this.getColor(env, t);
-    let vertices = this.nodes.map(vertex => vertex.evolve(env, t));
+    let vertices = this.nodes.map(vertex => vertex.evaluate(env, t));
 
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
@@ -1129,11 +1137,27 @@ export class TwovillePolygon extends TwovilleMarkerable {
       this.setStroke(env, t);
       this.setTransform(env, t);
 
-      let commands = vertices.join(' ');
+      let commands = vertices.map(p => `${p.get(0).value},${p.get(1).value}`).join(' ');
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'points', commands);
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
+
+      this.annotations.polygon.setAttributeNS(null, 'points', commands);
+      setCommonAnnotationProperties(this.annotations.polygon);
+
+      // Remove old vertices.
+      for (let vertexAnnotation of this.annotations.vertices) {
+        vertexAnnotation.parentNode.removeChild(vertexAnnotation);
+      }
+
+      this.annotations.vertices = [];
+      for (let vertex of vertices) {
+        let vertexAnnotation = document.createElementNS(svgNamespace, 'circle');
+        setVertexAnnotationAttributes(vertexAnnotation, vertex);
+        this.annotations.vertexGroup.appendChild(vertexAnnotation);
+        this.annotations.vertices.push(vertexAnnotation);
+      }
     }
   }
 }
@@ -1148,13 +1172,19 @@ export class TwovillePolyline extends TwovilleMarkerable {
     this.registerClickHandler();
     this.nodes = [];
 
-    this.svgElement = document.createElementNS(svgNamespace, 'polyline');
-
     this.bindings['vertex'] = {
       name: 'vertex',
       formals: [],
       body: new ExpressionVertex(this)
     };
+
+    this.annotations = {
+      polyline: document.createElementNS(svgNamespace, 'polyline'),
+      vertexGroup: document.createElementNS(svgNamespace, 'g'),
+      vertices: [],
+    };
+    this.addAnnotation(this.annotations.polyline);
+    this.addAnnotation(this.annotations.vertexGroup);
   }
 
   draw(env, t) {
@@ -1164,7 +1194,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
 
     let size = this.valueAt(env, 'size', t);
     let color = this.getColor(env, t);
-    let vertices = this.nodes.map(vertex => vertex.evolve(env, t));
+    let vertices = this.nodes.map(vertex => vertex.evaluate(env, t));
 
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
@@ -1173,10 +1203,26 @@ export class TwovillePolyline extends TwovilleMarkerable {
       this.setStrokelessStroke(env, t);
       this.setTransform(env, t);
 
-      let commands = vertices.join(' ');
+      let commands = vertices.map(p => `${p.get(0).value},${p.get(1).value}`).join(' ');
 
       this.svgElement.setAttributeNS(null, 'points', commands);
       this.svgElement.setAttributeNS(null, 'fill', 'none');
+
+      this.annotations.polyline.setAttributeNS(null, 'points', commands);
+      setCommonAnnotationProperties(this.annotations.polyline);
+
+      // Remove old vertices.
+      for (let vertexAnnotation of this.annotations.vertices) {
+        vertexAnnotation.parentNode.removeChild(vertexAnnotation);
+      }
+
+      this.annotations.vertices = [];
+      for (let vertex of vertices) {
+        let vertexAnnotation = document.createElementNS(svgNamespace, 'circle');
+        setVertexAnnotationAttributes(vertexAnnotation, vertex);
+        this.annotations.vertexGroup.appendChild(vertexAnnotation);
+        this.annotations.vertices.push(vertexAnnotation);
+      }
     }
   }
 }
@@ -1315,7 +1361,6 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     this.shapes = [];
 
     this.svg.addEventListener('click', () => {
-      console.log("click");
       if (selection) {
         selection.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
         selection = null;
