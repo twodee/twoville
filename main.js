@@ -164,7 +164,7 @@ function stopSpinning() {
 }
 
 function hideAnnotations() {
-  document.querySelectorAll('.annotation').forEach(element => {
+  document.querySelectorAll('.annotation-group').forEach(element => {
     element.setAttributeNS(null, 'visibility', 'hidden');
   });
 }
@@ -269,7 +269,7 @@ export function exportSvgWithoutAnnotations() {
 // we forcibly remove them from the SVG.
 // https://bugs.launchpad.net/inkscape/+bug/166181
 function removeAnnotations(root) {
-  if (root.classList.contains('annotation')) {
+  if (root.classList.contains('annotation-group')) {
     root.parentNode.removeChild(root);
   } else {
     for (let i = root.childNodes.length - 1; i >= 0; --i) {
@@ -416,7 +416,13 @@ function interpret() {
     pageOutline.setAttributeNS(null, 'stroke-width', '1px');
     pageOutline.setAttributeNS(null, 'stroke-opacity', 1);
     pageOutline.classList.add('annotation');
-    env.svg.appendChild(pageOutline);
+
+    let sceneAnnotations = document.createElementNS(svgNamespace, 'g');
+    sceneAnnotations.setAttributeNS(null, 'id', 'scene-annotations');
+    sceneAnnotations.classList.add('annotation-group');
+
+    sceneAnnotations.appendChild(pageOutline);
+    env.svg.appendChild(sceneAnnotations);
 
     env.shapes.forEach(shape => {
       // console.log("shape:", shape);

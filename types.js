@@ -39,6 +39,7 @@ import {
 } from './ast.js';
 
 export let svgNamespace = "http://www.w3.org/2000/svg";
+let selection = null;
 
 // --------------------------------------------------------------------------- 
 
@@ -171,6 +172,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.type = type;
     this.callExpression = callExpression;
     this.parentElement = null;
+    this.annotationParentElement = null;
     this.annotationElements = [];
     this.bindings.stroke = new TwovilleTimelinedEnvironment(this);
     this.bindings.stroke.bind('opacity', new ExpressionReal(1));
@@ -212,6 +214,18 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     return this.bindings[id];
   }
 
+  registerClickHandler() {
+    this.svgElement.addEventListener('click', () => {
+      if (selection == this) {
+        this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
+        selection = null;
+      } else {
+        this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
+        selection = this;
+      }
+    });
+  }
+
   domify(svg) {
     if (this.has('clippers')) {
       let clipPath = document.createElementNS(svgNamespace, 'clipPath');
@@ -246,8 +260,15 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       this.parentElement.appendChild(this.svgElement);
     }
 
-    for (let element of this.annotationElements) {
-      this.parentElement.appendChild(element);
+    if (this.annotationElements.length > 0) {
+      this.annotationParentElement = document.createElementNS(svgNamespace, 'g');
+      this.annotationParentElement.setAttributeNS(null, 'id', `element-${this.id}-annotations`);
+      this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
+      this.annotationParentElement.classList.add('annotation-group');
+      this.parentElement.appendChild(this.annotationParentElement);
+      for (let element of this.annotationElements) {
+        this.annotationParentElement.appendChild(element);
+      }
     }
   }
 
@@ -464,6 +485,7 @@ export class TwovilleLabel extends TwovilleShape {
     this.svgElement = document.createElementNS(svgNamespace, 'text');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.svgElement.appendChild(document.createTextNode('foo'));
+    this.registerClickHandler();
   }
 
   draw(env, t) {
@@ -603,18 +625,7 @@ export class TwovillePathLine extends TwovilleShape {
 
     if (toPosition) {
       setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
-
-      this.lineElement.setAttributeNS(null, 'x1', fromPosition.get(0).value);
-      this.lineElement.setAttributeNS(null, 'y1', fromPosition.get(1).value);
-      this.lineElement.setAttributeNS(null, 'x2', absoluteToPosition.get(0).value);
-      this.lineElement.setAttributeNS(null, 'y2', absoluteToPosition.get(1).value);
-      this.lineElement.setAttributeNS(null, 'stroke-width', 1);
-      this.lineElement.setAttributeNS(null, 'stroke-opacity', 1);
-      this.lineElement.setAttributeNS(null, 'stroke', 'gray');
-      this.lineElement.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
-      this.lineElement.setAttributeNS(null, 'fill', 'none');
-      this.lineElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
-      this.lineElement.classList.add('annotation');
+      setLineAnnotationAttributes(this.lineElement, fromPosition, absoluteToPosition);
 
       return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
     } else {
@@ -676,33 +687,12 @@ export class TwovillePathBezier extends TwovilleShape {
       setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
       setVertexAnnotationAttributes(this.control2Element, control2);
 
-      this.line2Element.setAttributeNS(null, 'x1', control2.get(0).value);
-      this.line2Element.setAttributeNS(null, 'y1', control2.get(1).value);
-      this.line2Element.setAttributeNS(null, 'x2', absoluteToPosition.get(0).value);
-      this.line2Element.setAttributeNS(null, 'y2', absoluteToPosition.get(1).value);
-      this.line2Element.setAttributeNS(null, 'stroke-width', 1);
-      this.line2Element.setAttributeNS(null, 'stroke-opacity', 1);
-      this.line2Element.setAttributeNS(null, 'stroke', 'gray');
-      this.line2Element.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
-      this.line2Element.setAttributeNS(null, 'fill', 'none');
-      this.line2Element.setAttributeNS(null, 'stroke-dasharray', '2 2');
-      this.line2Element.classList.add('annotation');
+      setLineAnnotationAttributes(this.line2Element, control2, absoluteToPosition);
 
       if (control1) {
         setVertexAnnotationAttributes(this.control1Element, control1);
+        setLineAnnotationAttributes(this.line1Element, control1, fromPosition);
  
-        this.line1Element.setAttributeNS(null, 'x1', control1.get(0).value);
-        this.line1Element.setAttributeNS(null, 'y1', control1.get(1).value);
-        this.line1Element.setAttributeNS(null, 'x2', fromPosition.get(0).value);
-        this.line1Element.setAttributeNS(null, 'y2', fromPosition.get(1).value);
-        this.line1Element.setAttributeNS(null, 'stroke-width', 1);
-        this.line1Element.setAttributeNS(null, 'stroke-opacity', 1);
-        this.line1Element.setAttributeNS(null, 'stroke', 'gray');
-        this.line1Element.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
-        this.line1Element.setAttributeNS(null, 'fill', 'none');
-        this.line1Element.setAttributeNS(null, 'stroke-dasharray', '2 2');
-        this.line1Element.classList.add('annotation');
-
         let letter = isDelta ? 'c' : 'C';
         return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
       } else {
@@ -761,18 +751,7 @@ export class TwovillePathQuadratic extends TwovilleShape {
 
       if (control) {
         setVertexAnnotationAttributes(this.controlElement, control);
-
-        this.lineElement.setAttributeNS(null, 'x1', control.get(0).value);
-        this.lineElement.setAttributeNS(null, 'y1', control.get(1).value);
-        this.lineElement.setAttributeNS(null, 'x2', absoluteToPosition.get(0).value);
-        this.lineElement.setAttributeNS(null, 'y2', absoluteToPosition.get(1).value);
-        this.lineElement.setAttributeNS(null, 'stroke-width', 1);
-        this.lineElement.setAttributeNS(null, 'stroke-opacity', 1);
-        this.lineElement.setAttributeNS(null, 'stroke', 'gray');
-        this.lineElement.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
-        this.lineElement.setAttributeNS(null, 'fill', 'none');
-        this.lineElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
-        this.lineElement.classList.add('annotation');
+        setLineAnnotationAttributes(this.lineElement, control, absoluteToPosition);
 
         let letter = isDelta ? 'q' : 'Q';
         return [`${letter} ${control.get(0).value},${control.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
@@ -881,16 +860,54 @@ export class TwovillePathArc extends TwovilleShape {
   }
 }
 
-function setVertexAnnotationAttributes(vertex, position) {
-  vertex.setAttributeNS(null, 'cx', position.get(0).value);
-  vertex.setAttributeNS(null, 'cy', position.get(1).value);
-  vertex.setAttributeNS(null, 'r', '0.1');
-  vertex.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
-  vertex.setAttributeNS(null, 'fill', 'none');
-  vertex.setAttributeNS(null, 'stroke', 'gray');
-  vertex.setAttributeNS(null, 'stroke-opacity', 1);
-  vertex.setAttributeNS(null, 'stroke-width', 1);
-  vertex.classList.add('annotation');
+// --------------------------------------------------------------------------- 
+
+function setVertexAnnotationAttributes(annotation, position) {
+  annotation.setAttributeNS(null, 'cx', position.get(0).value);
+  annotation.setAttributeNS(null, 'cy', position.get(1).value);
+  annotation.setAttributeNS(null, 'r', 0.1);
+  setCommonAnnotationProperties(annotation);
+}
+
+// --------------------------------------------------------------------------- 
+
+function setLineAnnotationAttributes(annotation, from, to) {
+  annotation.setAttributeNS(null, 'x1', from.get(0).value);
+  annotation.setAttributeNS(null, 'y1', from.get(1).value);
+  annotation.setAttributeNS(null, 'x2', to.get(0).value);
+  annotation.setAttributeNS(null, 'y2', to.get(1).value);
+  setCommonAnnotationProperties(annotation);
+}
+
+// --------------------------------------------------------------------------- 
+
+function setRectangleAnnotationAttributes(annotation, position, size) {
+  annotation.setAttributeNS(null, 'x', position.get(0).value);
+  annotation.setAttributeNS(null, 'y', position.get(1).value);
+  annotation.setAttributeNS(null, 'width', size.get(0).value);
+  annotation.setAttributeNS(null, 'height', size.get(1).value);
+  setCommonAnnotationProperties(annotation);
+}
+
+// --------------------------------------------------------------------------- 
+
+function setCircleAnnotationAttributes(annotation, center, radius) {
+  annotation.setAttributeNS(null, 'cx', center.get(0).value);
+  annotation.setAttributeNS(null, 'cy', center.get(1).value);
+  annotation.setAttributeNS(null, 'r', radius.value);
+  setCommonAnnotationProperties(annotation);
+}
+
+// --------------------------------------------------------------------------- 
+
+function setCommonAnnotationProperties(annotation) {
+  annotation.setAttributeNS(null, 'stroke-width', 1);
+  annotation.setAttributeNS(null, 'stroke-opacity', 1);
+  annotation.setAttributeNS(null, 'stroke', 'gray');
+  annotation.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+  annotation.setAttributeNS(null, 'fill', 'none');
+  annotation.setAttributeNS(null, 'stroke-dasharray', '2 2');
+  annotation.classList.add('annotation'); // TODO: should just do this once
 }
 
 // --------------------------------------------------------------------------- 
@@ -929,6 +946,7 @@ export class TwovilleLine extends TwovilleMarkerable {
     super(env, callExpression, 'line');
     this.svgElement = document.createElementNS(svgNamespace, 'line');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.registerClickHandler();
     this.nodes = [];
 
     this.bindings['vertex'] = {
@@ -936,6 +954,15 @@ export class TwovilleLine extends TwovilleMarkerable {
       formals: [],
       body: new ExpressionVertex(this)
     };
+
+    this.positionElements = [
+      document.createElementNS(svgNamespace, 'circle'),
+      document.createElementNS(svgNamespace, 'circle')
+    ];
+    this.lineElement = document.createElementNS(svgNamespace, 'line')
+    this.addAnnotation(this.positionElements[0]);
+    this.addAnnotation(this.positionElements[1]);
+    this.addAnnotation(this.lineElement);
   }
 
   draw(env, t) {
@@ -961,6 +988,10 @@ export class TwovilleLine extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'x2', vertices[1].get(0).value);
       this.svgElement.setAttributeNS(null, 'y2', vertices[1].get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
+
+      setVertexAnnotationAttributes(this.positionElements[0], vertices[0]);
+      setVertexAnnotationAttributes(this.positionElements[1], vertices[1]);
+      setLineAnnotationAttributes(this.lineElement, vertices[0], vertices[1]);
     }
   }
 }
@@ -972,6 +1003,7 @@ export class TwovillePath extends TwovilleMarkerable {
     super(env, callExpression, 'path');
     this.svgElement = document.createElementNS(svgNamespace, 'path');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.registerClickHandler();
     this.nodes = [];
 
     this.bindings['arc'] = {
@@ -1053,6 +1085,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
     super(env, callExpression, 'polygon');
     this.svgElement = document.createElementNS(svgNamespace, 'polygon');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.registerClickHandler();
     this.nodes = [];
 
     this.bindings['vertex'] = {
@@ -1091,7 +1124,10 @@ export class TwovillePolyline extends TwovilleMarkerable {
     super(env, callExpression, 'polyline');
     this.svgElement = document.createElementNS(svgNamespace, 'polyline');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.registerClickHandler();
     this.nodes = [];
+
+    this.svgElement = document.createElementNS(svgNamespace, 'polyline');
 
     this.bindings['vertex'] = {
       name: 'vertex',
@@ -1131,6 +1167,12 @@ export class TwovilleRectangle extends TwovilleShape {
     super(env, callExpression, 'rectangle');
     this.svgElement = document.createElementNS(svgNamespace, 'rect');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.registerClickHandler();
+
+    this.rectangleElement = document.createElementNS(svgNamespace, 'rect');
+    this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.addAnnotation(this.rectangleElement);
+    this.addAnnotation(this.positionElement);
   }
 
   draw(env, t) {
@@ -1147,10 +1189,11 @@ export class TwovilleRectangle extends TwovilleShape {
     let size = this.valueAt(env, 'size', t);
 
     let corner;
+    let center;
     if (this.has('corner')) {
       corner = this.valueAt(env, 'corner', t);
     } else {
-      let center = this.valueAt(env, 'center', t);
+      center = this.valueAt(env, 'center', t);
       corner = new ExpressionVector([
         new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
         new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
@@ -1183,6 +1226,14 @@ export class TwovilleRectangle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'height', size.get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
+
+      setRectangleAnnotationAttributes(this.rectangleElement, corner, size);
+
+      if (center) {
+        setVertexAnnotationAttributes(this.positionElement, center);
+      } else {
+        setVertexAnnotationAttributes(this.positionElement, corner);
+      }
     }
   }
 }
@@ -1194,6 +1245,12 @@ export class TwovilleCircle extends TwovilleShape {
     super(env, callExpression, 'circle');
     this.svgElement = document.createElementNS(svgNamespace, 'circle');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.registerClickHandler();
+
+    this.circleElement = document.createElementNS(svgNamespace, 'circle');
+    this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.addAnnotation(this.circleElement);
+    this.addAnnotation(this.positionElement);
   }
 
   draw(env, t) {
@@ -1221,6 +1278,9 @@ export class TwovilleCircle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'r', radius.value);
       this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
+
+      setCircleAnnotationAttributes(this.circleElement, center, radius);
+      setVertexAnnotationAttributes(this.positionElement, center);
     }
   }
 }

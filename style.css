@@ -163,3 +163,11 @@ a {
     transform: translate(-50%, -50%) rotate(360deg);
   }
 }
+
+svg rect {
+  cursor: pointer;
+}
+
+svg .annotation {
+  cursor: move;
+}
