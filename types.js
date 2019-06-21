@@ -226,6 +226,9 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
         this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
         selection = null;
       } else {
+        if (selection) {
+          selection.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
+        }
         this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
         selection = this;
       }
@@ -238,8 +241,6 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
 
     this.svgElement.addEventListener('mouseleave', event => {
       event.stopPropagation();
-      console.log("exit");
-      console.log("selection:", selection);
       if (selection != this) {
         this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
       }
