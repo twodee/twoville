@@ -215,13 +215,33 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
   }
 
   registerClickHandler() {
-    this.svgElement.addEventListener('click', () => {
+    this.svgElement.classList.add('selectable');
+
+    this.svgElement.addEventListener('click', event => {
+      // The parent SVG also listens for clicks and deselects. We don't want the
+      // parent involved when a child is clicked on.
+      event.stopPropagation();
+
       if (selection == this) {
         this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
         selection = null;
       } else {
         this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
         selection = this;
+      }
+    });
+
+    this.svgElement.addEventListener('mouseenter', event => {
+      event.stopPropagation();
+      this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
+    });
+
+    this.svgElement.addEventListener('mouseleave', event => {
+      event.stopPropagation();
+      console.log("exit");
+      console.log("selection:", selection);
+      if (selection != this) {
+        this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
       }
     });
   }
@@ -1292,6 +1312,14 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     super(null);
     this.svg = svg;
     this.shapes = [];
+
+    this.svg.addEventListener('click', () => {
+      console.log("click");
+      if (selection) {
+        selection.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
+        selection = null;
+      }
+    }, false);
 
     this.bindings.time = new TwovilleEnvironment(this);
     this.bindings.time.bind('start', new ExpressionInteger(0));

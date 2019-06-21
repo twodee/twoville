@@ -164,7 +164,7 @@ a {
   }
 }
 
-svg rect {
+svg .selectable {
   cursor: pointer;
 }
 
