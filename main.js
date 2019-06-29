@@ -376,6 +376,11 @@ function interpret() {
 
     let size = env.get('viewport').get('size');
 
+    if (env.get('viewport').has('color')) {
+      let color = env.get('viewport').get('color');
+      env.svg.setAttributeNS(null, 'style', `background: ${color.toColor()}`);
+    }
+
     let corner;
     if (env.get('viewport').has('corner')) {
       corner = env.get('viewport').get('corner');
