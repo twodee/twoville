@@ -659,7 +659,7 @@ export class TwovillePathLine extends TwovilleShape {
 
 export class TwovillePathBezier extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'bezier');
+    super(env, callExpression, 'cubic');
     env.nodes.push(this);
 
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
@@ -1033,8 +1033,8 @@ export class TwovillePath extends TwovilleMarkerable {
       body: new ExpressionPathArc(this)
     };
 
-    this.bindings['bezier'] = {
-      name: 'bezier',
+    this.bindings['cubic'] = {
+      name: 'cubic',
       formals: [],
       body: new ExpressionPathBezier(this)
     };
