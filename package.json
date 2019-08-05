@@ -6,6 +6,6 @@
   },
   "devDependencies": {
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
-    "jsdom": "^14.0.0"
+    "jsdom": "^14.1.0"
   }
 }
