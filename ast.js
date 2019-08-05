@@ -1853,6 +1853,14 @@ export class ExpressionVector extends ExpressionData {
       throw '...';
     }
   }
+
+  negative() {
+    let result = [];
+    for (let i = 0; i < this.elements.length; ++i) {
+      result.push(this.get(i).negative());
+    }
+    return new ExpressionVector(result);
+  }
 }
 
 // --------------------------------------------------------------------------- 
