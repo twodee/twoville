@@ -22,6 +22,9 @@ import {
   TwovillePolygon,
   TwovillePolyline,
   TwovilleRectangle,
+  TwovilleTurtle,
+  TwovilleTurtleMove,
+  TwovilleTurtleTurn,
   TwovilleVertex,
 } from "./types.js";
 
@@ -219,6 +222,10 @@ export class ExpressionCharacter extends ExpressionData {
     return this.x;
   }
 
+  add(other) {
+    return new ExpressionString(this.toString() + other.toString());
+  }
+
   get value() {
     return this.x;
   }
@@ -275,6 +282,10 @@ export class ExpressionString extends ExpressionData {
     } else {
       return new ExpressionCharacter(this.x.charAt(i));
     }
+  }
+
+  add(other) {
+    return new ExpressionString(this.x + other.toString());
   }
 
   interpolate(other, proportion) {
@@ -1260,6 +1271,45 @@ export class ExpressionVertex extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleVertex(this.instance, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionTurtle extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovilleTurtle(this.instance, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionTurtleTurn extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovilleTurtleTurn(this.instance, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionTurtleMove extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovilleTurtleMove(this.instance, callExpression);
   }
 }
 

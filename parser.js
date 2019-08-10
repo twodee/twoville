@@ -61,9 +61,11 @@ export function parse(tokens) {
     // for alignment-baseline on text elements
     // See https://vanseodesign.com/web-design/svg-text-baseline-alignment for semantics.
     ':top': new ExpressionString('hanging'),
-    ':center': new ExpressionString('middle'),
+    ':center': new ExpressionString('center'),
+    ':central': new ExpressionString('central'),
     ':bottom': new ExpressionString('baseline'),
 
+    // Text anchors.
     ':start': new ExpressionString('start'),
     ':middle': new ExpressionString('middle'),
     ':end': new ExpressionString('end'),

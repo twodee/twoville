@@ -29,6 +29,9 @@ import {
   ExpressionRectangle,
   ExpressionSine,
   ExpressionString,
+  ExpressionTurtle,
+  ExpressionTurtleMove,
+  ExpressionTurtleTurn,
   ExpressionVector,
   ExpressionVectorAdd,
   ExpressionVectorToCartesian,
@@ -40,6 +43,15 @@ import {
 
 export let svgNamespace = "http://www.w3.org/2000/svg";
 let selection = null;
+
+// --------------------------------------------------------------------------- 
+
+class Turtle {
+  constructor(position, heading) {
+    this.position = position;
+    this.heading = heading;
+  }
+}
 
 // --------------------------------------------------------------------------- 
 
@@ -222,26 +234,30 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       // parent involved when a child is clicked on.
       event.stopPropagation();
 
-      if (selection == this) {
-        this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
-        selection = null;
-      } else {
-        if (selection) {
-          selection.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
+      if (this.annotationParentElement) {
+        if (selection == this) {
+          this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
+          selection = null;
+        } else {
+          if (selection) {
+            selection.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
+          }
+          this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
+          selection = this;
         }
-        this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
-        selection = this;
       }
     });
 
     this.svgElement.addEventListener('mouseenter', event => {
       event.stopPropagation();
-      this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
+      if (this.annotationParentElement) {
+        this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
+      }
     });
 
     this.svgElement.addEventListener('mouseleave', event => {
       event.stopPropagation();
-      if (selection != this) {
+      if (this.annotationParentElement && selection != this) {
         this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
       }
     });
@@ -535,7 +551,7 @@ export class TwovilleLabel extends TwovilleShape {
     if (this.has('baseline')) {
       baseline = this.valueAt(env, 'baseline', t);
     } else {
-      baseline = new ExpressionString('middle');
+      baseline = new ExpressionString('center');
     }
 
     if (position == null || color == null) {
@@ -551,7 +567,7 @@ export class TwovilleLabel extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
       this.svgElement.setAttributeNS(null, 'font-size', fontSize.value);
       this.svgElement.setAttributeNS(null, 'text-anchor', anchor.value);
-      this.svgElement.setAttributeNS(null, 'alignment-baseline', baseline.value);
+      this.svgElement.setAttributeNS(null, 'dominant-baseline', baseline.value);
     }
   }
 }
@@ -569,12 +585,78 @@ export class TwovilleVertex extends TwovilleShape {
     return this.valueAt(env, 'position', t);
   }
 
-  evolve(env, t) {
+  evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     let position = this.valueAt(env, 'position', t);
     
     if (position) {
-      return `${position.get(0).value},${position.get(1).value}`;
+      return [`${position.get(0).value},${position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovilleTurtle extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'turtle');
+    env.nodes.push(this);
+  }
+
+  evolve(env, t, fromTurtle) {
+    this.assertProperty('position');
+    this.assertProperty('heading');
+
+    let position = this.valueAt(env, 'position', t);
+    let heading = this.valueAt(env, 'heading', t);
+    
+    if (position) {
+      return [`M${position.get(0).value},${position.get(1).value}`, new Turtle(position, heading)];
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovilleTurtleMove extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'move');
+    env.nodes.push(this);
+  }
+
+  evolve(env, t, fromTurtle) {
+    this.assertProperty('distance');
+
+    let distance = this.valueAt(env, 'distance', t);
+    
+    if (distance) {
+      let delta = new ExpressionVector([distance, fromTurtle.heading]).toCartesian();
+      let position = fromTurtle.position.add(delta);
+      return [`L${position.get(0).value},${position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class TwovilleTurtleTurn extends TwovilleShape {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'turn');
+    env.nodes.push(this);
+  }
+
+  evolve(env, t, fromTurtle) {
+    this.assertProperty('degrees');
+    let degrees = this.valueAt(env, 'degrees', t);
+    
+    if (degrees) {
+      return [null, new Turtle(fromTurtle.position, fromTurtle.heading.add(degrees))];
     } else {
       return null;
     }
@@ -594,14 +676,14 @@ export class TwovillePathJump extends TwovilleShape {
     env.addAnnotation(this.positionElement);
   }
 
-  evolve(env, t) {
+  evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let position = this.valueAt(env, 'position', t);
 
     if (position) {
       setVertexAnnotationAttributes(this.positionElement, position);
-      return [`M${position.get(0).value},${position.get(1).value}`, position];
+      return [`M${position.get(0).value},${position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
     } else {
       return null;
     }
@@ -624,7 +706,7 @@ export class TwovillePathLine extends TwovilleShape {
     env.addAnnotation(this.lineElement);
   }
 
-  evolve(env, t, fromPosition) {
+  evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let toPosition = this.valueAt(env, 'position', t);
@@ -637,7 +719,7 @@ export class TwovillePathLine extends TwovilleShape {
     let absoluteToPosition;
     let letter;
     if (isDelta) {
-      absoluteToPosition = fromPosition.add(toPosition);
+      absoluteToPosition = fromTurtle.position.add(toPosition);
       letter = 'l';
     } else {
       absoluteToPosition = toPosition;
@@ -646,9 +728,9 @@ export class TwovillePathLine extends TwovilleShape {
 
     if (toPosition) {
       setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
-      setLineAnnotationAttributes(this.lineElement, fromPosition, absoluteToPosition);
+      setLineAnnotationAttributes(this.lineElement, fromTurtle.position, absoluteToPosition);
 
-      return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
+      return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, new Turtle(absoluteToPosition, fromTurtle.heading)];
     } else {
       return null;
     }
@@ -681,7 +763,7 @@ export class TwovillePathBezier extends TwovilleShape {
     env.addAnnotation(this.line2Element);
   }
 
-  evolve(env, t, fromPosition) {
+  evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     this.assertProperty('control2');
     
@@ -700,10 +782,12 @@ export class TwovillePathBezier extends TwovilleShape {
     if (toPosition) {
       let absoluteToPosition;
       if (isDelta) {
-        absoluteToPosition = fromPosition.add(toPosition);
+        absoluteToPosition = fromTurtle.position.add(toPosition);
       } else {
         absoluteToPosition = toPosition;
       }
+
+      let toTurtle = new Turtle(absoluteToPosition, fromTurtle.heading);
 
       setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
       setVertexAnnotationAttributes(this.control2Element, control2);
@@ -712,13 +796,13 @@ export class TwovillePathBezier extends TwovilleShape {
 
       if (control1) {
         setVertexAnnotationAttributes(this.control1Element, control1);
-        setLineAnnotationAttributes(this.line1Element, control1, fromPosition);
+        setLineAnnotationAttributes(this.line1Element, control1, fromTurtle.position);
  
         let letter = isDelta ? 'c' : 'C';
-        return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
+        return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, toTurtle];
       } else {
         let letter = isDelta ? 's' : 'S';
-        return [`${letter} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
+        return [`${letter} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, toTurtle];
       }
     } else {
       return null;
@@ -746,7 +830,7 @@ export class TwovillePathQuadratic extends TwovilleShape {
     env.addAnnotation(this.lineElement);
   }
 
-  evolve(env, t, fromPosition) {
+  evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let toPosition = this.valueAt(env, 'position', t);
@@ -763,11 +847,12 @@ export class TwovillePathQuadratic extends TwovilleShape {
     if (toPosition) {
       let absoluteToPosition;
       if (isDelta) {
-        absoluteToPosition = fromPosition.add(toPosition);
+        absoluteToPosition = fromTurtle.position.add(toPosition);
       } else {
         absoluteToPosition = toPosition;
       }
 
+      let toTurtle = new Turtle(absoluteToPosition, fromTurtle.heading);
       setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
 
       if (control) {
@@ -775,10 +860,10 @@ export class TwovillePathQuadratic extends TwovilleShape {
         setLineAnnotationAttributes(this.lineElement, control, absoluteToPosition);
 
         let letter = isDelta ? 'q' : 'Q';
-        return [`${letter} ${control.get(0).value},${control.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
+        return [`${letter} ${control.get(0).value},${control.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, toTurtle];
       } else {
         let letter = isDelta ? 't' : 'T';
-        return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, absoluteToPosition];
+        return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, toTurtle];
       }
     } else {
       return null;
@@ -807,7 +892,7 @@ export class TwovillePathArc extends TwovilleShape {
     env.addAnnotation(this.positionElement);
   }
 
-  evolve(env, t, fromPosition) {
+  evolve(env, t, fromTurtle) {
     if (this.has('position') && this.has('center')) {
       throw new LocatedException(this.callExpression.where, 'I found an arc whose position and center properties were both set. Define only one of these.');
     }
@@ -829,22 +914,22 @@ export class TwovillePathArc extends TwovilleShape {
     if (this.has('center')) {
       center = this.valueAt(env, 'center', t);
       if (isDelta) {
-        center = center.add(fromPosition);
+        center = center.add(fromTurtle.position);
       }
     } else {
       let toPosition = this.valueAt(env, 'position', t);
       if (isDelta) {
-        toPosition = fromPosition.add(toPosition);
+        toPosition = fromTurtle.position.add(toPosition);
       }
 
-      let diff = toPosition.subtract(fromPosition);
+      let diff = toPosition.subtract(fromTurtle.position);
       let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
-      let halfway = fromPosition.add(toPosition).multiply(new ExpressionReal(0.5));
+      let halfway = fromTurtle.position.add(toPosition).multiply(new ExpressionReal(0.5));
       let normal = diff.rotate90().normalize();
       center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
     }
 
-    let toFrom = fromPosition.subtract(center);
+    let toFrom = fromTurtle.position.subtract(center);
     let toTo = new ExpressionVector([
       new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
       new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
@@ -877,7 +962,7 @@ export class TwovillePathArc extends TwovilleShape {
     setVertexAnnotationAttributes(this.centerElement, center);
     setVertexAnnotationAttributes(this.positionElement, to);
 
-    return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, to];
+    return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, new Turtle(to, fromTurtle.heading)];
   }
 }
 
@@ -976,6 +1061,24 @@ export class TwovilleLine extends TwovilleMarkerable {
       body: new ExpressionVertex(this)
     };
 
+    this.bindings['turtle'] = {
+      name: 'turtle',
+      formals: [],
+      body: new ExpressionTurtle(this)
+    };
+
+    this.bindings['turn'] = {
+      name: 'turn',
+      formals: [],
+      body: new ExpressionTurtleTurn(this)
+    };
+
+    this.bindings['move'] = {
+      name: 'move',
+      formals: [],
+      body: new ExpressionTurtleMove(this)
+    };
+
     this.positionElements = [
       document.createElementNS(svgNamespace, 'circle'),
       document.createElementNS(svgNamespace, 'circle')
@@ -989,13 +1092,21 @@ export class TwovilleLine extends TwovilleMarkerable {
   draw(env, t) {
     super.draw(env, t);
 
-    if (this.nodes.length != 2) {
-      throw new LocatedException(this.callExpression.where, `I tried to draw a line that had ${this.nodes.length} ${this.nodes.size == 1 ? 'vertex' : 'vertices'}. Lines must only have two vertices.`);
-    }
-    
-    let vertices = this.nodes.map(vertex => vertex.evaluate(env, t));
+    let vertices = [];
+    let last = null;
+    this.nodes.forEach(node => {
+      let result = node.evolve(env, t, last);
+      last = result[1];
+      if (result[0] != null) {
+        vertices.push(result[1].position);
+      }
+    });
     let color = this.getColor(env, t);
 
+    if (vertices.length != 2) {
+      throw new LocatedException(this.callExpression.where, `I tried to draw a line that had ${vertices.length} ${vertices.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly two vertices.`);
+    }
+    
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
     } else {
@@ -1056,6 +1167,24 @@ export class TwovillePath extends TwovilleMarkerable {
       formals: [],
       body: new ExpressionPathQuadratic(this)
     };
+
+    this.bindings['turtle'] = {
+      name: 'turtle',
+      formals: [],
+      body: new ExpressionTurtle(this)
+    };
+
+    this.bindings['turn'] = {
+      name: 'turn',
+      formals: [],
+      body: new ExpressionTurtleTurn(this)
+    };
+
+    this.bindings['move'] = {
+      name: 'move',
+      formals: [],
+      body: new ExpressionTurtleMove(this)
+    };
   }
 
   draw(env, t) {
@@ -1067,10 +1196,13 @@ export class TwovillePath extends TwovilleMarkerable {
     }
 
     let last = null;
-    let vertices = this.nodes.map((vertex, i) => {
-      let result = vertex.evolve(env, t, last);
+    let vertices = [];
+    this.nodes.forEach(node => {
+      let result = node.evolve(env, t, last);
       last = result[1];
-      return result[0];
+      if (result[0] != null) {
+        vertices.push(result[0]);
+      }
     });
 
     let opacity = this.valueAt(env, 'opacity', t).value;
@@ -1115,6 +1247,24 @@ export class TwovillePolygon extends TwovilleMarkerable {
       body: new ExpressionVertex(this)
     };
 
+    this.bindings['turtle'] = {
+      name: 'turtle',
+      formals: [],
+      body: new ExpressionTurtle(this)
+    };
+
+    this.bindings['turn'] = {
+      name: 'turn',
+      formals: [],
+      body: new ExpressionTurtleTurn(this)
+    };
+
+    this.bindings['move'] = {
+      name: 'move',
+      formals: [],
+      body: new ExpressionTurtleMove(this)
+    };
+
     this.annotations = {
       polygon: document.createElementNS(svgNamespace, 'polygon'),
       vertexGroup: document.createElementNS(svgNamespace, 'g'),
@@ -1128,7 +1278,16 @@ export class TwovillePolygon extends TwovilleMarkerable {
     super.draw(env, t);
 
     let color = this.getColor(env, t);
-    let vertices = this.nodes.map(vertex => vertex.evaluate(env, t));
+
+    let last = null;
+    let vertices = [];
+    this.nodes.forEach(node => {
+      let result = node.evolve(env, t, last);
+      last = result[1];
+      if (result[0] != null) {
+        vertices.push(result[1].position);
+      }
+    });
 
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
@@ -1178,6 +1337,24 @@ export class TwovillePolyline extends TwovilleMarkerable {
       body: new ExpressionVertex(this)
     };
 
+    this.bindings['turtle'] = {
+      name: 'turtle',
+      formals: [],
+      body: new ExpressionTurtle(this)
+    };
+
+    this.bindings['turn'] = {
+      name: 'turn',
+      formals: [],
+      body: new ExpressionTurtleTurn(this)
+    };
+
+    this.bindings['move'] = {
+      name: 'move',
+      formals: [],
+      body: new ExpressionTurtleMove(this)
+    };
+
     this.annotations = {
       polyline: document.createElementNS(svgNamespace, 'polyline'),
       vertexGroup: document.createElementNS(svgNamespace, 'g'),
@@ -1194,7 +1371,16 @@ export class TwovillePolyline extends TwovilleMarkerable {
 
     let size = this.valueAt(env, 'size', t);
     let color = this.getColor(env, t);
-    let vertices = this.nodes.map(vertex => vertex.evaluate(env, t));
+
+    let last = null;
+    let vertices = [];
+    this.nodes.forEach(node => {
+      let result = node.evolve(env, t, last);
+      last = result[1];
+      if (result[0] != null) {
+        vertices.push(result[1].position);
+      }
+    });
 
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
