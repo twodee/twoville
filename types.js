@@ -1093,7 +1093,7 @@ export class TwovilleLine extends TwovilleMarkerable {
     super.draw(env, t);
 
     let vertices = [];
-    let last = null;
+    let last = new Turtle(null, null);
     this.nodes.forEach(node => {
       let result = node.evolve(env, t, last);
       last = result[1];
@@ -1195,7 +1195,7 @@ export class TwovillePath extends TwovilleMarkerable {
       isClosed = this.valueAt(env, 'closed', t).value;
     }
 
-    let last = null;
+    let last = new Turtle(null, null);
     let vertices = [];
     this.nodes.forEach(node => {
       let result = node.evolve(env, t, last);
@@ -1279,7 +1279,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
 
     let color = this.getColor(env, t);
 
-    let last = null;
+    let last = new Turtle(null, null);
     let vertices = [];
     this.nodes.forEach(node => {
       let result = node.evolve(env, t, last);
@@ -1372,7 +1372,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
     let size = this.valueAt(env, 'size', t);
     let color = this.getColor(env, t);
 
-    let last = null;
+    let last = new Turtle(null, null);
     let vertices = [];
     this.nodes.forEach(node => {
       let result = node.evolve(env, t, last);
