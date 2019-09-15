@@ -65,6 +65,67 @@ if (source0) {
 }
 
 export let svg = document.getElementById('svg');
+export let fitBounds;
+export let svgBounds;
+
+function setSvgBounds(svgBounds) {
+  // env.svg.setAttributeNS(null, 'width', svgBounds.width);
+  // env.svg.setAttributeNS(null, 'height', svgBounds.height);
+  env.svg.setAttributeNS(null, 'viewBox', `${svgBounds.x} ${svgBounds.y} ${svgBounds.width} ${svgBounds.height}`)
+}
+
+function fitSvg() {
+  svgBounds = Object.assign({}, fitBounds);
+  setSvgBounds(fitBounds);
+}
+
+svg.addEventListener('wheel', e => {
+  if (svgBounds) {
+    let factor = 1 + e.deltaY / 100;
+    svgBounds.x *= factor;
+    svgBounds.y *= factor;
+    svgBounds.width *= factor;
+    svgBounds.height *= factor;
+    setSvgBounds(svgBounds);
+  }
+});
+
+export let mouseAt = [0, 0];
+export let isMouseDown = false;
+
+function onMouseDown(e) {
+  isMouseDown = true;
+  mouseAt[0] = e.clientX;
+  mouseAt[1] = e.clientY;
+}
+
+function onMouseMove(e) {
+  if (isMouseDown) {
+    let delta = [e.clientX - mouseAt[0], e.clientY - mouseAt[1]];
+    let viewBoxAspect = svgBounds.width / svgBounds.height;
+    let windowAspect = svg.clientWidth / svg.clientHeight;
+    if (viewBoxAspect < windowAspect) {
+      svgBounds.x -= (delta[0] / svg.clientHeight) * svgBounds.height;
+      svgBounds.y -= (delta[1] / svg.clientHeight) * svgBounds.height;
+    } else {
+      svgBounds.x -= (delta[0] / svg.clientWidth) * svgBounds.width;
+      svgBounds.y -= (delta[1] / svg.clientWidth) * svgBounds.width;
+    }
+    setSvgBounds(svgBounds);
+  }
+  mouseAt[0] = e.clientX;
+  mouseAt[1] = e.clientY;
+}
+
+function onMouseUp(e) {
+  isMouseDown = false;
+  mouseAt[0] = e.clientX;
+  mouseAt[1] = e.clientY;
+}
+
+svg.addEventListener('mousedown', onMouseDown);
+svg.addEventListener('mousemove', onMouseMove);
+svg.addEventListener('mouseup', onMouseUp);
 
 export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
@@ -254,6 +315,7 @@ function downloadBlob(name, blob) {
 }
 
 exportButton.addEventListener('click', exportSvgWithoutAnnotations);
+fitButton.addEventListener('click', fitSvg);
 
 export function exportSvgWithAnnotations() {
   serializeThenDownload(svg);
@@ -397,16 +459,13 @@ function interpret() {
       ]);
     }
 
-    let svgBounds = {
+    fitBounds = {
       x: corner.get(0).value,
       y: corner.get(1).value,
       width: size.get(0).value,
       height: size.get(1).value,
     };
-
-    env.svg.setAttributeNS(null, 'width', size.get(0).value);
-    env.svg.setAttributeNS(null, 'height', size.get(1).value);
-    env.svg.setAttributeNS(null, 'viewBox', `${svgBounds.x} ${svgBounds.y} ${svgBounds.width} ${svgBounds.height}`)
+    fitSvg();
 
     let pageOutline = document.createElementNS(svgNamespace, 'rect');
     pageOutline.setAttributeNS(null, 'id', 'x-outline');
