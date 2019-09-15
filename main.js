@@ -82,8 +82,10 @@ function fitSvg() {
 svg.addEventListener('wheel', e => {
   if (svgBounds) {
     let factor = 1 + e.deltaY / 100;
-    svgBounds.x *= factor;
-    svgBounds.y *= factor;
+    let centerX = svgBounds.x + svgBounds.width * 0.5;
+    let centerY = svgBounds.y + svgBounds.height * 0.5;
+    svgBounds.x = (svgBounds.x - centerX) * factor + centerX;
+    svgBounds.y = (svgBounds.y - centerY) * factor + centerY;
     svgBounds.width *= factor;
     svgBounds.height *= factor;
     setSvgBounds(svgBounds);
