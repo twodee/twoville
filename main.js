@@ -79,13 +79,18 @@ function fitSvg() {
   setSvgBounds(fitBounds);
 }
 
+let mouseAtSvg = svg.createSVGPoint();
+
 svg.addEventListener('wheel', e => {
   if (svgBounds) {
+    mouseAtSvg.x = e.clientX;
+    mouseAtSvg.y = e.clientY;
+    let center = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+
+    let bounds = svg.getBoundingClientRect();
     let factor = 1 + e.deltaY / 100;
-    let centerX = svgBounds.x + svgBounds.width * 0.5;
-    let centerY = svgBounds.y + svgBounds.height * 0.5;
-    svgBounds.x = (svgBounds.x - centerX) * factor + centerX;
-    svgBounds.y = (svgBounds.y - centerY) * factor + centerY;
+    svgBounds.x = (svgBounds.x - center.x) * factor + center.x;
+    svgBounds.y = (svgBounds.y - center.y) * factor + center.y;
     svgBounds.width *= factor;
     svgBounds.height *= factor;
     setSvgBounds(svgBounds);
