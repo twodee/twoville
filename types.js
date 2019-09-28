@@ -27,6 +27,7 @@ import {
   ExpressionRandom,
   ExpressionReal,
   ExpressionRectangle,
+  ExpressionSeed,
   ExpressionSine,
   ExpressionString,
   ExpressionTurtle,
@@ -84,9 +85,12 @@ export class TwovilleEnvironment {
   constructor(parent) {
     this.bindings = {};
     this.parent = parent;
+
+    // Let's make the globals easy to access.
     if (parent) {
       this.shapes = parent.shapes;
       this.svg = parent.svg;
+      this.prng = parent.prng;
     }
   }
 
@@ -1540,11 +1544,29 @@ export class TwovilleCircle extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
+export class Random {
+  constructor() {
+    this.engine = new Math.seedrandom();
+  }
+
+  seed(value) {
+    this.engine = new Math.seedrandom(value);
+  }
+
+  random01() {
+    return this.engine.quick();
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class GlobalEnvironment extends TwovilleEnvironment {
   constructor(svg) {
     super(null);
     this.svg = svg;
     this.shapes = [];
+
+    this.prng = new Random();
 
     this.svg.addEventListener('click', () => {
       if (selection) {
@@ -1655,6 +1677,12 @@ export class GlobalEnvironment extends TwovilleEnvironment {
       name: 'random',
       formals: ['min', 'max'],
       body: new ExpressionRandom()
+    };
+
+    this.bindings['seed'] = {
+      name: 'seed',
+      formals: ['value'],
+      body: new ExpressionSeed()
     };
 
     this.bindings['sin'] = {
