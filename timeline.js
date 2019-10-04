@@ -7,6 +7,22 @@ export class Timeline {
     this.intervals = [];
   }
 
+  bind(id, rhs, from, to) {
+    if (id == 'tween') {
+      if (from && to) {
+        for (let interval of this.intervals) {
+          if (interval.fromTime == from.value && interval.toTime == to.value) {
+            interval.setTween(rhs.value); 
+          }
+        }
+      } else {
+        throw new MessagedException('need both from and to');
+      }
+    } else {
+      throw new MessagedException('bad property');
+    }
+  }
+
   toString() {
     return '[default: ' + this.defaultValue + ', intervals: ' + this.intervals.map(interval => interval.toString()).join(',') + ']';
   }

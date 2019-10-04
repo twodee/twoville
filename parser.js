@@ -73,9 +73,20 @@ export function parse(tokens) {
     ':short': new ExpressionInteger(0),
     ':long': new ExpressionInteger(1),
 
-    // 
+    // Vectors
     ':zero2': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]),
     ':zero3': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
+
+    // Interpolants
+    ':linear': new ExpressionString('linear'),
+    ':nearest': new ExpressionString('nearest'),
+    ':ease': new ExpressionString('ease'),
+    ':sineInOut': new ExpressionString('sineInOut'),
+    ':backInOut': new ExpressionString('backInOut'),
+    ':quadraticInOut': new ExpressionString('quadraticInOut'),
+    ':cubicInOut': new ExpressionString('cubicInOut'),
+    ':quarticInOut': new ExpressionString('quarticInOut'),
+    ':quinticInOut': new ExpressionString('quinticInOut'),
 
     // Colors
     ':black': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),

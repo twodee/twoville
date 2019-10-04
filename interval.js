@@ -6,6 +6,29 @@ export class Interval {
   constructor(fromTime, fromValue, toTime, toValue) {
     this.setFrom(fromTime, fromValue);
     this.setTo(toTime, toValue);
+    this.setTween('linear');
+  }
+
+  setTween(tweenType) {
+    if (tweenType == 'linear') {
+      this.interpolator = 'interpolateLinear';
+    } else if (tweenType == 'nearest') {
+      this.interpolator = 'interpolateNearest';
+    } else if (tweenType == 'sineInOut') {
+      this.interpolator = 'interpolateSineInOut';
+    } else if (tweenType == 'backInOut') {
+      this.interpolator = 'interpolateBackInOut';
+    } else if (tweenType == 'quadraticInOut') {
+      this.interpolator = 'interpolateQuadraticInOut';
+    } else if (tweenType == 'cubicInOut') {
+      this.interpolator = 'interpolateCubicInOut';
+    } else if (tweenType == 'quarticInOut') {
+      this.interpolator = 'interpolateQuarticInOut';
+    } else if (tweenType == 'quinticInOut') {
+      this.interpolator = 'interpolateQuinticInOut';
+    } else {
+      throw new MessagedException(`Don't know this ${tweenType}`);
+    }
   }
 
   toString() {
@@ -61,7 +84,7 @@ export class Interval {
       return this.toValue.evaluate(env);
     } else {
       let proportion = (t - this.fromTime.value) / this.duration();
-      return this.fromValue.interpolate(this.toValue, proportion);
+      return this.fromValue[this.interpolator].bind(this.fromValue)(this.toValue, proportion);
     }
   }
 };
