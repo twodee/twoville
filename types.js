@@ -384,6 +384,17 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
         throw new LocatedException(this.callExpression.where, `I found a ${this.type} that is rotated, but it\'s pivot property is not defined.`);
       }
     }
+
+    if (this.has('translate')) {
+      let translate = this.valueAt(env, 'translate', t);
+      if (translate) {
+        let xform = `translate(${translate.get(0).value},${translate.get(1).value})`;
+        this.svgElement.setAttributeNS(null, 'transform', xform);
+        for (let annotation of this.annotationElements) {
+          annotation.setAttributeNS(null, 'transform', xform);
+        }
+      }
+    }
   }
 }
 
