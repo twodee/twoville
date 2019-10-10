@@ -1,6 +1,10 @@
 import { ExpressionInteger } from './ast.js';
 import { Interval } from './interval.js';
 
+import {
+  MessagedException,
+} from "./types.js";
+
 export class Timeline {
   constructor() {
     this.defaultValue = null;
@@ -19,7 +23,7 @@ export class Timeline {
         throw new MessagedException('need both from and to');
       }
     } else {
-      throw new MessagedException('bad property');
+      throw new MessagedException(`I don't know the property ${id}.`);
     }
   }
 

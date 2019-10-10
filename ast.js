@@ -24,6 +24,9 @@ import {
   TwovillePolygon,
   TwovillePolyline,
   TwovilleRectangle,
+  TwovilleRotate,
+  TwovilleScale,
+  TwovilleTranslate,
   TwovilleTurtle,
   TwovilleTurtleMove,
   TwovilleTurtleTurn,
@@ -1548,6 +1551,45 @@ export class ExpressionPathQuadratic extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovillePathQuadratic(this.instance, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionTranslate extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovilleTranslate(this.instance, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionScale extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovilleScale(this.instance, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionRotate extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovilleRotate(this.instance, callExpression);
   }
 }
 
