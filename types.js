@@ -3,6 +3,7 @@ import {
 } from './timeline.js';
 
 import { 
+  ExpressionArcSine,
   ExpressionBoolean,
   ExpressionCircle,
   ExpressionCosine,
@@ -31,6 +32,7 @@ import {
   ExpressionScale,
   ExpressionSeed,
   ExpressionSine,
+  ExpressionSquareRoot,
   ExpressionString,
   ExpressionTranslate,
   ExpressionTurtle,
@@ -1705,6 +1707,18 @@ export class GlobalEnvironment extends TwovilleEnvironment {
       name: 'cos',
       formals: ['degrees'],
       body: new ExpressionCosine()
+    };
+
+    this.bindings['asin'] = {
+      name: 'asin',
+      formals: ['ratio'],
+      body: new ExpressionArcSine()
+    };
+
+    this.bindings['sqrt'] = {
+      name: 'sqrt',
+      formals: ['x'],
+      body: new ExpressionSquareRoot()
     };
 
     this.bindings['int'] = {

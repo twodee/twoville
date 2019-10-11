@@ -1758,6 +1758,34 @@ export class ExpressionCosine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionArcSine extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let ratio = env.get('ratio').value;
+    let angle = Math.asin(ratio) * 180 / Math.PI;
+    return new ExpressionReal(angle);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionSquareRoot extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let x = env.get('x').value;
+    let root = Math.sqrt(x);
+    return new ExpressionReal(root);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 // The casting function.
 export class ExpressionInt extends Expression {
   constructor() {
