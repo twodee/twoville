@@ -198,6 +198,10 @@ export class ExpressionInteger extends ExpressionData {
     return this.x;
   }
 
+  get(i) {
+    return new ExpressionInteger(this.x >> i & 1);
+  }
+
   add(other) {
     if (other instanceof ExpressionInteger) {
       return new ExpressionInteger(this.value + other.value);
@@ -1137,8 +1141,8 @@ export class ExpressionSubscript extends Expression {
 
   evaluate(env, fromTime, toTime) {
     let baseValue = this.base.evaluate(env, fromTime, toTime); 
-    if (!(baseValue instanceof ExpressionVector) && !(baseValue instanceof ExpressionString)) {
-      throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors and strings. This expression has type ${baseValue.type}.`);
+    if (!(baseValue instanceof ExpressionVector) && !(baseValue instanceof ExpressionString) && !(baseValue instanceof ExpressionInteger)) {
+      throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors, strings, and integers. This expression has type ${baseValue.type}.`);
     }
 
     let indexValue = this.index.evaluate(env, fromTime, toTime); 
