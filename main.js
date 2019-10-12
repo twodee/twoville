@@ -563,3 +563,8 @@ if (source0) {
     }
   }
 }
+
+// Kepe scrolling from bubbling up to parent when embedded.
+document.body.addEventListener('wheel', function (e) {
+  e.preventDefault();
+});
