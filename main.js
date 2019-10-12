@@ -565,7 +565,9 @@ if (source0) {
   }
 }
 
-// Kepe scrolling from bubbling up to parent when embedded.
-document.body.addEventListener('wheel', function (e) {
-  e.preventDefault();
-});
+// Keep scrolling from bubbling up to parent when embedded.
+// Doesn't work with Ace editor.
+// document.body.addEventListener('wheel', function (e) {
+  // e.stopPropagation();
+  // e.preventDefault();
+// });
