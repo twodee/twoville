@@ -66,34 +66,36 @@ if (source0) {
 
 export let svg = document.getElementById('svg');
 export let fitBounds;
-export let svgBounds;
 
-function setSvgBounds(svgBounds) {
-  // env.svg.setAttributeNS(null, 'width', svgBounds.width);
-  // env.svg.setAttributeNS(null, 'height', svgBounds.height);
-  env.svg.setAttributeNS(null, 'viewBox', `${svgBounds.x} ${svgBounds.y} ${svgBounds.width} ${svgBounds.height}`)
+function setSvgBounds(bounds) {
+  env.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`)
 }
 
 function fitSvg() {
-  svgBounds = Object.assign({}, fitBounds);
+  // env.bounds = Object.assign(env.bounds, fitBounds);
+  env.bounds.x = fitBounds.x;
+  env.bounds.y = fitBounds.y;
+  env.bounds.width = fitBounds.width;
+  env.bounds.height = fitBounds.height;
+  env.bounds.span = env.bounds.y + (env.bounds.y + env.bounds.height);
   setSvgBounds(fitBounds);
 }
 
 let mouseAtSvg = svg.createSVGPoint();
 
 svg.addEventListener('wheel', e => {
-  if (svgBounds) {
+  if (env.bounds) {
     mouseAtSvg.x = e.clientX;
     mouseAtSvg.y = e.clientY;
     let center = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
 
     let bounds = svg.getBoundingClientRect();
     let factor = 1 + e.deltaY / 100;
-    svgBounds.x = (svgBounds.x - center.x) * factor + center.x;
-    svgBounds.y = (svgBounds.y - center.y) * factor + center.y;
-    svgBounds.width *= factor;
-    svgBounds.height *= factor;
-    setSvgBounds(svgBounds);
+    env.bounds.x = (env.bounds.x - center.x) * factor + center.x;
+    env.bounds.y = (env.bounds.y - center.y) * factor + center.y;
+    env.bounds.width *= factor;
+    env.bounds.height *= factor;
+    setSvgBounds(env.bounds);
   }
 });
 
@@ -109,16 +111,16 @@ function onMouseDown(e) {
 function onMouseMove(e) {
   if (isMouseDown) {
     let delta = [e.clientX - mouseAt[0], e.clientY - mouseAt[1]];
-    let viewBoxAspect = svgBounds.width / svgBounds.height;
+    let viewBoxAspect = env.bounds.width / env.bounds.height;
     let windowAspect = svg.clientWidth / svg.clientHeight;
     if (viewBoxAspect < windowAspect) {
-      svgBounds.x -= (delta[0] / svg.clientHeight) * svgBounds.height;
-      svgBounds.y -= (delta[1] / svg.clientHeight) * svgBounds.height;
+      env.bounds.x -= (delta[0] / svg.clientHeight) * env.bounds.height;
+      env.bounds.y -= (delta[1] / svg.clientHeight) * env.bounds.height;
     } else {
-      svgBounds.x -= (delta[0] / svg.clientWidth) * svgBounds.width;
-      svgBounds.y -= (delta[1] / svg.clientWidth) * svgBounds.width;
+      env.bounds.x -= (delta[0] / svg.clientWidth) * env.bounds.width;
+      env.bounds.y -= (delta[1] / svg.clientWidth) * env.bounds.width;
     }
-    setSvgBounds(svgBounds);
+    setSvgBounds(env.bounds);
   }
   mouseAt[0] = e.clientX;
   mouseAt[1] = e.clientY;
@@ -477,10 +479,10 @@ function interpret() {
     let pageOutline = document.createElementNS(svgNamespace, 'rect');
     pageOutline.setAttributeNS(null, 'id', 'x-outline');
     pageOutline.setAttributeNS(null, 'visibility', 'visible');
-    pageOutline.setAttributeNS(null, 'x', svgBounds.x);
-    pageOutline.setAttributeNS(null, 'y', svgBounds.y);
-    pageOutline.setAttributeNS(null, 'width', svgBounds.width);
-    pageOutline.setAttributeNS(null, 'height', svgBounds.height);
+    pageOutline.setAttributeNS(null, 'x', env.bounds.x);
+    pageOutline.setAttributeNS(null, 'y', env.bounds.y);
+    pageOutline.setAttributeNS(null, 'width', env.bounds.width);
+    pageOutline.setAttributeNS(null, 'height', env.bounds.height);
     pageOutline.setAttributeNS(null, 'fill', 'none');
     pageOutline.setAttributeNS(null, 'stroke', 'rgb(180, 180, 180)');
     pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')

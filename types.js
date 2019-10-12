@@ -96,6 +96,7 @@ export class TwovilleEnvironment {
       this.shapes = parent.shapes;
       this.svg = parent.svg;
       this.prng = parent.prng;
+      this.bounds = parent.bounds;
     }
   }
 
@@ -437,6 +438,7 @@ export class TwovilleMarker extends TwovilleShape {
 
     this.svgElement.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`)
 
+    // TODO need to handle y flip?
     this.svgElement.setAttributeNS(null, 'markerWidth', size.get(0).value);
     this.svgElement.setAttributeNS(null, 'markerHeight', size.get(1).value);
     this.svgElement.setAttributeNS(null, 'refX', anchor.get(0).value);
@@ -475,6 +477,15 @@ export class TwovilleCutout extends TwovilleMask {
   constructor(env, callExpression) {
     super(env, callExpression);
 
+    this.rectangle = document.createElementNS(svgNamespace, 'rect');
+    this.rectangle.setAttributeNS(null, 'width', '100%');
+    this.rectangle.setAttributeNS(null, 'height', '100%');
+    this.rectangle.setAttributeNS(null, 'fill', 'white');
+
+    this.getParentingElement().appendChild(this.rectangle);
+  }
+
+  draw(env, t) {
     let size = env.get('viewport').get('size');
 
     let corner;
@@ -493,14 +504,8 @@ export class TwovilleCutout extends TwovilleMask {
       ]);
     }
 
-    let rectangle = document.createElementNS(svgNamespace, 'rect');
-    rectangle.setAttributeNS(null, 'x', corner.get(0).value);
-    rectangle.setAttributeNS(null, 'y', corner.get(1).value);
-    rectangle.setAttributeNS(null, 'width', '100%');
-    rectangle.setAttributeNS(null, 'height', '100%');
-    rectangle.setAttributeNS(null, 'fill', 'white');
-
-    this.getParentingElement().appendChild(rectangle);
+    this.rectangle.setAttributeNS(null, 'x', corner.get(0).value);
+    this.rectangle.setAttributeNS(null, 'y', corner.get(1).value);
   }
 }
 
@@ -553,7 +558,7 @@ export class TwovilleLabel extends TwovilleShape {
       this.svgElement.childNodes[0].nodeValue = text.value;
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'x', position.get(0).value);
-      this.svgElement.setAttributeNS(null, 'y', position.get(1).value);
+      this.svgElement.setAttributeNS(null, 'y', env.bounds.span - position.get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
       this.svgElement.setAttributeNS(null, 'font-size', fontSize.value);
       this.svgElement.setAttributeNS(null, 'text-anchor', anchor.value);
@@ -580,7 +585,7 @@ export class TwovilleVertex extends TwovilleShape {
     let position = this.valueAt(env, 'position', t);
     
     if (position) {
-      return [`${position.get(0).value},${position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
+      return [`${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
     } else {
       return null;
     }
@@ -603,7 +608,7 @@ export class TwovilleTurtle extends TwovilleShape {
     let heading = this.valueAt(env, 'heading', t);
     
     if (position) {
-      return [`M${position.get(0).value},${position.get(1).value}`, new Turtle(position, heading)];
+      return [`M${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, heading)];
     } else {
       return null;
     }
@@ -626,7 +631,7 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
     if (distance) {
       let delta = new ExpressionVector([distance, fromTurtle.heading]).toCartesian();
       let position = fromTurtle.position.add(delta);
-      return [`L${position.get(0).value},${position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
+      return [`L${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
     } else {
       return null;
     }
@@ -672,8 +677,8 @@ export class TwovillePathJump extends TwovilleTimelinedEnvironment {
     let position = this.valueAt(env, 'position', t);
 
     if (position) {
-      this.setVertexAnnotationAttributes(this.positionElement, position);
-      return [`M${position.get(0).value},${position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
+      this.setVertexAnnotationAttributes(this.positionElement, position, env.bounds);
+      return [`M${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
     } else {
       return null;
     }
@@ -717,10 +722,14 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
     }
 
     if (toPosition) {
-      this.setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
-      this.setLineAnnotationAttributes(this.lineElement, fromTurtle.position, absoluteToPosition);
+      this.setVertexAnnotationAttributes(this.positionElement, absoluteToPosition, env.bounds);
+      this.setLineAnnotationAttributes(this.lineElement, fromTurtle.position, absoluteToPosition, env.bounds);
 
-      return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, new Turtle(absoluteToPosition, fromTurtle.heading)];
+      if (isDelta) {
+        return [`${letter}${toPosition.get(0).value},${-toPosition.get(1).value}`, new Turtle(absoluteToPosition, fromTurtle.heading)];
+      } else {
+        return [`${letter}${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, new Turtle(absoluteToPosition, fromTurtle.heading)];
+      }
     } else {
       return null;
     }
@@ -779,20 +788,20 @@ export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
 
       let toTurtle = new Turtle(absoluteToPosition, fromTurtle.heading);
 
-      this.setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
-      this.setVertexAnnotationAttributes(this.control2Element, control2);
+      this.setVertexAnnotationAttributes(this.positionElement, absoluteToPosition, env.bounds);
+      this.setVertexAnnotationAttributes(this.control2Element, control2, env.bounds);
 
-      this.setLineAnnotationAttributes(this.line2Element, control2, absoluteToPosition);
+      this.setLineAnnotationAttributes(this.line2Element, control2, absoluteToPosition, env.bounds);
 
       if (control1) {
-        this.setVertexAnnotationAttributes(this.control1Element, control1);
-        this.setLineAnnotationAttributes(this.line1Element, control1, fromTurtle.position);
+        this.setVertexAnnotationAttributes(this.control1Element, control1, env.bounds);
+        this.setLineAnnotationAttributes(this.line1Element, control1, fromTurtle.position, env.bounds);
  
         let letter = isDelta ? 'c' : 'C';
-        return [`${letter} ${control1.get(0).value},${control1.get(1).value} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, toTurtle];
+        return [`${letter} ${control1.get(0).value},${env.bounds.span - control1.get(1).value} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle];
       } else {
         let letter = isDelta ? 's' : 'S';
-        return [`${letter} ${control2.get(0).value},${control2.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, toTurtle];
+        return [`${letter} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle];
       }
     } else {
       return null;
@@ -843,17 +852,17 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
       }
 
       let toTurtle = new Turtle(absoluteToPosition, fromTurtle.heading);
-      this.setVertexAnnotationAttributes(this.positionElement, absoluteToPosition);
+      this.setVertexAnnotationAttributes(this.positionElement, absoluteToPosition, env.bounds);
 
       if (control) {
-        this.setVertexAnnotationAttributes(this.controlElement, control);
-        this.setLineAnnotationAttributes(this.lineElement, control, absoluteToPosition);
+        this.setVertexAnnotationAttributes(this.controlElement, control, env.bounds);
+        this.setLineAnnotationAttributes(this.lineElement, control, absoluteToPosition, env.bounds);
 
         let letter = isDelta ? 'q' : 'Q';
-        return [`${letter} ${control.get(0).value},${control.get(1).value} ${toPosition.get(0).value},${toPosition.get(1).value}`, toTurtle];
+        return [`${letter} ${control.get(0).value},${env.bounds.span - control.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle];
       } else {
         let letter = isDelta ? 't' : 'T';
-        return [`${letter}${toPosition.get(0).value},${toPosition.get(1).value}`, toTurtle];
+        return [`${letter}${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle];
       }
     } else {
       return null;
@@ -932,14 +941,14 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
 
     if (degrees.value >= 0) {
       large = degrees.value >= 180 ? 1 : 0;
-      sweep = 1;
+      sweep = 0;
     } else {
       large = degrees.value <= -180 ? 1 : 0;
-      sweep = 0;
+      sweep = 1;
     }
 
     this.circleElement.setAttributeNS(null, 'cx', center.get(0).value);
-    this.circleElement.setAttributeNS(null, 'cy', center.get(1).value);
+    this.circleElement.setAttributeNS(null, 'cy', env.bounds.span - center.get(1).value);
     this.circleElement.setAttributeNS(null, 'r', radius);
     this.circleElement.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
     this.circleElement.setAttributeNS(null, 'fill', 'none');
@@ -949,10 +958,10 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     this.circleElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
     this.circleElement.classList.add('annotation');
 
-    this.setVertexAnnotationAttributes(this.centerElement, center);
-    this.setVertexAnnotationAttributes(this.positionElement, to);
+    this.setVertexAnnotationAttributes(this.centerElement, center, env.bounds);
+    this.setVertexAnnotationAttributes(this.positionElement, to, env.bounds);
 
-    return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${to.get(1).value}`, new Turtle(to, fromTurtle.heading)];
+    return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${env.bounds.span - to.get(1).value}`, new Turtle(to, fromTurtle.heading)];
   }
 }
 
@@ -969,7 +978,7 @@ export class TwovilleTranslate extends TwovilleTimelinedEnvironment {
     let offset = this.valueAt(env, 'offset', t);
 
     if (offset) {
-      return [`translate(${offset.get(0).value} ${offset.get(1).value})`];
+      return [`translate(${offset.get(0).value} ${env.bounds.span - offset.get(1).value})`];
     } else {
       return null;
     }
@@ -992,7 +1001,7 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
     let degrees = this.valueAt(env, 'degrees', t);
 
     if (pivot && degrees) {
-      return [`rotate(${degrees.value} ${pivot.get(0).value} ${pivot.get(1).value})`];
+      return [`rotate(${-degrees.value} ${pivot.get(0).value} ${env.bounds.span - pivot.get(1).value})`];
     } else {
       return null;
     }
@@ -1019,9 +1028,9 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
     if (factors) {
       if (pivot) {
         return [
-          `translate(${-pivot.get(0).value} ${-pivot.get(1).value})`,
-          `scale(${factors.get(0).value} ${factors.get(1).value})`,
-          `translate(${pivot.get(0).value} ${pivot.get(1).value})`,
+          `translate(${-pivot.get(0).value} ${-(env.bounds.span - pivot.get(1).value)})`,
+          `scale(${factors.get(0).value} ${-factors.get(1).value})`,
+          `translate(${pivot.get(0).value} ${env.bounds.span - pivot.get(1).value})`,
         ];
       } else {
         return [`scale(${factors.get(0).value} ${factors.get(1).value})`];
@@ -1132,14 +1141,14 @@ export class TwovilleLine extends TwovilleMarkerable {
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'x1', vertices[0].get(0).value);
-      this.svgElement.setAttributeNS(null, 'y1', vertices[0].get(1).value);
+      this.svgElement.setAttributeNS(null, 'y1', env.bounds.span - vertices[0].get(1).value);
       this.svgElement.setAttributeNS(null, 'x2', vertices[1].get(0).value);
-      this.svgElement.setAttributeNS(null, 'y2', vertices[1].get(1).value);
+      this.svgElement.setAttributeNS(null, 'y2', env.bounds.span - vertices[1].get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
-      this.setVertexAnnotationAttributes(this.positionElements[0], vertices[0]);
-      this.setVertexAnnotationAttributes(this.positionElements[1], vertices[1]);
-      this.setLineAnnotationAttributes(this.lineElement, vertices[0], vertices[1]);
+      this.setVertexAnnotationAttributes(this.positionElements[0], vertices[0], env.bounds);
+      this.setVertexAnnotationAttributes(this.positionElements[1], vertices[1], env.bounds);
+      this.setLineAnnotationAttributes(this.lineElement, vertices[0], vertices[1], env.bounds);
     }
   }
 }
@@ -1312,14 +1321,14 @@ export class TwovillePolygon extends TwovilleMarkerable {
       this.setStroke(env, t);
       this.setTransform(env, t);
 
-      let commands = vertices.map(p => `${p.get(0).value},${p.get(1).value}`).join(' ');
+      let commands = vertices.map(p => `${p.get(0).value},${env.bounds.span - p.get(1).value}`).join(' ');
 
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
       this.svgElement.setAttributeNS(null, 'points', commands);
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
       this.annotations.polygon.setAttributeNS(null, 'points', commands);
-      setCommonAnnotationProperties(this.annotations.polygon);
+      this.setCommonAnnotationProperties(this.annotations.polygon);
 
       // Remove old vertices.
       for (let vertexAnnotation of this.annotations.vertices) {
@@ -1329,7 +1338,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
       this.annotations.vertices = [];
       for (let vertex of vertices) {
         let vertexAnnotation = document.createElementNS(svgNamespace, 'circle');
-        this.setVertexAnnotationAttributes(vertexAnnotation, vertex);
+        this.setVertexAnnotationAttributes(vertexAnnotation, vertex, env.bounds);
         this.annotations.vertexGroup.appendChild(vertexAnnotation);
         this.annotations.vertices.push(vertexAnnotation);
       }
@@ -1405,13 +1414,13 @@ export class TwovillePolyline extends TwovilleMarkerable {
       this.setStrokelessStroke(env, t);
       this.setTransform(env, t);
 
-      let commands = vertices.map(p => `${p.get(0).value},${p.get(1).value}`).join(' ');
+      let commands = vertices.map(p => `${p.get(0).value},${env.bounds.span - p.get(1).value}`).join(' ');
 
       this.svgElement.setAttributeNS(null, 'points', commands);
       this.svgElement.setAttributeNS(null, 'fill', 'none');
 
       this.annotations.polyline.setAttributeNS(null, 'points', commands);
-      setCommonAnnotationProperties(this.annotations.polyline);
+      this.setCommonAnnotationProperties(this.annotations.polyline);
 
       // Remove old vertices.
       for (let vertexAnnotation of this.annotations.vertices) {
@@ -1421,7 +1430,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
       this.annotations.vertices = [];
       for (let vertex of vertices) {
         let vertexAnnotation = document.createElementNS(svgNamespace, 'circle');
-        this.setVertexAnnotationAttributes(vertexAnnotation, vertex);
+        this.setVertexAnnotationAttributes(vertexAnnotation, vertex, env.bounds);
         this.annotations.vertexGroup.appendChild(vertexAnnotation);
         this.annotations.vertices.push(vertexAnnotation);
       }
@@ -1489,19 +1498,20 @@ export class TwovilleRectangle extends TwovilleShape {
         this.svgElement.setAttributeNS(null, 'ry', rounding.value);
       }
 
+
       this.svgElement.setAttributeNS(null, 'x', corner.get(0).value);
-      this.svgElement.setAttributeNS(null, 'y', corner.get(1).value);
+      this.svgElement.setAttributeNS(null, 'y', env.bounds.span - size.get(1).value - corner.get(1).value);
       this.svgElement.setAttributeNS(null, 'width', size.get(0).value);
       this.svgElement.setAttributeNS(null, 'height', size.get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
 
-      this.setRectangleAnnotationAttributes(this.rectangleElement, corner, size);
+      this.setRectangleAnnotationAttributes(this.rectangleElement, corner, size, env.bounds);
 
       if (center) {
-        this.setVertexAnnotationAttributes(this.positionElement, center);
+        this.setVertexAnnotationAttributes(this.positionElement, center, env.bounds);
       } else {
-        this.setVertexAnnotationAttributes(this.positionElement, corner);
+        this.setVertexAnnotationAttributes(this.positionElement, corner, env.bounds);
       }
     }
   }
@@ -1543,13 +1553,13 @@ export class TwovilleCircle extends TwovilleShape {
       this.setTransform(env, t);
       this.setStroke(env, t);
       this.svgElement.setAttributeNS(null, 'cx', center.get(0).value);
-      this.svgElement.setAttributeNS(null, 'cy', center.get(1).value);
+      this.svgElement.setAttributeNS(null, 'cy', env.bounds.span - center.get(1).value);
       this.svgElement.setAttributeNS(null, 'r', radius.value);
       this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
 
-      this.setCircleAnnotationAttributes(this.circleElement, center, radius);
-      this.setVertexAnnotationAttributes(this.positionElement, center);
+      this.setCircleAnnotationAttributes(this.circleElement, center, radius, env.bounds);
+      this.setVertexAnnotationAttributes(this.positionElement, center, env.bounds);
     }
   }
 }
@@ -1577,6 +1587,12 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     super(null);
     this.svg = svg;
     this.shapes = [];
+    this.bounds = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    };
 
     this.prng = new Random();
 
@@ -1780,32 +1796,32 @@ let annotationMixin = {
     });
   },
 
-  setVertexAnnotationAttributes(annotation, position) {
+  setVertexAnnotationAttributes(annotation, position, bounds) {
     annotation.setAttributeNS(null, 'cx', position.get(0).value);
-    annotation.setAttributeNS(null, 'cy', position.get(1).value);
+    annotation.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
     annotation.setAttributeNS(null, 'r', 0.1);
     this.setCommonAnnotationProperties(annotation);
   },
 
-  setLineAnnotationAttributes(annotation, from, to) {
+  setLineAnnotationAttributes(annotation, from, to, bounds) {
     annotation.setAttributeNS(null, 'x1', from.get(0).value);
-    annotation.setAttributeNS(null, 'y1', from.get(1).value);
+    annotation.setAttributeNS(null, 'y1', bounds.span - from.get(1).value);
     annotation.setAttributeNS(null, 'x2', to.get(0).value);
-    annotation.setAttributeNS(null, 'y2', to.get(1).value);
+    annotation.setAttributeNS(null, 'y2', bounds.span - to.get(1).value);
     this.setCommonAnnotationProperties(annotation);
   },
 
-  setRectangleAnnotationAttributes(annotation, position, size) {
+  setRectangleAnnotationAttributes(annotation, position, size, bounds) {
     annotation.setAttributeNS(null, 'x', position.get(0).value);
-    annotation.setAttributeNS(null, 'y', position.get(1).value);
+    annotation.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
     annotation.setAttributeNS(null, 'width', size.get(0).value);
     annotation.setAttributeNS(null, 'height', size.get(1).value);
     this.setCommonAnnotationProperties(annotation);
   },
 
-  setCircleAnnotationAttributes(annotation, center, radius) {
+  setCircleAnnotationAttributes(annotation, center, radius, bounds) {
     annotation.setAttributeNS(null, 'cx', center.get(0).value);
-    annotation.setAttributeNS(null, 'cy', center.get(1).value);
+    annotation.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
     annotation.setAttributeNS(null, 'r', radius.value);
     this.setCommonAnnotationProperties(annotation);
   },
