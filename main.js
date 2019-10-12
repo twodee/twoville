@@ -97,6 +97,7 @@ svg.addEventListener('wheel', e => {
     env.bounds.height *= factor;
     setSvgBounds(env.bounds);
   }
+  e.preventDefault();
 });
 
 export let mouseAt = [0, 0];
