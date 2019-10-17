@@ -252,6 +252,8 @@ recordButton.addEventListener('click', () => {
   let repeat = env.get('gif').get('repeat');
   let delay = env.get('gif').get('delay');
 
+  console.log("delay:", delay);
+
   // I don't know why I need to set the viewport explicitly. Setting the size
   // of the image isn't sufficient.
   svg.setAttribute('width', size.get(0).value);
@@ -278,7 +280,7 @@ recordButton.addEventListener('click', () => {
       if (i >= scrubber.max) {
         gif.render();
       } else {
-        env.shapes.forEach(shape => shape.draw(env.svg, i));
+        env.shapes.forEach(shape => shape.draw(env, i));
 
         let data = new XMLSerializer().serializeToString(svg);
         let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
