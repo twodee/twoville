@@ -129,7 +129,6 @@ export function lex(source) {
         let elseToken = tokens.pop();
         iStartLine = elseToken.where.lineStart;
         iStartColumn = elseToken.where.columnStart;
-        iStartIndex = elseToken.where.indexStart;
         tokenSoFar = 'else if';
         emit(Tokens.ElseIf);
       } else {

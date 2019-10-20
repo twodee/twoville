@@ -50,17 +50,15 @@ export let Tokens = Object.freeze({
 });
 
 export class SourceLocation {
-  constructor(lineStart, lineEnd, columnStart, columnEnd, indexStart, indexEnd) {
+  constructor(lineStart, lineEnd, columnStart, columnEnd) {
     this.lineStart = lineStart;
     this.lineEnd = lineEnd;
     this.columnStart = columnStart;
     this.columnEnd = columnEnd;
-    this.indexStart = indexStart;
-    this.indexEnd = indexEnd;
   }
 
   clone() {
-    return new SourceLocation(this.lineStart, this.lineEnd, this.columnStart, this.columnEnd, this.indexStart, this.indexEnd);
+    return new SourceLocation(this.lineStart, this.lineEnd, this.columnStart, this.columnEnd);
   }
 
   debugPrefix() {
@@ -71,7 +69,7 @@ export class SourceLocation {
   }
 
   static span(a, b) {
-    return new SourceLocation(a.lineStart, b.lineEnd, a.columnStart, b.columnEnd, a.indexStart, b.indexEnd);
+    return new SourceLocation(a.lineStart, b.lineEnd, a.columnStart, b.columnEnd);
   }
 }
 

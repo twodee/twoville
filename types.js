@@ -1461,18 +1461,25 @@ export class TwovilleRectangle extends TwovilleShape {
     this.addAnnotation(this.positionElement);
     this.positionExpression = null;
 
+    let mouseDownAt = null;
+    let originalPositionExpression = null;
     let moveListener = e => {
       if (event.buttons === 1) {
         mouseAtSvg.x = e.clientX;
         mouseAtSvg.y = e.clientY;
         let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
         mouseAt.y = env.bounds.span - mouseAt.y;
-        let replacement = '[' + mouseAt.x.toFixed(6) + ', ' + mouseAt.y.toFixed(6) + ']';
+        let delta = [mouseAt.x - mouseDownAt.x, mouseAt.y - mouseDownAt.y];
+
+        let x = parseFloat((originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+        let y = parseFloat((originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+        this.positionExpression.set(0, new ExpressionReal(x));
+        this.positionExpression.set(1, new ExpressionReal(y));
+
+        let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
         updateSelection(replacement);
         e.stopPropagation();
 
-        this.positionExpression.set(0, new ExpressionReal(mouseAt.x.toFixed(6)));
-        this.positionExpression.set(1, new ExpressionReal(mouseAt.y.toFixed(6)));
         // TODO update where
 
         redraw();
@@ -1482,9 +1489,16 @@ export class TwovilleRectangle extends TwovilleShape {
     let upListener = e => {
       window.removeEventListener('mousemove', moveListener);
       window.removeEventListener('mouseup', upListener);
+      interpret();
     };
 
     this.positionElement.addEventListener('mousedown', e => {
+      mouseAtSvg.x = e.clientX;
+      mouseAtSvg.y = e.clientY;
+      mouseDownAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+      mouseDownAt.y = env.bounds.span - mouseDownAt.y;
+      originalPositionExpression = this.positionExpression.clone();
+
       let where = this.positionExpression.where;
       highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
       e.stopPropagation();
