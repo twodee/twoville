@@ -1944,7 +1944,7 @@ export class ExpressionVector extends ExpressionData {
     let values = this.elements.map(element => {
       return element.evaluate(env, fromTime, toTime);
     });
-    return new ExpressionVector(values);
+    return new ExpressionVector(values, this.where.clone());
   }
 
   insert(item) {

@@ -3,6 +3,14 @@ import {
 } from './timeline.js';
 
 import { 
+  highlight,
+  interpret,
+  mouseAtSvg,
+  redraw,
+  updateSelection,
+} from './main.js';
+
+import { 
   ExpressionArcSine,
   ExpressionBoolean,
   ExpressionCircle,
@@ -1451,6 +1459,38 @@ export class TwovilleRectangle extends TwovilleShape {
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
     this.addAnnotation(this.rectangleElement);
     this.addAnnotation(this.positionElement);
+    this.positionExpression = null;
+
+    let moveListener = e => {
+      if (event.buttons === 1) {
+        mouseAtSvg.x = e.clientX;
+        mouseAtSvg.y = e.clientY;
+        let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+        mouseAt.y = env.bounds.span - mouseAt.y;
+        let replacement = '[' + mouseAt.x.toFixed(6) + ', ' + mouseAt.y.toFixed(6) + ']';
+        updateSelection(replacement);
+        e.stopPropagation();
+
+        this.positionExpression.set(0, new ExpressionReal(mouseAt.x.toFixed(6)));
+        this.positionExpression.set(1, new ExpressionReal(mouseAt.y.toFixed(6)));
+        // TODO update where
+
+        redraw();
+      }
+    };
+
+    let upListener = e => {
+      window.removeEventListener('mousemove', moveListener);
+      window.removeEventListener('mouseup', upListener);
+    };
+
+    this.positionElement.addEventListener('mousedown', e => {
+      let where = this.positionExpression.where;
+      highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
+      e.stopPropagation();
+      window.addEventListener('mousemove', moveListener);
+      window.addEventListener('mouseup', upListener);
+    });
   }
 
   draw(env, t) {
@@ -1470,8 +1510,10 @@ export class TwovilleRectangle extends TwovilleShape {
     let center;
     if (this.has('corner')) {
       corner = this.valueAt(env, 'corner', t);
+      this.positionExpression = corner;
     } else {
       center = this.valueAt(env, 'center', t);
+      this.positionExpression = center;
       corner = new ExpressionVector([
         new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
         new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
@@ -1510,6 +1552,7 @@ export class TwovilleRectangle extends TwovilleShape {
 
       if (center) {
         this.setVertexAnnotationAttributes(this.positionElement, center, env.bounds);
+
       } else {
         this.setVertexAnnotationAttributes(this.positionElement, corner, env.bounds);
       }
@@ -1790,7 +1833,11 @@ let annotationMixin = {
 
     this.svgElement.addEventListener('mouseleave', event => {
       event.stopPropagation();
-      if (this.annotationParentElement && selection != this) {
+      // Only turn off annotations if shape wasn't explicitly click-selected
+      // and the mouse is dragged onto to some other entity that isn't an
+      // annotation. Mousing over the shape's annotations should not cause the
+      // annotations to disappear.
+      if (this.annotationParentElement && selection != this && !event.toElement.classList.contains('annotation')) {
         this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
       }
     });
@@ -1799,8 +1846,9 @@ let annotationMixin = {
   setVertexAnnotationAttributes(annotation, position, bounds) {
     annotation.setAttributeNS(null, 'cx', position.get(0).value);
     annotation.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
-    annotation.setAttributeNS(null, 'r', 0.1);
+    annotation.setAttributeNS(null, 'r', 1.1);
     this.setCommonAnnotationProperties(annotation);
+    annotation.setAttributeNS(null, 'fill', 'red');
   },
 
   setLineAnnotationAttributes(annotation, from, to, bounds) {
@@ -1827,7 +1875,7 @@ let annotationMixin = {
   },
 
   setCommonAnnotationProperties(annotation) {
-    annotation.setAttributeNS(null, 'stroke-width', 1);
+    annotation.setAttributeNS(null, 'stroke-width', 3);
     annotation.setAttributeNS(null, 'stroke-opacity', 1);
     annotation.setAttributeNS(null, 'stroke', 'gray');
     annotation.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');

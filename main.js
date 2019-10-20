@@ -57,6 +57,7 @@ export let env;
 let isDirty = false;
 let animateTask = null;
 let delay;
+let previousBounds = null;
 
 if (source0) {
   left.style.width = '300px';
@@ -68,11 +69,11 @@ export let svg = document.getElementById('svg');
 export let fitBounds;
 
 function setSvgBounds(bounds) {
+  console.log("bounds:", bounds);
   env.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`)
 }
 
 function fitSvg() {
-  // env.bounds = Object.assign(env.bounds, fitBounds);
   env.bounds.x = fitBounds.x;
   env.bounds.y = fitBounds.y;
   env.bounds.width = fitBounds.width;
@@ -81,7 +82,7 @@ function fitSvg() {
   setSvgBounds(fitBounds);
 }
 
-let mouseAtSvg = svg.createSVGPoint();
+export let mouseAtSvg = svg.createSVGPoint();
 
 svg.addEventListener('wheel', e => {
   if (env.bounds) {
@@ -89,12 +90,12 @@ svg.addEventListener('wheel', e => {
     mouseAtSvg.y = e.clientY;
     let center = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
 
-    let bounds = svg.getBoundingClientRect();
     let factor = 1 + e.deltaY / 100;
     env.bounds.x = (env.bounds.x - center.x) * factor + center.x;
     env.bounds.y = (env.bounds.y - center.y) * factor + center.y;
     env.bounds.width *= factor;
     env.bounds.height *= factor;
+    console.log("env.bounds:", env.bounds);
     setSvgBounds(env.bounds);
   }
   e.preventDefault();
@@ -140,6 +141,15 @@ svg.addEventListener('mouseup', onMouseUp);
 export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
   editor.centerSelection();
+}
+
+export function updateSelection(replacement) {
+  let range = editor.getSelectionRange();
+  let doc = editor.getSession().getDocument();
+  doc.replace(range, replacement);
+
+  range.setEnd(range.end.row, range.start.column + replacement.length);
+  editor.getSelection().setSelectionRange(range);
 }
 
 function registerResizeListener(bounds, gap, resize) {
@@ -389,6 +399,13 @@ timeSpinner.addEventListener('input', () => {
   scrubTo(tick);
 });
 
+export function redraw() {
+  let t = tickToTime(parseInt(scrubber.value));
+  env.shapes.forEach(shape => {
+    shape.draw(env, t);
+  });
+}
+
 function animateFrame(i, isLoop = false) {
   scrubTo(i);
   if (i < parseInt(scrubber.max)) {
@@ -422,7 +439,7 @@ function play(isLoop) {
 
 export let ast;
 
-function interpret() {
+export function interpret() {
   Messager.clear();
 
   while (svg.lastChild) {
@@ -444,6 +461,9 @@ function interpret() {
     ast = parse(tokens);
 
     TwovilleShape.serial = 0;
+    if (env) {
+      previousBounds = env.bounds;
+    }
     env = new GlobalEnvironment(svg);
 
     ast.evaluate(env);
@@ -477,15 +497,25 @@ function interpret() {
       width: size.get(0).value,
       height: size.get(1).value,
     };
-    fitSvg();
+
+    if (previousBounds) {
+      env.bounds.x = previousBounds.x;
+      env.bounds.y = previousBounds.y;
+      env.bounds.width = previousBounds.width;
+      env.bounds.height = previousBounds.height;
+      env.bounds.span = previousBounds.span;
+      setSvgBounds(env.bounds);
+    } else {
+      fitSvg();
+    }
 
     let pageOutline = document.createElementNS(svgNamespace, 'rect');
     pageOutline.setAttributeNS(null, 'id', 'x-outline');
     pageOutline.setAttributeNS(null, 'visibility', 'visible');
-    pageOutline.setAttributeNS(null, 'x', env.bounds.x);
-    pageOutline.setAttributeNS(null, 'y', env.bounds.y);
-    pageOutline.setAttributeNS(null, 'width', env.bounds.width);
-    pageOutline.setAttributeNS(null, 'height', env.bounds.height);
+    pageOutline.setAttributeNS(null, 'x', fitBounds.x);
+    pageOutline.setAttributeNS(null, 'y', fitBounds.y);
+    pageOutline.setAttributeNS(null, 'width', fitBounds.width);
+    pageOutline.setAttributeNS(null, 'height', fitBounds.height);
     pageOutline.setAttributeNS(null, 'fill', 'none');
     pageOutline.setAttributeNS(null, 'stroke', 'rgb(180, 180, 180)');
     pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
