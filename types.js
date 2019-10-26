@@ -1457,13 +1457,24 @@ export class TwovilleRectangle extends TwovilleShape {
 
     this.rectangleElement = document.createElementNS(svgNamespace, 'rect');
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.widthElement = document.createElementNS(svgNamespace, 'circle');
+    this.heightElement = document.createElementNS(svgNamespace, 'circle');
+
     this.addAnnotation(this.rectangleElement);
     this.addAnnotation(this.positionElement);
+    this.addAnnotation(this.widthElement);
+    this.addAnnotation(this.heightElement);
+
     this.positionExpression = null;
+    this.sizeExpression = null;
 
     let mouseDownAt = null;
     let originalPositionExpression = null;
-    let moveListener = e => {
+    let originalSizeExpression = null;
+
+    this.hasCenter = false;
+
+    let positionMoveListener = e => {
       if (event.buttons === 1) {
         mouseAtSvg.x = e.clientX;
         mouseAtSvg.y = e.clientY;
@@ -1486,9 +1497,59 @@ export class TwovilleRectangle extends TwovilleShape {
       }
     };
 
-    let upListener = e => {
-      window.removeEventListener('mousemove', moveListener);
-      window.removeEventListener('mouseup', upListener);
+    let widthMoveListener = e => {
+      if (event.buttons === 1) {
+        mouseAtSvg.x = e.clientX;
+        mouseAtSvg.y = e.clientY;
+        let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+        mouseAt.y = env.bounds.span - mouseAt.y;
+        let delta = [mouseAt.x - mouseDownAt.x, mouseAt.y - mouseDownAt.y];
+
+        let x = parseFloat((originalSizeExpression.get(0).value + delta[0] * (this.hasCenter ? 2 : 1)).toFixed(3));
+        this.sizeExpression.set(0, new ExpressionReal(x));
+
+        let replacement = this.sizeExpression.get(0).value.toString();
+        updateSelection(replacement);
+        e.stopPropagation();
+
+        redraw();
+      }
+    };
+
+    let heightMoveListener = e => {
+      if (event.buttons === 1) {
+        mouseAtSvg.x = e.clientX;
+        mouseAtSvg.y = e.clientY;
+        let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+        mouseAt.y = env.bounds.span - mouseAt.y;
+        let delta = [mouseAt.x - mouseDownAt.x, mouseAt.y - mouseDownAt.y];
+
+        let y = parseFloat((originalSizeExpression.get(1).value + delta[1] * (this.hasCenter ? 2 : 1)).toFixed(3));
+        this.sizeExpression.set(1, new ExpressionReal(y));
+
+        let replacement = this.sizeExpression.get(1).value.toString();
+        updateSelection(replacement);
+        e.stopPropagation();
+
+        redraw();
+      }
+    };
+
+    let positionUpListener = e => {
+      window.removeEventListener('mousemove', positionMoveListener);
+      window.removeEventListener('mouseup', positionUpListener);
+      interpret();
+    };
+
+    let widthUpListener = e => {
+      window.removeEventListener('mousemove', widthMoveListener);
+      window.removeEventListener('mouseup', widthUpListener);
+      interpret();
+    };
+
+    let heightUpListener = e => {
+      window.removeEventListener('mousemove', heightMoveListener);
+      window.removeEventListener('mouseup', heightUpListener);
       interpret();
     };
 
@@ -1502,8 +1563,37 @@ export class TwovilleRectangle extends TwovilleShape {
       let where = this.positionExpression.where;
       highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
       e.stopPropagation();
-      window.addEventListener('mousemove', moveListener);
-      window.addEventListener('mouseup', upListener);
+      window.addEventListener('mousemove', positionMoveListener);
+      window.addEventListener('mouseup', positionUpListener);
+    });
+
+    this.widthElement.addEventListener('mousedown', e => {
+      mouseAtSvg.x = e.clientX;
+      mouseAtSvg.y = e.clientY;
+      mouseDownAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+      mouseDownAt.y = env.bounds.span - mouseDownAt.y;
+      console.log("mouseDownAt:", mouseDownAt);
+      originalSizeExpression = this.sizeExpression.clone();
+
+      let where = this.sizeExpression.get(0).where;
+      highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
+      e.stopPropagation();
+      window.addEventListener('mousemove', widthMoveListener);
+      window.addEventListener('mouseup', widthUpListener);
+    });
+
+    this.heightElement.addEventListener('mousedown', e => {
+      mouseAtSvg.x = e.clientX;
+      mouseAtSvg.y = e.clientY;
+      mouseDownAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+      mouseDownAt.y = env.bounds.span - mouseDownAt.y;
+      originalSizeExpression = this.sizeExpression.clone();
+
+      let where = this.sizeExpression.get(1).where;
+      highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
+      e.stopPropagation();
+      window.addEventListener('mousemove', heightMoveListener);
+      window.addEventListener('mouseup', heightUpListener);
     });
   }
 
@@ -1519,12 +1609,14 @@ export class TwovilleRectangle extends TwovilleShape {
     this.assertProperty('size');
 
     let size = this.valueAt(env, 'size', t);
+    this.sizeExpression = size;
 
     let corner;
     let center;
     if (this.has('corner')) {
       corner = this.valueAt(env, 'corner', t);
       this.positionExpression = corner;
+      this.hasCenter = false;
     } else {
       center = this.valueAt(env, 'center', t);
       this.positionExpression = center;
@@ -1532,6 +1624,7 @@ export class TwovilleRectangle extends TwovilleShape {
         new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
         new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
       ]);
+      this.hasCenter = true;
     }
 
     let opacity = this.valueAt(env, 'opacity', t).value;
@@ -1566,9 +1659,24 @@ export class TwovilleRectangle extends TwovilleShape {
 
       if (center) {
         this.setVertexAnnotationAttributes(this.positionElement, center, env.bounds);
-
+        this.setVertexAnnotationAttributes(this.widthElement, new ExpressionVector([
+          new ExpressionReal(center.get(0).value + size.get(0).value * 0.5),
+          center.get(1)
+        ]), env.bounds);
+        this.setVertexAnnotationAttributes(this.heightElement, new ExpressionVector([
+          center.get(0),
+          new ExpressionReal(center.get(1).value + size.get(1).value * 0.5)
+        ]), env.bounds);
       } else {
         this.setVertexAnnotationAttributes(this.positionElement, corner, env.bounds);
+        this.setVertexAnnotationAttributes(this.widthElement, new ExpressionVector([
+          new ExpressionReal(corner.get(0).value + size.get(0).value),
+          corner.get(1)
+        ]), env.bounds);
+        this.setVertexAnnotationAttributes(this.heightElement, new ExpressionVector([
+          corner.get(0),
+          new ExpressionReal(corner.get(1).value + size.get(1).value)
+        ]), env.bounds);
       }
     }
   }
