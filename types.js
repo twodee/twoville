@@ -1448,6 +1448,52 @@ export class TwovillePolyline extends TwovilleMarkerable {
 
 // --------------------------------------------------------------------------- 
 
+class AnnotationListener {
+  constructor(env, element, range, change) {
+    this.element = element;
+    this.env = env;
+    this.mouseDownAt = null;
+
+    this.mouseDown = e => {
+      this.mouseDownAt = this.transform(e);
+      let where = range();
+      highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
+      e.stopPropagation();
+      window.addEventListener('mousemove', this.mouseMove);
+      window.addEventListener('mouseup', this.mouseUp);
+    }
+
+    this.mouseUp = e => {
+      window.removeEventListener('mousemove', this.mouseMove);
+      window.removeEventListener('mouseup', this.mouseUp);
+      interpret();
+    }
+
+    this.mouseMove = e => {
+      if (event.buttons === 1) {
+        let mouseAt = this.transform(e);
+        let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
+
+        let replacement = change(delta);
+        updateSelection(replacement);
+        e.stopPropagation();
+
+        redraw();
+      }
+    }
+
+    this.element.addEventListener('mousedown', this.mouseDown);
+  }
+
+  transform(e) {
+    mouseAtSvg.x = e.clientX;
+    mouseAtSvg.y = e.clientY;
+    let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+    mouseAt.y = this.env.bounds.span - mouseAt.y;
+    return mouseAt;
+  }
+}
+
 export class TwovilleRectangle extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'rectangle');
@@ -1467,133 +1513,38 @@ export class TwovilleRectangle extends TwovilleShape {
 
     this.positionExpression = null;
     this.sizeExpression = null;
-
-    let mouseDownAt = null;
-    let originalPositionExpression = null;
-    let originalSizeExpression = null;
-
     this.hasCenter = false;
 
-    let positionMoveListener = e => {
-      if (event.buttons === 1) {
-        mouseAtSvg.x = e.clientX;
-        mouseAtSvg.y = e.clientY;
-        let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
-        mouseAt.y = env.bounds.span - mouseAt.y;
-        let delta = [mouseAt.x - mouseDownAt.x, mouseAt.y - mouseDownAt.y];
-
-        let x = parseFloat((originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-        let y = parseFloat((originalPositionExpression.get(1).value + delta[1]).toFixed(3));
-        this.positionExpression.set(0, new ExpressionReal(x));
-        this.positionExpression.set(1, new ExpressionReal(y));
-
-        let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-        updateSelection(replacement);
-        e.stopPropagation();
-
-        // TODO update where
-
-        redraw();
-      }
-    };
-
-    let widthMoveListener = e => {
-      if (event.buttons === 1) {
-        mouseAtSvg.x = e.clientX;
-        mouseAtSvg.y = e.clientY;
-        let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
-        mouseAt.y = env.bounds.span - mouseAt.y;
-        let delta = [mouseAt.x - mouseDownAt.x, mouseAt.y - mouseDownAt.y];
-
-        let x = parseFloat((originalSizeExpression.get(0).value + delta[0] * (this.hasCenter ? 2 : 1)).toFixed(3));
-        this.sizeExpression.set(0, new ExpressionReal(x));
-
-        let replacement = this.sizeExpression.get(0).value.toString();
-        updateSelection(replacement);
-        e.stopPropagation();
-
-        redraw();
-      }
-    };
-
-    let heightMoveListener = e => {
-      if (event.buttons === 1) {
-        mouseAtSvg.x = e.clientX;
-        mouseAtSvg.y = e.clientY;
-        let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
-        mouseAt.y = env.bounds.span - mouseAt.y;
-        let delta = [mouseAt.x - mouseDownAt.x, mouseAt.y - mouseDownAt.y];
-
-        let y = parseFloat((originalSizeExpression.get(1).value + delta[1] * (this.hasCenter ? 2 : 1)).toFixed(3));
-        this.sizeExpression.set(1, new ExpressionReal(y));
-
-        let replacement = this.sizeExpression.get(1).value.toString();
-        updateSelection(replacement);
-        e.stopPropagation();
-
-        redraw();
-      }
-    };
-
-    let positionUpListener = e => {
-      window.removeEventListener('mousemove', positionMoveListener);
-      window.removeEventListener('mouseup', positionUpListener);
-      interpret();
-    };
-
-    let widthUpListener = e => {
-      window.removeEventListener('mousemove', widthMoveListener);
-      window.removeEventListener('mouseup', widthUpListener);
-      interpret();
-    };
-
-    let heightUpListener = e => {
-      window.removeEventListener('mousemove', heightMoveListener);
-      window.removeEventListener('mouseup', heightUpListener);
-      interpret();
-    };
-
-    this.positionElement.addEventListener('mousedown', e => {
-      mouseAtSvg.x = e.clientX;
-      mouseAtSvg.y = e.clientY;
-      mouseDownAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
-      mouseDownAt.y = env.bounds.span - mouseDownAt.y;
-      originalPositionExpression = this.positionExpression.clone();
-
-      let where = this.positionExpression.where;
-      highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
-      e.stopPropagation();
-      window.addEventListener('mousemove', positionMoveListener);
-      window.addEventListener('mouseup', positionUpListener);
+    let positionListener = new AnnotationListener(env, this.positionElement, () => {
+      this.originalPositionExpression = this.positionExpression.clone();
+      return this.positionExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+      this.positionExpression.set(0, new ExpressionReal(x));
+      this.positionExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
+      return replacement;
     });
 
-    this.widthElement.addEventListener('mousedown', e => {
-      mouseAtSvg.x = e.clientX;
-      mouseAtSvg.y = e.clientY;
-      mouseDownAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
-      mouseDownAt.y = env.bounds.span - mouseDownAt.y;
-      console.log("mouseDownAt:", mouseDownAt);
-      originalSizeExpression = this.sizeExpression.clone();
-
-      let where = this.sizeExpression.get(0).where;
-      highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
-      e.stopPropagation();
-      window.addEventListener('mousemove', widthMoveListener);
-      window.addEventListener('mouseup', widthUpListener);
+    let widthListener = new AnnotationListener(env, this.widthElement, () => {
+      this.originalSizeExpression = this.sizeExpression.clone();
+      return this.sizeExpression.get(0).where;
+    }, delta => {
+      let x = parseFloat((this.originalSizeExpression.get(0).value + delta[0] * (this.hasCenter ? 2 : 1)).toFixed(3));
+      this.sizeExpression.set(0, new ExpressionReal(x));
+      let replacement = this.sizeExpression.get(0).value.toString();
+      return replacement;
     });
 
-    this.heightElement.addEventListener('mousedown', e => {
-      mouseAtSvg.x = e.clientX;
-      mouseAtSvg.y = e.clientY;
-      mouseDownAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
-      mouseDownAt.y = env.bounds.span - mouseDownAt.y;
-      originalSizeExpression = this.sizeExpression.clone();
-
-      let where = this.sizeExpression.get(1).where;
-      highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
-      e.stopPropagation();
-      window.addEventListener('mousemove', heightMoveListener);
-      window.addEventListener('mouseup', heightUpListener);
+    let heightListener = new AnnotationListener(env, this.heightElement, () => {
+      this.originalSizeExpression = this.sizeExpression.clone();
+      return this.sizeExpression.get(1).where;
+    }, delta => {
+      let y = parseFloat((this.originalSizeExpression.get(1).value + delta[1] * (this.hasCenter ? 2 : 1)).toFixed(3));
+      this.sizeExpression.set(1, new ExpressionReal(y));
+      let replacement = this.sizeExpression.get(1).value.toString();
+      return replacement;
     });
   }
 
@@ -1693,8 +1644,36 @@ export class TwovilleCircle extends TwovilleShape {
 
     this.circleElement = document.createElementNS(svgNamespace, 'circle');
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    this.radiusElement = document.createElementNS(svgNamespace, 'circle');
+
     this.addAnnotation(this.circleElement);
     this.addAnnotation(this.positionElement);
+    this.addAnnotation(this.radiusElement);
+
+    this.positionExpression = null;
+    this.radiusExpression = null;
+
+    let positionListener = new AnnotationListener(env, this.positionElement, () => {
+      this.originalPositionExpression = this.positionExpression.clone();
+      return this.positionExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+      this.positionExpression.set(0, new ExpressionReal(x));
+      this.positionExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
+      return replacement;
+    });
+
+    let radiusListener = new AnnotationListener(env, this.radiusElement, () => {
+      this.originalRadiusExpression = this.radiusExpression.clone();
+      return this.radiusExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalRadiusExpression.value + delta[0]).toFixed(3));
+      this.radiusExpression.x = x;
+      let replacement = this.radiusExpression.value.toString();
+      return replacement;
+    });
   }
 
   draw(env, t) {
@@ -1704,6 +1683,9 @@ export class TwovilleCircle extends TwovilleShape {
     let opacity = this.valueAt(env, 'opacity', t).value;
     let center = this.valueAt(env, 'center', t);
     let radius = this.valueAt(env, 'radius', t);
+
+    this.positionExpression = center;
+    this.radiusExpression = radius;
 
     let isVisible = opacity > 0.0001;
     let color = null;
@@ -1725,6 +1707,11 @@ export class TwovilleCircle extends TwovilleShape {
 
       this.setCircleAnnotationAttributes(this.circleElement, center, radius, env.bounds);
       this.setVertexAnnotationAttributes(this.positionElement, center, env.bounds);
+      this.setVertexAnnotationAttributes(this.positionElement, center, env.bounds);
+      this.setVertexAnnotationAttributes(this.radiusElement, new ExpressionVector([
+        new ExpressionReal(center.get(0).value + radius.value),
+        center.get(1)
+      ]), env.bounds);
     }
   }
 }
