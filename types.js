@@ -5,6 +5,7 @@ import {
 import { 
   highlight,
   interpret,
+  isDirty,
   mouseAtSvg,
   redraw,
   updateSelection,
@@ -57,6 +58,13 @@ import {
 
 export let svgNamespace = "http://www.w3.org/2000/svg";
 let selection = null;
+
+export function clearSelection() {
+  if (selection) {
+    selection.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
+  }
+  selection = null;
+}
 
 // --------------------------------------------------------------------------- 
 
@@ -1919,14 +1927,11 @@ let annotationMixin = {
       // parent involved when a child is clicked on.
       event.stopPropagation();
 
-      if (this.annotationParentElement) {
+      if (!isDirty && this.annotationParentElement) {
         if (selection == this) {
-          this.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
-          selection = null;
+          clearSelection();
         } else {
-          if (selection) {
-            selection.annotationParentElement.setAttributeNS(null, 'visibility', 'hidden');
-          }
+          clearSelection();
           this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
           selection = this;
         }
@@ -1935,7 +1940,8 @@ let annotationMixin = {
 
     this.svgElement.addEventListener('mouseenter', event => {
       event.stopPropagation();
-      if (this.annotationParentElement) {
+      // Only show the handles if the source code has been evaluated
+      if (!isDirty && this.annotationParentElement) {
         this.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
       }
     });

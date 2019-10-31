@@ -17,6 +17,7 @@ import {
   TwovilleShape,
   initializeShapes,
   svgNamespace,
+  clearSelection,
 } from './types.js';
 
 import {
@@ -54,7 +55,8 @@ let timeSpinner = document.getElementById('timeSpinner');
 new Messager(document.getElementById('messager'), document, highlight);
 
 export let env;
-let isDirty = false;
+export let isDirty = false;
+let isSaved = true;
 let animateTask = null;
 let delay;
 let previousBounds = null;
@@ -69,7 +71,6 @@ export let svg = document.getElementById('svg');
 export let fitBounds;
 
 function setSvgBounds(bounds) {
-  console.log("bounds:", bounds);
   env.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`)
 }
 
@@ -95,7 +96,6 @@ svg.addEventListener('wheel', e => {
     env.bounds.y = (env.bounds.y - center.y) * factor + center.y;
     env.bounds.width *= factor;
     env.bounds.height *= factor;
-    console.log("env.bounds:", env.bounds);
     setSvgBounds(env.bounds);
   }
   e.preventDefault();
@@ -262,8 +262,6 @@ recordButton.addEventListener('click', () => {
   let repeat = env.get('gif').get('repeat');
   let delay = env.get('gif').get('delay');
 
-  console.log("delay:", delay);
-
   // I don't know why I need to set the viewport explicitly. Setting the size
   // of the image isn't sufficient.
   svg.setAttribute('width', size.get(0).value);
@@ -319,7 +317,7 @@ recordButton.addEventListener('click', () => {
 
 saveButton.addEventListener('click', () => {
   localStorage.setItem('src', editor.getValue());
-  isDirty = false;
+  isSaved = true;
   syncTitle();
 });
 
@@ -555,6 +553,7 @@ export function interpret() {
     }
 
     recordButton.disabled = false;
+    isDirty = false;
   } catch (e) {
     if (e instanceof MessagedException) {
       Messager.log(e.userMessage);
@@ -580,11 +579,13 @@ evaluateButton.addEventListener('click', interpret);
 
 function onSourceChanged() {
   isDirty = true;
+  clearSelection();
+  isSaved = false;
   syncTitle();
 }
 
 function syncTitle() {
-  document.title = 'Twoville' + (isDirty ? '*' : '');
+  document.title = 'Twoville' + (isSaved ? '' : '*');
 }
 
 if (source0) {
