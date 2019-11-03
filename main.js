@@ -18,6 +18,7 @@ import {
   initializeShapes,
   svgNamespace,
   clearSelection,
+  restoreSelection,
 } from './types.js';
 
 import {
@@ -437,7 +438,7 @@ function play(isLoop) {
 
 export let ast;
 
-export function interpret() {
+export function interpret(isTweak = false) {
   Messager.clear();
 
   while (svg.lastChild) {
@@ -554,6 +555,10 @@ export function interpret() {
 
     recordButton.disabled = false;
     isDirty = false;
+
+    if (isTweak) {
+      restoreSelection(env.shapes);
+    }
   } catch (e) {
     if (e instanceof MessagedException) {
       Messager.log(e.userMessage);
@@ -579,7 +584,7 @@ evaluateButton.addEventListener('click', interpret);
 
 function onSourceChanged() {
   isDirty = true;
-  clearSelection();
+  // clearSelection();
   isSaved = false;
   syncTitle();
 }

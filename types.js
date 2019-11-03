@@ -66,6 +66,13 @@ export function clearSelection() {
   selection = null;
 }
 
+export function restoreSelection(shapes) {
+  if (selection) {
+    selection = shapes.find(shape => shape.id == selection.id);
+    selection.annotationParentElement.setAttributeNS(null, 'visibility', 'visible');
+  }
+}
+
 // --------------------------------------------------------------------------- 
 
 class Turtle {
@@ -685,12 +692,27 @@ export class TwovillePathJump extends TwovilleTimelinedEnvironment {
     this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
 
     env.addAnnotation(this.positionElement);
+
+    this.positionExpression = null;
+
+    let positionListener = new AnnotationListener(env, this.positionElement, () => {
+      this.originalPositionExpression = this.positionExpression.clone();
+      return this.positionExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+      this.positionExpression.set(0, new ExpressionReal(x));
+      this.positionExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
+      return replacement;
+    });
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let position = this.valueAt(env, 'position', t);
+    this.positionExpression = position;
 
     if (position) {
       this.setVertexAnnotationAttributes(this.positionElement, position, env.bounds);
@@ -843,15 +865,45 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
     env.addAnnotation(this.positionElement);
     env.addAnnotation(this.controlElement);
     env.addAnnotation(this.lineElement);
+
+    this.positionExpression = null;
+    this.controlExpression = null;
+
+    let positionListener = new AnnotationListener(env, this.positionElement, () => {
+      this.originalPositionExpression = this.positionExpression.clone();
+      return this.positionExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+      this.positionExpression.set(0, new ExpressionReal(x));
+      this.positionExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
+      return replacement;
+    });
+
+    let controlListener = new AnnotationListener(env, this.controlElement, () => {
+      this.originalControlExpression = this.controlExpression.clone();
+      return this.controlExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalControlExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalControlExpression.get(1).value + delta[1]).toFixed(3));
+      this.controlExpression.set(0, new ExpressionReal(x));
+      this.controlExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.controlExpression.get(0).value + ', ' + this.controlExpression.get(1).value + ']';
+      return replacement;
+    });
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let toPosition = this.valueAt(env, 'position', t);
+    this.positionExpression = toPosition;
+
     let control;
     if (this.has('control')) {
       control = this.valueAt(env, 'control', t);
+      this.controlExpression = control;
     }
 
     let isDelta = false;
@@ -1474,7 +1526,7 @@ class AnnotationListener {
     this.mouseUp = e => {
       window.removeEventListener('mousemove', this.mouseMove);
       window.removeEventListener('mouseup', this.mouseUp);
-      interpret();
+      interpret(true);
     }
 
     this.mouseMove = e => {
@@ -1714,7 +1766,6 @@ export class TwovilleCircle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
 
       this.setCircleAnnotationAttributes(this.circleElement, center, radius, env.bounds);
-      this.setVertexAnnotationAttributes(this.positionElement, center, env.bounds);
       this.setVertexAnnotationAttributes(this.positionElement, center, env.bounds);
       this.setVertexAnnotationAttributes(this.radiusElement, new ExpressionVector([
         new ExpressionReal(center.get(0).value + radius.value),
