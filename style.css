@@ -168,6 +168,6 @@ svg .selectable {
   cursor: pointer;
 }
 
-svg .annotation {
+svg .handle {
   cursor: move;
 }

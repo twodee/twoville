@@ -245,8 +245,8 @@ function stopSpinning() {
   spinner.style.display = 'none';
 }
 
-function hideAnnotations() {
-  document.querySelectorAll('.annotation-group').forEach(element => {
+function hideHandles() {
+  document.querySelectorAll('.handle-group').forEach(element => {
     element.setAttributeNS(null, 'visibility', 'hidden');
   });
 }
@@ -255,7 +255,7 @@ recordButton.addEventListener('click', () => {
   startSpinning();
   let box = svg.getBoundingClientRect();
 
-  hideAnnotations();
+  hideHandles();
 
   let size = env.get('gif').get('size');
   let transparentColor = env.get('gif').get('transparency');
@@ -335,29 +335,29 @@ function downloadBlob(name, blob) {
   });
 }
 
-exportButton.addEventListener('click', exportSvgWithoutAnnotations);
+exportButton.addEventListener('click', exportSvgWithoutHandles);
 fitButton.addEventListener('click', fitSvg);
 
-export function exportSvgWithAnnotations() {
+export function exportSvgWithHandles() {
   serializeThenDownload(svg);
 }
 
-export function exportSvgWithoutAnnotations() {
+export function exportSvgWithoutHandles() {
   let clone = svg.cloneNode(true);
-  removeAnnotations(clone);
+  removeHandles(clone);
   serializeThenDownload(clone);
 }
 
 // Inkscape doesn't honor the visibility: hidden attribute. As a workaround,
 // we forcibly remove them from the SVG.
 // https://bugs.launchpad.net/inkscape/+bug/166181
-function removeAnnotations(root) {
-  if (root.classList.contains('annotation-group')) {
+function removeHandles(root) {
+  if (root.classList.contains('handle-group')) {
     root.parentNode.removeChild(root);
   } else {
     for (let i = root.childNodes.length - 1; i >= 0; --i) {
       if (root.childNodes[i].nodeType == Node.ELEMENT_NODE) {
-        removeAnnotations(root.childNodes[i]);
+        removeHandles(root.childNodes[i]);
       }
     }
   }
@@ -520,14 +520,14 @@ export function interpret(isTweak = false) {
     pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
     pageOutline.setAttributeNS(null, 'stroke-width', '1px');
     pageOutline.setAttributeNS(null, 'stroke-opacity', 1);
-    pageOutline.classList.add('annotation');
+    pageOutline.classList.add('handle');
 
-    let sceneAnnotations = document.createElementNS(svgNamespace, 'g');
-    sceneAnnotations.setAttributeNS(null, 'id', 'scene-annotations');
-    sceneAnnotations.classList.add('annotation-group');
+    let sceneHandles = document.createElementNS(svgNamespace, 'g');
+    sceneHandles.setAttributeNS(null, 'id', 'scene-handles');
+    sceneHandles.classList.add('handle-group');
 
-    sceneAnnotations.appendChild(pageOutline);
-    env.svg.appendChild(sceneAnnotations);
+    sceneHandles.appendChild(pageOutline);
+    env.svg.appendChild(sceneHandles);
 
     env.shapes.forEach(shape => {
       // console.log("shape:", shape);
