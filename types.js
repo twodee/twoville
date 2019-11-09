@@ -596,18 +596,38 @@ export class TwovilleVertex extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'vertex');
     env.nodes.push(this);
+
+    this.positionElement = document.createElementNS(svgNamespace, 'circle');
+    env.addHandle(this.positionElement);
+    this.positionExpression = null;
+
+    let positionListener = new HandleListener(env, env, this.positionElement, () => {
+      this.originalPositionExpression = this.positionExpression.clone();
+      return this.positionExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+      this.positionExpression.set(0, new ExpressionReal(x));
+      this.positionExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
+      return replacement;
+    }, env);
   }
 
   evaluate(env, t) {
     this.assertProperty('position');
-    return this.valueAt(env, 'position', t);
+    let position = this.valueAt(env, 'position', t);
+    this.positionExpression = position;
+    return position;
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     let position = this.valueAt(env, 'position', t);
+    this.positionExpression = position;
     
     if (position) {
+      this.setVertexHandleAttributes(this.positionElement, position, env.bounds);
       return [`${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
     } else {
       return null;
@@ -695,7 +715,7 @@ export class TwovillePathJump extends TwovilleTimelinedEnvironment {
 
     this.positionExpression = null;
 
-    let positionListener = new HandleListener(env, this.positionElement, () => {
+    let positionListener = new HandleListener(env, env, this.positionElement, () => {
       this.originalPositionExpression = this.positionExpression.clone();
       return this.positionExpression.where;
     }, delta => {
@@ -737,12 +757,27 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
 
     env.addHandle(this.positionElement);
     env.addHandle(this.lineElement);
+
+    this.positionExpression = null;
+
+    let positionListener = new HandleListener(env, env, this.positionElement, () => {
+      this.originalPositionExpression = this.positionExpression.clone();
+      return this.positionExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+      this.positionExpression.set(0, new ExpressionReal(x));
+      this.positionExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
+      return replacement;
+    });
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let toPosition = this.valueAt(env, 'position', t);
+    this.positionExpression = toPosition;
 
     let isDelta = false;
     if (this.has('delta')) {
@@ -798,6 +833,46 @@ export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
     env.addHandle(this.control2Element);
     env.addHandle(this.line1Element);
     env.addHandle(this.line2Element);
+
+    this.positionExpression = null;
+    this.control1Expression = null;
+    this.control2Expression = null;
+
+    let positionListener = new HandleListener(env, env, this.positionElement, () => {
+      this.originalPositionExpression = this.positionExpression.clone();
+      return this.positionExpression.where;
+    }, delta => {
+      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+      this.positionExpression.set(0, new ExpressionReal(x));
+      this.positionExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
+      return replacement;
+    });
+
+    let control1Listener = new HandleListener(env, env, this.control1Element, () => {
+      this.originalControl1Expression = this.control1Expression.clone();
+      return this.control1Expression.where;
+    }, delta => {
+      let x = parseFloat((this.originalControl1Expression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalControl1Expression.get(1).value + delta[1]).toFixed(3));
+      this.control1Expression.set(0, new ExpressionReal(x));
+      this.control1Expression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.control1Expression.get(0).value + ', ' + this.control1Expression.get(1).value + ']';
+      return replacement;
+    });
+
+    let control2Listener = new HandleListener(env, env, this.control2Element, () => {
+      this.originalControl2Expression = this.control2Expression.clone();
+      return this.control2Expression.where;
+    }, delta => {
+      let x = parseFloat((this.originalControl2Expression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalControl2Expression.get(1).value + delta[1]).toFixed(3));
+      this.control2Expression.set(0, new ExpressionReal(x));
+      this.control2Expression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.control2Expression.get(0).value + ', ' + this.control2Expression.get(1).value + ']';
+      return replacement;
+    });
   }
 
   evolve(env, t, fromTurtle) {
@@ -805,11 +880,15 @@ export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
     this.assertProperty('control2');
     
     let toPosition = this.valueAt(env, 'position', t);
+    this.positionExpression = toPosition;
+
     let control1;
     if (this.has('control1')) {
       control1 = this.valueAt(env, 'control1', t);
+      this.control1Expression = control1;
     }
     let control2 = this.valueAt(env, 'control2', t);
+    this.control2Expression = control2;
 
     let isDelta = false;
     if (this.has('delta')) {
@@ -860,16 +939,20 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
     this.controlElement = document.createElementNS(svgNamespace, 'circle');
     this.controlElement.setAttributeNS(null, 'id', `element-${this.id}-control`);
 
-    this.lineElement = document.createElementNS(svgNamespace, 'line');
+    this.lineElements = [
+      document.createElementNS(svgNamespace, 'line'),
+      document.createElementNS(svgNamespace, 'line')
+    ];
 
     env.addHandle(this.positionElement);
     env.addHandle(this.controlElement);
-    env.addHandle(this.lineElement);
+    env.addHandle(this.lineElements[0]);
+    env.addHandle(this.lineElements[1]);
 
     this.positionExpression = null;
     this.controlExpression = null;
 
-    let positionListener = new HandleListener(env, this.positionElement, () => {
+    let positionListener = new HandleListener(env, env, this.positionElement, () => {
       this.originalPositionExpression = this.positionExpression.clone();
       return this.positionExpression.where;
     }, delta => {
@@ -881,7 +964,7 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
       return replacement;
     });
 
-    let controlListener = new HandleListener(env, this.controlElement, () => {
+    let controlListener = new HandleListener(env, env, this.controlElement, () => {
       this.originalControlExpression = this.controlExpression.clone();
       return this.controlExpression.where;
     }, delta => {
@@ -924,7 +1007,8 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
 
       if (control) {
         this.setVertexHandleAttributes(this.controlElement, control, env.bounds);
-        this.setLineHandleAttributes(this.lineElement, control, absoluteToPosition, env.bounds);
+        this.setLineHandleAttributes(this.lineElements[0], control, absoluteToPosition, env.bounds);
+        this.setLineHandleAttributes(this.lineElements[1], control, fromTurtle.position, env.bounds);
 
         let letter = isDelta ? 'q' : 'Q';
         return [`${letter} ${control.get(0).value},${env.bounds.span - control.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle];
@@ -1172,13 +1256,7 @@ export class TwovilleLine extends TwovilleMarkerable {
       body: new ExpressionTurtleMove(this)
     };
 
-    this.positionElements = [
-      document.createElementNS(svgNamespace, 'circle'),
-      document.createElementNS(svgNamespace, 'circle')
-    ];
     this.lineElement = document.createElementNS(svgNamespace, 'line')
-    this.addHandle(this.positionElements[0]);
-    this.addHandle(this.positionElements[1]);
     this.addHandle(this.lineElement);
   }
 
@@ -1199,6 +1277,9 @@ export class TwovilleLine extends TwovilleMarkerable {
     if (vertices.length != 2) {
       throw new LocatedException(this.callExpression.where, `I tried to draw a line that had ${vertices.length} ${vertices.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly two vertices.`);
     }
+
+    // this.positionExpressions[0] = vertices[0];
+    // this.positionExpressions[1] = vertices[1];
     
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
@@ -1214,8 +1295,8 @@ export class TwovilleLine extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'y2', env.bounds.span - vertices[1].get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
-      this.setVertexHandleAttributes(this.positionElements[0], vertices[0], env.bounds);
-      this.setVertexHandleAttributes(this.positionElements[1], vertices[1], env.bounds);
+      // this.setVertexHandleAttributes(this.positionElements[0], vertices[0], env.bounds);
+      // this.setVertexHandleAttributes(this.positionElements[1], vertices[1], env.bounds);
       this.setLineHandleAttributes(this.lineElement, vertices[0], vertices[1], env.bounds);
     }
   }
@@ -1509,7 +1590,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
 // --------------------------------------------------------------------------- 
 
 class HandleListener {
-  constructor(env, element, range, change) {
+  constructor(env, selectElement, element, range, change) {
     this.element = element;
     this.env = env;
     this.mouseDownAt = null;
@@ -1521,6 +1602,7 @@ class HandleListener {
       e.stopPropagation();
       window.addEventListener('mousemove', this.mouseMove);
       window.addEventListener('mouseup', this.mouseUp);
+      selection = selectElement;
     }
 
     this.mouseUp = e => {
@@ -1575,7 +1657,7 @@ export class TwovilleRectangle extends TwovilleShape {
     this.sizeExpression = null;
     this.hasCenter = false;
 
-    let positionListener = new HandleListener(env, this.positionElement, () => {
+    let positionListener = new HandleListener(env, this, this.positionElement, () => {
       this.originalPositionExpression = this.positionExpression.clone();
       return this.positionExpression.where;
     }, delta => {
@@ -1587,7 +1669,7 @@ export class TwovilleRectangle extends TwovilleShape {
       return replacement;
     });
 
-    let widthListener = new HandleListener(env, this.widthElement, () => {
+    let widthListener = new HandleListener(env, this, this.widthElement, () => {
       this.originalSizeExpression = this.sizeExpression.clone();
       return this.sizeExpression.get(0).where;
     }, delta => {
@@ -1597,7 +1679,7 @@ export class TwovilleRectangle extends TwovilleShape {
       return replacement;
     });
 
-    let heightListener = new HandleListener(env, this.heightElement, () => {
+    let heightListener = new HandleListener(env, this, this.heightElement, () => {
       this.originalSizeExpression = this.sizeExpression.clone();
       return this.sizeExpression.get(1).where;
     }, delta => {
@@ -1713,7 +1795,7 @@ export class TwovilleCircle extends TwovilleShape {
     this.positionExpression = null;
     this.radiusExpression = null;
 
-    let positionListener = new HandleListener(env, this.positionElement, () => {
+    let positionListener = new HandleListener(env, this, this.positionElement, () => {
       this.originalPositionExpression = this.positionExpression.clone();
       return this.positionExpression.where;
     }, delta => {
@@ -1725,7 +1807,7 @@ export class TwovilleCircle extends TwovilleShape {
       return replacement;
     });
 
-    let radiusListener = new HandleListener(env, this.radiusElement, () => {
+    let radiusListener = new HandleListener(env, this, this.radiusElement, () => {
       this.originalRadiusExpression = this.radiusExpression.clone();
       return this.radiusExpression.where;
     }, delta => {
@@ -2059,6 +2141,7 @@ Object.assign(TwovillePathQuadratic.prototype, handleMixin);
 Object.assign(TwovillePathArc.prototype, handleMixin);
 Object.assign(TwovilleTurtleMove.prototype, handleMixin);
 Object.assign(TwovilleTurtleTurn.prototype, handleMixin);
+Object.assign(TwovilleVertex.prototype, handleMixin);
 
 // --------------------------------------------------------------------------- 
 
