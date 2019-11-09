@@ -718,9 +718,15 @@ export class TwovillePathJump extends TwovilleTimelinedEnvironment {
     let positionListener = new HandleListener(env, env, this.positionElement, () => {
       this.originalPositionExpression = this.positionExpression.clone();
       return this.positionExpression.where;
-    }, delta => {
+    }, (delta, isShiftModified) => {
       let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
       let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+
+      if (isShiftModified) {
+        x = Math.round(x);
+        y = Math.round(y);
+      }
+
       this.positionExpression.set(0, new ExpressionReal(x));
       this.positionExpression.set(1, new ExpressionReal(y));
       let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
@@ -955,9 +961,15 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
     let positionListener = new HandleListener(env, env, this.positionElement, () => {
       this.originalPositionExpression = this.positionExpression.clone();
       return this.positionExpression.where;
-    }, delta => {
+    }, (delta, isShiftModified) => {
       let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
       let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+
+      if (isShiftModified) {
+        x = Math.round(x);
+        y = Math.round(y);
+      }
+
       this.positionExpression.set(0, new ExpressionReal(x));
       this.positionExpression.set(1, new ExpressionReal(y));
       let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
@@ -967,9 +979,15 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
     let controlListener = new HandleListener(env, env, this.controlElement, () => {
       this.originalControlExpression = this.controlExpression.clone();
       return this.controlExpression.where;
-    }, delta => {
+    }, (delta, isShiftModified) => {
       let x = parseFloat((this.originalControlExpression.get(0).value + delta[0]).toFixed(3));
       let y = parseFloat((this.originalControlExpression.get(1).value + delta[1]).toFixed(3));
+      
+      if (isShiftModified) {
+        x = Math.round(x);
+        y = Math.round(y);
+      }
+
       this.controlExpression.set(0, new ExpressionReal(x));
       this.controlExpression.set(1, new ExpressionReal(y));
       let replacement = '[' + this.controlExpression.get(0).value + ', ' + this.controlExpression.get(1).value + ']';
@@ -1616,7 +1634,7 @@ class HandleListener {
         let mouseAt = this.transform(e);
         let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
 
-        let replacement = change(delta);
+        let replacement = change(delta, e.shiftKey);
         updateSelection(replacement);
         e.stopPropagation();
 
