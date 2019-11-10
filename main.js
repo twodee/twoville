@@ -35,11 +35,6 @@ editor.setOptions({
   useSoftTabs: true
 });
 
-if (localStorage.getItem('src') !== null) {
-  editor.setValue(localStorage.getItem('src'), 1);
-}
-editor.getSession().on('change', onSourceChanged);
-editor.getSession().setMode("ace/mode/twoville");
 let Range = ace.require('ace/range').Range;
 
 let left = document.getElementById('left');
@@ -61,12 +56,6 @@ let isSaved = true;
 let animateTask = null;
 let delay;
 let previousBounds = null;
-
-if (source0) {
-  left.style.width = '300px';
-  messagerContainer.style.height = '50px';
-  editor.resize();
-}
 
 export let svg = document.getElementById('svg');
 export let fitBounds;
@@ -594,19 +583,35 @@ function syncTitle() {
   document.title = 'Twoville' + (isSaved ? '' : '*');
 }
 
-if (source0) {
-  editor.setValue(source0, 1);
-  if (runZeroMode) {
-    interpret();
-    if (runZeroMode == 'loop') {
-      play(true);
-    }
-  }
-}
-
 // Keep scrolling from bubbling up to parent when embedded.
 // Doesn't work with Ace editor.
 // document.body.addEventListener('wheel', function (e) {
   // e.stopPropagation();
   // e.preventDefault();
 // });
+
+function initialize() {
+  if (localStorage.getItem('src') !== null) {
+    editor.setValue(localStorage.getItem('src'), 1);
+  }
+  editor.getSession().on('change', onSourceChanged);
+  editor.getSession().setMode("ace/mode/twoville");
+
+  if (source0) {
+    left.style.width = '300px';
+    messagerContainer.style.height = '50px';
+    editor.resize();
+  }
+
+  if (source0) {
+    editor.setValue(source0, 1);
+    if (runZeroMode) {
+      interpret();
+      if (runZeroMode == 'loop') {
+        play(true);
+      }
+    }
+  }
+}
+
+window.addEventListener('load', initialize);
