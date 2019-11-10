@@ -76,6 +76,8 @@ export function parse(tokens) {
     // Vectors
     ':zero2': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]),
     ':zero3': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
+    ':up': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1)]),
+    ':right': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0)]),
 
     // Interpolants
     ':linear': new ExpressionString('linear'),

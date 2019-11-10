@@ -100,6 +100,8 @@ svg.addEventListener('wheel', e => {
     setSvgBounds(env.bounds);
   }
   e.preventDefault();
+}, {
+  passive: true
 });
 
 export let mouseAt = [0, 0];

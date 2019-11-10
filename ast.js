@@ -20,6 +20,7 @@ import {
   TwovillePathJump,
   TwovillePathLine,
   TwovillePathBezier,
+  // TwovillePathMirror,
   TwovillePathQuadratic,
   TwovillePolygon,
   TwovillePolyline,
@@ -893,7 +894,7 @@ export class ExpressionIdentifier extends Expression {
         targetEnv = targetEnv.parent;
       }
     }
-    targetEnv.bind(this.nameToken.source, value, fromTime, toTime);
+    targetEnv.bind(this.nameToken.source, value, fromTime, toTime, rhs);
 
     return value;
   }
@@ -931,7 +932,7 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
       rhsValue = rhs.evaluate(env, fromTime, toTime);
     }
 
-    baseValue.bind(this.nameToken.source, rhsValue, fromTime, toTime);
+    baseValue.bind(this.nameToken.source, rhsValue, fromTime, toTime, rhs);
 
     return rhsValue;
   }
@@ -961,7 +962,7 @@ export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
     let rhsValue = rhs.evaluate(env, fromTime, toTime);
 
     baseValue.forEach(element => {
-      element.bind(this.nameToken.source, rhsValue, fromTime, toTime);
+      element.bind(this.nameToken.source, rhsValue, fromTime, toTime, rhs);
     });
 
     return rhsValue;
@@ -2199,6 +2200,25 @@ export class ExpressionVector extends ExpressionData {
       result.push(this.get(i).negative());
     }
     return new ExpressionVector(result);
+  }
+
+  dot(that) {
+    // TODO ensure same cardinality
+    let sum = 0;
+    for (let i = 0; i < this.elements.length; ++i) {
+      sum = this.get(i).multiply(that.get(i)).value;
+    }
+    return sum;
+  }
+
+  mirror(point, axis) {
+    let normal = axis.normalize();
+    let diff = point.subtract(this); // ORDER?
+    let length = diff.dot(normal);
+    normal = normal.multiply(new ExpressionReal(length * 2));
+    normal = normal.subtract(diff);
+    let reflection = point.subtract(normal);
+    return reflection;
   }
 }
 

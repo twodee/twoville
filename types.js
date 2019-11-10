@@ -176,10 +176,12 @@ export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
     this.type = type;
   }
 
-  bind(id, value, fromTime = null, toTime = null) {
+  bind(id, value, fromTime = null, toTime = null, rhs = null) {
     if (!this.bindings.hasOwnProperty(id)) {
       this.bindings[id] = new Timeline();
     }
+
+    value.tree = rhs;
 
     // We are assigning one timeline to another...
     if (value instanceof Timeline) {
@@ -742,7 +744,7 @@ export class TwovillePathJump extends TwovilleTimelinedEnvironment {
 
     if (position) {
       this.setVertexHandleAttributes(this.positionElement, position, env.bounds);
-      return [`M${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
+      return [`M${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading), null];
     } else {
       return null;
     }
@@ -803,11 +805,13 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
     if (toPosition) {
       this.setVertexHandleAttributes(this.positionElement, absoluteToPosition, env.bounds);
       this.setLineHandleAttributes(this.lineElement, fromTurtle.position, absoluteToPosition, env.bounds);
+      
+      let segment = new LineSegment(fromTurtle.position, absoluteToPosition);
 
       if (isDelta) {
-        return [`${letter}${toPosition.get(0).value},${-toPosition.get(1).value}`, new Turtle(absoluteToPosition, fromTurtle.heading)];
+        return [`${letter}${toPosition.get(0).value},${-toPosition.get(1).value}`, new Turtle(absoluteToPosition, fromTurtle.heading), segment];
       } else {
-        return [`${letter}${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, new Turtle(absoluteToPosition, fromTurtle.heading)];
+        return [`${letter}${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, new Turtle(absoluteToPosition, fromTurtle.heading), segment];
       }
     } else {
       return null;
@@ -881,7 +885,7 @@ export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
     });
   }
 
-  evolve(env, t, fromTurtle) {
+  evolve(env, t, fromTurtle, previousSegment) {
     this.assertProperty('position');
     this.assertProperty('control2');
     
@@ -893,6 +897,7 @@ export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
       control1 = this.valueAt(env, 'control1', t);
       this.control1Expression = control1;
     }
+
     let control2 = this.valueAt(env, 'control2', t);
     this.control2Expression = control2;
 
@@ -917,18 +922,75 @@ export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
       this.setLineHandleAttributes(this.line2Element, control2, absoluteToPosition, env.bounds);
 
       if (control1) {
+        let segment = new CubicSegment(fromTurtle.position, toPosition, control1, false, control2);
+
         this.setVertexHandleAttributes(this.control1Element, control1, env.bounds);
         this.setLineHandleAttributes(this.line1Element, control1, fromTurtle.position, env.bounds);
  
         let letter = isDelta ? 'c' : 'C';
-        return [`${letter} ${control1.get(0).value},${env.bounds.span - control1.get(1).value} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle];
+        return [`${letter} ${control1.get(0).value},${env.bounds.span - control1.get(1).value} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle, segment];
       } else {
+        let implicitControl1 = fromTurtle.position.add(fromTurtle.position.subtract(previousSegment.control2)); // from - previous' control2 + from
+        let segment = new CubicSegment(fromTurtle.position, toPosition, implicitControl1, true, control2);
+
         let letter = isDelta ? 's' : 'S';
-        return [`${letter} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle];
+        return [`${letter} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle, segment];
       }
     } else {
       return null;
     }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+class QuadraticSegment {
+  constructor(from, to, control, isControlImplicit) {
+    this.from = from;
+    this.to = to;
+    this.control = control;
+    this.isControlImplicit = isControlImplicit;
+  }
+
+  mirror(point, axis, predecessor, successor) {
+  }
+}
+
+class CubicSegment {
+  constructor(from, to, control1, isControl1Implicit, control2) {
+    this.from = from;
+    this.to = to;
+    this.control1 = control1;
+    this.isControl1Implicit = isControl1Implicit;
+    this.control2 = control2;
+  }
+
+  mirror(point, axis) {
+    return new CubicSegment(
+      this.to.mirror(point, axis),
+      this.from.mirror(point, axis),
+      this.control2.mirror(point, axis),
+      false,
+      this.control1.mirror(point, axis)
+    );
+  }
+
+  toCommandString(env) {
+    if (this.isControl1Implicit) {
+      return `S ${this.control2.get(0).value},${env.bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${env.bounds.span - this.to.get(1).value}`;
+    } else {
+      return `C ${this.control1.get(0).value},${env.bounds.span - this.control1.get(1).value} ${this.control2.get(0).value},${env.bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${env.bounds.span - this.to.get(1).value}`;
+    }
+  }
+}
+
+class LineSegment {
+  constructor(from, to) {
+    this.from = from;
+    this.to = to;
+  }
+
+  mirror(point, axis, predecessor, successor) {
   }
 }
 
@@ -1330,6 +1392,8 @@ export class TwovillePath extends TwovilleMarkerable {
     this.registerClickHandler();
     this.nodes = [];
 
+    this.bindings.mirror = new TwovilleTimelinedEnvironment(this, null, 'mirror');
+
     this.bindings['arc'] = {
       name: 'arc',
       formals: [],
@@ -1388,12 +1452,20 @@ export class TwovillePath extends TwovilleMarkerable {
     }
 
     let last = new Turtle(null, null);
+    let lastSegment = null;
     let vertices = [];
+    let segments = [];
     this.nodes.forEach(node => {
-      let result = node.evolve(env, t, last);
+      let result = node.evolve(env, t, last, lastSegment);
+
       last = result[1];
       if (result[0] != null) {
         vertices.push(result[0]);
+      }
+
+      lastSegment = result[2];
+      if (lastSegment != null) {
+        segments.push(lastSegment);
       }
     });
 
@@ -1410,7 +1482,19 @@ export class TwovillePath extends TwovilleMarkerable {
       this.show();
       this.setStroke(env, t);
       this.setTransform(env, t);
-      
+
+      if (this.has('mirror')) {
+        let mirror = this.get('mirror');
+        if (mirror.owns('point') && mirror.owns('axis')) {
+          let point = mirror.valueAt(env, 'point', t);
+          let axis = mirror.valueAt(env, 'axis', t);
+          for (let i = segments.length - 1; i >= 0; --i) {
+            let command = segments[i].mirror(point, axis).toCommandString(env);
+            vertices.push(command);
+          }
+        }
+      }
+        
       let commands = vertices.join(' ');
       if (isClosed) {
         commands += ' Z';
