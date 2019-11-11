@@ -2196,9 +2196,9 @@ let handleMixin = {
   setVertexHandleAttributes(handle, position, bounds) {
     handle.setAttributeNS(null, 'cx', position.get(0).value);
     handle.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
-    handle.setAttributeNS(null, 'r', 1.1);
+    handle.setAttributeNS(null, 'r', 0.3);
     this.setCommonHandleProperties(handle);
-    handle.setAttributeNS(null, 'fill', 'red');
+    handle.setAttributeNS(null, 'fill', 'black');
   },
 
   setLineHandleAttributes(handle, from, to, bounds) {
