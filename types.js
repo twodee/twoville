@@ -31,6 +31,7 @@ import {
   ExpressionPathJump,
   ExpressionPathLine,
   ExpressionPathQuadratic,
+  ExpressionPolycurve,
   ExpressionPolygon,
   ExpressionPolyline,
   ExpressionPrint,
@@ -1509,6 +1510,130 @@ export class TwovillePath extends TwovilleMarkerable {
 
 // --------------------------------------------------------------------------- 
 
+export class TwovillePolycurve extends TwovilleMarkerable {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'polycurve');
+    this.svgElement = document.createElementNS(svgNamespace, 'path');
+    this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.registerClickHandler();
+    this.nodes = [];
+
+    this.bindings['vertex'] = {
+      name: 'vertex',
+      formals: [],
+      body: new ExpressionVertex(this)
+    };
+
+    this.bindings['turtle'] = {
+      name: 'turtle',
+      formals: [],
+      body: new ExpressionTurtle(this)
+    };
+
+    this.bindings['turn'] = {
+      name: 'turn',
+      formals: [],
+      body: new ExpressionTurtleTurn(this)
+    };
+
+    this.bindings['move'] = {
+      name: 'move',
+      formals: [],
+      body: new ExpressionTurtleMove(this)
+    };
+
+    this.handles = {
+      polygon: document.createElementNS(svgNamespace, 'polygon'),
+      vertexGroup: document.createElementNS(svgNamespace, 'g'),
+      vertices: [],
+    };
+    this.addHandle(this.handles.polygon);
+    this.addHandle(this.handles.vertexGroup);
+  }
+
+  draw(env, t) {
+    super.draw(env, t);
+
+    let color = this.getColor(env, t);
+
+    let last = new Turtle(null, null);
+    let vertices = [];
+    this.nodes.forEach(node => {
+      let result = node.evolve(env, t, last);
+      last = result[1];
+      if (result[0] != null) {
+        vertices.push(result[1].position);
+      }
+    });
+
+    let rounding;
+    if (this.has('rounding')) {
+      rounding = this.valueAt(env, 'rounding', t).value;
+    }
+
+    if (vertices.some(v => v == null) || color == null) {
+      this.hide();
+    } else {
+      this.show();
+      this.setStroke(env, t);
+      this.setTransform(env, t);
+
+      let vertexPositions = vertices.map(p => `${p.get(0).value},${env.bounds.span - p.get(1).value}`).join(' ');
+
+      rounding = 1 - rounding;
+      let commands = [];
+      let start = vertices[0].midpoint(vertices[1]);
+      commands.push(`M ${start.get(0).value},${env.bounds.span - start.get(1).value}`);
+      let previous = start;
+      for (let i = 1; i < vertices.length; ++i) {
+        let mid = vertices[i].midpoint(vertices[(i + 1) % vertices.length]);
+
+        if (rounding) {
+          let control1 = previous.interpolateLinear(vertices[i], rounding);
+          let control2 = mid.interpolateLinear(vertices[i], rounding);
+          commands.push(`C ${control1.get(0).value},${env.bounds.span - control1.get(1).value} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${mid.get(0).value},${env.bounds.span - mid.get(1).value}`);
+        } else {
+          commands.push(`Q ${vertices[i].get(0).value},${env.bounds.span - vertices[i].get(1).value} ${mid.get(0).value},${env.bounds.span - mid.get(1).value}`);
+        }
+        previous = mid;
+      }
+
+      if (rounding) {
+        let control1 = previous.interpolateLinear(vertices[0], rounding);
+        let control2 = start.interpolateLinear(vertices[0], rounding);
+        commands.push(`C ${control1.get(0).value},${env.bounds.span - control1.get(1).value} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${start.get(0).value},${env.bounds.span - start.get(1).value}`);
+      } else {
+        commands.push(`Q${vertices[0].get(0).value},${env.bounds.span - vertices[0].get(1).value} ${start.get(0).value},${env.bounds.span - start.get(1).value}`);
+      }
+      commands.push('z');
+
+      this.svgElement.setAttributeNS(null, 'd', commands.join(' '));
+      this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+      this.svgElement.setAttributeNS(null, 'fill', color.toColor());
+
+      this.handles.polygon.setAttributeNS(null, 'points', vertexPositions);
+      this.setCommonHandleProperties(this.handles.polygon);
+
+      // Remove old vertices.
+      for (let vertexHandle of this.handles.vertices) {
+        vertexHandle.parentNode.removeChild(vertexHandle);
+      }
+
+      this.handles.vertices = [];
+      for (let vertex of vertices) {
+        let vertexHandle = document.createElementNS(svgNamespace, 'circle');
+        this.setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
+        this.handles.vertexGroup.appendChild(vertexHandle);
+        this.handles.vertices.push(vertexHandle);
+      }
+    }
+
+    // this.handleParentElement.setAttributeNS(null, 'visibility', 'visible');
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TwovillePolygon extends TwovilleMarkerable {
   constructor(env, callExpression) {
     super(env, callExpression, 'polygon');
@@ -1564,6 +1689,11 @@ export class TwovillePolygon extends TwovilleMarkerable {
         vertices.push(result[1].position);
       }
     });
+
+    let rounding;
+    if (this.has('rounding')) {
+      rounding = this.valueAt(env, 'rounding', t);
+    }
 
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
@@ -1842,7 +1972,6 @@ export class TwovilleRectangle extends TwovilleShape {
         this.svgElement.setAttributeNS(null, 'ry', rounding.value);
       }
 
-
       this.svgElement.setAttributeNS(null, 'x', corner.get(0).value);
       this.svgElement.setAttributeNS(null, 'y', env.bounds.span - size.get(1).value - corner.get(1).value);
       this.svgElement.setAttributeNS(null, 'width', size.get(0).value);
@@ -2040,6 +2169,12 @@ export class GlobalEnvironment extends TwovilleEnvironment {
       name: 'path',
       formals: [],
       body: new ExpressionPath()
+    };
+
+    this.bindings['polycurve'] = {
+      name: 'polycurve',
+      formals: [],
+      body: new ExpressionPolycurve()
     };
 
     this.bindings['polygon'] = {

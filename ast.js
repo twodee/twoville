@@ -22,6 +22,7 @@ import {
   TwovillePathBezier,
   // TwovillePathMirror,
   TwovillePathQuadratic,
+  TwovillePolycurve,
   TwovillePolygon,
   TwovillePolyline,
   TwovilleRectangle,
@@ -1628,6 +1629,20 @@ export class ExpressionPolygon extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionPolycurve extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let r = new TwovillePolycurve(env, callExpression);
+    env.shapes.push(r);
+    return r;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionPolyline extends Expression {
   constructor() {
     super(null);
@@ -2079,6 +2094,11 @@ export class ExpressionVector extends ExpressionData {
   normalize() {
     let magnitude = this.magnitude;
     let newElements = this.elements.map(element => new ExpressionReal(element.value / magnitude));
+    return new ExpressionVector(newElements);
+  }
+
+  midpoint(that) {
+    let newElements = this.elements.map((element, i) => new ExpressionReal((element.value + that.elements[i].value) / 2));
     return new ExpressionVector(newElements);
   }
 
