@@ -57,8 +57,17 @@ import {
   ExpressionVertex,
 } from './ast.js';
 
+// --------------------------------------------------------------------------- 
+
 export let svgNamespace = "http://www.w3.org/2000/svg";
 let selection = null;
+export let serial = 0;
+
+// --------------------------------------------------------------------------- 
+
+export function initializeShapes() {
+  serial = 0;
+}
 
 export function clearSelection() {
   if (selection) {
@@ -154,7 +163,7 @@ export class TwovilleEnvironment {
     return false;
   }
 
-  bind(id, value) {
+  bind(id, value, fromTime, toTime, rhs) {
     this.bindings[id] = value;
   }
 
@@ -171,43 +180,53 @@ export class TwovilleEnvironment {
 // ---------------------------------------------------------------------------
 
 export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
-  constructor(env, callExpression, type) {
+  constructor(env, callExpression, type, animatedIds) {
     super(env);
     this.callExpression = callExpression;
     this.type = type;
+    this.animatedIds = animatedIds;
   }
 
   bind(id, value, fromTime = null, toTime = null, rhs = null) {
-    if (!this.bindings.hasOwnProperty(id)) {
-      this.bindings[id] = new Timeline();
+    // Non-animated properties get a standard key-value binding.
+    if (!this.animatedIds.includes(id)) {
+      this.bindings[id] = value;
     }
 
-    value.tree = rhs;
-
-    // We are assigning one timeline to another...
-    if (value instanceof Timeline) {
-      let timeline = value;
-      if (fromTime != null && toTime != null) {
-        this.bindings[id].setFromValue(fromTime, timeline.intervalFrom(fromTime).fromValue);
-        this.bindings[id].setToValue(toTime, timeline.intervalTo(toTime).toValue);
-      }  if (fromTime != null) {
-        this.bindings[id].setFromValue(fromTime, timeline.intervalFrom(fromTime).fromValue);
-      } else if (toTime != null) {
-        this.bindings[id].setToValue(toTime, timeline.intervalTo(toTime).toValue);
-      } else {
-        this.bindings[id].setDefault(timeline.getDefault());
+    // But animated properties get dropped onto a timeline. This gets a little
+    // involved...
+    else {
+      if (!this.bindings.hasOwnProperty(id)) {
+        this.bindings[id] = new Timeline();
       }
-    }
-    
-    else if (fromTime != null && toTime != null) {
-      this.bindings[id].setFromValue(fromTime, value);
-      this.bindings[id].setToValue(toTime, value);
-    } else if (fromTime != null) {
-      this.bindings[id].setFromValue(fromTime, value);
-    } else if (toTime != null) {
-      this.bindings[id].setToValue(toTime, value);
-    } else {
-      this.bindings[id].setDefault(value);
+
+      value.tree = rhs;
+
+      // We are assigning one timeline to another...
+      if (value instanceof Timeline) {
+        let timeline = value;
+        if (fromTime != null && toTime != null) {
+          this.bindings[id].setFromValue(fromTime, timeline.intervalFrom(fromTime).fromValue);
+          this.bindings[id].setToValue(toTime, timeline.intervalTo(toTime).toValue);
+        }  if (fromTime != null) {
+          this.bindings[id].setFromValue(fromTime, timeline.intervalFrom(fromTime).fromValue);
+        } else if (toTime != null) {
+          this.bindings[id].setToValue(toTime, timeline.intervalTo(toTime).toValue);
+        } else {
+          this.bindings[id].setDefault(timeline.getDefault());
+        }
+      }
+      
+      else if (fromTime != null && toTime != null) {
+        this.bindings[id].setFromValue(fromTime, value);
+        this.bindings[id].setToValue(toTime, value);
+      } else if (fromTime != null) {
+        this.bindings[id].setFromValue(fromTime, value);
+      } else if (toTime != null) {
+        this.bindings[id].setToValue(toTime, value);
+      } else {
+        this.bindings[id].setDefault(value);
+      }
     }
   }
 
@@ -220,17 +239,11 @@ export class TwovilleTimelinedEnvironment extends TwovilleEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export let serial = 0;
-
-export function initializeShapes() {
-  serial = 0;
-}
-
 export class TwovilleShape extends TwovilleTimelinedEnvironment {
-  constructor(env, callExpression, type) {
-    super(env, callExpression, type);
+  constructor(env, callExpression, type, animatedIds) {
+    super(env, callExpression, type, animatedIds);
     this.parentElement = null;
-    this.bindings.stroke = new TwovilleTimelinedEnvironment(this, null, 'stroke');
+    this.bindings.stroke = new TwovilleTimelinedEnvironment(this, null, 'stroke', ['size', 'color', 'opacity']);
     this.bindings.stroke.bind('opacity', new ExpressionReal(1));
     this.bind('opacity', new ExpressionReal(1));
     this.id = serial;
@@ -245,7 +258,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
   }
 
   getColor(env, t) {
-    let isCutout = this.owns('parent') && this.get('parent').defaultValue instanceof TwovilleCutout;
+    let isCutout = this.owns('parent') && this.get('parent') instanceof TwovilleCutout;
 
     if (!this.has('color') && !isCutout) {
       throw new LocatedException(this.callExpression.where, `I found a ${this.type} whose color property is not defined.`);
@@ -273,7 +286,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     if (this.has('clippers')) {
       let clipPath = document.createElementNS(svgNamespace, 'clipPath');
       clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
-      let clippers = this.get('clippers').getDefault();
+      let clippers = this.get('clippers');
       clippers.forEach(clipper => {
         let use = document.createElementNS(svgNamespace, 'use');
         use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
@@ -284,15 +297,15 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     }
 
     if (this.owns('parent')) {
-      this.parentElement = this.get('parent').getDefault().getParentingElement();
-    } else if (this.owns('template') && this.get('template').getDefault().value) {
+      this.parentElement = this.get('parent').getParentingElement();
+    } else if (this.owns('template') && this.get('template').value) {
       this.parentElement = svg.firstChild;
     } else {
       this.parentElement = this.svg;
     }
 
     if (this.owns('mask')) {
-      let mask = this.get('mask').getDefault();
+      let mask = this.get('mask');
 
       let maskParent = document.createElementNS(svgNamespace, 'g');
       maskParent.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
@@ -404,7 +417,7 @@ Object.assign(TwovilleShape.prototype, transformMixin);
 
 export class TwovilleGroup extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'group');
+    super(env, callExpression, 'group', []);
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'g');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
@@ -420,7 +433,7 @@ export class TwovilleGroup extends TwovilleShape {
 
 export class TwovilleMarker extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'marker');
+    super(env, callExpression, 'marker', ['size', 'anchor', 'corner', 'center']);
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'marker');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
@@ -478,7 +491,7 @@ export class TwovilleMarker extends TwovilleShape {
 
 export class TwovilleMask extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'mask');
+    super(env, callExpression, 'mask', []);
     this.children = [];
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
@@ -501,7 +514,7 @@ export class TwovilleMask extends TwovilleShape {
 
 export class TwovilleCutout extends TwovilleMask {
   constructor(env, callExpression) {
-    super(env, callExpression);
+    super(env, callExpression, 'cutout', []);
 
     this.rectangle = document.createElementNS(svgNamespace, 'rect');
     this.rectangle.setAttributeNS(null, 'width', '100%');
@@ -539,7 +552,7 @@ export class TwovilleCutout extends TwovilleMask {
 
 export class TwovilleLabel extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'label');
+    super(env, callExpression, 'label', ['position', 'text', 'size', 'color', 'opacity']);
     this.svgElement = document.createElementNS(svgNamespace, 'text');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.svgElement.appendChild(document.createTextNode('foo'));
@@ -563,14 +576,14 @@ export class TwovilleLabel extends TwovilleShape {
 
     let anchor;
     if (this.has('anchor')) {
-      anchor = this.valueAt(env, 'anchor', t);
+      anchor = this.bindings['anchor'];
     } else {
       anchor = new ExpressionString('middle');
     }
 
     let baseline;
     if (this.has('baseline')) {
-      baseline = this.valueAt(env, 'baseline', t);
+      baseline = this.bindings['baseline'];
     } else {
       baseline = new ExpressionString('center');
     }
@@ -597,7 +610,7 @@ export class TwovilleLabel extends TwovilleShape {
 
 export class TwovilleVertex extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'vertex');
+    super(env, callExpression, 'vertex', ['position']);
     env.nodes.push(this);
 
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
@@ -642,7 +655,7 @@ export class TwovilleVertex extends TwovilleShape {
 
 export class TwovilleTurtle extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'turtle');
+    super(env, callExpression, 'turtle', ['position', 'heading']);
     env.nodes.push(this);
   }
 
@@ -665,7 +678,7 @@ export class TwovilleTurtle extends TwovilleShape {
 
 export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'move');
+    super(env, callExpression, 'move', ['distance']);
     env.nodes.push(this);
   }
 
@@ -688,7 +701,7 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
 
 export class TwovilleTurtleTurn extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'turn');
+    super(env, callExpression, 'turn', ['degrees']);
     env.nodes.push(this);
   }
 
@@ -708,7 +721,7 @@ export class TwovilleTurtleTurn extends TwovilleTimelinedEnvironment {
 
 export class TwovillePathJump extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'jump');
+    super(env, callExpression, 'jump', ['position']);
     env.nodes.push(this);
 
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
@@ -756,7 +769,7 @@ export class TwovillePathJump extends TwovilleTimelinedEnvironment {
 
 export class TwovillePathLine extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'line');
+    super(env, callExpression, 'line', ['position']);
     env.nodes.push(this);
 
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
@@ -790,7 +803,7 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
 
     let isDelta = false;
     if (this.has('delta')) {
-      isDelta = this.valueAt(env, 'delta', t).value;
+      isDelta = this.bindings['delta'].value;
     }
 
     let absoluteToPosition;
@@ -824,7 +837,7 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
 
 export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'cubic');
+    super(env, callExpression, 'cubic', ['position', 'control1', 'control2']);
     env.nodes.push(this);
 
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
@@ -999,7 +1012,7 @@ class LineSegment {
 
 export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'quadratic');
+    super(env, callExpression, 'quadratic', ['position', 'control']);
     env.nodes.push(this);
 
     this.positionElement = document.createElementNS(svgNamespace, 'circle');
@@ -1107,7 +1120,7 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
 
 export class TwovillePathArc extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'arc');
+    super(env, callExpression, 'arc', ['position', 'center', 'degrees']);
     env.nodes.push(this);
 
     this.centerElement = document.createElementNS(svgNamespace, 'circle');
@@ -1139,7 +1152,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
 
     let isDelta = false;
     if (this.has('delta')) {
-      isDelta = this.valueAt(env, 'delta', t).value;
+      isDelta = this.bindings['delta'].value;
     }
 
     let center;
@@ -1202,7 +1215,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
 
 export class TwovilleTranslate extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'translate');
+    super(env, callExpression, 'translate', ['offset']);
     env.transforms.push(this);
   }
 
@@ -1222,7 +1235,7 @@ export class TwovilleTranslate extends TwovilleTimelinedEnvironment {
 
 export class TwovilleRotate extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'rotate');
+    super(env, callExpression, 'rotate', ['degrees', 'pivot']);
     env.transforms.push(this);
   }
 
@@ -1245,7 +1258,7 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
 
 export class TwovilleScale extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
-    super(env, callExpression, 'scale');
+    super(env, callExpression, 'scale', ['pivot', 'factors']);
     env.transforms.push(this);
   }
 
@@ -1277,27 +1290,27 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
 // --------------------------------------------------------------------------- 
 
 export class TwovilleMarkerable extends TwovilleShape {
-  constructor(env, callExpression, name) {
-    super(env, callExpression, name);
+  constructor(env, callExpression, name, animatedIds = []) {
+    super(env, callExpression, name, animatedIds);
   }
 
   draw(env, t) {
     // Difference between owns and has? TODO
 
     if (this.owns('node')) {
-      let node = this.get('node').getDefault();
+      let node = this.get('node');
       this.svgElement.setAttributeNS(null, 'marker-mid', 'url(#element-' + node.id + ')');
       this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + node.id + ')');
       this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + node.id + ')');
     }
 
     if (this.owns('head')) {
-      let head = this.get('head').getDefault();
+      let head = this.get('head');
       this.svgElement.setAttributeNS(null, 'marker-end', 'url(#element-' + head.id + ')');
     }
 
     if (this.owns('tail')) {
-      let tail = this.get('tail').getDefault();
+      let tail = this.get('tail');
       this.svgElement.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
     }
   }
@@ -1307,7 +1320,7 @@ export class TwovilleMarkerable extends TwovilleShape {
 
 export class TwovilleLine extends TwovilleMarkerable {
   constructor(env, callExpression) {
-    super(env, callExpression, 'line');
+    super(env, callExpression, 'line', ['color', 'opacity', 'size']);
     this.svgElement = document.createElementNS(svgNamespace, 'line');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.registerClickHandler();
@@ -1387,13 +1400,13 @@ export class TwovilleLine extends TwovilleMarkerable {
 
 export class TwovillePath extends TwovilleMarkerable {
   constructor(env, callExpression) {
-    super(env, callExpression, 'path');
+    super(env, callExpression, 'path', ['opacity', 'color']);
     this.svgElement = document.createElementNS(svgNamespace, 'path');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.registerClickHandler();
     this.nodes = [];
 
-    this.bindings.mirror = new TwovilleTimelinedEnvironment(this, null, 'mirror');
+    this.bindings.mirror = new TwovilleTimelinedEnvironment(this, null, 'mirror', ['point', 'axis']);
 
     this.bindings['arc'] = {
       name: 'arc',
@@ -1449,7 +1462,7 @@ export class TwovillePath extends TwovilleMarkerable {
 
     let isClosed = true;
     if (this.has('closed')) {
-      isClosed = this.valueAt(env, 'closed', t).value;
+      isClosed = this.bindings['closed'].value;
     }
 
     let last = new Turtle(null, null);
@@ -1512,7 +1525,7 @@ export class TwovillePath extends TwovilleMarkerable {
 
 export class TwovillePolycurve extends TwovilleMarkerable {
   constructor(env, callExpression) {
-    super(env, callExpression, 'polycurve');
+    super(env, callExpression, 'polycurve', ['rounding', 'color', 'opacity']);
     this.svgElement = document.createElementNS(svgNamespace, 'path');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.registerClickHandler();
@@ -1636,7 +1649,7 @@ export class TwovillePolycurve extends TwovilleMarkerable {
 
 export class TwovillePolygon extends TwovilleMarkerable {
   constructor(env, callExpression) {
-    super(env, callExpression, 'polygon');
+    super(env, callExpression, 'polygon', ['color', 'opacity']);
     this.svgElement = document.createElementNS(svgNamespace, 'polygon');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.registerClickHandler();
@@ -1690,11 +1703,6 @@ export class TwovillePolygon extends TwovilleMarkerable {
       }
     });
 
-    let rounding;
-    if (this.has('rounding')) {
-      rounding = this.valueAt(env, 'rounding', t);
-    }
-
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
     } else {
@@ -1731,7 +1739,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
 
 export class TwovillePolyline extends TwovilleMarkerable {
   constructor(env, callExpression) {
-    super(env, callExpression, 'polyline');
+    super(env, callExpression, 'polyline', ['size', 'color', 'opacity']);
     this.svgElement = document.createElementNS(svgNamespace, 'polyline');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.registerClickHandler();
@@ -1870,7 +1878,7 @@ class HandleListener {
 
 export class TwovilleRectangle extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'rectangle');
+    super(env, callExpression, 'rectangle', ['corner', 'center', 'size', 'color', 'opacity', 'rounding']);
     this.svgElement = document.createElementNS(svgNamespace, 'rect');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.registerClickHandler();
@@ -2010,7 +2018,7 @@ export class TwovilleRectangle extends TwovilleShape {
 
 export class TwovilleCircle extends TwovilleShape {
   constructor(env, callExpression) {
-    super(env, callExpression, 'circle');
+    super(env, callExpression, 'circle', ['center', 'radius', 'color', 'opacity']);
     this.svgElement = document.createElementNS(svgNamespace, 'circle');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.registerClickHandler();

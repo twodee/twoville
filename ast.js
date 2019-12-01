@@ -881,7 +881,7 @@ export class ExpressionIdentifier extends Expression {
     }
   }
 
-  assign(env, fromTime, toTime, rhs, isGlobal) {
+  assign(env, fromTime, toTime, rhs) {
     let value;
     if (rhs.isTimeSensitive(env)) {
       value = rhs;
@@ -889,13 +889,7 @@ export class ExpressionIdentifier extends Expression {
       value = rhs.evaluate(env, fromTime, toTime);
     }
 
-    let targetEnv = env;
-    if (isGlobal) {
-      while (targetEnv.parent != null) {
-        targetEnv = targetEnv.parent;
-      }
-    }
-    targetEnv.bind(this.nameToken.source, value, fromTime, toTime, rhs);
+    env.bind(this.nameToken.source, value, fromTime, toTime, rhs);
 
     return value;
   }
@@ -1053,16 +1047,15 @@ export class ExpressionBlock extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAssignment extends Expression {
-  constructor(l, r, isGlobal, where = null) {
+  constructor(l, r, where = null) {
     super(where);
     this.l = l;
     this.r = r;
-    this.isGlobal = isGlobal;
   }
 
   evaluate(env, fromTime, toTime) {
     if ('assign' in this.l) {
-      return this.l.assign(env, fromTime, toTime, this.r, this.isGlobal);
+      return this.l.assign(env, fromTime, toTime, this.r);
     } else {
       throw 'unassignable';
     }
