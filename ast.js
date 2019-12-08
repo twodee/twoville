@@ -1771,6 +1771,20 @@ export class ExpressionCosine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionTangent extends Expression {
+  constructor() {
+    super(null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let degrees = env.get('degrees').value;
+    let x = Math.tan(degrees * Math.PI / 180);
+    return new ExpressionReal(x);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionArcSine extends Expression {
   constructor() {
     super(null);

@@ -44,6 +44,7 @@ import {
   ExpressionSine,
   ExpressionSquareRoot,
   ExpressionString,
+  ExpressionTangent,
   ExpressionTranslate,
   ExpressionTurtle,
   ExpressionTurtleMove,
@@ -2261,6 +2262,12 @@ export class GlobalEnvironment extends TwovilleEnvironment {
       name: 'cos',
       formals: ['degrees'],
       body: new ExpressionCosine()
+    };
+
+    this.bindings['tan'] = {
+      name: 'tan',
+      formals: ['degrees'],
+      body: new ExpressionTangent()
     };
 
     this.bindings['asin'] = {
