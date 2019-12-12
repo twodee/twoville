@@ -53,6 +53,10 @@ import {
   // ExpressionVector
 // } from './types.js';
 
+export let Symbols = {
+  None: new ExpressionInteger(-1),
+};
+
 export function parse(tokens) {
   let symbols = {
     ':clockwise': new ExpressionInteger(0),
@@ -108,6 +112,8 @@ export function parse(tokens) {
     // Polygon
     ':open': new ExpressionInteger(0),
     ':closed': new ExpressionInteger(1),
+
+    ':none': Symbols.None,
   };
 
   let i = 0;

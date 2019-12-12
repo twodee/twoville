@@ -3,7 +3,8 @@ import {
 } from './lexer.js';
 
 import {
-  parse
+  parse,
+  Symbols,
 } from './parser.js';
 
 import {
@@ -262,7 +263,7 @@ recordButton.addEventListener('click', () => {
     workers: 3,
     quality: 1,
     background: '#FFFFFF',
-    transparent: transparentColor.toHexColor(),
+    transparent: transparentColor.value == Symbols.None.value ? null : transparentColor.toHexColor(),
     repeat: repeat.value,
     width: size.get(0).value,
     height: size.get(1).value,
