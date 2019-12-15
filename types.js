@@ -2155,6 +2155,7 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     ]));
     this.bindings.gif.bind('repeat', new ExpressionInteger(0));
     this.bindings.gif.bind('delay', new ExpressionInteger(10));
+    this.bindings.gif.bind('skip', new ExpressionInteger(1));
 
     this.bindings.viewport = new TwovilleEnvironment(this);
     this.bindings.viewport.bind('size', new ExpressionVector([

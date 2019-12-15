@@ -253,17 +253,19 @@ recordButton.addEventListener('click', () => {
   let name = env.get('gif').get('name');
   let repeat = env.get('gif').get('repeat');
   let delay = env.get('gif').get('delay');
+  let skip = env.get('gif').get('skip');
 
   // I don't know why I need to set the viewport explicitly. Setting the size
   // of the image isn't sufficient.
   svg.setAttribute('width', size.get(0).value);
   svg.setAttribute('height', size.get(1).value);
+  console.log("transparentColor.toHexColor():", transparentColor.toHexColor());
 
   let gif = new GIF({
     workers: 3,
     quality: 1,
     background: '#FFFFFF',
-    transparent: transparentColor.value == Symbols.None.value ? null : transparentColor.toHexColor(),
+    transparent: null,
     repeat: repeat.value,
     width: size.get(0).value,
     height: size.get(1).value,
@@ -293,7 +295,7 @@ recordButton.addEventListener('click', () => {
             copy: true
           });
           URL.revokeObjectURL(url);
-          tick(i + 1);
+          tick(i + skip.value);
         };
 
         img.src = url;
@@ -362,7 +364,7 @@ function serializeThenDownload(root) {
 
 function tickToTime(tick) {
   let proportion = tick / nTicks;
-  return tmin + proportion * (tmax - tmin);
+  return Math.round(tmin + proportion * (tmax - tmin));
 }
 
 function timeToTick(time) {
@@ -534,6 +536,7 @@ export function interpret(isTweak = false) {
 
     scrubber.min = 0;
     scrubber.max = nTicks;
+    timeSpinner.max = nTicks;
 
     let t = getT();
     if (t < tmin) {
