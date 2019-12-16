@@ -464,7 +464,9 @@ export function interpret(isTweak = false) {
 
     if (env.get('viewport').has('color')) {
       let color = env.get('viewport').get('color');
-      env.svg.setAttributeNS(null, 'style', `background: ${color.toColor()}`);
+      env.svg.setAttributeNS(null, 'style', `background-color: ${color.toColor()}`);
+    } else {
+      env.svg.setAttributeNS(null, 'style', `initial`);
     }
 
     let corner;
