@@ -283,7 +283,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     return this.bindings[id];
   }
 
-  domify(svg) {
+  domify(defs, mainGroup, handleGroup) {
     if (this.has('clippers')) {
       let clipPath = document.createElementNS(svgNamespace, 'clipPath');
       clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
@@ -293,16 +293,16 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
         use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
         clipPath.appendChild(use);
       });
-      svg.firstChild.appendChild(clipPath);
+      defs.appendChild(clipPath);
       this.svgElement.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
     }
 
     if (this.owns('parent')) {
       this.parentElement = this.get('parent').getParentingElement();
     } else if (this.owns('template') && this.get('template').value) {
-      this.parentElement = svg.firstChild;
+      this.parentElement = defs;
     } else {
-      this.parentElement = this.svg;
+      this.parentElement = mainGroup;
     }
 
     if (this.owns('mask')) {
@@ -322,7 +322,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       this.handleParentElement.setAttributeNS(null, 'id', `element-${this.id}-handles`);
       this.handleParentElement.setAttributeNS(null, 'visibility', 'hidden');
       this.handleParentElement.classList.add('handle-group');
-      this.parentElement.appendChild(this.handleParentElement);
+      handleGroup.appendChild(this.handleParentElement);
       for (let element of this.handleElements) {
         this.handleParentElement.appendChild(element);
       }
@@ -409,11 +409,14 @@ let transformMixin = {
   setTransform(env, t) {
     let attributeValue = this.transforms.slice().reverse().flatMap(xform => xform.evolve(env, t)).join(' ');
     this.svgElement.setAttributeNS(null, 'transform', attributeValue);
+    this.handleParentElement.setAttributeNS(null, 'transform', attributeValue);
   }
 }
 
 Object.assign(TwovilleShape.prototype, transformMixin);
 
+// --------------------------------------------------------------------------- 
+// ENVIRONMENTS
 // --------------------------------------------------------------------------- 
 
 export class TwovilleGroup extends TwovilleShape {
@@ -1238,6 +1241,43 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'rotate', ['degrees', 'pivot']);
     env.transforms.push(this);
+
+    this.pivotHandle = document.createElementNS(svgNamespace, 'circle');
+    env.addHandle(this.pivotHandle);
+
+    this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
+    env.addHandle(this.degreesHandle);
+
+    let positionListener = new HandleListener(env, env, this.pivotHandle, () => {
+      this.originalPivotExpression = this.pivotExpression.clone();
+      return this.pivotExpression.where;
+    }, (delta, isShiftModified, mouseAt) => {
+      let x = parseFloat((this.originalPivotExpression.get(0).value + delta[0]).toFixed(3));
+      let y = parseFloat((this.originalPivotExpression.get(1).value + delta[1]).toFixed(3));
+      this.pivotExpression.set(0, new ExpressionReal(x));
+      this.pivotExpression.set(1, new ExpressionReal(y));
+      let replacement = '[' + this.pivotExpression.get(0).value + ', ' + this.pivotExpression.get(1).value + ']';
+      return replacement;
+    });
+
+    let degreesListener = new HandleListener(env, env, this.degreesHandle, () => {
+      this.originalDegreesExpression = this.degreesExpression.clone();
+      return this.degreesExpression.where;
+    }, (delta, isShiftModified, mouseAt) => {
+      let diff = new ExpressionVector([
+        new ExpressionReal(mouseAt.x),
+        new ExpressionReal(mouseAt.y),
+      ]).subtract(this.pivotExpression);
+      let newRadians = Math.atan2(diff.get(0).value, -diff.get(1).value);
+      let newDegrees = newRadians * 180 / Math.PI - 90;
+      if (newDegrees < 0) {
+        newDegrees = 360 + newDegrees;
+      }
+      newDegrees = parseFloat(newDegrees.toFixed(3));
+      this.degreesExpression.x = newDegrees;
+      let replacement = '' + newDegrees;
+      return replacement;
+    });
   }
 
   evolve(env, t) {
@@ -1247,7 +1287,13 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
     let pivot = this.valueAt(env, 'pivot', t);
     let degrees = this.valueAt(env, 'degrees', t);
 
+    this.pivotExpression = pivot;
+    this.degreesExpression = degrees;
+
     if (pivot && degrees) {
+      this.parent.setVertexHandleAttributes(this.pivotHandle, pivot, env.bounds);
+      let rotationTo = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(degrees.value).add(pivot);
+      this.parent.setVertexHandleAttributes(this.degreesHandle, rotationTo, env.bounds);
       return [`rotate(${-degrees.value} ${pivot.get(0).value} ${env.bounds.span - pivot.get(1).value})`];
     } else {
       return null;
@@ -1857,7 +1903,7 @@ class HandleListener {
         let mouseAt = this.transform(e);
         let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
 
-        let replacement = change(delta, e.shiftKey);
+        let replacement = change(delta, e.shiftKey, mouseAt);
         updateSelection(replacement);
         e.stopPropagation();
 
@@ -2302,10 +2348,26 @@ let handleMixin = {
   },
 
   addHandle(element) {
+    element.classList.add(`element-${this.id}-group`);
+    element.addEventListener('mouseleave', event => {
+      event.stopPropagation();
+      if (this.handleParentElement && selection != this && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
+        this.hideHandles();
+      }
+    });
     this.handleElements.push(element);
   },
 
+  showHandles() {
+    this.handleParentElement.setAttributeNS(null, 'visibility', 'visible');
+  },
+
+  hideHandles() {
+    this.handleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+  },
+
   registerClickHandler() {
+    this.svgElement.classList.add(`element-${this.id}-group`);
     this.svgElement.classList.add('selectable');
 
     this.svgElement.addEventListener('click', event => {
@@ -2314,11 +2376,9 @@ let handleMixin = {
       event.stopPropagation();
 
       if (!isDirty && this.handleParentElement) {
-        if (selection == this) {
-          clearSelection();
-        } else {
-          clearSelection();
-          this.handleParentElement.setAttributeNS(null, 'visibility', 'visible');
+        clearSelection();
+        if (selection != this) {
+          this.showHandles();
           selection = this;
         }
       }
@@ -2328,18 +2388,23 @@ let handleMixin = {
       event.stopPropagation();
       // Only show the handles if the source code has been evaluated
       if (!isDirty && this.handleParentElement) {
-        this.handleParentElement.setAttributeNS(null, 'visibility', 'visible');
+        this.showHandles();
       }
     });
 
     this.svgElement.addEventListener('mouseleave', event => {
       event.stopPropagation();
       // Only turn off handles if shape wasn't explicitly click-selected
-      // and the mouse is dragged onto to some other entity that isn't an
+      // and the mouse is dragged onto to some other entity that isn't a
       // handle. Mousing over the shape's handles should not cause the
       // handles to disappear.
-      if (this.handleParentElement && selection != this && !event.toElement.classList.contains('handle')) {
-        this.handleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+      //
+      // this element has handles AND
+      // this element hasn't been click-selected (i.e., this was only a hover-select) AND
+      // (we are rolling off to nothing OR
+      //  we are rolling to something that's not a handle)
+      if (this.handleParentElement && selection != this && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
+        this.hideHandles();
       }
     });
   },

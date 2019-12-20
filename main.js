@@ -259,7 +259,6 @@ recordButton.addEventListener('click', () => {
   // of the image isn't sufficient.
   svg.setAttribute('width', size.get(0).value);
   svg.setAttribute('height', size.get(1).value);
-  console.log("transparentColor.toHexColor():", transparentColor.toHexColor());
 
   let gif = new GIF({
     workers: 3,
@@ -517,16 +516,21 @@ export function interpret(isTweak = false) {
     pageOutline.setAttributeNS(null, 'stroke-opacity', 1);
     pageOutline.classList.add('handle');
 
+    let mainGroup = document.createElementNS(svgNamespace, 'g');
+    svg.appendChild(mainGroup);
+
+    let handleGroup = document.createElementNS(svgNamespace, 'g');
+    svg.appendChild(handleGroup);
+
     let sceneHandles = document.createElementNS(svgNamespace, 'g');
     sceneHandles.setAttributeNS(null, 'id', 'scene-handles');
     sceneHandles.classList.add('handle-group');
-
     sceneHandles.appendChild(pageOutline);
-    env.svg.appendChild(sceneHandles);
+    handleGroup.appendChild(sceneHandles);
 
     env.shapes.forEach(shape => {
       // console.log("shape:", shape);
-      shape.domify(env.svg)
+      shape.domify(defs, mainGroup, handleGroup)
     });
 
     delay = env.get('time').get('delay').value;
