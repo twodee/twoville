@@ -19,8 +19,7 @@ import {
   TwovillePathArc,
   TwovillePathJump,
   TwovillePathLine,
-  TwovillePathBezier,
-  // TwovillePathMirror,
+  TwovillePathCubic,
   TwovillePathQuadratic,
   TwovillePolycurve,
   TwovillePolygon,
@@ -1529,14 +1528,14 @@ export class ExpressionPathLine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathBezier extends Expression {
+export class ExpressionPathCubic extends Expression {
   constructor(instance) {
     super(null);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathBezier(this.instance, callExpression);
+    return new TwovillePathCubic(this.instance, callExpression);
   }
 }
 

@@ -27,7 +27,7 @@ import {
   ExpressionMask,
   ExpressionPath,
   ExpressionPathArc,
-  ExpressionPathBezier,
+  ExpressionPathCubic,
   ExpressionPathJump,
   ExpressionPathLine,
   ExpressionPathQuadratic,
@@ -72,7 +72,8 @@ export function initializeShapes() {
 
 export function clearSelection() {
   if (selection) {
-    selection.handleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+    selection.backgroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+    selection.foregroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
   }
   selection = null;
 }
@@ -80,7 +81,8 @@ export function clearSelection() {
 export function restoreSelection(shapes) {
   if (selection) {
     selection = shapes.find(shape => shape.id == selection.id);
-    selection.handleParentElement.setAttributeNS(null, 'visibility', 'visible');
+    selection.backgroundHandleParentElement.setAttributeNS(null, 'visibility', 'visible');
+    selection.foregroundHandleParentElement.setAttributeNS(null, 'visibility', 'visible');
   }
 }
 
@@ -283,7 +285,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     return this.bindings[id];
   }
 
-  domify(defs, mainGroup, handleGroup) {
+  domify(defs, mainGroup, backgroundHandleGroup, foregroundHandleGroup) {
     if (this.has('clippers')) {
       let clipPath = document.createElementNS(svgNamespace, 'clipPath');
       clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
@@ -317,14 +319,25 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       this.parentElement.appendChild(this.svgElement);
     }
 
-    if (this.handleElements.length > 0) {
-      this.handleParentElement = document.createElementNS(svgNamespace, 'g');
-      this.handleParentElement.setAttributeNS(null, 'id', `element-${this.id}-handles`);
-      this.handleParentElement.setAttributeNS(null, 'visibility', 'hidden');
-      this.handleParentElement.classList.add('handle-group');
-      handleGroup.appendChild(this.handleParentElement);
-      for (let element of this.handleElements) {
-        this.handleParentElement.appendChild(element);
+    if (this.backgroundHandleElements.length > 0) {
+      this.backgroundHandleParentElement = document.createElementNS(svgNamespace, 'g');
+      this.backgroundHandleParentElement.setAttributeNS(null, 'id', `element-${this.id}-background-handles`);
+      this.backgroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+      this.backgroundHandleParentElement.classList.add('handle-group');
+      backgroundHandleGroup.appendChild(this.backgroundHandleParentElement);
+      for (let element of this.backgroundHandleElements) {
+        this.backgroundHandleParentElement.appendChild(element);
+      }
+    }
+
+    if (this.foregroundHandleElements.length > 0) {
+      this.foregroundHandleParentElement = document.createElementNS(svgNamespace, 'g');
+      this.foregroundHandleParentElement.setAttributeNS(null, 'id', `element-${this.id}-foreground-handles`);
+      this.foregroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+      this.foregroundHandleParentElement.classList.add('handle-group');
+      foregroundHandleGroup.appendChild(this.foregroundHandleParentElement);
+      for (let element of this.foregroundHandleElements) {
+        this.foregroundHandleParentElement.appendChild(element);
       }
     }
   }
@@ -409,7 +422,8 @@ let transformMixin = {
   setTransform(env, t) {
     let attributeValue = this.transforms.slice().reverse().flatMap(xform => xform.evolve(env, t)).join(' ');
     this.svgElement.setAttributeNS(null, 'transform', attributeValue);
-    this.handleParentElement.setAttributeNS(null, 'transform', attributeValue);
+    this.backgroundHandleParentElement.setAttributeNS(null, 'transform', attributeValue);
+    this.foregroundHandleParentElement.setAttributeNS(null, 'transform', attributeValue);
   }
 }
 
@@ -616,38 +630,23 @@ export class TwovilleVertex extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'vertex', ['position']);
     env.nodes.push(this);
-
-    this.positionElement = document.createElementNS(svgNamespace, 'circle');
-    env.addHandle(this.positionElement);
-    this.positionExpression = null;
-
-    let positionListener = new HandleListener(env, env, this.positionElement, () => {
-      this.originalPositionExpression = this.positionExpression.clone();
-      return this.positionExpression.where;
-    }, delta => {
-      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
-      this.positionExpression.set(0, new ExpressionReal(x));
-      this.positionExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-      return replacement;
-    }, env);
+    this.positionHandle = new VectorPanHandle(this, env);
   }
 
   evaluate(env, t) {
     this.assertProperty('position');
     let position = this.valueAt(env, 'position', t);
-    this.positionExpression = position;
+    this.positionHandle.update(env, position);
     return position;
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     let position = this.valueAt(env, 'position', t);
-    this.positionExpression = position;
+    this.positionHandle.attach(position);
     
     if (position) {
-      this.setVertexHandleAttributes(this.positionElement, position, env.bounds);
+      this.positionHandle.update(env, position);
       return [`${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
     } else {
       return null;
@@ -727,41 +726,17 @@ export class TwovillePathJump extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'jump', ['position']);
     env.nodes.push(this);
-
-    this.positionElement = document.createElementNS(svgNamespace, 'circle');
-    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
-
-    env.addHandle(this.positionElement);
-
-    this.positionExpression = null;
-
-    let positionListener = new HandleListener(env, env, this.positionElement, () => {
-      this.originalPositionExpression = this.positionExpression.clone();
-      return this.positionExpression.where;
-    }, (delta, isShiftModified) => {
-      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
-
-      if (isShiftModified) {
-        x = Math.round(x);
-        y = Math.round(y);
-      }
-
-      this.positionExpression.set(0, new ExpressionReal(x));
-      this.positionExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-      return replacement;
-    });
+    this.positionHandle = new VectorPanHandle(this, env);
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let position = this.valueAt(env, 'position', t);
-    this.positionExpression = position;
+    this.positionHandle.attach(position);
 
     if (position) {
-      this.setVertexHandleAttributes(this.positionElement, position, env.bounds);
+      this.positionHandle.update(env, position);
       return [`M${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading), null];
     } else {
       return null;
@@ -776,34 +751,17 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
     super(env, callExpression, 'line', ['position']);
     env.nodes.push(this);
 
-    this.positionElement = document.createElementNS(svgNamespace, 'circle');
-    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
-
     this.lineElement = document.createElementNS(svgNamespace, 'line');
+    env.addBackgroundHandle(this.lineElement);
 
-    env.addHandle(this.positionElement);
-    env.addHandle(this.lineElement);
-
-    this.positionExpression = null;
-
-    let positionListener = new HandleListener(env, env, this.positionElement, () => {
-      this.originalPositionExpression = this.positionExpression.clone();
-      return this.positionExpression.where;
-    }, delta => {
-      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
-      this.positionExpression.set(0, new ExpressionReal(x));
-      this.positionExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-      return replacement;
-    });
+    this.positionHandle = new VectorPanHandle(this, env);
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let toPosition = this.valueAt(env, 'position', t);
-    this.positionExpression = toPosition;
+    this.positionHandle.attach(toPosition);
 
     let isDelta = false;
     if (this.has('delta')) {
@@ -821,7 +779,7 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
     }
 
     if (toPosition) {
-      this.setVertexHandleAttributes(this.positionElement, absoluteToPosition, env.bounds);
+      this.positionHandle.update(env, absoluteToPosition);
       this.setLineHandleAttributes(this.lineElement, fromTurtle.position, absoluteToPosition, env.bounds);
       
       let segment = new LineSegment(fromTurtle.position, absoluteToPosition);
@@ -839,68 +797,22 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
+export class TwovillePathCubic extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'cubic', ['position', 'control1', 'control2']);
     env.nodes.push(this);
 
-    this.positionElement = document.createElementNS(svgNamespace, 'circle');
-    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
-
-    this.control1Element = document.createElementNS(svgNamespace, 'circle');
-    this.control1Element.setAttributeNS(null, 'id', `element-${this.id}-control1`);
-
-    this.control2Element = document.createElementNS(svgNamespace, 'circle');
-    this.control2Element.setAttributeNS(null, 'id', `element-${this.id}-control2`);
+    this.positionHandle = new VectorPanHandle(this, env);
+    this.controlHandles = [
+      new VectorPanHandle(this, env),
+      new VectorPanHandle(this, env),
+    ];
 
     this.line1Element = document.createElementNS(svgNamespace, 'line');
     this.line2Element = document.createElementNS(svgNamespace, 'line');
 
-    env.addHandle(this.positionElement);
-    env.addHandle(this.control1Element);
-    env.addHandle(this.control2Element);
-    env.addHandle(this.line1Element);
-    env.addHandle(this.line2Element);
-
-    this.positionExpression = null;
-    this.control1Expression = null;
-    this.control2Expression = null;
-
-    let positionListener = new HandleListener(env, env, this.positionElement, () => {
-      this.originalPositionExpression = this.positionExpression.clone();
-      return this.positionExpression.where;
-    }, delta => {
-      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
-      this.positionExpression.set(0, new ExpressionReal(x));
-      this.positionExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-      return replacement;
-    });
-
-    let control1Listener = new HandleListener(env, env, this.control1Element, () => {
-      this.originalControl1Expression = this.control1Expression.clone();
-      return this.control1Expression.where;
-    }, delta => {
-      let x = parseFloat((this.originalControl1Expression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalControl1Expression.get(1).value + delta[1]).toFixed(3));
-      this.control1Expression.set(0, new ExpressionReal(x));
-      this.control1Expression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.control1Expression.get(0).value + ', ' + this.control1Expression.get(1).value + ']';
-      return replacement;
-    });
-
-    let control2Listener = new HandleListener(env, env, this.control2Element, () => {
-      this.originalControl2Expression = this.control2Expression.clone();
-      return this.control2Expression.where;
-    }, delta => {
-      let x = parseFloat((this.originalControl2Expression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalControl2Expression.get(1).value + delta[1]).toFixed(3));
-      this.control2Expression.set(0, new ExpressionReal(x));
-      this.control2Expression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.control2Expression.get(0).value + ', ' + this.control2Expression.get(1).value + ']';
-      return replacement;
-    });
+    env.addBackgroundHandle(this.line1Element);
+    env.addBackgroundHandle(this.line2Element);
   }
 
   evolve(env, t, fromTurtle, previousSegment) {
@@ -908,16 +820,16 @@ export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
     this.assertProperty('control2');
     
     let toPosition = this.valueAt(env, 'position', t);
-    this.positionExpression = toPosition;
+    this.positionHandle.attach(toPosition);
 
     let control1;
     if (this.has('control1')) {
       control1 = this.valueAt(env, 'control1', t);
-      this.control1Expression = control1;
+      this.controlHandles[0].attach(control1);
     }
 
     let control2 = this.valueAt(env, 'control2', t);
-    this.control2Expression = control2;
+    this.controlHandles[1].attach(control2);
 
     let isDelta = false;
     if (this.has('delta')) {
@@ -934,15 +846,15 @@ export class TwovillePathBezier extends TwovilleTimelinedEnvironment {
 
       let toTurtle = new Turtle(absoluteToPosition, fromTurtle.heading);
 
-      this.setVertexHandleAttributes(this.positionElement, absoluteToPosition, env.bounds);
-      this.setVertexHandleAttributes(this.control2Element, control2, env.bounds);
+      this.positionHandle.update(env, absoluteToPosition);
+      this.controlHandles[1].update(env, control2);
 
       this.setLineHandleAttributes(this.line2Element, control2, absoluteToPosition, env.bounds);
 
       if (control1) {
         let segment = new CubicSegment(fromTurtle.position, toPosition, control1, false, control2);
 
-        this.setVertexHandleAttributes(this.control1Element, control1, env.bounds);
+        this.controlHandles[0].update(env, control1);
         this.setLineHandleAttributes(this.line1Element, control1, fromTurtle.position, env.bounds);
  
         let letter = isDelta ? 'c' : 'C';
@@ -1019,72 +931,28 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
     super(env, callExpression, 'quadratic', ['position', 'control']);
     env.nodes.push(this);
 
-    this.positionElement = document.createElementNS(svgNamespace, 'circle');
-    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
-
-    this.controlElement = document.createElementNS(svgNamespace, 'circle');
-    this.controlElement.setAttributeNS(null, 'id', `element-${this.id}-control`);
+    this.positionHandle = new VectorPanHandle(this, env);
+    this.controlHandle = new VectorPanHandle(this, env);
 
     this.lineElements = [
       document.createElementNS(svgNamespace, 'line'),
       document.createElementNS(svgNamespace, 'line')
     ];
 
-    env.addHandle(this.positionElement);
-    env.addHandle(this.controlElement);
-    env.addHandle(this.lineElements[0]);
-    env.addHandle(this.lineElements[1]);
-
-    this.positionExpression = null;
-    this.controlExpression = null;
-
-    let positionListener = new HandleListener(env, env, this.positionElement, () => {
-      this.originalPositionExpression = this.positionExpression.clone();
-      return this.positionExpression.where;
-    }, (delta, isShiftModified) => {
-      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
-
-      if (isShiftModified) {
-        x = Math.round(x);
-        y = Math.round(y);
-      }
-
-      this.positionExpression.set(0, new ExpressionReal(x));
-      this.positionExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-      return replacement;
-    });
-
-    let controlListener = new HandleListener(env, env, this.controlElement, () => {
-      this.originalControlExpression = this.controlExpression.clone();
-      return this.controlExpression.where;
-    }, (delta, isShiftModified) => {
-      let x = parseFloat((this.originalControlExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalControlExpression.get(1).value + delta[1]).toFixed(3));
-      
-      if (isShiftModified) {
-        x = Math.round(x);
-        y = Math.round(y);
-      }
-
-      this.controlExpression.set(0, new ExpressionReal(x));
-      this.controlExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.controlExpression.get(0).value + ', ' + this.controlExpression.get(1).value + ']';
-      return replacement;
-    });
+    env.addBackgroundHandle(this.lineElements[0]);
+    env.addBackgroundHandle(this.lineElements[1]);
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('position');
     
     let toPosition = this.valueAt(env, 'position', t);
-    this.positionExpression = toPosition;
+    this.positionHandle.attach(toPosition);
 
     let control;
     if (this.has('control')) {
       control = this.valueAt(env, 'control', t);
-      this.controlExpression = control;
+      this.controlHandle.attach(control);
     }
 
     let isDelta = false;
@@ -1101,10 +969,10 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
       }
 
       let toTurtle = new Turtle(absoluteToPosition, fromTurtle.heading);
-      this.setVertexHandleAttributes(this.positionElement, absoluteToPosition, env.bounds);
+      this.positionHandle.update(env, absoluteToPosition);
 
       if (control) {
-        this.setVertexHandleAttributes(this.controlElement, control, env.bounds);
+        this.controlHandle.update(env, control);
         this.setLineHandleAttributes(this.lineElements[0], control, absoluteToPosition, env.bounds);
         this.setLineHandleAttributes(this.lineElements[1], control, fromTurtle.position, env.bounds);
 
@@ -1127,18 +995,13 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     super(env, callExpression, 'arc', ['position', 'center', 'degrees']);
     env.nodes.push(this);
 
-    this.centerElement = document.createElementNS(svgNamespace, 'circle');
-    this.centerElement.setAttributeNS(null, 'id', `element-${this.id}-center`);
-
     this.circleElement = document.createElementNS(svgNamespace, 'circle');
     this.circleElement.setAttributeNS(null, 'id', `element-${this.id}-circle`);
 
-    this.positionElement = document.createElementNS(svgNamespace, 'circle');
-    this.positionElement.setAttributeNS(null, 'id', `element-${this.id}-position`);
+    this.positionHandle = new VectorPanHandle(this, env);
+    this.centerHandle = new VectorPanHandle(this, env);
 
-    env.addHandle(this.centerElement);
-    env.addHandle(this.circleElement);
-    env.addHandle(this.positionElement);
+    env.addBackgroundHandle(this.circleElement);
   }
 
   evolve(env, t, fromTurtle) {
@@ -1208,8 +1071,8 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     this.circleElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
     this.circleElement.classList.add('handle');
 
-    this.setVertexHandleAttributes(this.centerElement, center, env.bounds);
-    this.setVertexHandleAttributes(this.positionElement, to, env.bounds);
+    this.positionHandle.update(env, to);
+    this.centerHandle.update(env, center);
 
     return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${env.bounds.span - to.get(1).value}`, new Turtle(to, fromTurtle.heading)];
   }
@@ -1242,23 +1105,10 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
     super(env, callExpression, 'rotate', ['degrees', 'pivot']);
     env.transforms.push(this);
 
-    this.pivotHandle = document.createElementNS(svgNamespace, 'circle');
-    env.addHandle(this.pivotHandle);
+    this.pivotHandle = new VectorPanHandle(this, env);
 
     this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
-    env.addHandle(this.degreesHandle);
-
-    let positionListener = new HandleListener(env, env, this.pivotHandle, () => {
-      this.originalPivotExpression = this.pivotExpression.clone();
-      return this.pivotExpression.where;
-    }, (delta, isShiftModified, mouseAt) => {
-      let x = parseFloat((this.originalPivotExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalPivotExpression.get(1).value + delta[1]).toFixed(3));
-      this.pivotExpression.set(0, new ExpressionReal(x));
-      this.pivotExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.pivotExpression.get(0).value + ', ' + this.pivotExpression.get(1).value + ']';
-      return replacement;
-    });
+    env.addForegroundHandle(this.degreesHandle);
 
     let degreesListener = new HandleListener(env, env, this.degreesHandle, () => {
       this.originalDegreesExpression = this.degreesExpression.clone();
@@ -1287,11 +1137,11 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
     let pivot = this.valueAt(env, 'pivot', t);
     let degrees = this.valueAt(env, 'degrees', t);
 
-    this.pivotExpression = pivot;
+    this.pivotHandle.attach(pivot);
     this.degreesExpression = degrees;
 
     if (pivot && degrees) {
-      this.parent.setVertexHandleAttributes(this.pivotHandle, pivot, env.bounds);
+      this.pivotHandle.update(env, pivot);
       let rotationTo = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(degrees.value).add(pivot);
       this.parent.setVertexHandleAttributes(this.degreesHandle, rotationTo, env.bounds);
       return [`rotate(${-degrees.value} ${pivot.get(0).value} ${env.bounds.span - pivot.get(1).value})`];
@@ -1398,7 +1248,7 @@ export class TwovilleLine extends TwovilleMarkerable {
     };
 
     this.lineElement = document.createElementNS(svgNamespace, 'line')
-    this.addHandle(this.lineElement);
+    this.addBackgroundHandle(this.lineElement);
   }
 
   draw(env, t) {
@@ -1418,9 +1268,6 @@ export class TwovilleLine extends TwovilleMarkerable {
     if (vertices.length != 2) {
       throw new LocatedException(this.callExpression.where, `I tried to draw a line that had ${vertices.length} ${vertices.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly two vertices.`);
     }
-
-    // this.positionExpressions[0] = vertices[0];
-    // this.positionExpressions[1] = vertices[1];
     
     if (vertices.some(v => v == null) || color == null) {
       this.hide();
@@ -1436,8 +1283,6 @@ export class TwovilleLine extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'y2', env.bounds.span - vertices[1].get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
-      // this.setVertexHandleAttributes(this.positionElements[0], vertices[0], env.bounds);
-      // this.setVertexHandleAttributes(this.positionElements[1], vertices[1], env.bounds);
       this.setLineHandleAttributes(this.lineElement, vertices[0], vertices[1], env.bounds);
     }
   }
@@ -1464,7 +1309,7 @@ export class TwovillePath extends TwovilleMarkerable {
     this.bindings['cubic'] = {
       name: 'cubic',
       formals: [],
-      body: new ExpressionPathBezier(this)
+      body: new ExpressionPathCubic(this)
     };
 
     this.bindings['jump'] = {
@@ -1607,7 +1452,7 @@ export class TwovillePolycurve extends TwovilleMarkerable {
       vertexGroup: document.createElementNS(svgNamespace, 'g'),
       vertices: [],
     };
-    this.addHandle(this.handles.polygon);
+    this.addBackgroundHandle(this.handles.polygon);
     this.addHandle(this.handles.vertexGroup);
   }
 
@@ -1687,8 +1532,6 @@ export class TwovillePolycurve extends TwovilleMarkerable {
         this.handles.vertices.push(vertexHandle);
       }
     }
-
-    // this.handleParentElement.setAttributeNS(null, 'visibility', 'visible');
   }
 }
 
@@ -1731,7 +1574,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
       vertexGroup: document.createElementNS(svgNamespace, 'g'),
       vertices: [],
     };
-    this.addHandle(this.handles.polygon);
+    this.addBackgroundHandle(this.handles.polygon);
     this.addHandle(this.handles.vertexGroup);
   }
 
@@ -1821,7 +1664,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
       vertexGroup: document.createElementNS(svgNamespace, 'g'),
       vertices: [],
     };
-    this.addHandle(this.handles.polyline);
+    this.addBackgroundHandle(this.handles.polyline);
     this.addHandle(this.handles.vertexGroup);
   }
 
@@ -1931,50 +1774,14 @@ export class TwovilleRectangle extends TwovilleShape {
     this.registerClickHandler();
 
     this.rectangleElement = document.createElementNS(svgNamespace, 'rect');
-    this.positionElement = document.createElementNS(svgNamespace, 'circle');
-    this.widthElement = document.createElementNS(svgNamespace, 'circle');
-    this.heightElement = document.createElementNS(svgNamespace, 'circle');
+    this.addBackgroundHandle(this.rectangleElement);
 
-    this.addHandle(this.rectangleElement);
-    this.addHandle(this.positionElement);
-    this.addHandle(this.widthElement);
-    this.addHandle(this.heightElement);
+    this.positionHandle = new VectorPanHandle(this, this);
+    this.widthHandle = new VectorComponentPanHandle(this, this, 0);
+    this.heightHandle = new VectorComponentPanHandle(this, this, 1);
 
-    this.positionExpression = null;
-    this.sizeExpression = null;
     this.hasCenter = false;
 
-    let positionListener = new HandleListener(env, this, this.positionElement, () => {
-      this.originalPositionExpression = this.positionExpression.clone();
-      return this.positionExpression.where;
-    }, delta => {
-      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
-      this.positionExpression.set(0, new ExpressionReal(x));
-      this.positionExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-      return replacement;
-    });
-
-    let widthListener = new HandleListener(env, this, this.widthElement, () => {
-      this.originalSizeExpression = this.sizeExpression.clone();
-      return this.sizeExpression.get(0).where;
-    }, delta => {
-      let x = parseFloat((this.originalSizeExpression.get(0).value + delta[0] * (this.hasCenter ? 2 : 1)).toFixed(3));
-      this.sizeExpression.set(0, new ExpressionReal(x));
-      let replacement = this.sizeExpression.get(0).value.toString();
-      return replacement;
-    });
-
-    let heightListener = new HandleListener(env, this, this.heightElement, () => {
-      this.originalSizeExpression = this.sizeExpression.clone();
-      return this.sizeExpression.get(1).where;
-    }, delta => {
-      let y = parseFloat((this.originalSizeExpression.get(1).value + delta[1] * (this.hasCenter ? 2 : 1)).toFixed(3));
-      this.sizeExpression.set(1, new ExpressionReal(y));
-      let replacement = this.sizeExpression.get(1).value.toString();
-      return replacement;
-    });
   }
 
   draw(env, t) {
@@ -1989,17 +1796,18 @@ export class TwovilleRectangle extends TwovilleShape {
     this.assertProperty('size');
 
     let size = this.valueAt(env, 'size', t);
-    this.sizeExpression = size;
+    this.widthHandle.attach(size);
+    this.heightHandle.attach(size);
 
     let corner;
     let center;
     if (this.has('corner')) {
       corner = this.valueAt(env, 'corner', t);
-      this.positionExpression = corner;
+      this.positionHandle.attach(corner);
       this.hasCenter = false;
     } else {
       center = this.valueAt(env, 'center', t);
-      this.positionExpression = center;
+      this.positionHandle.attach(center);
       corner = new ExpressionVector([
         new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
         new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
@@ -2037,25 +1845,25 @@ export class TwovilleRectangle extends TwovilleShape {
       this.setRectangleHandleAttributes(this.rectangleElement, corner, size, env.bounds);
 
       if (center) {
-        this.setVertexHandleAttributes(this.positionElement, center, env.bounds);
-        this.setVertexHandleAttributes(this.widthElement, new ExpressionVector([
+        this.positionHandle.update(env, center);
+        this.widthHandle.update(env, new ExpressionVector([
           new ExpressionReal(center.get(0).value + size.get(0).value * 0.5),
           center.get(1)
-        ]), env.bounds);
-        this.setVertexHandleAttributes(this.heightElement, new ExpressionVector([
+        ]));
+        this.heightHandle.update(env, new ExpressionVector([
           center.get(0),
           new ExpressionReal(center.get(1).value + size.get(1).value * 0.5)
-        ]), env.bounds);
+        ]));
       } else {
-        this.setVertexHandleAttributes(this.positionElement, corner, env.bounds);
-        this.setVertexHandleAttributes(this.widthElement, new ExpressionVector([
+        this.positionHandle.update(env, corner);
+        this.widthHandle.update(env, new ExpressionVector([
           new ExpressionReal(corner.get(0).value + size.get(0).value),
           corner.get(1)
-        ]), env.bounds);
-        this.setVertexHandleAttributes(this.heightElement, new ExpressionVector([
+        ]));
+        this.heightHandle.update(env, new ExpressionVector([
           corner.get(0),
           new ExpressionReal(corner.get(1).value + size.get(1).value)
-        ]), env.bounds);
+        ]));
       }
     }
   }
@@ -2071,37 +1879,10 @@ export class TwovilleCircle extends TwovilleShape {
     this.registerClickHandler();
 
     this.circleElement = document.createElementNS(svgNamespace, 'circle');
-    this.positionElement = document.createElementNS(svgNamespace, 'circle');
-    this.radiusElement = document.createElementNS(svgNamespace, 'circle');
+    this.addBackgroundHandle(this.circleElement);
 
-    this.addHandle(this.circleElement);
-    this.addHandle(this.positionElement);
-    this.addHandle(this.radiusElement);
-
-    this.positionExpression = null;
-    this.radiusExpression = null;
-
-    let positionListener = new HandleListener(env, this, this.positionElement, () => {
-      this.originalPositionExpression = this.positionExpression.clone();
-      return this.positionExpression.where;
-    }, delta => {
-      let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-      let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
-      this.positionExpression.set(0, new ExpressionReal(x));
-      this.positionExpression.set(1, new ExpressionReal(y));
-      let replacement = '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-      return replacement;
-    });
-
-    let radiusListener = new HandleListener(env, this, this.radiusElement, () => {
-      this.originalRadiusExpression = this.radiusExpression.clone();
-      return this.radiusExpression.where;
-    }, delta => {
-      let x = parseFloat((this.originalRadiusExpression.value + delta[0]).toFixed(3));
-      this.radiusExpression.x = x;
-      let replacement = this.radiusExpression.value.toString();
-      return replacement;
-    });
+    this.positionHandle = new VectorPanHandle(this, this);
+    this.radiusHandle = new HorizontalPanHandle(this, this);
   }
 
   draw(env, t) {
@@ -2112,8 +1893,8 @@ export class TwovilleCircle extends TwovilleShape {
     let center = this.valueAt(env, 'center', t);
     let radius = this.valueAt(env, 'radius', t);
 
-    this.positionExpression = center;
-    this.radiusExpression = radius;
+    this.positionHandle.attach(center);
+    this.radiusHandle.attach(radius);
 
     let isVisible = opacity > 0.0001;
     let color = null;
@@ -2133,12 +1914,12 @@ export class TwovilleCircle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
 
-      this.setCircleHandleAttributes(this.circleElement, center, radius, env.bounds);
-      this.setVertexHandleAttributes(this.positionElement, center, env.bounds);
-      this.setVertexHandleAttributes(this.radiusElement, new ExpressionVector([
+      this.positionHandle.update(env, center);
+      this.radiusHandle.update(env, new ExpressionVector([
         new ExpressionReal(center.get(0).value + radius.value),
         center.get(1)
-      ]), env.bounds);
+      ]));
+      this.setCircleHandleAttributes(this.circleElement, center, radius, env.bounds);
     }
   }
 }
@@ -2177,7 +1958,8 @@ export class GlobalEnvironment extends TwovilleEnvironment {
 
     this.svg.addEventListener('click', () => {
       if (selection) {
-        selection.handleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+        selection.backgroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+        selection.foregroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
         selection = null;
       }
     }, false);
@@ -2343,27 +2125,44 @@ export class GlobalEnvironment extends TwovilleEnvironment {
 
 let handleMixin = {
   initializeHandles() {
-    this.handleParentElement = null;
-    this.handleElements = [];
+    this.backgroundHandleParentElement = null;
+    this.foregroundHandleParentElement = null;
+    this.backgroundHandleElements = [];
+    this.foregroundHandleElements = [];
   },
 
-  addHandle(element) {
+  addHandle(element, isForeground = false) {
     element.classList.add(`element-${this.id}-group`);
     element.addEventListener('mouseleave', event => {
       event.stopPropagation();
-      if (this.handleParentElement && selection != this && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
+      if ((this.backgroundHandleParentElement || this.foregroundHandleParentElement) && selection != this && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
         this.hideHandles();
       }
     });
-    this.handleElements.push(element);
+
+    if (isForeground) {
+      this.foregroundHandleElements.push(element);
+    } else {
+      this.backgroundHandleElements.push(element);
+    }
+  },
+
+  addForegroundHandle(element) {
+    this.addHandle(element, true);
+  },
+
+  addBackgroundHandle(element) {
+    this.addHandle(element, false);
   },
 
   showHandles() {
-    this.handleParentElement.setAttributeNS(null, 'visibility', 'visible');
+    this.backgroundHandleParentElement.setAttributeNS(null, 'visibility', 'visible');
+    this.foregroundHandleParentElement.setAttributeNS(null, 'visibility', 'visible');
   },
 
   hideHandles() {
-    this.handleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+    this.backgroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
+    this.foregroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
   },
 
   registerClickHandler() {
@@ -2375,7 +2174,7 @@ let handleMixin = {
       // parent involved when a child is clicked on.
       event.stopPropagation();
 
-      if (!isDirty && this.handleParentElement) {
+      if (!isDirty && (this.backgroundHandleParentElement || this.foregroundHandleParentElement)) {
         clearSelection();
         if (selection != this) {
           this.showHandles();
@@ -2387,7 +2186,7 @@ let handleMixin = {
     this.svgElement.addEventListener('mouseenter', event => {
       event.stopPropagation();
       // Only show the handles if the source code has been evaluated
-      if (!isDirty && this.handleParentElement) {
+      if (!isDirty && (this.backgroundHandleParentElement || this.foregroundHandleParentElement)) {
         this.showHandles();
       }
     });
@@ -2403,7 +2202,7 @@ let handleMixin = {
       // this element hasn't been click-selected (i.e., this was only a hover-select) AND
       // (we are rolling off to nothing OR
       //  we are rolling to something that's not a handle)
-      if (this.handleParentElement && selection != this && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
+      if ((this.backgroundHandleParentElement || this.foregroundHandleParentElement) && selection != this && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
         this.hideHandles();
       }
     });
@@ -2454,7 +2253,7 @@ let handleMixin = {
 Object.assign(TwovilleShape.prototype, handleMixin);
 Object.assign(TwovillePathJump.prototype, handleMixin);
 Object.assign(TwovillePathLine.prototype, handleMixin);
-Object.assign(TwovillePathBezier.prototype, handleMixin);
+Object.assign(TwovillePathCubic.prototype, handleMixin);
 Object.assign(TwovillePathQuadratic.prototype, handleMixin);
 Object.assign(TwovillePathArc.prototype, handleMixin);
 Object.assign(TwovilleTurtleMove.prototype, handleMixin);
@@ -2463,3 +2262,104 @@ Object.assign(TwovilleVertex.prototype, handleMixin);
 
 // --------------------------------------------------------------------------- 
 
+class PanHandle {
+  constructor(owner, handleOwner) {
+    this.owner = owner;
+    this.expression = null;
+
+    this.element = document.createElementNS(svgNamespace, 'circle');
+    handleOwner.addForegroundHandle(this.element);
+
+    let listener = new HandleListener(handleOwner, handleOwner, this.element, () => {
+      this.originalExpression = this.expression.clone();
+      return this.locate();
+    }, (delta, isShiftModified) => {
+      let replacement = this.updateTree(delta, isShiftModified);
+      return replacement;
+    }, handleOwner);
+  }
+
+  locate() {
+    return this.expression.where;
+  }
+
+  // Modify this handle's SVG element attributes.
+  update(env, expression) {
+    this.owner.setVertexHandleAttributes(this.element, expression, env.bounds);
+  }
+
+  // Attach this handle to the given expression node in the AST.
+  attach(expression) {
+    this.expression = expression;
+  }
+}
+
+class VectorPanHandle extends PanHandle {
+  constructor(owner, handleOwner) {
+    super(owner, handleOwner);
+  }
+
+  updateTree(delta, isShiftModified) {
+    let x = parseFloat((this.originalExpression.get(0).value + delta[0]).toFixed(3));
+    let y = parseFloat((this.originalExpression.get(1).value + delta[1]).toFixed(3));
+
+    if (isShiftModified) {
+      x = Math.round(x);
+      y = Math.round(y);
+    }
+
+    this.expression.set(0, new ExpressionReal(x));
+    this.expression.set(1, new ExpressionReal(y));
+
+    return '[' + this.expression.get(0).value + ', ' + this.expression.get(1).value + ']';
+  }
+}
+
+class VectorComponentPanHandle extends PanHandle {
+  constructor(owner, handleOwner, dimension) {
+    super(owner, handleOwner);
+    this.dimension = dimension;
+  }
+
+  locate() {
+    return this.expression.get(this.dimension).where;
+  }
+
+  updateTree(delta, isShiftModified) {
+    let x = parseFloat((this.originalExpression.get(this.dimension).value + delta[this.dimension] * (this.owner.hasCenter ? 2 : 1)).toFixed(3));
+
+    if (isShiftModified) {
+      x = Math.round(x);
+    }
+
+    this.expression.set(this.dimension, new ExpressionReal(x));
+    return this.expression.get(this.dimension).value.toString();
+  }
+}
+
+class HorizontalPanHandle extends PanHandle {
+  constructor(owner, handleOwner) {
+    super(owner, handleOwner);
+  }
+
+  updateTree(delta, isShiftModified) {
+    let x = parseFloat((this.originalExpression.value + delta[0]).toFixed(3));
+
+    if (isShiftModified) {
+      x = Math.round(x);
+    }
+
+    this.expression.x = x;
+
+    return this.expression.value.toString();
+  }
+}
+    // let heightListener = new HandleListener(env, this, this.heightElement, () => {
+      // this.originalSizeExpression = this.sizeExpression.clone();
+      // return this.sizeExpression.get(1).where;
+    // }, delta => {
+      // let y = parseFloat((this.originalSizeExpression.get(1).value + delta[1] * (this.hasCenter ? 2 : 1)).toFixed(3));
+      // this.sizeExpression.set(1, new ExpressionReal(y));
+      // let replacement = this.sizeExpression.get(1).value.toString();
+      // return replacement;
+    // });

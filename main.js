@@ -519,18 +519,20 @@ export function interpret(isTweak = false) {
     let mainGroup = document.createElementNS(svgNamespace, 'g');
     svg.appendChild(mainGroup);
 
-    let handleGroup = document.createElementNS(svgNamespace, 'g');
-    svg.appendChild(handleGroup);
+    let backgroundHandleGroup = document.createElementNS(svgNamespace, 'g');
+    svg.appendChild(backgroundHandleGroup);
+
+    let foregroundHandleGroup = document.createElementNS(svgNamespace, 'g');
+    svg.appendChild(foregroundHandleGroup);
 
     let sceneHandles = document.createElementNS(svgNamespace, 'g');
     sceneHandles.setAttributeNS(null, 'id', 'scene-handles');
     sceneHandles.classList.add('handle-group');
     sceneHandles.appendChild(pageOutline);
-    handleGroup.appendChild(sceneHandles);
+    backgroundHandleGroup.appendChild(sceneHandles);
 
     env.shapes.forEach(shape => {
-      // console.log("shape:", shape);
-      shape.domify(defs, mainGroup, handleGroup)
+      shape.domify(defs, mainGroup, backgroundHandleGroup, foregroundHandleGroup);
     });
 
     delay = env.get('time').get('delay').value;
