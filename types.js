@@ -319,7 +319,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       this.parentElement.appendChild(this.svgElement);
     }
 
-    if (this.backgroundHandleElements.length > 0) {
+    if (this.backgroundHandleElements.length > 0 || this.foregroundHandleElements.length > 0) {
       this.backgroundHandleParentElement = document.createElementNS(svgNamespace, 'g');
       this.backgroundHandleParentElement.setAttributeNS(null, 'id', `element-${this.id}-background-handles`);
       this.backgroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
@@ -328,9 +328,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       for (let element of this.backgroundHandleElements) {
         this.backgroundHandleParentElement.appendChild(element);
       }
-    }
 
-    if (this.foregroundHandleElements.length > 0) {
       this.foregroundHandleParentElement = document.createElementNS(svgNamespace, 'g');
       this.foregroundHandleParentElement.setAttributeNS(null, 'id', `element-${this.id}-foreground-handles`);
       this.foregroundHandleParentElement.setAttributeNS(null, 'visibility', 'hidden');
@@ -660,6 +658,7 @@ export class TwovilleTurtle extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'turtle', ['position', 'heading']);
     env.nodes.push(this);
+    this.positionHandle = new VectorPanHandle(this, this);
   }
 
   evolve(env, t, fromTurtle) {
@@ -683,16 +682,52 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'move', ['distance']);
     env.nodes.push(this);
+
+    this.distanceExpression = null;
+    this.distanceHandle = document.createElementNS(svgNamespace, 'circle');
+    env.addForegroundHandle(this.distanceHandle);
+
+    let listener = new HandleListener(env, env, this.distanceHandle, () => {
+      this.originalDistanceExpression = this.distanceExpression.clone();
+      return this.distanceExpression.where;
+    }, (delta, isShiftModified, mouseAt) => {
+      let positionToHeading = new ExpressionVector([
+        new ExpressionReal(1),
+        this.headingExpression
+      ]).toCartesian();
+
+      let mouse = new ExpressionVector([
+        new ExpressionReal(mouseAt.x),
+        new ExpressionReal(mouseAt.y),
+      ]);
+
+      let positionToMouse = mouse.subtract(this.positionExpression);
+      let dot = new ExpressionReal(positionToMouse.dot(positionToHeading));
+
+      let distance = parseFloat(dot.value.toFixed(3));
+
+      if (isShiftModified) {
+        distance = Math.round(distance);
+      }
+
+      this.distanceExpression.x = distance;
+      return this.distanceExpression.value.toString();
+    });
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('distance');
 
     let distance = this.valueAt(env, 'distance', t);
+
+    this.distanceExpression = distance;
+    this.positionExpression = fromTurtle.position;
+    this.headingExpression = fromTurtle.heading;
     
     if (distance) {
       let delta = new ExpressionVector([distance, fromTurtle.heading]).toCartesian();
       let position = fromTurtle.position.add(delta);
+      setVertexHandleAttributes(this.distanceHandle, position, env.bounds);
       return [`L${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, fromTurtle.heading)];
     } else {
       return null;
@@ -780,7 +815,7 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
 
     if (toPosition) {
       this.positionHandle.update(env, absoluteToPosition);
-      this.setLineHandleAttributes(this.lineElement, fromTurtle.position, absoluteToPosition, env.bounds);
+      setLineHandleAttributes(this.lineElement, fromTurtle.position, absoluteToPosition, env.bounds);
       
       let segment = new LineSegment(fromTurtle.position, absoluteToPosition);
 
@@ -849,13 +884,13 @@ export class TwovillePathCubic extends TwovilleTimelinedEnvironment {
       this.positionHandle.update(env, absoluteToPosition);
       this.controlHandles[1].update(env, control2);
 
-      this.setLineHandleAttributes(this.line2Element, control2, absoluteToPosition, env.bounds);
+      setLineHandleAttributes(this.line2Element, control2, absoluteToPosition, env.bounds);
 
       if (control1) {
         let segment = new CubicSegment(fromTurtle.position, toPosition, control1, false, control2);
 
         this.controlHandles[0].update(env, control1);
-        this.setLineHandleAttributes(this.line1Element, control1, fromTurtle.position, env.bounds);
+        setLineHandleAttributes(this.line1Element, control1, fromTurtle.position, env.bounds);
  
         let letter = isDelta ? 'c' : 'C';
         return [`${letter} ${control1.get(0).value},${env.bounds.span - control1.get(1).value} ${control2.get(0).value},${env.bounds.span - control2.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle, segment];
@@ -973,8 +1008,8 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
 
       if (control) {
         this.controlHandle.update(env, control);
-        this.setLineHandleAttributes(this.lineElements[0], control, absoluteToPosition, env.bounds);
-        this.setLineHandleAttributes(this.lineElements[1], control, fromTurtle.position, env.bounds);
+        setLineHandleAttributes(this.lineElements[0], control, absoluteToPosition, env.bounds);
+        setLineHandleAttributes(this.lineElements[1], control, fromTurtle.position, env.bounds);
 
         let letter = isDelta ? 'q' : 'Q';
         return [`${letter} ${control.get(0).value},${env.bounds.span - control.get(1).value} ${toPosition.get(0).value},${env.bounds.span - toPosition.get(1).value}`, toTurtle];
@@ -1084,13 +1119,16 @@ export class TwovilleTranslate extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'translate', ['offset']);
     env.transforms.push(this);
+    this.offsetHandle = new VectorPanHandle(this, env);
   }
 
   evolve(env, t) {
     this.assertProperty('offset');
     let offset = this.valueAt(env, 'offset', t);
+    this.offsetHandle.attach(offset);
 
     if (offset) {
+      this.offsetHandle.update(env, offset);
       return [`translate(${offset.get(0).value} ${env.bounds.span - offset.get(1).value})`];
     } else {
       return null;
@@ -1117,7 +1155,7 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
       let diff = new ExpressionVector([
         new ExpressionReal(mouseAt.x),
         new ExpressionReal(mouseAt.y),
-      ]).subtract(this.pivotExpression);
+      ]).subtract(this.pivotHandle.expression);
       let newRadians = Math.atan2(diff.get(0).value, -diff.get(1).value);
       let newDegrees = newRadians * 180 / Math.PI - 90;
       if (newDegrees < 0) {
@@ -1143,7 +1181,7 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
     if (pivot && degrees) {
       this.pivotHandle.update(env, pivot);
       let rotationTo = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(degrees.value).add(pivot);
-      this.parent.setVertexHandleAttributes(this.degreesHandle, rotationTo, env.bounds);
+      setVertexHandleAttributes(this.degreesHandle, rotationTo, env.bounds);
       return [`rotate(${-degrees.value} ${pivot.get(0).value} ${env.bounds.span - pivot.get(1).value})`];
     } else {
       return null;
@@ -1283,7 +1321,7 @@ export class TwovilleLine extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'y2', env.bounds.span - vertices[1].get(1).value);
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
-      this.setLineHandleAttributes(this.lineElement, vertices[0], vertices[1], env.bounds);
+      setLineHandleAttributes(this.lineElement, vertices[0], vertices[1], env.bounds);
     }
   }
 }
@@ -1517,7 +1555,7 @@ export class TwovillePolycurve extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
       this.handles.polygon.setAttributeNS(null, 'points', vertexPositions);
-      this.setCommonHandleProperties(this.handles.polygon);
+      setCommonHandleProperties(this.handles.polygon);
 
       // Remove old vertices.
       for (let vertexHandle of this.handles.vertices) {
@@ -1527,7 +1565,7 @@ export class TwovillePolycurve extends TwovilleMarkerable {
       this.handles.vertices = [];
       for (let vertex of vertices) {
         let vertexHandle = document.createElementNS(svgNamespace, 'circle');
-        this.setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
+        setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
         this.handles.vertexGroup.appendChild(vertexHandle);
         this.handles.vertices.push(vertexHandle);
       }
@@ -1607,7 +1645,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
       this.handles.polygon.setAttributeNS(null, 'points', commands);
-      this.setCommonHandleProperties(this.handles.polygon);
+      setCommonHandleProperties(this.handles.polygon);
 
       // Remove old vertices.
       for (let vertexHandle of this.handles.vertices) {
@@ -1617,7 +1655,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
       this.handles.vertices = [];
       for (let vertex of vertices) {
         let vertexHandle = document.createElementNS(svgNamespace, 'circle');
-        this.setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
+        setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
         this.handles.vertexGroup.appendChild(vertexHandle);
         this.handles.vertices.push(vertexHandle);
       }
@@ -1699,7 +1737,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'fill', 'none');
 
       this.handles.polyline.setAttributeNS(null, 'points', commands);
-      this.setCommonHandleProperties(this.handles.polyline);
+      setCommonHandleProperties(this.handles.polyline);
 
       // Remove old vertices.
       for (let vertexHandle of this.handles.vertices) {
@@ -1709,7 +1747,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
       this.handles.vertices = [];
       for (let vertex of vertices) {
         let vertexHandle = document.createElementNS(svgNamespace, 'circle');
-        this.setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
+        setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
         this.handles.vertexGroup.appendChild(vertexHandle);
         this.handles.vertices.push(vertexHandle);
       }
@@ -1842,7 +1880,7 @@ export class TwovilleRectangle extends TwovilleShape {
       this.svgElement.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.svgElement.setAttributeNS(null, 'fill-opacity', opacity);
 
-      this.setRectangleHandleAttributes(this.rectangleElement, corner, size, env.bounds);
+      setRectangleHandleAttributes(this.rectangleElement, corner, size, env.bounds);
 
       if (center) {
         this.positionHandle.update(env, center);
@@ -1919,7 +1957,7 @@ export class TwovilleCircle extends TwovilleShape {
         new ExpressionReal(center.get(0).value + radius.value),
         center.get(1)
       ]));
-      this.setCircleHandleAttributes(this.circleElement, center, radius, env.bounds);
+      setCircleHandleAttributes(this.circleElement, center, radius, env.bounds);
     }
   }
 }
@@ -2207,47 +2245,6 @@ let handleMixin = {
       }
     });
   },
-
-  setVertexHandleAttributes(handle, position, bounds) {
-    handle.setAttributeNS(null, 'cx', position.get(0).value);
-    handle.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
-    handle.setAttributeNS(null, 'r', 0.3);
-    this.setCommonHandleProperties(handle);
-    handle.setAttributeNS(null, 'fill', 'black');
-  },
-
-  setLineHandleAttributes(handle, from, to, bounds) {
-    handle.setAttributeNS(null, 'x1', from.get(0).value);
-    handle.setAttributeNS(null, 'y1', bounds.span - from.get(1).value);
-    handle.setAttributeNS(null, 'x2', to.get(0).value);
-    handle.setAttributeNS(null, 'y2', bounds.span - to.get(1).value);
-    this.setCommonHandleProperties(handle);
-  },
-
-  setRectangleHandleAttributes(handle, position, size, bounds) {
-    handle.setAttributeNS(null, 'x', position.get(0).value);
-    handle.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
-    handle.setAttributeNS(null, 'width', size.get(0).value);
-    handle.setAttributeNS(null, 'height', size.get(1).value);
-    this.setCommonHandleProperties(handle);
-  },
-
-  setCircleHandleAttributes(handle, center, radius, bounds) {
-    handle.setAttributeNS(null, 'cx', center.get(0).value);
-    handle.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
-    handle.setAttributeNS(null, 'r', radius.value);
-    this.setCommonHandleProperties(handle);
-  },
-
-  setCommonHandleProperties(handle) {
-    handle.setAttributeNS(null, 'stroke-width', 3);
-    handle.setAttributeNS(null, 'stroke-opacity', 1);
-    handle.setAttributeNS(null, 'stroke', 'gray');
-    handle.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
-    handle.setAttributeNS(null, 'fill', 'none');
-    handle.setAttributeNS(null, 'stroke-dasharray', '2 2');
-    handle.classList.add('handle');
-  },
 };
 
 Object.assign(TwovilleShape.prototype, handleMixin);
@@ -2259,6 +2256,47 @@ Object.assign(TwovillePathArc.prototype, handleMixin);
 Object.assign(TwovilleTurtleMove.prototype, handleMixin);
 Object.assign(TwovilleTurtleTurn.prototype, handleMixin);
 Object.assign(TwovilleVertex.prototype, handleMixin);
+
+function setVertexHandleAttributes(handle, position, bounds) {
+  handle.setAttributeNS(null, 'cx', position.get(0).value);
+  handle.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
+  handle.setAttributeNS(null, 'r', 0.3);
+  setCommonHandleProperties(handle);
+  handle.setAttributeNS(null, 'fill', 'black');
+}
+
+function setLineHandleAttributes(handle, from, to, bounds) {
+  handle.setAttributeNS(null, 'x1', from.get(0).value);
+  handle.setAttributeNS(null, 'y1', bounds.span - from.get(1).value);
+  handle.setAttributeNS(null, 'x2', to.get(0).value);
+  handle.setAttributeNS(null, 'y2', bounds.span - to.get(1).value);
+  setCommonHandleProperties(handle);
+}
+
+function setRectangleHandleAttributes(handle, position, size, bounds) {
+  handle.setAttributeNS(null, 'x', position.get(0).value);
+  handle.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
+  handle.setAttributeNS(null, 'width', size.get(0).value);
+  handle.setAttributeNS(null, 'height', size.get(1).value);
+  setCommonHandleProperties(handle);
+}
+
+function setCircleHandleAttributes(handle, center, radius, bounds) {
+  handle.setAttributeNS(null, 'cx', center.get(0).value);
+  handle.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
+  handle.setAttributeNS(null, 'r', radius.value);
+  setCommonHandleProperties(handle);
+}
+
+function setCommonHandleProperties(handle) {
+  handle.setAttributeNS(null, 'stroke-width', 3);
+  handle.setAttributeNS(null, 'stroke-opacity', 1);
+  handle.setAttributeNS(null, 'stroke', 'gray');
+  handle.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+  handle.setAttributeNS(null, 'fill', 'none');
+  handle.setAttributeNS(null, 'stroke-dasharray', '2 2');
+  handle.classList.add('handle');
+}
 
 // --------------------------------------------------------------------------- 
 
@@ -2274,7 +2312,7 @@ class PanHandle {
       this.originalExpression = this.expression.clone();
       return this.locate();
     }, (delta, isShiftModified) => {
-      let replacement = this.updateTree(delta, isShiftModified);
+      let replacement = this.updateProgram(delta, isShiftModified);
       return replacement;
     }, handleOwner);
   }
@@ -2285,7 +2323,7 @@ class PanHandle {
 
   // Modify this handle's SVG element attributes.
   update(env, expression) {
-    this.owner.setVertexHandleAttributes(this.element, expression, env.bounds);
+    setVertexHandleAttributes(this.element, expression, env.bounds);
   }
 
   // Attach this handle to the given expression node in the AST.
@@ -2299,7 +2337,7 @@ class VectorPanHandle extends PanHandle {
     super(owner, handleOwner);
   }
 
-  updateTree(delta, isShiftModified) {
+  updateProgram(delta, isShiftModified) {
     let x = parseFloat((this.originalExpression.get(0).value + delta[0]).toFixed(3));
     let y = parseFloat((this.originalExpression.get(1).value + delta[1]).toFixed(3));
 
@@ -2325,7 +2363,7 @@ class VectorComponentPanHandle extends PanHandle {
     return this.expression.get(this.dimension).where;
   }
 
-  updateTree(delta, isShiftModified) {
+  updateProgram(delta, isShiftModified) {
     let x = parseFloat((this.originalExpression.get(this.dimension).value + delta[this.dimension] * (this.owner.hasCenter ? 2 : 1)).toFixed(3));
 
     if (isShiftModified) {
@@ -2342,7 +2380,7 @@ class HorizontalPanHandle extends PanHandle {
     super(owner, handleOwner);
   }
 
-  updateTree(delta, isShiftModified) {
+  updateProgram(delta, isShiftModified) {
     let x = parseFloat((this.originalExpression.value + delta[0]).toFixed(3));
 
     if (isShiftModified) {
@@ -2354,12 +2392,21 @@ class HorizontalPanHandle extends PanHandle {
     return this.expression.value.toString();
   }
 }
-    // let heightListener = new HandleListener(env, this, this.heightElement, () => {
-      // this.originalSizeExpression = this.sizeExpression.clone();
-      // return this.sizeExpression.get(1).where;
-    // }, delta => {
-      // let y = parseFloat((this.originalSizeExpression.get(1).value + delta[1] * (this.hasCenter ? 2 : 1)).toFixed(3));
-      // this.sizeExpression.set(1, new ExpressionReal(y));
-      // let replacement = this.sizeExpression.get(1).value.toString();
-      // return replacement;
-    // });
+
+class DistancePanHandle extends PanHandle {
+  constructor(owner, handleOwner) {
+    super(owner, handleOwner);
+  }
+
+  updateProgram(delta, isShiftModified, mouseAt) {
+    let distance = parseFloat((this.originalExpression.value + Math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])).toFixed(3));
+
+    if (isShiftModified) {
+      distance = Math.round(distance);
+    }
+
+    this.expression.x = distance;
+
+    return this.expression.value.toString();
+  }
+}

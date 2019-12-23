@@ -2232,7 +2232,7 @@ export class ExpressionVector extends ExpressionData {
     // TODO ensure same cardinality
     let sum = 0;
     for (let i = 0; i < this.elements.length; ++i) {
-      sum = this.get(i).multiply(that.get(i)).value;
+      sum += this.get(i).multiply(that.get(i)).value;
     }
     return sum;
   }
