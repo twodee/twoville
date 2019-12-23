@@ -420,8 +420,8 @@ let transformMixin = {
   setTransform(env, t) {
     let attributeValue = this.transforms.slice().reverse().flatMap(xform => xform.evolve(env, t)).join(' ');
     this.svgElement.setAttributeNS(null, 'transform', attributeValue);
-    this.backgroundHandleParentElement.setAttributeNS(null, 'transform', attributeValue);
-    this.foregroundHandleParentElement.setAttributeNS(null, 'transform', attributeValue);
+    // this.backgroundHandleParentElement.setAttributeNS(null, 'transform', attributeValue);
+    // this.foregroundHandleParentElement.setAttributeNS(null, 'transform', attributeValue);
   }
 }
 
@@ -654,11 +654,36 @@ export class TwovilleVertex extends TwovilleShape {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovilleTurtle extends TwovilleShape {
+export class TwovilleTurtle extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'turtle', ['position', 'heading']);
     env.nodes.push(this);
-    this.positionHandle = new VectorPanHandle(this, this);
+    this.positionHandle = new VectorPanHandle(this, env);
+
+    this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
+    env.addForegroundHandle(this.degreesHandle);
+
+    let degreesListener = new HandleListener(env, env, this.degreesHandle, () => {
+      this.originalDegreesExpression = this.degreesExpression.clone();
+      return this.degreesExpression.where;
+    }, (delta, isShiftModified, mouseAt) => {
+      let diff = new ExpressionVector([
+        new ExpressionReal(mouseAt.x),
+        new ExpressionReal(mouseAt.y),
+      ]).subtract(this.positionHandle.expression);
+      let newRadians = Math.atan2(diff.get(0).value, -diff.get(1).value);
+      let newDegrees = newRadians * 180 / Math.PI - 90;
+      if (newDegrees < 0) {
+        newDegrees = 360 + newDegrees;
+      }
+      newDegrees = parseFloat(newDegrees.toFixed(3));
+      if (isShiftModified) {
+        newDegrees = Math.round(newDegrees);
+      }
+      this.degreesExpression.x = newDegrees;
+      let replacement = '' + newDegrees;
+      return replacement;
+    });
   }
 
   evolve(env, t, fromTurtle) {
@@ -667,8 +692,14 @@ export class TwovilleTurtle extends TwovilleShape {
 
     let position = this.valueAt(env, 'position', t);
     let heading = this.valueAt(env, 'heading', t);
+
+    this.positionHandle.attach(position);
+    this.degreesExpression = heading;
     
     if (position) {
+      this.positionHandle.update(env, position);
+      let rotationTo = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(heading.value).add(position);
+      setVertexHandleAttributes(this.degreesHandle, rotationTo, env.bounds);
       return [`M${position.get(0).value},${env.bounds.span - position.get(1).value}`, new Turtle(position, heading)];
     } else {
       return null;
@@ -741,13 +772,44 @@ export class TwovilleTurtleTurn extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'turn', ['degrees']);
     env.nodes.push(this);
+
+    this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
+    env.addForegroundHandle(this.degreesHandle);
+
+    let degreesListener = new HandleListener(env, env, this.degreesHandle, () => {
+      this.originalDegreesExpression = this.degreesExpression.clone();
+      return this.degreesExpression.where;
+    }, (delta, isShiftModified, mouseAt) => {
+      let diff = new ExpressionVector([
+        new ExpressionReal(mouseAt.x),
+        new ExpressionReal(mouseAt.y),
+      ]).subtract(this.positionExpression);
+      let newRadians = Math.atan2(diff.get(0).value, -diff.get(1).value);
+      let newDegrees = newRadians * 180 / Math.PI - 90 - this.headingExpression.value;
+      if (newDegrees < 0) {
+        newDegrees = 360 + newDegrees;
+      }
+      newDegrees = parseFloat(newDegrees.toFixed(3));
+      if (isShiftModified) {
+        newDegrees = Math.round(newDegrees);
+      }
+      this.degreesExpression.x = newDegrees;
+      let replacement = '' + newDegrees;
+      return replacement;
+    });
   }
 
   evolve(env, t, fromTurtle) {
     this.assertProperty('degrees');
     let degrees = this.valueAt(env, 'degrees', t);
+
+    this.positionExpression = fromTurtle.position;
+    this.headingExpression = fromTurtle.heading;
+    this.degreesExpression = degrees;
     
     if (degrees) {
+      let rotationTo = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(fromTurtle.heading.value + degrees.value).add(fromTurtle.position);
+      setVertexHandleAttributes(this.degreesHandle, rotationTo, env.bounds);
       return [null, new Turtle(fromTurtle.position, fromTurtle.heading.add(degrees))];
     } else {
       return null;
@@ -1162,6 +1224,9 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
         newDegrees = 360 + newDegrees;
       }
       newDegrees = parseFloat(newDegrees.toFixed(3));
+      if (isShiftModified) {
+        newDegrees = Math.round(newDegrees);
+      }
       this.degreesExpression.x = newDegrees;
       let replacement = '' + newDegrees;
       return replacement;
@@ -1195,25 +1260,81 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'scale', ['pivot', 'factors']);
     env.transforms.push(this);
+
+    this.pivotHandle = new VectorPanHandle(this, env);
+    this.scaleHandles = [
+      document.createElementNS(svgNamespace, 'circle'),
+      document.createElementNS(svgNamespace, 'circle'),
+    ];
+
+    env.addForegroundHandle(this.scaleHandles[0]);
+    env.addForegroundHandle(this.scaleHandles[1]);
+
+    new HandleListener(env, env, this.scaleHandles[0], () => {
+      this.originalFactorsExpression = this.factorsExpression.clone();
+      return this.factorsExpression.get(0).where;
+    }, (delta, isShiftModified, mouseAt) => {
+      let factor = parseFloat((delta[0] + this.originalFactorsExpression.get(0).value).toFixed(3));
+
+      if (isShiftModified) {
+        factor = Math.round(factor);
+      }
+
+      this.factorsExpression.set(0, new ExpressionReal(factor));
+      return this.factorsExpression.get(0).value.toString();
+    });
+
+    new HandleListener(env, env, this.scaleHandles[1], () => {
+      this.originalFactorsExpression = this.factorsExpression.clone();
+      return this.factorsExpression.get(1).where;
+    }, (delta, isShiftModified, mouseAt) => {
+      let factor = parseFloat((delta[1] + this.originalFactorsExpression.get(1).value).toFixed(3));
+
+      if (isShiftModified) {
+        factor = Math.round(factor);
+      }
+
+      this.factorsExpression.set(1, new ExpressionReal(factor));
+      return this.factorsExpression.get(1).value.toString();
+    });
   }
 
   evolve(env, t) {
     this.assertProperty('factors');
     let factors = this.valueAt(env, 'factors', t);
+    this.factorsExpression = factors;
 
     let pivot;
     if (this.has('pivot')) {
       pivot = this.valueAt(env, 'pivot', t);
+      this.pivotHandle.attach(pivot);
     }
 
     if (factors) {
       if (pivot) {
+        this.pivotHandle.update(env, pivot);
+        setVertexHandleAttributes(this.scaleHandles[0], pivot.add(new ExpressionVector([
+          new ExpressionReal(1),
+          new ExpressionReal(0),
+        ])), env.bounds);
+        setVertexHandleAttributes(this.scaleHandles[1], pivot.add(new ExpressionVector([
+          new ExpressionReal(0),
+          new ExpressionReal(1),
+        ])), env.bounds);
         return [
           `translate(${-pivot.get(0).value} ${-(env.bounds.span - pivot.get(1).value)})`,
           `scale(${factors.get(0).value} ${-factors.get(1).value})`,
           `translate(${pivot.get(0).value} ${env.bounds.span - pivot.get(1).value})`,
         ];
       } else {
+        setVertexHandleAttributes(this.scaleHandles[0], new ExpressionVector([
+          new ExpressionReal(1),
+          new ExpressionReal(0),
+        ]), env.bounds);
+        setVertexHandleAttributes(this.scaleHandles[1], new ExpressionVector([
+          new ExpressionReal(0),
+          new ExpressionReal(1),
+        ]), env.bounds);
         return [`scale(${factors.get(0).value} ${factors.get(1).value})`];
       }
     } else {
@@ -2253,6 +2374,7 @@ Object.assign(TwovillePathLine.prototype, handleMixin);
 Object.assign(TwovillePathCubic.prototype, handleMixin);
 Object.assign(TwovillePathQuadratic.prototype, handleMixin);
 Object.assign(TwovillePathArc.prototype, handleMixin);
+Object.assign(TwovilleTurtle.prototype, handleMixin);
 Object.assign(TwovilleTurtleMove.prototype, handleMixin);
 Object.assign(TwovilleTurtleTurn.prototype, handleMixin);
 Object.assign(TwovilleVertex.prototype, handleMixin);
