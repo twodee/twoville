@@ -2103,6 +2103,14 @@ export class ExpressionVector extends ExpressionData {
     return new ExpressionVector(newElements);
   }
 
+  lengthen(length) {
+    return this.normalize().multiply(length);
+  }
+
+  distance(that) {
+    return new ExpressionReal(that.subtract(this).magnitude);
+  }
+
   midpoint(that) {
     let newElements = this.elements.map((element, i) => new ExpressionReal((element.value + that.elements[i].value) / 2));
     return new ExpressionVector(newElements);

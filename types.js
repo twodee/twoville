@@ -1093,12 +1093,128 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     env.nodes.push(this);
 
     this.circleElement = document.createElementNS(svgNamespace, 'circle');
-    this.circleElement.setAttributeNS(null, 'id', `element-${this.id}-circle`);
-
-    this.positionHandle = new VectorPanHandle(this, env);
-    this.centerHandle = new VectorPanHandle(this, env);
+    this.positionHandle = document.createElementNS(svgNamespace, 'circle');
+    this.centerHandle = document.createElementNS(svgNamespace, 'circle');
 
     env.addBackgroundHandle(this.circleElement);
+    env.addForegroundHandle(this.positionHandle);
+    env.addForegroundHandle(this.centerHandle);
+
+    new HandleListener(env, env, this.centerHandle, () => {
+      if (this.positionExpression) {
+        this.originalDegreesExpression = this.degreesExpression.clone();
+        return this.degreesExpression.where;
+      } else {
+        this.originalCenterExpression = this.centerExpression.clone();
+        return this.centerExpression.where;
+      }
+    }, (delta, isShiftModified, mouseAt) => {
+      if (this.positionExpression) {
+        let centerToMouse = new ExpressionVector([
+          new ExpressionReal(mouseAt.x),
+          new ExpressionReal(mouseAt.y),
+        ]).subtract(this.centerExpression);
+
+        let rootToPosition = this.positionExpression.subtract(this.rootPosition).normalize();
+        let direction = rootToPosition.rotate90(); 
+        let dot = new ExpressionReal(centerToMouse.dot(direction));
+
+        let newCenterPosition = this.centerExpression.add(direction.multiply(dot));
+
+        let newCenterToRoot = this.rootPosition.subtract(newCenterPosition).normalize();
+        let newCenterToPosition = this.positionExpression.subtract(newCenterPosition).normalize();
+        dot = newCenterToRoot.dot(newCenterToPosition);
+        let degrees = Math.acos(dot) * 180 / Math.PI;
+
+        // Because dot is ambiguous, find signed area and adjust angle to be > 180.
+        let rootToNewCenter = newCenterPosition.subtract(this.rootPosition);
+        rootToPosition = this.positionExpression.subtract(this.rootPosition);
+        let signedArea = rootToNewCenter.get(0).value * rootToPosition.get(1).value - rootToNewCenter.get(1).value * rootToPosition.get(0).value;
+        if (signedArea > 0) {
+          degrees = 360 - degrees;
+        }
+
+        degrees = parseFloat(degrees.toFixed(3));
+
+        if (isShiftModified) {
+          degrees = Math.round(degrees);
+        }
+
+        this.degreesExpression.x = degrees;
+        return this.degreesExpression.value.toString();
+      } else {
+        let x = parseFloat((this.originalCenterExpression.get(0).value + delta[0]).toFixed(3));
+        let y = parseFloat((this.originalCenterExpression.get(1).value + delta[1]).toFixed(3));
+
+        if (isShiftModified) {
+          x = Math.round(x);
+          y = Math.round(y);
+        }
+
+        this.centerExpression.set(0, new ExpressionReal(x));
+        this.centerExpression.set(1, new ExpressionReal(y));
+
+        return '[' + this.centerExpression.get(0).value + ', ' + this.centerExpression.get(1).value + ']';
+      }
+    });
+
+    new HandleListener(env, env, this.positionHandle, () => {
+      if (this.positionExpression) {
+        this.originalPositionExpression = this.positionExpression.clone();
+        return this.positionExpression.where;
+      } else {
+        this.originalDegreesExpression = this.degreesExpression.clone();
+        return this.degreesExpression.where;
+      }
+    }, (delta, isShiftModified, mouseAt) => {
+      if (this.positionExpression) {
+        let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
+        let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+
+        if (isShiftModified) {
+          x = Math.round(x);
+          y = Math.round(y);
+        }
+
+        this.positionExpression.set(0, new ExpressionReal(x));
+        this.positionExpression.set(1, new ExpressionReal(y));
+
+        return '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
+      } else {
+        // Find vector from center to root position.
+        let centerToRoot = this.rootPosition.subtract(this.centerExpression).normalize();
+
+        // Find vector from center to mouse.
+        let centerToProjectedMouse = new ExpressionVector([
+          new ExpressionReal(mouseAt.x),
+          new ExpressionReal(mouseAt.y),
+        ]).subtract(this.centerExpression).normalize();
+
+        // Find angle between the two vectors.
+        let degrees = Math.acos(centerToRoot.dot(centerToProjectedMouse)) * 180 / Math.PI;
+
+        // Because dot is ambiguous, find signed area and adjust angle to be > 180.
+        let rootToCenter = this.centerExpression.subtract(this.rootPosition);
+        let rootToMouse = new ExpressionVector([
+          new ExpressionReal(mouseAt.x),
+          new ExpressionReal(mouseAt.y),
+        ]).subtract(this.rootPosition);
+        let signedArea = rootToCenter.get(0).value * rootToMouse.get(1).value - rootToCenter.get(1).value * rootToMouse.get(0).value;
+        if (signedArea > 0) {
+          degrees = 360 - degrees;
+        }
+
+        degrees = parseFloat(degrees.toFixed(3))
+
+        if (isShiftModified) {
+          degrees = Math.round(degrees);
+        }
+
+        this.degreesExpression.x = degrees;
+
+        return this.degreesExpression.toString();
+      }
+    });
   }
 
   evolve(env, t, fromTurtle) {
@@ -1110,8 +1226,11 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
       throw new LocatedException(this.callExpression.where, 'I found an arc whose curvature I couldn\'t figure out. Please define its center or position.');
     }
 
+    this.rootPosition = fromTurtle.position;
+
     this.assertProperty('degrees');
     let degrees = this.valueAt(env, 'degrees', t);
+    this.degreesExpression = degrees;
     let radians = degrees * Math.PI / 180;
 
     let isDelta = false;
@@ -1122,11 +1241,16 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     let center;
     if (this.has('center')) {
       center = this.valueAt(env, 'center', t);
+      this.positionExpression = null;
+
       if (isDelta) {
         center = center.add(fromTurtle.position);
       }
     } else {
       let toPosition = this.valueAt(env, 'position', t);
+      this.positionExpression = toPosition;
+      this.centerExpression = null;
+
       if (isDelta) {
         toPosition = fromTurtle.position.add(toPosition);
       }
@@ -1137,6 +1261,8 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
       let normal = diff.rotate90().normalize();
       center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
     }
+
+    this.centerExpression = center;
 
     let toFrom = fromTurtle.position.subtract(center);
     let toTo = new ExpressionVector([
@@ -1168,8 +1294,8 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     this.circleElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
     this.circleElement.classList.add('handle');
 
-    this.positionHandle.update(env, to);
-    this.centerHandle.update(env, center);
+    setVertexHandleAttributes(this.centerHandle, center, env.bounds);
+    setVertexHandleAttributes(this.positionHandle, to, env.bounds);
 
     return [`A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${env.bounds.span - to.get(1).value}`, new Turtle(to, fromTurtle.heading)];
   }
