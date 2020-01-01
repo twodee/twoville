@@ -57,12 +57,13 @@ let isSaved = true;
 let animateTask = null;
 let delay;
 let previousBounds = null;
+let previousFitBounds;
 
 export let svg = document.getElementById('svg');
 export let fitBounds;
 
 function setSvgBounds(bounds) {
-  env.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`)
+  env.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
 }
 
 function fitSvg() {
@@ -484,14 +485,22 @@ export function interpret(isTweak = false) {
       ]);
     }
 
+    previousFitBounds = fitBounds;
     fitBounds = {
       x: corner.get(0).value,
       y: corner.get(1).value,
       width: size.get(0).value,
       height: size.get(1).value,
     };
+    fitBounds.span = fitBounds.y + (fitBounds.y + fitBounds.height);
 
-    if (previousBounds) {
+    // Retain viewBox only if we've rendered previously and the viewport hasn't
+    // changed. Otherwise we fit the viewBox to the viewport.
+    if (previousBounds &&
+        fitBounds.x == previousFitBounds.x &&
+        fitBounds.y == previousFitBounds.y &&
+        fitBounds.width == previousFitBounds.width &&
+        fitBounds.height == previousFitBounds.height) {
       env.bounds.x = previousBounds.x;
       env.bounds.y = previousBounds.y;
       env.bounds.width = previousBounds.width;
@@ -517,12 +526,15 @@ export function interpret(isTweak = false) {
     pageOutline.classList.add('handle');
 
     let mainGroup = document.createElementNS(svgNamespace, 'g');
+    mainGroup.setAttributeNS(null, 'id', 'main-group');
     svg.appendChild(mainGroup);
 
     let backgroundHandleGroup = document.createElementNS(svgNamespace, 'g');
+    backgroundHandleGroup.setAttributeNS(null, 'id', 'background-handle-group');
     svg.appendChild(backgroundHandleGroup);
 
     let foregroundHandleGroup = document.createElementNS(svgNamespace, 'g');
+    foregroundHandleGroup.setAttributeNS(null, 'id', 'foreground-handle-group');
     svg.appendChild(foregroundHandleGroup);
 
     let sceneHandles = document.createElementNS(svgNamespace, 'g');
@@ -564,10 +576,16 @@ export function interpret(isTweak = false) {
   } catch (e) {
     if (e instanceof MessagedException) {
       Messager.log(e.userMessage);
+
+      // The env must be wiped. Otherwise the bounds tracked between runs get
+      // messed up.
+      env = null;
+
       throw e;
     } else {
       console.trace(e);
       Messager.log(e.message);
+      env = null;
     }
   }
 }

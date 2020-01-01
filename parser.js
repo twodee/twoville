@@ -105,6 +105,7 @@ export function parse(tokens) {
     ':cyan': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1), new ExpressionReal(1)]),
     ':magenta': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0), new ExpressionReal(1)]),
     ':cornflower': new ExpressionVector([new ExpressionReal(0.392), new ExpressionReal(0.584), new ExpressionReal(0.929)]),
+    ':crimson': new ExpressionVector([new ExpressionReal(0.863), new ExpressionReal(0.078), new ExpressionReal(0.235)]),
 
     ':absolute': new ExpressionInteger(0),
     ':relative': new ExpressionInteger(1),

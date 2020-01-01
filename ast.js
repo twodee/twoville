@@ -27,6 +27,7 @@ import {
   TwovilleRectangle,
   TwovilleRotate,
   TwovilleScale,
+  TwovilleShear,
   TwovilleTranslate,
   TwovilleTurtle,
   TwovilleTurtleMove,
@@ -1410,6 +1411,9 @@ export class ExpressionWith extends Expression {
 
   evaluate(env, fromTime, toTime) {
     let withEnv = this.scope.evaluate(env, fromTime, toTime);
+    if (!(withEnv instanceof TwovilleEnvironment)) {
+      throw new LocatedException(this.scope.where, `I encountered a with expression whose subject isn't an environment.`);
+    }
     withEnv.parent = env;
     this.body.evaluate(withEnv, fromTime, toTime);
     return withEnv;
@@ -1588,6 +1592,19 @@ export class ExpressionRotate extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleRotate(this.instance, callExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionShear extends Expression {
+  constructor(instance) {
+    super(null);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return new TwovilleShear(this.instance, callExpression);
   }
 }
 

@@ -40,6 +40,7 @@ import {
   ExpressionRectangle,
   ExpressionRotate,
   ExpressionScale,
+  ExpressionShear,
   ExpressionSeed,
   ExpressionSine,
   ExpressionSquareRoot,
@@ -414,6 +415,12 @@ let transformMixin = {
       name: 'rotate',
       formals: [],
       body: new ExpressionRotate(this)
+    };
+
+    this.bindings['shear'] = {
+      name: 'shear',
+      formals: [],
+      body: new ExpressionShear(this)
     };
   },
 
@@ -1382,6 +1389,31 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
+export class TwovilleShear extends TwovilleTimelinedEnvironment {
+  constructor(env, callExpression) {
+    super(env, callExpression, 'shear', ['factors', 'pivot']);
+    env.transforms.push(this);
+  }
+
+  evolve(env, t) {
+    this.assertProperty('factors');
+    this.assertProperty('pivot');
+
+    let pivot = this.valueAt(env, 'pivot', t);
+    let factors = this.valueAt(env, 'factors', t);
+
+    if (factors) {
+      let x = factors.get(0).value;
+      let y = factors.get(1).value;
+      return [`matrix(1 ${y} ${x} 1 0 0)`];
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TwovilleScale extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'scale', ['pivot', 'factors']);
@@ -1702,7 +1734,7 @@ export class TwovillePath extends TwovilleMarkerable {
 
 export class TwovillePolycurve extends TwovilleMarkerable {
   constructor(env, callExpression) {
-    super(env, callExpression, 'polycurve', ['rounding', 'color', 'opacity']);
+    super(env, callExpression, 'ungon', ['rounding', 'color', 'opacity']);
     this.svgElement = document.createElementNS(svgNamespace, 'path');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.registerClickHandler();
@@ -1795,7 +1827,7 @@ export class TwovillePolycurve extends TwovilleMarkerable {
       } else {
         commands.push(`Q${vertices[0].get(0).value},${env.bounds.span - vertices[0].get(1).value} ${start.get(0).value},${env.bounds.span - start.get(1).value}`);
       }
-      commands.push('z');
+      // commands.push('z');
 
       this.svgElement.setAttributeNS(null, 'd', commands.join(' '));
       this.svgElement.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
@@ -2294,8 +2326,8 @@ export class GlobalEnvironment extends TwovilleEnvironment {
       body: new ExpressionPath()
     };
 
-    this.bindings['polycurve'] = {
-      name: 'polycurve',
+    this.bindings['ungon'] = {
+      name: 'ungon',
       formals: [],
       body: new ExpressionPolycurve()
     };
