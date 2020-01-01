@@ -1403,9 +1403,16 @@ export class TwovilleShear extends TwovilleTimelinedEnvironment {
     let factors = this.valueAt(env, 'factors', t);
 
     if (factors) {
-      let x = factors.get(0).value;
-      let y = factors.get(1).value;
-      return [`matrix(1 ${y} ${x} 1 0 0)`];
+      let shearMatrix = `matrix(1 ${factors.get(1).value} ${factors.get(0).value} 1 0 0)`;
+      if (pivot) {
+        return [
+          `translate(${-pivot.get(0).value} ${-(env.bounds.span - pivot.get(1).value)})`,
+          shearMatrix,
+          `translate(${pivot.get(0).value} ${env.bounds.span - pivot.get(1).value})`,
+        ];
+      } else {
+        return [shearMatrix];
+      }
     } else {
       return null;
     }
