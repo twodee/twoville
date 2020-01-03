@@ -124,6 +124,8 @@ export function lex(source) {
       emit(Tokens.For);
     } else if (tokenSoFar == 'in') {
       emit(Tokens.In);
+    } else if (tokenSoFar == 'around') {
+      emit(Tokens.Around);
     } else if (tokenSoFar == 'if') {
       if (tokens.length > 0 && tokens[tokens.length - 1].type == Tokens.Else) {
         let elseToken = tokens.pop();

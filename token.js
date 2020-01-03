@@ -1,5 +1,6 @@
 export let Tokens = Object.freeze({
   Assign: 'Assign',
+  Around: 'Around',
   Asterisk: 'Asterisk',
   Boolean: 'Boolean',
   By: 'By',

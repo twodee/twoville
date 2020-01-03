@@ -31,7 +31,7 @@ import {
   ExpressionPathJump,
   ExpressionPathLine,
   ExpressionPathQuadratic,
-  ExpressionPolycurve,
+  ExpressionUngon,
   ExpressionPolygon,
   ExpressionPolyline,
   ExpressionPrint,
@@ -1739,7 +1739,7 @@ export class TwovillePath extends TwovilleMarkerable {
 
 // --------------------------------------------------------------------------- 
 
-export class TwovillePolycurve extends TwovilleMarkerable {
+export class TwovilleUngon extends TwovilleMarkerable {
   constructor(env, callExpression) {
     super(env, callExpression, 'ungon', ['rounding', 'color', 'opacity']);
     this.svgElement = document.createElementNS(svgNamespace, 'path');
@@ -1794,6 +1794,10 @@ export class TwovillePolycurve extends TwovilleMarkerable {
         vertices.push(result[1].position);
       }
     });
+
+    if (vertices[0].distance(vertices[vertices.length - 1]) < 1e-3) {
+      vertices.pop();
+    }
 
     let rounding;
     if (this.has('rounding')) {
@@ -2336,7 +2340,7 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     this.bindings['ungon'] = {
       name: 'ungon',
       formals: [],
-      body: new ExpressionPolycurve()
+      body: new ExpressionUngon()
     };
 
     this.bindings['polygon'] = {

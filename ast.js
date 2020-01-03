@@ -21,7 +21,7 @@ import {
   TwovillePathLine,
   TwovillePathCubic,
   TwovillePathQuadratic,
-  TwovillePolycurve,
+  TwovilleUngon,
   TwovillePolygon,
   TwovillePolyline,
   TwovilleRectangle,
@@ -1402,6 +1402,34 @@ export class ExpressionRepeat extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+// TODO: better names
+export class ExpressionRepeatAround extends Expression {
+  constructor(count, body, around, where = null) {
+    super(where);
+    this.count = count;
+    this.body = body;
+    this.around = around;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let count = this.count.evaluate(env, fromTime, toTime);
+    let last = null;
+    for (let i = 0; i < count; ++i) {
+      last = this.body.evaluate(env, fromTime, toTime);
+      if (i < count - 1) {
+        this.around.evaluate(env, fromTime, toTime);
+      }
+    }
+    return last;
+  }
+
+  isTimeSensitive(env) {
+    return this.count.isTimeSensitive(env) || this.body.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionWith extends Expression {
   constructor(scope, body, where = null) {
     super(where);
@@ -1638,13 +1666,13 @@ export class ExpressionPolygon extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPolycurve extends Expression {
+export class ExpressionUngon extends Expression {
   constructor() {
     super(null);
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let r = new TwovillePolycurve(env, callExpression);
+    let r = new TwovilleUngon(env, callExpression);
     env.shapes.push(r);
     return r;
   }

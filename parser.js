@@ -35,6 +35,7 @@ import {
   ExpressionReal,
   ExpressionRemainder,
   ExpressionRepeat,
+  ExpressionRepeatAround,
   ExpressionSame,
   ExpressionString,
   ExpressionSubscript,
@@ -753,7 +754,15 @@ export function parse(tokens) {
       }
       consume(); // eat linebreak
       let body = block();
-      return new ExpressionRepeat(count, body, SourceLocation.span(sourceStart, body.where));
+      if (has(Tokens.Indentation) && indents[indents.length - 1] == tokens[i].source.length && has(Tokens.Around, 1)) {
+        consume(); // eat indent
+        consume(); // eat around
+        consume(); // eat linebreak
+        let around = block();
+        return new ExpressionRepeatAround(count, body, around, SourceLocation.span(sourceStart, around.where));
+      } else {
+        return new ExpressionRepeat(count, body, SourceLocation.span(sourceStart, body.where));
+      }
     } else if (has(Tokens.Identifier) || has(Tokens.T)) {
       let where = tokens[i].where;
       let id = consume();
