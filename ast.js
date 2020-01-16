@@ -889,7 +889,11 @@ export class ExpressionIdentifier extends Expression {
       value = rhs.evaluate(env, fromTime, toTime);
     }
 
-    if (env.hasOwnProperty('sourceSpans')) {
+    // Favor mapping this chunk of the source code to the value rather
+    // than the environment.
+    if (value.hasOwnProperty('sourceSpans')) {
+      value.sourceSpans.push(whereAssigned);
+    } else if (env.hasOwnProperty('sourceSpans')) {
       env.sourceSpans.push(whereAssigned);
     }
 
@@ -929,6 +933,10 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
       rhsValue = rhs;
     } else {
       rhsValue = rhs.evaluate(env, fromTime, toTime);
+    }
+
+    if (baseValue.hasOwnProperty('sourceSpans')) {
+      baseValue.sourceSpans.push(whereAssigned);
     }
 
     baseValue.bind(this.nameToken.source, rhsValue, fromTime, toTime, rhs);

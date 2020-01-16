@@ -104,7 +104,7 @@ export function moveCursor(column, row, shapes) {
       if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
         selectedShape.hideHandles();
 
-        if (selectedHandler && selectedHandler != transform) {
+        if (selectedHandler && selectedHandler != subhandler) {
           selectedHandler.hideHandles();
         }
 
