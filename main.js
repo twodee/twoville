@@ -16,10 +16,11 @@ import {
   LocatedException,
   MessagedException,
   TwovilleShape,
-  initializeShapes,
-  svgNamespace,
   clearSelection,
+  initializeShapes,
+  moveCursor,
   restoreSelection,
+  svgNamespace,
 } from './types.js';
 
 import {
@@ -626,6 +627,12 @@ function initialize() {
   }
   editor.getSession().on('change', onSourceChanged);
   editor.getSession().setMode("ace/mode/twoville");
+  editor.getSession().selection.on('changeCursor', () => {
+    if (env && env.shapes) {
+      const cursor = editor.getCursorPosition();
+      moveCursor(cursor.column, cursor.row, env.shapes);
+    }
+  });
 
   if (source0) {
     left.style.width = '300px';

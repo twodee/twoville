@@ -87,7 +87,7 @@ export function parse(tokens) {
     // Interpolants
     ':linear': new ExpressionString('linear'),
     ':nearest': new ExpressionString('nearest'),
-    ':ease': new ExpressionString('ease'),
+    // ':ease': new ExpressionString('ease'),
     ':sineInOut': new ExpressionString('sineInOut'),
     ':backInOut': new ExpressionString('backInOut'),
     ':quadraticInOut': new ExpressionString('quadraticInOut'),

@@ -2,6 +2,10 @@ import {
   ExpressionInteger
 } from './ast.js';
 
+import {
+  MessagedException,
+} from "./types.js";
+
 export class Interval {
   constructor(fromTime, fromValue, toTime, toValue) {
     this.setFrom(fromTime, fromValue);

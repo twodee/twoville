@@ -881,12 +881,16 @@ export class ExpressionIdentifier extends Expression {
     }
   }
 
-  assign(env, fromTime, toTime, rhs) {
+  assign(env, fromTime, toTime, rhs, whereAssigned) {
     let value;
     if (rhs.isTimeSensitive(env)) {
       value = rhs;
     } else {
       value = rhs.evaluate(env, fromTime, toTime);
+    }
+
+    if (env.hasOwnProperty('sourceSpans')) {
+      env.sourceSpans.push(whereAssigned);
     }
 
     env.bind(this.nameToken.source, value, fromTime, toTime, rhs);
@@ -917,7 +921,7 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
     }
   }
 
-  assign(env, fromTime, toTime, rhs) {
+  assign(env, fromTime, toTime, rhs, whereAssigned) {
     let baseValue = this.base.evaluate(env, fromTime, toTime); 
 
     let rhsValue;
@@ -1055,7 +1059,7 @@ export class ExpressionAssignment extends Expression {
 
   evaluate(env, fromTime, toTime) {
     if ('assign' in this.l) {
-      return this.l.assign(env, fromTime, toTime, this.r);
+      return this.l.assign(env, fromTime, toTime, this.r, this.where);
     } else {
       throw 'unassignable';
     }
@@ -1441,6 +1445,9 @@ export class ExpressionWith extends Expression {
     let withEnv = this.scope.evaluate(env, fromTime, toTime);
     if (!(withEnv instanceof TwovilleEnvironment)) {
       throw new LocatedException(this.scope.where, `I encountered a with expression whose subject isn't an environment.`);
+    }
+    if (withEnv.hasOwnProperty('sourceSpans')) {
+      withEnv.sourceSpans.push(this.where);
     }
     withEnv.parent = env;
     this.body.evaluate(withEnv, fromTime, toTime);

@@ -58,6 +58,10 @@ export class SourceLocation {
     this.columnEnd = columnEnd;
   }
 
+  contains(column, row) {
+    return this.lineStart <= row && row <= this.lineEnd && this.columnStart <= column && column <= this.columnEnd;
+  }
+
   clone() {
     return new SourceLocation(this.lineStart, this.lineEnd, this.columnStart, this.columnEnd);
   }
