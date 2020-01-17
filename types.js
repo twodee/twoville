@@ -63,7 +63,7 @@ import {
 
 export let svgNamespace = "http://www.w3.org/2000/svg";
 let selectedShape = null;
-let selectedHandler = null;
+let selectedHandlers = [];
 let isHandling = false;
 export let serial = 0;
 
@@ -84,12 +84,14 @@ export function restoreSelection(shapes) {
   if (selectedShape) {
     selectedShape = shapes.find(shape => shape.id == selectedShape.id);
 
-    if (selectedHandler) {
-      selectedHandler = selectedShape.subhandlers.find(subhandler => subhandler.id == selectedHandler.id);
+    if (selectedHandlers.length > 0) {
+      selectedHandlers = selectedHandlers.map(handler => selectedShape.subhandlers.find(subhandler => subhandler.id == handler.id));
     }
     
-    if (selectedHandler) {
-      selectedHandler.showHandles();
+    if (selectedHandlers.length > 0) {
+      for (let handler of selectedHandlers) {
+        handler.showHandles();
+      }
       selectedShape.showBackgroundHandles();
     } else {
       selectedShape.showHandles();
@@ -101,43 +103,36 @@ export function moveCursor(column, row, shapes) {
   if (isHandling) return;
 
   if (selectedShape) {
+    selectedHandlers.forEach(handler => handler.hideHandles());
+    selectedHandlers = [];
+
     for (let subhandler of selectedShape.subhandlers) {
       if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
-        selectedShape.hideHandles();
-
-        if (selectedHandler && selectedHandler != subhandler) {
-          selectedHandler.hideHandles();
-        }
-
-        if (selectedHandler != subhandler) {
-          selectedHandler = subhandler;
-          selectedHandler.showHandles();
-          selectedShape.showBackgroundHandles();
-        }
-
-        return;
+        subhandler.showHandles();
+        selectedHandlers.push(subhandler);
       }
     }
 
-    if (selectedHandler) {
-      selectedHandler.hideHandles();
-      selectedHandler = null;
+    if (selectedHandlers.length > 0) {
+      selectedShape.hideHandles();
+      selectedShape.showBackgroundHandles();
+    } else {
+      selectedShape.showHandles();
     }
-
-    selectedShape.showHandles();
   } else {
     for (let shape of shapes) {
       for (let subhandler of shape.subhandlers) {
         if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
           subhandler.showHandles();
-          selectedHandler = subhandler;
-          selectedShape = shape;
-          selectedShape.showBackgroundHandles();
-          return;
+          selectedHandlers.push(subhandler);
         }
       }
 
-      if (shape.sourceSpans.some(span => span.contains(column, row))) {
+      if (selectedHandlers.length > 0) {
+        selectedShape = shape;
+        selectedShape.showBackgroundHandles();
+        return;
+      } else if (shape.sourceSpans.some(span => span.contains(column, row))) {
         shape.showHandles();
         selectedShape = shape;
       }
@@ -771,8 +766,8 @@ export class TwovilleTurtle extends TwovilleTimelinedEnvironment {
 export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'move', ['distance']);
-    env.registerSubhandler(this);
     this.initializeHandles(env);
+    env.registerSubhandler(this);
     env.nodes.push(this);
 
     this.distanceExpression = null;
@@ -911,9 +906,8 @@ export class TwovillePathJump extends TwovilleTimelinedEnvironment {
 export class TwovillePathLine extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'line', ['position']);
-    env.registerSubhandler(this);
     this.initializeHandles(env);
-
+    env.registerSubhandler(this);
     env.nodes.push(this);
 
     this.lineElement = document.createElementNS(svgNamespace, 'line');
@@ -965,8 +959,8 @@ export class TwovillePathLine extends TwovilleTimelinedEnvironment {
 export class TwovillePathCubic extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'cubic', ['position', 'control1', 'control2']);
-    env.registerSubhandler(this);
     this.initializeHandles(env);
+    env.registerSubhandler(this);
     env.nodes.push(this);
 
     this.positionHandle = new VectorPanHandle(this, this, env);
@@ -1096,8 +1090,8 @@ class LineSegment {
 export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'quadratic', ['position', 'control']);
-    env.registerSubhandler(this);
     this.initializeHandles(env);
+    env.registerSubhandler(this);
     env.nodes.push(this);
 
     this.positionHandle = new VectorPanHandle(this, this, env);
@@ -1162,9 +1156,8 @@ export class TwovillePathQuadratic extends TwovilleTimelinedEnvironment {
 export class TwovillePathArc extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'arc', ['position', 'center', 'degrees']);
-    env.registerSubhandler(this);
     this.initializeHandles(env);
-
+    env.registerSubhandler(this);
     env.nodes.push(this);
 
     this.circleElement = document.createElementNS(svgNamespace, 'circle');
@@ -1381,9 +1374,9 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
 export class TwovilleTranslate extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'translate', ['offset']);
+    this.initializeHandles(env);
     env.registerSubhandler(this);
     env.transforms.push(this);
-    this.initializeHandles(env);
     this.offsetHandle = new VectorPanHandle(this, this, env);
   }
 
@@ -1406,10 +1399,10 @@ export class TwovilleTranslate extends TwovilleTimelinedEnvironment {
 export class TwovilleRotate extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'rotate', ['degrees', 'pivot']);
+    this.initializeHandles(env);
     env.registerSubhandler(this);
     env.transforms.push(this);
 
-    this.initializeHandles(env);
     this.pivotHandle = new VectorPanHandle(this, this, env);
 
     this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
@@ -1464,9 +1457,9 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
 export class TwovilleShear extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'shear', ['factors', 'pivot']);
+    this.initializeHandles(env);
     env.registerSubhandler(this);
     env.transforms.push(this);
-    this.initializeHandles(env);
   }
 
   evolve(env, t) {
@@ -1498,10 +1491,9 @@ export class TwovilleShear extends TwovilleTimelinedEnvironment {
 export class TwovilleScale extends TwovilleTimelinedEnvironment {
   constructor(env, callExpression) {
     super(env, callExpression, 'scale', ['pivot', 'factors']);
+    this.initializeHandles(env);
     env.registerSubhandler(this);
     env.transforms.push(this);
-
-    this.initializeHandles(env);
 
     this.pivotHandle = new VectorPanHandle(this, this, env);
     this.scaleHandles = [
@@ -2015,17 +2007,17 @@ export class TwovillePolygon extends TwovilleMarkerable {
       setCommonHandleProperties(this.handles.polygon);
 
       // Remove old vertices.
-      for (let vertexHandle of this.handles.vertices) {
-        vertexHandle.parentNode.removeChild(vertexHandle);
-      }
+      // for (let vertexHandle of this.handles.vertices) {
+        // vertexHandle.parentNode.removeChild(vertexHandle);
+      // }
 
-      this.handles.vertices = [];
-      for (let vertex of vertices) {
-        let vertexHandle = document.createElementNS(svgNamespace, 'circle');
-        setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
-        this.handles.vertexGroup.appendChild(vertexHandle);
-        this.handles.vertices.push(vertexHandle);
-      }
+      // this.handles.vertices = [];
+      // for (let vertex of vertices) {
+        // let vertexHandle = document.createElementNS(svgNamespace, 'circle');
+        // setVertexHandleAttributes(vertexHandle, vertex, env.bounds);
+        // this.handles.vertexGroup.appendChild(vertexHandle);
+        // this.handles.vertices.push(vertexHandle);
+      // }
     }
   }
 }
