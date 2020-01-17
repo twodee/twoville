@@ -2,11 +2,7 @@ import {
   Timeline
 } from './timeline.js';
 
-import './seedrandom/seedrandom.js';
-
-if (!Math.seedrandom) {
-  Math.seedrandom = require('seedrandom');
-}
+const seedrandom = require('seedrandom');
 
 import { 
   beginTweaking,
@@ -91,11 +87,9 @@ export function restoreSelection(shapes) {
   if (selectedShape) {
     selectedShape = shapes.find(shape => shape.id == selectedShape.id);
 
-    console.log("old restore selectedHandlers:", selectedHandlers.map(h => h.id));
     if (selectedHandlers.length > 0) {
       selectedHandlers = selectedHandlers.map(handler => selectedShape.subhandlers.find(subhandler => subhandler.id == handler.id));
     }
-    console.log("new restore selectedHandlers:", selectedHandlers.map(h => h.id));
     
     if (selectedHandlers.length > 0) {
       for (let handler of selectedHandlers) {
@@ -129,7 +123,6 @@ export function moveCursor(column, row, shapes) {
     } else {
       selectedShape.showHandles();
     }
-    console.log("already selectedHandlers:", selectedHandlers.map(h => h.id));
   } else {
     for (let shape of shapes) {
       for (let subhandler of shape.subhandlers) {
@@ -148,7 +141,6 @@ export function moveCursor(column, row, shapes) {
         shape.showHandles();
         selectedShape = shape;
       }
-      console.log("new selectedHandlers:", selectedHandlers.map(h => h.id));
     }
   }
 }
@@ -2370,11 +2362,11 @@ export class TwovilleCircle extends TwovilleShape {
 
 export class Random {
   constructor() {
-    this.engine = new Math.seedrandom();
+    this.engine = seedrandom();
   }
 
   seed(value) {
-    this.engine = new Math.seedrandom(value);
+    this.engine = seedrandom(value);
   }
 
   random01() {

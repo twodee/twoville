@@ -11,6 +11,10 @@ import {
   Messager
 } from './messager.js';
 
+import ace from 'ace-builds/src-min-noconflict/ace';
+import 'ace-builds/src-min-noconflict/theme-twilight';
+import './mode-twoville.js';
+
 import {
   GlobalEnvironment,
   LocatedException,
@@ -52,7 +56,7 @@ let delay;
 let previousBounds = null;
 let previousFitBounds;
 
-export let svg = document.getElementById('svg');
+export let svg;
 export let fitBounds;
 export let mouseAtSvg;
 
@@ -662,6 +666,7 @@ function initialize() {
 
   evaluateButton.addEventListener('click', interpret);
 
+  svg = document.getElementById('svg');
   svg.addEventListener('wheel', e => {
     if (env.bounds) {
       mouseAtSvg.x = e.clientX;

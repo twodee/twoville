@@ -1,6 +1,2 @@
-foo.*
-jsgif
-gif.js*
-gif.worker.js
+dist
 node_modules
-seedrandom
