@@ -4,10 +4,10 @@ const { document } = (new JSDOM(`...`)).window;
 const {} = require('./messager');
 
 const {Messager} = require('./messager');
-const {ExpressionBoolean, ExpressionInteger, ExpressionReal} = require('./ast');
 const {GlobalEnvironment} = require('./types');
 const {lex} = require('./lexer');
 const {parse} = require('./parser');
+const {ExpressionBoolean, ExpressionInteger, ExpressionReal} = require('./ast');
 
 function evaluateOutput(src, lines) {
   let root = document.createElement('div');

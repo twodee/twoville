@@ -2,6 +2,14 @@ import {
   Timeline
 } from './timeline.js';
 
+// import './seedrandom/seedrandom.js';
+
+if (!Math.seedrandom) {
+  // let i = require('seedrandom');
+  // console.log("i:", i);
+  Math.seedrandom = require('seedrandom');
+}
+
 import { 
   highlight,
   interpret,
@@ -110,6 +118,7 @@ export function moveCursor(column, row, shapes) {
       if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
         subhandler.showHandles();
         selectedHandlers.push(subhandler);
+        // break;
       }
     }
 
@@ -125,6 +134,7 @@ export function moveCursor(column, row, shapes) {
         if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
           subhandler.showHandles();
           selectedHandlers.push(subhandler);
+          // break;
         }
       }
 
@@ -138,6 +148,12 @@ export function moveCursor(column, row, shapes) {
       }
     }
   }
+}
+
+// --------------------------------------------------------------------------- 
+
+Number.prototype.toShortFloat = function() {
+  return parseFloat(this.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 3}));
 }
 
 // --------------------------------------------------------------------------- 
@@ -730,7 +746,7 @@ export class TwovilleTurtle extends TwovilleTimelinedEnvironment {
       if (newDegrees < 0) {
         newDegrees = 360 + newDegrees;
       }
-      newDegrees = parseFloat(newDegrees.toFixed(3));
+      newDegrees = parseFloat(newDegrees.toShortFloat());
       if (isShiftModified) {
         newDegrees = Math.round(newDegrees);
       }
@@ -791,7 +807,7 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
       let positionToMouse = mouse.subtract(this.positionExpression);
       let dot = new ExpressionReal(positionToMouse.dot(positionToHeading));
 
-      let distance = parseFloat(dot.value.toFixed(3));
+      let distance = parseFloat(dot.value.toShortFloat());
 
       if (isShiftModified) {
         distance = Math.round(distance);
@@ -847,7 +863,7 @@ export class TwovilleTurtleTurn extends TwovilleTimelinedEnvironment {
       if (newDegrees < 0) {
         newDegrees = 360 + newDegrees;
       }
-      newDegrees = parseFloat(newDegrees.toFixed(3));
+      newDegrees = parseFloat(newDegrees.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 3}));
       if (isShiftModified) {
         newDegrees = Math.round(newDegrees);
       }
@@ -866,9 +882,16 @@ export class TwovilleTurtleTurn extends TwovilleTimelinedEnvironment {
     this.degreesExpression = degrees;
     
     if (degrees) {
-      let rotationTo = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(fromTurtle.heading.value + degrees.value).add(fromTurtle.position);
+      let newHeading = fromTurtle.heading.add(degrees).value;
+      while (newHeading > 360) {
+        newHeading -= 360;
+      }
+      while (newHeading < 0) {
+        newHeading += 360;
+      }
+      let rotationTo = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(newHeading).add(fromTurtle.position);
       setVertexHandleAttributes(this.degreesHandle, rotationTo, env.bounds);
-      return [null, new Turtle(fromTurtle.position, fromTurtle.heading.add(degrees))];
+      return [null, new Turtle(fromTurtle.position, new ExpressionReal(newHeading))];
     } else {
       return null;
     }
@@ -1202,7 +1225,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
           degrees = 360 - degrees;
         }
 
-        degrees = parseFloat(degrees.toFixed(3));
+        degrees = parseFloat(degrees.toShortFloat());
 
         if (isShiftModified) {
           degrees = Math.round(degrees);
@@ -1211,8 +1234,8 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
         this.degreesExpression.x = degrees;
         return this.degreesExpression.value.toString();
       } else {
-        let x = parseFloat((this.originalCenterExpression.get(0).value + delta[0]).toFixed(3));
-        let y = parseFloat((this.originalCenterExpression.get(1).value + delta[1]).toFixed(3));
+        let x = parseFloat((this.originalCenterExpression.get(0).value + delta[0]).toShortFloat());
+        let y = parseFloat((this.originalCenterExpression.get(1).value + delta[1]).toShortFloat());
 
         if (isShiftModified) {
           x = Math.round(x);
@@ -1236,8 +1259,8 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
       }
     }, (delta, isShiftModified, mouseAt) => {
       if (this.positionExpression) {
-        let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toFixed(3));
-        let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toFixed(3));
+        let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toShortFloat());
+        let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toShortFloat());
 
         if (isShiftModified) {
           x = Math.round(x);
@@ -1272,7 +1295,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
           degrees = 360 - degrees;
         }
 
-        degrees = parseFloat(degrees.toFixed(3))
+        degrees = parseFloat(degrees.toShortFloat())
 
         if (isShiftModified) {
           degrees = Math.round(degrees);
@@ -1421,7 +1444,7 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
       if (newDegrees < 0) {
         newDegrees = 360 + newDegrees;
       }
-      newDegrees = parseFloat(newDegrees.toFixed(3));
+      newDegrees = parseFloat(newDegrees.toShortFloat());
       if (isShiftModified) {
         newDegrees = Math.round(newDegrees);
       }
@@ -1508,7 +1531,7 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
       this.originalFactorsExpression = this.factorsExpression.clone();
       return this.factorsExpression.get(0).where;
     }, (delta, isShiftModified, mouseAt) => {
-      let factor = parseFloat((delta[0] + this.originalFactorsExpression.get(0).value).toFixed(3));
+      let factor = parseFloat((delta[0] + this.originalFactorsExpression.get(0).value).toShortFloat());
 
       if (isShiftModified) {
         factor = Math.round(factor);
@@ -1522,7 +1545,7 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
       this.originalFactorsExpression = this.factorsExpression.clone();
       return this.factorsExpression.get(1).where;
     }, (delta, isShiftModified, mouseAt) => {
-      let factor = parseFloat((delta[1] + this.originalFactorsExpression.get(1).value).toFixed(3));
+      let factor = parseFloat((delta[1] + this.originalFactorsExpression.get(1).value).toShortFloat());
 
       if (isShiftModified) {
         factor = Math.round(factor);
@@ -2121,6 +2144,7 @@ class HandleListener {
     this.element = element;
     this.env = env;
     this.mouseDownAt = null;
+    this.needsUndoFirst = false;
 
     this.mouseDown = e => {
       isHandling = true;
@@ -2131,6 +2155,7 @@ class HandleListener {
       window.addEventListener('mousemove', this.mouseMove);
       window.addEventListener('mouseup', this.mouseUp);
       selectedShape = selectElement;
+      this.needsUndoFirst = false;
     }
 
     this.mouseUp = e => {
@@ -2146,8 +2171,10 @@ class HandleListener {
         let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
 
         let replacement = change(delta, e.shiftKey, mouseAt);
-        updateSelection(replacement);
+        updateSelection(replacement, this.needsUndoFirst);
         e.stopPropagation();
+
+        this.needsUndoFirst = true;
 
         redraw();
       }
@@ -2355,12 +2382,14 @@ export class GlobalEnvironment extends TwovilleEnvironment {
 
     this.prng = new Random();
 
-    this.svg.addEventListener('click', () => {
-      if (selectedShape) {
-        selectedShape.hideHandles();
-        selectedShape = null;
-      }
-    }, false);
+    if (this.svg) {
+      this.svg.addEventListener('click', () => {
+        if (selectedShape) {
+          selectedShape.hideHandles();
+          selectedShape = null;
+        }
+      }, false);
+    }
 
     this.bindings.time = new TwovilleEnvironment(this);
     this.bindings.time.bind('start', new ExpressionInteger(0));
@@ -2730,8 +2759,8 @@ class VectorPanHandle extends PanHandle {
   }
 
   updateProgram(delta, isShiftModified) {
-    let x = parseFloat((this.originalExpression.get(0).value + delta[0]).toFixed(3));
-    let y = parseFloat((this.originalExpression.get(1).value + delta[1]).toFixed(3));
+    let x = parseFloat((this.originalExpression.get(0).value + delta[0]).toShortFloat());
+    let y = parseFloat((this.originalExpression.get(1).value + delta[1]).toShortFloat());
 
     if (isShiftModified) {
       x = Math.round(x);
@@ -2756,7 +2785,7 @@ class VectorComponentPanHandle extends PanHandle {
   }
 
   updateProgram(delta, isShiftModified) {
-    let x = parseFloat((this.originalExpression.get(this.dimension).value + delta[this.dimension] * (this.owner.hasCenter ? 2 : 1)).toFixed(3));
+    let x = parseFloat((this.originalExpression.get(this.dimension).value + delta[this.dimension] * (this.owner.hasCenter ? 2 : 1)).toShortFloat());
 
     if (isShiftModified) {
       x = Math.round(x);
@@ -2773,7 +2802,7 @@ class HorizontalPanHandle extends PanHandle {
   }
 
   updateProgram(delta, isShiftModified) {
-    let x = parseFloat((this.originalExpression.value + delta[0]).toFixed(3));
+    let x = parseFloat((this.originalExpression.value + delta[0]).toShortFloat());
 
     if (isShiftModified) {
       x = Math.round(x);
@@ -2784,21 +2813,3 @@ class HorizontalPanHandle extends PanHandle {
     return this.expression.value.toString();
   }
 }
-
-// class DistancePanHandle extends PanHandle {
-  // constructor(owner, handleOwner, selectElement) {
-    // super(owner, handleOwner, selectElement);
-  // }
-
-  // updateProgram(delta, isShiftModified, mouseAt) {
-    // let distance = parseFloat((this.originalExpression.value + Math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])).toFixed(3));
-
-    // if (isShiftModified) {
-      // distance = Math.round(distance);
-    // }
-
-    // this.expression.x = distance;
-
-    // return this.expression.value.toString();
-  // }
-// }

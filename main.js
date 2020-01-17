@@ -29,28 +29,19 @@ import {
   ExpressionVector,
 } from './ast.js';
 
-let editor = ace.edit('editor');
-editor.setTheme('ace/theme/twilight');
-editor.setOptions({
-  fontSize: source0 ? '10pt' : '14pt',
-  tabSize: 2,
-  useSoftTabs: true
-});
-
-let Range = ace.require('ace/range').Range;
-
-let left = document.getElementById('left');
-let messagerContainer = document.getElementById('messagerContainer');
-let evaluateButton = document.getElementById('evaluateButton');
-let recordButton = document.getElementById('recordButton');
-let exportButton = document.getElementById('exportButton');
-let playOnceButton = document.getElementById('playOnceButton');
-let playLoopButton = document.getElementById('playLoopButton');
-let saveButton = document.getElementById('saveButton');
-let spinner = document.getElementById('spinner');
-let scrubber = document.getElementById('scrubber');
-let timeSpinner = document.getElementById('timeSpinner');
-new Messager(document.getElementById('messager'), document, highlight);
+let editor;
+let Range;
+let left;
+let messagerContainer;
+let evaluateButton;
+let recordButton;
+let exportButton;
+let playOnceButton;
+let playLoopButton;
+let saveButton;
+let spinner;
+let scrubber;
+let timeSpinner;
 
 export let env;
 export let isDirty = false;
@@ -62,6 +53,7 @@ let previousFitBounds;
 
 export let svg = document.getElementById('svg');
 export let fitBounds;
+export let mouseAtSvg;
 
 function setSvgBounds(bounds) {
   env.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
@@ -75,25 +67,6 @@ function fitSvg() {
   env.bounds.span = env.bounds.y + (env.bounds.y + env.bounds.height);
   setSvgBounds(fitBounds);
 }
-
-export let mouseAtSvg = svg.createSVGPoint();
-
-svg.addEventListener('wheel', e => {
-  if (env.bounds) {
-    mouseAtSvg.x = e.clientX;
-    mouseAtSvg.y = e.clientY;
-    let center = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
-
-    let factor = 1 + e.deltaY / 100;
-    env.bounds.x = (env.bounds.x - center.x) * factor + center.x;
-    env.bounds.y = (env.bounds.y - center.y) * factor + center.y;
-    env.bounds.width *= factor;
-    env.bounds.height *= factor;
-    setSvgBounds(env.bounds);
-  }
-}, {
-  passive: true
-});
 
 export let mouseAt = [0, 0];
 export let isMouseDown = false;
@@ -128,16 +101,18 @@ function onMouseUp(e) {
   mouseAt[1] = e.clientY;
 }
 
-svg.addEventListener('mousedown', onMouseDown);
-svg.addEventListener('mousemove', onMouseMove);
-svg.addEventListener('mouseup', onMouseUp);
-
 export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
   editor.centerSelection();
 }
 
-export function updateSelection(replacement) {
+export function updateSelection(replacement, needsUndoFirst) {
+  // Ace doesn't have a way to do atomic group of changes, which is what I want
+  // for handler events. We work around this by undoing before each tweak.
+  if (needsUndoFirst) {
+    editor.undo();
+  }
+
   let range = editor.getSelectionRange();
   let doc = editor.getSession().getDocument();
   doc.replace(range, replacement);
@@ -244,78 +219,6 @@ function hideHandles() {
   });
 }
 
-recordButton.addEventListener('click', () => {
-  startSpinning();
-  let box = svg.getBoundingClientRect();
-
-  hideHandles();
-
-  let size = env.get('gif').get('size');
-  let transparentColor = env.get('gif').get('transparency');
-  let name = env.get('gif').get('name');
-  let repeat = env.get('gif').get('repeat');
-  let delay = env.get('gif').get('delay');
-  let skip = env.get('gif').get('skip');
-
-  // I don't know why I need to set the viewport explicitly. Setting the size
-  // of the image isn't sufficient.
-  svg.setAttribute('width', size.get(0).value);
-  svg.setAttribute('height', size.get(1).value);
-
-  let gif = new GIF({
-    workers: 3,
-    quality: 1,
-    background: '#FFFFFF',
-    transparent: null,
-    repeat: repeat.value,
-    width: size.get(0).value,
-    height: size.get(1).value,
-  });
-
-  gif.on('finished', (blob) => {
-    downloadBlob(name.value, blob);
-    stopSpinning();
-  });
-
-	function tick(i) {
-    try {
-      // TODO if looping, go >=, otherwise >
-      if (i >= scrubber.max) {
-        gif.render();
-      } else {
-        env.shapes.forEach(shape => shape.draw(env, i));
-
-        let data = new XMLSerializer().serializeToString(svg);
-        let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
-        let url = URL.createObjectURL(svgBlob);
-
-        let img = new Image();
-        img.onload = () => {
-          gif.addFrame(img, {
-            delay: delay.value,
-            copy: true
-          });
-          URL.revokeObjectURL(url);
-          tick(i + skip.value);
-        };
-
-        img.src = url;
-      }
-    } catch (e) {
-      stopSpinning();
-      throw e;
-    }
-	}
-
-	tick(parseInt(scrubber.min));
-});
-
-saveButton.addEventListener('click', () => {
-  localStorage.setItem('src', editor.getValue());
-  isSaved = true;
-  syncTitle();
-});
-
 function downloadBlob(name, blob) {
   let link = document.createElement('a');
   link.download = name;
@@ -328,9 +231,6 @@ function downloadBlob(name, blob) {
     document.body.removeChild(link);
   });
 }
-
-exportButton.addEventListener('click', exportSvgWithoutHandles);
-fitButton.addEventListener('click', fitSvg);
 
 export function exportSvgWithHandles() {
   serializeThenDownload(svg);
@@ -381,17 +281,6 @@ function scrubTo(tick) {
   });
 }
 
-scrubber.addEventListener('input', () => {
-  stopAnimation();
-  scrubTo(parseInt(scrubber.value));
-});
-
-timeSpinner.addEventListener('input', () => {
-  stopAnimation();
-  let tick = timeToTick(parseFloat(timeSpinner.value));
-  scrubTo(tick);
-});
-
 export function redraw() {
   let t = tickToTime(parseInt(scrubber.value));
   env.shapes.forEach(shape => {
@@ -416,14 +305,6 @@ function stopAnimation() {
     animateTask = null;
   }
 }
-
-playOnceButton.addEventListener('click', (e) => {
-  play(false);
-});
-
-playLoopButton.addEventListener('click', e => {
-  play(true);
-});
 
 function play(isLoop) {
   stopAnimation();
@@ -601,8 +482,6 @@ let tmax;
 let resolution;
 let nTicks;
 
-evaluateButton.addEventListener('click', interpret);
-
 function onSourceChanged() {
   isDirty = true;
   // clearSelection();
@@ -622,6 +501,29 @@ function syncTitle() {
 // });
 
 function initialize() {
+  editor = ace.edit('editor');
+  editor.setTheme('ace/theme/twilight');
+  editor.setOptions({
+    fontSize: source0 ? '10pt' : '14pt',
+    tabSize: 2,
+    useSoftTabs: true
+  });
+
+  Range = ace.require('ace/range').Range;
+
+  left = document.getElementById('left');
+  messagerContainer = document.getElementById('messagerContainer');
+  evaluateButton = document.getElementById('evaluateButton');
+  recordButton = document.getElementById('recordButton');
+  exportButton = document.getElementById('exportButton');
+  playOnceButton = document.getElementById('playOnceButton');
+  playLoopButton = document.getElementById('playLoopButton');
+  saveButton = document.getElementById('saveButton');
+  spinner = document.getElementById('spinner');
+  scrubber = document.getElementById('scrubber');
+  timeSpinner = document.getElementById('timeSpinner');
+  new Messager(document.getElementById('messager'), document, highlight);
+
   if (localStorage.getItem('src') !== null) {
     editor.setValue(localStorage.getItem('src'), 1);
   }
@@ -649,6 +551,126 @@ function initialize() {
       }
     }
   }
+
+  recordButton.addEventListener('click', () => {
+    startSpinning();
+    let box = svg.getBoundingClientRect();
+
+    hideHandles();
+
+    let size = env.get('gif').get('size');
+    let transparentColor = env.get('gif').get('transparency');
+    let name = env.get('gif').get('name');
+    let repeat = env.get('gif').get('repeat');
+    let delay = env.get('gif').get('delay');
+    let skip = env.get('gif').get('skip');
+
+    // I don't know why I need to set the viewport explicitly. Setting the size
+    // of the image isn't sufficient.
+    svg.setAttribute('width', size.get(0).value);
+    svg.setAttribute('height', size.get(1).value);
+
+    let gif = new GIF({
+      workers: 3,
+      quality: 1,
+      background: '#FFFFFF',
+      transparent: null,
+      repeat: repeat.value,
+      width: size.get(0).value,
+      height: size.get(1).value,
+    });
+
+    gif.on('finished', (blob) => {
+      downloadBlob(name.value, blob);
+      stopSpinning();
+    });
+
+    function tick(i) {
+      try {
+        // TODO if looping, go >=, otherwise >
+        if (i >= scrubber.max) {
+          gif.render();
+        } else {
+          env.shapes.forEach(shape => shape.draw(env, i));
+
+          let data = new XMLSerializer().serializeToString(svg);
+          let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+          let url = URL.createObjectURL(svgBlob);
+
+          let img = new Image();
+          img.onload = () => {
+            gif.addFrame(img, {
+              delay: delay.value,
+              copy: true
+            });
+            URL.revokeObjectURL(url);
+            tick(i + skip.value);
+          };
+
+          img.src = url;
+        }
+      } catch (e) {
+        stopSpinning();
+        throw e;
+      }
+    }
+
+    tick(parseInt(scrubber.min));
+  });
+
+  saveButton.addEventListener('click', () => {
+    localStorage.setItem('src', editor.getValue());
+    isSaved = true;
+    syncTitle();
+  });
+
+  exportButton.addEventListener('click', exportSvgWithoutHandles);
+  fitButton.addEventListener('click', fitSvg);
+
+  scrubber.addEventListener('input', () => {
+    stopAnimation();
+    scrubTo(parseInt(scrubber.value));
+  });
+
+  timeSpinner.addEventListener('input', () => {
+    stopAnimation();
+    let tick = timeToTick(parseFloat(timeSpinner.value));
+    scrubTo(tick);
+  });
+
+  playOnceButton.addEventListener('click', (e) => {
+    play(false);
+  });
+
+  playLoopButton.addEventListener('click', e => {
+    play(true);
+  });
+
+  evaluateButton.addEventListener('click', interpret);
+
+  svg.addEventListener('wheel', e => {
+    if (env.bounds) {
+      mouseAtSvg.x = e.clientX;
+      mouseAtSvg.y = e.clientY;
+      let center = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+
+      let factor = 1 + e.deltaY / 100;
+      env.bounds.x = (env.bounds.x - center.x) * factor + center.x;
+      env.bounds.y = (env.bounds.y - center.y) * factor + center.y;
+      env.bounds.width *= factor;
+      env.bounds.height *= factor;
+      setSvgBounds(env.bounds);
+    }
+  }, {
+    passive: true
+  });
+
+  svg.addEventListener('mousedown', onMouseDown);
+  svg.addEventListener('mousemove', onMouseMove);
+  svg.addEventListener('mouseup', onMouseUp);
+
+
+  mouseAtSvg = svg.createSVGPoint();
 }
 
 window.addEventListener('load', initialize);

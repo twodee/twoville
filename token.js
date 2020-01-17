@@ -59,7 +59,7 @@ export class SourceLocation {
   }
 
   contains(column, row) {
-    return this.lineStart <= row && row <= this.lineEnd && this.columnStart <= column && column <= this.columnEnd;
+    return this.lineStart <= row && row <= this.lineEnd && this.columnStart <= column && column - 1 <= this.columnEnd;
   }
 
   clone() {

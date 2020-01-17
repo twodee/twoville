@@ -54,9 +54,9 @@ import {
   // ExpressionVector
 // } from './types.js';
 
-export let Symbols = {
+export let Symbols = Object.freeze({
   None: new ExpressionInteger(-1),
-};
+});
 
 export function parse(tokens) {
   let symbols = {
