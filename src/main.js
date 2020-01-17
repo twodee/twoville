@@ -554,22 +554,6 @@ function initialize() {
     }
   });
 
-  if (source0) {
-    left.style.width = '300px';
-    messagerContainer.style.height = '50px';
-    editor.resize();
-  }
-
-  if (source0) {
-    editor.setValue(source0, 1);
-    if (runZeroMode) {
-      interpret();
-      if (runZeroMode == 'loop') {
-        play(true);
-      }
-    }
-  }
-
   recordButton.addEventListener('click', () => {
     startSpinning();
     let box = svg.getBoundingClientRect();
@@ -688,8 +672,23 @@ function initialize() {
   svg.addEventListener('mousemove', onMouseMove);
   svg.addEventListener('mouseup', onMouseUp);
 
-
   mouseAtSvg = svg.createSVGPoint();
+
+  if (source0) {
+    left.style.width = '300px';
+    messagerContainer.style.height = '50px';
+    editor.resize();
+  }
+
+  if (source0) {
+    editor.setValue(source0, 1);
+    if (runZeroMode) {
+      interpret();
+      if (runZeroMode == 'loop') {
+        play(true);
+      }
+    }
+  }
 }
 
 window.addEventListener('load', initialize);

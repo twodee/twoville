@@ -5,7 +5,7 @@ module.exports = {
     filename: 'bundle.js',
     publicPath: 'dist',
   },
-  // optimization: {
-    // minimize: true,
-  // },
+  optimization: {
+    minimize: true,
+  },
 };
