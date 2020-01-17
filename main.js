@@ -42,6 +42,7 @@ let saveButton;
 let spinner;
 let scrubber;
 let timeSpinner;
+let hasTweak;
 
 export let env;
 export let isDirty = false;
@@ -106,19 +107,32 @@ export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.centerSelection();
 }
 
-export function updateSelection(replacement, needsUndoFirst) {
+export function beginTweaking(lineStart, lineEnd, columnStart, columnEnd) {
+  highlight(lineStart, lineEnd, columnStart, columnEnd);
+  hasTweak = false;
+}
+
+export function tweak(newText) {
   // Ace doesn't have a way to do atomic group of changes, which is what I want
   // for handler events. We work around this by undoing before each tweak.
-  if (needsUndoFirst) {
+  if (hasTweak) {
     editor.undo();
   }
 
   let range = editor.getSelectionRange();
   let doc = editor.getSession().getDocument();
-  doc.replace(range, replacement);
 
-  range.setEnd(range.end.row, range.start.column + replacement.length);
+  let oldText = doc.getTextRange(range);
+  if (oldText != newText) {
+    doc.replace(range, newText);
+  }
+
+  range.setEnd(range.end.row, range.start.column + newText.length);
   editor.getSelection().setSelectionRange(range);
+}
+
+export function endTweaking() {
+  hasTweak = false;
 }
 
 function registerResizeListener(bounds, gap, resize) {

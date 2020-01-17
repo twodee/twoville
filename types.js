@@ -2,21 +2,20 @@ import {
   Timeline
 } from './timeline.js';
 
-// import './seedrandom/seedrandom.js';
+import './seedrandom/seedrandom.js';
 
 if (!Math.seedrandom) {
-  // let i = require('seedrandom');
-  // console.log("i:", i);
   Math.seedrandom = require('seedrandom');
 }
 
 import { 
-  highlight,
+  beginTweaking,
+  endTweaking,
+  tweak,
   interpret,
   isDirty,
   mouseAtSvg,
   redraw,
-  updateSelection,
 } from './main.js';
 
 import { 
@@ -92,9 +91,11 @@ export function restoreSelection(shapes) {
   if (selectedShape) {
     selectedShape = shapes.find(shape => shape.id == selectedShape.id);
 
+    console.log("old restore selectedHandlers:", selectedHandlers.map(h => h.id));
     if (selectedHandlers.length > 0) {
       selectedHandlers = selectedHandlers.map(handler => selectedShape.subhandlers.find(subhandler => subhandler.id == handler.id));
     }
+    console.log("new restore selectedHandlers:", selectedHandlers.map(h => h.id));
     
     if (selectedHandlers.length > 0) {
       for (let handler of selectedHandlers) {
@@ -128,6 +129,7 @@ export function moveCursor(column, row, shapes) {
     } else {
       selectedShape.showHandles();
     }
+    console.log("already selectedHandlers:", selectedHandlers.map(h => h.id));
   } else {
     for (let shape of shapes) {
       for (let subhandler of shape.subhandlers) {
@@ -146,6 +148,7 @@ export function moveCursor(column, row, shapes) {
         shape.showHandles();
         selectedShape = shape;
       }
+      console.log("new selectedHandlers:", selectedHandlers.map(h => h.id));
     }
   }
 }
@@ -1206,11 +1209,18 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
           new ExpressionReal(mouseAt.y),
         ]).subtract(this.centerExpression);
 
+        // The new center will be on a line perpendicular to the vector from
+        // the starting point to ending point.
         let rootToPosition = this.positionExpression.subtract(this.rootPosition).normalize();
         let direction = rootToPosition.rotate90(); 
-        let dot = new ExpressionReal(centerToMouse.dot(direction));
 
+        // Project the mouse point onto the perpendicular.
+        let dot = new ExpressionReal(centerToMouse.dot(direction));
         let newCenterPosition = this.centerExpression.add(direction.multiply(dot));
+
+        // We've figured out the new center. Now we need to figure out how many
+        // degrees separate the two points. But we need to preserve the sign of
+        // the original expression to make sure the arc travels the same winding.
 
         let newCenterToRoot = this.rootPosition.subtract(newCenterPosition).normalize();
         let newCenterToPosition = this.positionExpression.subtract(newCenterPosition).normalize();
@@ -1221,7 +1231,16 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
         let rootToNewCenter = newCenterPosition.subtract(this.rootPosition);
         rootToPosition = this.positionExpression.subtract(this.rootPosition);
         let signedArea = rootToNewCenter.get(0).value * rootToPosition.get(1).value - rootToNewCenter.get(1).value * rootToPosition.get(0).value;
-        if (signedArea > 0) {
+        const signs = [
+          Math.sign(signedArea),
+          Math.sign(this.originalDegreesExpression.value),
+        ];
+
+        if (signs[0] < 0 && signs[1] < 0) {
+          degrees = degrees - 360;
+        } else if (signs[0] > 0 && signs[1] < 0) {
+          degrees = -degrees;
+        } else if (signs[0] > 0 && signs[1] > 0) {
           degrees = 360 - degrees;
         }
 
@@ -2144,18 +2163,16 @@ class HandleListener {
     this.element = element;
     this.env = env;
     this.mouseDownAt = null;
-    this.needsUndoFirst = false;
 
     this.mouseDown = e => {
       isHandling = true;
       this.mouseDownAt = this.transform(e);
       let where = range();
-      highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
+      beginTweaking(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
       e.stopPropagation();
       window.addEventListener('mousemove', this.mouseMove);
       window.addEventListener('mouseup', this.mouseUp);
       selectedShape = selectElement;
-      this.needsUndoFirst = false;
     }
 
     this.mouseUp = e => {
@@ -2163,6 +2180,7 @@ class HandleListener {
       window.removeEventListener('mouseup', this.mouseUp);
       interpret(true);
       isHandling = false;
+      endTweaking();
     }
 
     this.mouseMove = e => {
@@ -2171,10 +2189,8 @@ class HandleListener {
         let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
 
         let replacement = change(delta, e.shiftKey, mouseAt);
-        updateSelection(replacement, this.needsUndoFirst);
+        tweak(replacement);
         e.stopPropagation();
-
-        this.needsUndoFirst = true;
 
         redraw();
       }
