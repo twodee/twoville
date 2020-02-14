@@ -15,6 +15,8 @@ import {
 } from './main.js';
 
 import { 
+  FunctionDefinition,
+  ExpressionAdd,
   ExpressionArcSine,
   ExpressionBoolean,
   ExpressionCircle,
@@ -454,29 +456,10 @@ let transformMixin = {
   initializeTransforms() {
     this.transforms = [];
 
-    this.bindings['translate'] = {
-      name: 'translate',
-      formals: [],
-      body: new ExpressionTranslate(this)
-    };
-
-    this.bindings['scale'] = {
-      name: 'scale',
-      formals: [],
-      body: new ExpressionScale(this)
-    };
-
-    this.bindings['rotate'] = {
-      name: 'rotate',
-      formals: [],
-      body: new ExpressionRotate(this)
-    };
-
-    this.bindings['shear'] = {
-      name: 'shear',
-      formals: [],
-      body: new ExpressionShear(this)
-    };
+    this.bindings['translate'] = new FunctionDefinition('translate', [], new ExpressionTranslate(this));
+    this.bindings['scale'] = new FunctionDefinition('scale', [], new ExpressionScale(this));
+    this.bindings['rotate'] = new FunctionDefinition('rotate', [], new ExpressionRotate(this));
+    this.bindings['shear'] = new FunctionDefinition('shear', [], new ExpressionShear(this));
   },
 
   setTransform(env, t) {
@@ -1650,29 +1633,10 @@ export class TwovilleLine extends TwovilleMarkerable {
     this.registerClickHandler();
     this.nodes = [];
 
-    this.bindings['vertex'] = {
-      name: 'vertex',
-      formals: [],
-      body: new ExpressionVertex(this)
-    };
-
-    this.bindings['turtle'] = {
-      name: 'turtle',
-      formals: [],
-      body: new ExpressionTurtle(this)
-    };
-
-    this.bindings['turn'] = {
-      name: 'turn',
-      formals: [],
-      body: new ExpressionTurtleTurn(this)
-    };
-
-    this.bindings['move'] = {
-      name: 'move',
-      formals: [],
-      body: new ExpressionTurtleMove(this)
-    };
+    this.bindings['vertex'] = new FunctionDefinition('vertex', [], new ExpressionVertex(this));
+    this.bindings['turtle'] = new FunctionDefinition('turtle', [], new ExpressionTurtle(this));
+    this.bindings['turn'] = new FunctionDefinition('turn', [], new ExpressionTurtleTurn(this));
+    this.bindings['move'] = new FunctionDefinition('move', [], new ExpressionTurtleMove(this));
 
     this.lineElement = document.createElementNS(svgNamespace, 'line')
     this.addBackgroundHandle(this.lineElement);
@@ -1726,54 +1690,14 @@ export class TwovillePath extends TwovilleMarkerable {
     this.nodes = [];
 
     this.bindings.mirror = new TwovilleTimelinedEnvironment(this, null, 'mirror', ['point', 'axis']);
-
-    this.bindings['arc'] = {
-      name: 'arc',
-      formals: [],
-      body: new ExpressionPathArc(this)
-    };
-
-    this.bindings['cubic'] = {
-      name: 'cubic',
-      formals: [],
-      body: new ExpressionPathCubic(this)
-    };
-
-    this.bindings['jump'] = {
-      name: 'jump',
-      formals: [],
-      body: new ExpressionPathJump(this)
-    };
-
-    this.bindings['line'] = {
-      name: 'line',
-      formals: [],
-      body: new ExpressionPathLine(this)
-    };
-
-    this.bindings['quadratic'] = {
-      name: 'quadratic',
-      formals: [],
-      body: new ExpressionPathQuadratic(this)
-    };
-
-    this.bindings['turtle'] = {
-      name: 'turtle',
-      formals: [],
-      body: new ExpressionTurtle(this)
-    };
-
-    this.bindings['turn'] = {
-      name: 'turn',
-      formals: [],
-      body: new ExpressionTurtleTurn(this)
-    };
-
-    this.bindings['move'] = {
-      name: 'move',
-      formals: [],
-      body: new ExpressionTurtleMove(this)
-    };
+    this.bindings['arc'] = new FunctionDefinition('arc', [], new ExpressionPathArc(this));
+    this.bindings['cubic'] = new FunctionDefinition('cubic', [], new ExpressionPathCubic(this));
+    this.bindings['jump'] = new FunctionDefinition('jump', [], new ExpressionPathJump(this));
+    this.bindings['line'] = new FunctionDefinition('line', [], new ExpressionPathLine(this));
+    this.bindings['quadratic'] = new FunctionDefinition('quadratic', [], new ExpressionPathQuadratic(this));
+    this.bindings['turtle'] = new FunctionDefinition('turtle', [], new ExpressionTurtle(this));
+    this.bindings['turn'] = new FunctionDefinition('turn', [], new ExpressionTurtleTurn(this));
+    this.bindings['move'] = new FunctionDefinition('move', [], new ExpressionTurtleMove(this));
   }
 
   draw(env, t) {
@@ -1850,29 +1774,10 @@ export class TwovilleUngon extends TwovilleMarkerable {
     this.registerClickHandler();
     this.nodes = [];
 
-    this.bindings['vertex'] = {
-      name: 'vertex',
-      formals: [],
-      body: new ExpressionVertex(this)
-    };
-
-    this.bindings['turtle'] = {
-      name: 'turtle',
-      formals: [],
-      body: new ExpressionTurtle(this)
-    };
-
-    this.bindings['turn'] = {
-      name: 'turn',
-      formals: [],
-      body: new ExpressionTurtleTurn(this)
-    };
-
-    this.bindings['move'] = {
-      name: 'move',
-      formals: [],
-      body: new ExpressionTurtleMove(this)
-    };
+    this.bindings['vertex'] = new FunctionDefinition('vertex', [], new ExpressionVertex(this));
+    this.bindings['turtle'] = new FunctionDefinition('turtle', [], new ExpressionTurtle(this));
+    this.bindings['turn'] = new FunctionDefinition('turn', [], new ExpressionTurtleTurn(this));
+    this.bindings['move'] = new FunctionDefinition('move', [], new ExpressionTurtleMove(this));
 
     this.handles = {
       polygon: document.createElementNS(svgNamespace, 'polygon'),
@@ -1976,29 +1881,10 @@ export class TwovillePolygon extends TwovilleMarkerable {
     this.registerClickHandler();
     this.nodes = [];
 
-    this.bindings['vertex'] = {
-      name: 'vertex',
-      formals: [],
-      body: new ExpressionVertex(this)
-    };
-
-    this.bindings['turtle'] = {
-      name: 'turtle',
-      formals: [],
-      body: new ExpressionTurtle(this)
-    };
-
-    this.bindings['turn'] = {
-      name: 'turn',
-      formals: [],
-      body: new ExpressionTurtleTurn(this)
-    };
-
-    this.bindings['move'] = {
-      name: 'move',
-      formals: [],
-      body: new ExpressionTurtleMove(this)
-    };
+    this.bindings['vertex'] = new FunctionDefinition('vertex', [], new ExpressionVertex(this));
+    this.bindings['turtle'] = new FunctionDefinition('turtle', [], new ExpressionTurtle(this));
+    this.bindings['turn'] = new FunctionDefinition('turn', [], new ExpressionTurtleTurn(this));
+    this.bindings['move'] = new FunctionDefinition('move', [], new ExpressionTurtleMove(this));
 
     this.handles = {
       polygon: document.createElementNS(svgNamespace, 'polygon'),
@@ -2066,29 +1952,10 @@ export class TwovillePolyline extends TwovilleMarkerable {
     this.registerClickHandler();
     this.nodes = [];
 
-    this.bindings['vertex'] = {
-      name: 'vertex',
-      formals: [],
-      body: new ExpressionVertex(this)
-    };
-
-    this.bindings['turtle'] = {
-      name: 'turtle',
-      formals: [],
-      body: new ExpressionTurtle(this)
-    };
-
-    this.bindings['turn'] = {
-      name: 'turn',
-      formals: [],
-      body: new ExpressionTurtleTurn(this)
-    };
-
-    this.bindings['move'] = {
-      name: 'move',
-      formals: [],
-      body: new ExpressionTurtleMove(this)
-    };
+    this.bindings['vertex'] = new FunctionDefinition('vertex', [], new ExpressionVertex(this));
+    this.bindings['turtle'] = new FunctionDefinition('turtle', [], new ExpressionTurtle(this));
+    this.bindings['turn'] = new FunctionDefinition('turn', [], new ExpressionTurtleTurn(this));
+    this.bindings['move'] = new FunctionDefinition('move', [], new ExpressionTurtleMove(this));
 
     this.handles = {
       polyline: document.createElementNS(svgNamespace, 'polyline'),
@@ -2426,131 +2293,27 @@ export class GlobalEnvironment extends TwovilleEnvironment {
       new ExpressionInteger(100)
     ]));
 
-    this.bindings['rectangle'] = {
-      name: 'rectangle',
-      formals: [],
-      body: new ExpressionRectangle()
-    };
-
-    this.bindings['line'] = {
-      name: 'line',
-      formals: [],
-      body: new ExpressionLine()
-    };
-
-    this.bindings['path'] = {
-      name: 'path',
-      formals: [],
-      body: new ExpressionPath()
-    };
-
-    this.bindings['ungon'] = {
-      name: 'ungon',
-      formals: [],
-      body: new ExpressionUngon()
-    };
-
-    this.bindings['polygon'] = {
-      name: 'polygon',
-      formals: [],
-      body: new ExpressionPolygon()
-    };
-
-    this.bindings['polyline'] = {
-      name: 'polyline',
-      formals: [],
-      body: new ExpressionPolyline()
-    };
-
-    this.bindings['label'] = {
-      name: 'label',
-      formals: [],
-      body: new ExpressionLabel()
-    };
-
-    this.bindings['group'] = {
-      name: 'group',
-      formals: [],
-      body: new ExpressionGroup()
-    };
-
-    this.bindings['marker'] = {
-      name: 'marker',
-      formals: [],
-      body: new ExpressionMarker()
-    };
-
-    this.bindings['mask'] = {
-      name: 'mask',
-      formals: [],
-      body: new ExpressionMask()
-    };
-
-    this.bindings['cutout'] = {
-      name: 'cutout',
-      formals: [],
-      body: new ExpressionCutout()
-    };
-
-    this.bindings['circle'] = {
-      name: 'circle',
-      formals: [],
-      body: new ExpressionCircle()
-    };
-
-    this.bindings['print'] = {
-      name: 'print',
-      formals: ['message'],
-      body: new ExpressionPrint()
-    };
-
-    this.bindings['random'] = {
-      name: 'random',
-      formals: ['min', 'max'],
-      body: new ExpressionRandom()
-    };
-
-    this.bindings['seed'] = {
-      name: 'seed',
-      formals: ['value'],
-      body: new ExpressionSeed()
-    };
-
-    this.bindings['sin'] = {
-      name: 'sin',
-      formals: ['degrees'],
-      body: new ExpressionSine()
-    };
-
-    this.bindings['cos'] = {
-      name: 'cos',
-      formals: ['degrees'],
-      body: new ExpressionCosine()
-    };
-
-    this.bindings['tan'] = {
-      name: 'tan',
-      formals: ['degrees'],
-      body: new ExpressionTangent()
-    };
-
-    this.bindings['asin'] = {
-      name: 'asin',
-      formals: ['ratio'],
-      body: new ExpressionArcSine()
-    };
-
-    this.bindings['sqrt'] = {
-      name: 'sqrt',
-      formals: ['x'],
-      body: new ExpressionSquareRoot()
-    };
-
-    this.bindings['int'] = {
-      name: 'int',
-      formals: ['x'],
-      body: new ExpressionInt()
-    };
+    this.bindings['rectangle'] = new FunctionDefinition('rectangle', [], new ExpressionRectangle());
+    this.bindings['line'] = new FunctionDefinition('line', [], new ExpressionLine());
+    this.bindings['path'] = new FunctionDefinition('path', [], new ExpressionPath());
+    this.bindings['ungon'] = new FunctionDefinition('ungon', [], new ExpressionUngon());
+    this.bindings['polygon'] = new FunctionDefinition('polygon', [], new ExpressionPolygon());
+    this.bindings['polyline'] = new FunctionDefinition('polyline', [], new ExpressionPolyline());
+    this.bindings['label'] = new FunctionDefinition('label', [], new ExpressionLabel());
+    this.bindings['group'] = new FunctionDefinition('group', [], new ExpressionGroup());
+    this.bindings['marker'] = new FunctionDefinition('marker', [], new ExpressionMarker());
+    this.bindings['mask'] = new FunctionDefinition('mask', [], new ExpressionMask());
+    this.bindings['cutout'] = new FunctionDefinition('cutout', [], new ExpressionCutout());
+    this.bindings['circle'] = new FunctionDefinition('circle', [], new ExpressionCircle());
+    this.bindings['print'] = new FunctionDefinition('print', ['message'], new ExpressionPrint());
+    this.bindings['random'] = new FunctionDefinition('random', ['min', 'max'], new ExpressionRandom());
+    this.bindings['seed'] = new FunctionDefinition('seed', ['value'], new ExpressionSeed());
+    this.bindings['sin'] = new FunctionDefinition('sin', ['degrees'], new ExpressionSine());
+    this.bindings['cos'] = new FunctionDefinition('cos', ['degrees'], new ExpressionCosine());
+    this.bindings['tan'] = new FunctionDefinition('tan', ['degrees'], new ExpressionTangent());
+    this.bindings['asin'] = new FunctionDefinition('asin', ['ratio'], new ExpressionArcSine());
+    this.bindings['sqrt'] = new FunctionDefinition('sqrt', ['x'], new ExpressionSquareRoot());
+    this.bindings['int'] = new FunctionDefinition('int', ['x'], new ExpressionInt());
   }
 }
 
@@ -2747,7 +2510,7 @@ class PanHandle {
   }
 
   locate() {
-    return this.expression.where;
+    return this.expression.unevaluated.where;
   }
 
   // Modify this handle's SVG element attributes.
@@ -2789,18 +2552,33 @@ class VectorComponentPanHandle extends PanHandle {
   }
 
   locate() {
-    return this.expression.get(this.dimension).where;
+    return this.expression.get(this.dimension).unevaluated.where;
   }
 
   updateProgram(delta, isShiftModified) {
-    let x = parseFloat((this.originalExpression.get(this.dimension).value + delta[this.dimension] * (this.owner.hasCenter ? 2 : 1)).toShortFloat());
+    // console.log("this.originalExpression:", this.originalExpression);
+    // console.log("this.expression:", this.expression);
+    // console.log("this.originalExpression.unevaluated:", this.originalExpression.get(this.dimension).unevaluated);
+    const unevaluated = this.originalExpression.get(this.dimension).unevaluated;
+    console.log("unevaluated:", unevaluated);
+    const originalValue = this.originalExpression.get(this.dimension).value;
+    console.log("originalValue:", originalValue);
+
+    let x = parseFloat((originalValue + delta[this.dimension] * (this.owner.hasCenter ? 2 : 1)).toShortFloat());
 
     if (isShiftModified) {
       x = Math.round(x);
     }
 
     this.expression.set(this.dimension, new ExpressionReal(x));
-    return this.expression.get(this.dimension).value.toString();
+    if (unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
+      return this.expression.get(this.dimension).toString();
+    } else if (unevaluated instanceof ExpressionAdd &&
+               (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
+      const right = unevaluated.b.value;
+      const left = originalValue - right;
+      return new ExpressionAdd(unevaluated.a, (x - left).toShortFloat()).toString();
+    }
   }
 }
 

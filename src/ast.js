@@ -35,6 +35,14 @@ import {
   TwovilleVertex,
 } from "./types.js";
 
+export class FunctionDefinition {
+  constructor(name, formals, body) {
+    this.name = name;
+    this.formals = formals;
+    this.body = body;
+  }
+}
+
 // --------------------------------------------------------------------------- 
 // INTERPOLANTS
 // --------------------------------------------------------------------------- 
@@ -96,8 +104,9 @@ function interpolateBackInOut(a, b, proportion) {
 // --------------------------------------------------------------------------- 
 
 export class Expression {
-  constructor(where = null) {
+  constructor(where = null, unevaluated = null) {
     this.where = where;
+    this.unevaluated = unevaluated ? unevaluated : this;
   }
 
   isTimeSensitive(env) {
@@ -108,8 +117,8 @@ export class Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionData extends Expression {
-  constructor(type, article, where = null) {
-    super(where);
+  constructor(type, article, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.type = type;
     this.article = article;
   }
@@ -128,7 +137,7 @@ export class ExpressionBoolean extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionBoolean(this.x, this.where == null ? null : this.where.clone());
+    return new ExpressionBoolean(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -179,13 +188,14 @@ export class ExpressionBoolean extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionInteger extends ExpressionData {
-  constructor(x, where = null) {
-    super('integer', 'an', where);
+  constructor(x, where = null, unevaluated = null) {
+    super('integer', 'an', where, unevaluated);
     this.x = x;
   }
 
   clone() {
-    return new ExpressionInteger(this.x, this.where == null ? null : this.where.clone());
+    console.log("this.unevaluated:", this.unevaluated);
+    return new ExpressionInteger(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -329,13 +339,13 @@ export class ExpressionInteger extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionCharacter extends ExpressionData {
-  constructor(x, where = null) {
-    super('character', 'a', where);
+  constructor(x, where = null, unevaluated = null) {
+    super('character', 'a', where, unevaluated);
     this.x = x;
   }
 
   clone() {
-    return new ExpressionCharacter(this.x, this.where == null ? null : this.where.clone());
+    return new ExpressionCharacter(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -358,17 +368,13 @@ export class ExpressionCharacter extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionString extends ExpressionData {
-  constructor(x, where = null) {
-    super('string', 'a', where);
+  constructor(x, where = null, unevaluated = null) {
+    super('string', 'a', where, unevaluated);
     this.x = x;
 
     this.bindings = [];
 
-    this.bindings['size'] = {
-      name: 'size',
-      formals: [],
-      body: new ExpressionStringSize(this)
-    };
+    this.bindings['size'] = new FunctionDefinition('size', [], new ExpressionStringSize(this));
   }
 
   has(id) {
@@ -380,7 +386,7 @@ export class ExpressionString extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionString(this.x, this.where == null ? null : this.where.clone());
+    return new ExpressionString(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -448,8 +454,8 @@ export class ExpressionString extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionStringSize extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -461,8 +467,8 @@ export class ExpressionStringSize extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionReal extends ExpressionData {
-  constructor(x, where = null) {
-    super('real', 'a', where);
+  constructor(x, where = null, unevaluated = null) {
+    super('real', 'a', where, unevaluated);
     this.x = x;
   }
 
@@ -471,7 +477,7 @@ export class ExpressionReal extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionReal(this.x, this.where == null ? null : this.where.clone());
+    return new ExpressionReal(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
   }
 
   toString() {
@@ -587,8 +593,8 @@ export class ExpressionReal extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSame extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -607,8 +613,8 @@ export class ExpressionSame extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionNotSame extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -627,8 +633,8 @@ export class ExpressionNotSame extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionLess extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -647,8 +653,8 @@ export class ExpressionLess extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionLessEqual extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -667,8 +673,8 @@ export class ExpressionLessEqual extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMore extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -687,8 +693,8 @@ export class ExpressionMore extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMoreEqual extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -709,8 +715,8 @@ export class ExpressionMoreEqual extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAdd extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -718,19 +724,27 @@ export class ExpressionAdd extends Expression {
   evaluate(env, fromTime, toTime) {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.add(evalB);
+
+    let sum = evalA.add(evalB);
+    sum.unevaluated = this;
+
+    return sum;
   }
 
   isTimeSensitive(env) {
     return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+  }
+
+  toString() {
+    return `${this.a.toString()} + ${this.b.toString()}`;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSubtract extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -749,8 +763,8 @@ export class ExpressionSubtract extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMultiply extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -769,8 +783,8 @@ export class ExpressionMultiply extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionDivide extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -789,8 +803,8 @@ export class ExpressionDivide extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRemainder extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -809,8 +823,8 @@ export class ExpressionRemainder extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPower extends Expression {
-  constructor(a, b, where = null) {
-    super(where);
+  constructor(a, b, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
     this.b = b;
   }
@@ -829,8 +843,8 @@ export class ExpressionPower extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionNegative extends Expression {
-  constructor(a, where = null) {
-    super(where);
+  constructor(a, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.a = a;
   }
 
@@ -847,8 +861,8 @@ export class ExpressionNegative extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionDefinition extends Expression {
-  constructor(name, formals, body, where = null) {
-    super(where);
+  constructor(name, formals, body, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.name = name;
     this.formals = formals;
     this.body = body;
@@ -856,19 +870,15 @@ export class ExpressionFunctionDefinition extends Expression {
 
   evaluate(env, fromTime, toTime) {
     // TODO: should definition be capturing parent for a closure?
-    env.bindings[this.name] = {
-      name: this.name,
-      formals: this.formals,
-      body: this.body
-    };
+    env.bindings[this.name] = new FunctionDefinition(this.name, this.formals, this.body);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionIdentifier extends Expression {
-  constructor(nameToken, where = null) {
-    super(where);
+  constructor(nameToken, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.nameToken = nameToken;
   }
 
@@ -905,13 +915,17 @@ export class ExpressionIdentifier extends Expression {
   isTimeSensitive(env) {
     return this.nameToken.type == Tokens.T;
   }
+
+  toString() {
+    return this.nameToken.source;
+  }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMemberIdentifier extends ExpressionIdentifier {
-  constructor(base, nameToken, where = null) {
-    super(nameToken, where);
+  constructor(base, nameToken, where = null, unevaluated = null) {
+    super(nameToken, where, unevaluated);
     this.base = base;
   }
 
@@ -948,8 +962,8 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
-  constructor(base, nameToken, where = null) {
-    super(nameToken, where);
+  constructor(base, nameToken, where = null, unevaluated = null) {
+    super(nameToken, where, unevaluated);
     this.base = base;
   }
 
@@ -979,8 +993,8 @@ export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionCall extends Expression {
-  constructor(nameToken, actuals, where = null) {
-    super(where);
+  constructor(nameToken, actuals, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.nameToken = nameToken;
     this.actuals = actuals;
   }
@@ -989,6 +1003,8 @@ export class ExpressionFunctionCall extends Expression {
     let f = env.get(this.nameToken.source);
     if (!f) {
       throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
+    } else if (!(f instanceof FunctionDefinition)) {
+      throw new LocatedException(this.where, `I can only call functions. ${this.nameToken.source} is not a function.`);
     }
     return f;
   }
@@ -1019,8 +1035,8 @@ export class ExpressionFunctionCall extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
-  constructor(host, nameToken, actuals, where = null) {
-    super(nameToken, actuals, where);
+  constructor(host, nameToken, actuals, where = null, unevaluated = null) {
+    super(nameToken, actuals, where, unevaluated);
     this.host = host;
   }
 
@@ -1038,8 +1054,8 @@ export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
 // ---------------------------------------------------------------------------
 
 export class ExpressionBlock extends Expression {
-  constructor(statements, where = null) {
-    super(where);
+  constructor(statements, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.statements = statements;
   }
 
@@ -1059,8 +1075,8 @@ export class ExpressionBlock extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAssignment extends Expression {
-  constructor(l, r, where = null) {
-    super(where);
+  constructor(l, r, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.l = l;
     this.r = r;
   }
@@ -1081,8 +1097,8 @@ export class ExpressionAssignment extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionIf extends Expression {
-  constructor(conditions, thenBlocks, elseBlock, where = null) {
-    super(where);
+  constructor(conditions, thenBlocks, elseBlock, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.conditions = conditions;
     this.thenBlocks = thenBlocks;
     this.elseBlock = elseBlock;
@@ -1112,8 +1128,8 @@ export class ExpressionIf extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFor extends Expression {
-  constructor(i, start, stop, by, body, where = null) {
-    super(where);
+  constructor(i, start, stop, by, body, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.i = i;
     this.start = start;
     this.stop = stop;
@@ -1140,8 +1156,8 @@ export class ExpressionFor extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSubscript extends Expression {
-  constructor(base, index, where = null) {
-    super(where);
+  constructor(base, index, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.base = base;
     this.index = index;
   }
@@ -1185,8 +1201,8 @@ export class ExpressionSubscript extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorAdd extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1199,8 +1215,8 @@ export class ExpressionVectorAdd extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorSize extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1212,8 +1228,8 @@ export class ExpressionVectorSize extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorToCartesian extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1225,8 +1241,8 @@ export class ExpressionVectorToCartesian extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorMagnitude extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1238,8 +1254,8 @@ export class ExpressionVectorMagnitude extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorNormalize extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1251,8 +1267,8 @@ export class ExpressionVectorNormalize extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorRotate extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1265,8 +1281,8 @@ export class ExpressionVectorRotate extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorRotateAround extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1280,8 +1296,8 @@ export class ExpressionVectorRotateAround extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorRotate90 extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1293,8 +1309,8 @@ export class ExpressionVectorRotate90 extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementFrom extends Expression {
-  constructor(fromTimeExpression, block, where = null) {
-    super(where);
+  constructor(fromTimeExpression, block, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.fromTimeExpression = fromTimeExpression;
     this.block = block;
   }
@@ -1308,8 +1324,8 @@ export class StatementFrom extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementTo extends Expression {
-  constructor(toTimeExpression, block, where = null) {
-    super(where);
+  constructor(toTimeExpression, block, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.toTimeExpression = toTimeExpression;
     this.block = block;
   }
@@ -1323,8 +1339,8 @@ export class StatementTo extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementBetween extends Expression {
-  constructor(fromTimeExpression, toTimeExpression, block, where = null) {
-    super(where);
+  constructor(fromTimeExpression, toTimeExpression, block, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.fromTimeExpression = fromTimeExpression;
     this.toTimeExpression = toTimeExpression;
     this.block = block;
@@ -1340,8 +1356,8 @@ export class StatementBetween extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementThrough extends Expression {
-  constructor(throughTimeExpression, block, where = null) {
-    super(where);
+  constructor(throughTimeExpression, block, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.throughTimeExpression = throughTimeExpression;
     this.block = block;
   }
@@ -1356,8 +1372,8 @@ export class StatementThrough extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementToStasis extends Expression {
-  constructor(startTimeExpression, endTimeExpression, block, where = null) {
-    super(where);
+  constructor(startTimeExpression, endTimeExpression, block, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.startTimeExpression = startTimeExpression;
     this.endTimeExpression = endTimeExpression;
     this.block = block;
@@ -1374,8 +1390,8 @@ export class StatementToStasis extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementFromStasis extends Expression {
-  constructor(startTimeExpression, endTimeExpression, block, where = null) {
-    super(where);
+  constructor(startTimeExpression, endTimeExpression, block, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.startTimeExpression = startTimeExpression;
     this.endTimeExpression = endTimeExpression;
     this.block = block;
@@ -1392,8 +1408,8 @@ export class StatementFromStasis extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRepeat extends Expression {
-  constructor(count, body, where = null) {
-    super(where);
+  constructor(count, body, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.count = count;
     this.body = body;
   }
@@ -1416,8 +1432,8 @@ export class ExpressionRepeat extends Expression {
 
 // TODO: better names
 export class ExpressionRepeatAround extends Expression {
-  constructor(count, body, around, where = null) {
-    super(where);
+  constructor(count, body, around, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.count = count;
     this.body = body;
     this.around = around;
@@ -1443,8 +1459,8 @@ export class ExpressionRepeatAround extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionWith extends Expression {
-  constructor(scope, body, where = null) {
-    super(where);
+  constructor(scope, body, where = null, unevaluated = null) {
+    super(where, unevaluated);
     this.scope = scope;
     this.body = body;
   }
@@ -1484,8 +1500,8 @@ export class ExpressionRectangle extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVertex extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1497,8 +1513,8 @@ export class ExpressionVertex extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionTurtle extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1510,8 +1526,8 @@ export class ExpressionTurtle extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionTurtleTurn extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1523,8 +1539,8 @@ export class ExpressionTurtleTurn extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionTurtleMove extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1536,8 +1552,8 @@ export class ExpressionTurtleMove extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathArc extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1550,8 +1566,8 @@ export class ExpressionPathArc extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathJump extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1563,8 +1579,8 @@ export class ExpressionPathJump extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathLine extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1576,8 +1592,8 @@ export class ExpressionPathLine extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathCubic extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1589,8 +1605,8 @@ export class ExpressionPathCubic extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPathQuadratic extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1602,8 +1618,8 @@ export class ExpressionPathQuadratic extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionTranslate extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1615,8 +1631,8 @@ export class ExpressionTranslate extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionScale extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1628,8 +1644,8 @@ export class ExpressionScale extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRotate extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1641,8 +1657,8 @@ export class ExpressionRotate extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionShear extends Expression {
-  constructor(instance) {
-    super(null);
+  constructor(instance, unevaluated = null) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1944,58 +1960,19 @@ export class ExpressionCutout extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVector extends ExpressionData {
-  constructor(elements, where = null) {
-    super('vector', 'a', where);
+  constructor(elements, where = null, unevaluated = null) {
+    super('vector', 'a', where, unevaluated);
     this.elements = elements;
     this.bindings = [];
 
-    this.bindings['normalize'] = {
-      name: 'normalize',
-      formals: [],
-      body: new ExpressionVectorNormalize(this)
-    };
-
-    this.bindings['size'] = {
-      name: 'size',
-      formals: [],
-      body: new ExpressionVectorSize(this)
-    };
-
-    this.bindings['magnitude'] = {
-      name: 'magnitude',
-      formals: [],
-      body: new ExpressionVectorMagnitude(this)
-    };
-
-    this.bindings['toCartesian'] = {
-      name: 'toCartesian',
-      formals: [],
-      body: new ExpressionVectorToCartesian(this)
-    };
-
-    this.bindings['add'] = {
-      name: 'add',
-      formals: ['item'],
-      body: new ExpressionVectorAdd(this)
-    };
-
-    this.bindings['rotateAround'] = {
-      name: 'rotateAround',
-      formals: ['pivot', 'degrees'],
-      body: new ExpressionVectorRotateAround(this)
-    };
-
-    this.bindings['rotate'] = {
-      name: 'rotate',
-      formals: ['degrees'],
-      body: new ExpressionVectorRotate(this)
-    };
-
-    this.bindings['rotate90'] = {
-      name: 'rotate90',
-      formals: [],
-      body: new ExpressionVectorRotate90(this)
-    };
+    this.bindings['normalize'] = new FunctionDefinition('normalize', [], new ExpressionVectorNormalize(this));
+    this.bindings['size'] = new FunctionDefinition('size', [], new ExpressionVectorSize(this));
+    this.bindings['magnitude'] = new FunctionDefinition('magnitude', [], new ExpressionVectorMagnitude(this));
+    this.bindings['toCartesian'] = new FunctionDefinition('toCartesian', [], new ExpressionVectorToCartesian(this));
+    this.bindings['add'] = new FunctionDefinition('add', ['item'], new ExpressionVectorAdd(this));
+    this.bindings['rotateAround'] = new FunctionDefinition('rotateAround', ['pivot', 'degrees'], new ExpressionVectorRotateAround(this));
+    this.bindings['rotate'] = new FunctionDefinition('rotate', ['degrees'], new ExpressionVectorRotate(this));
+    this.bindings['rotate90'] = new FunctionDefinition('rotate90', [], new ExpressionVectorRotate90(this));
   }
 
   has(id) {
@@ -2019,7 +1996,7 @@ export class ExpressionVector extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionVector(this.elements.map(e => e.clone()), this.where == null ? null : this.where.clone());
+    return new ExpressionVector(this.elements.map(e => e.clone()), this.where == null ? null : this.where.clone(), this.unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {

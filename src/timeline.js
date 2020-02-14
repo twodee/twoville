@@ -35,8 +35,8 @@ export class Timeline {
     return this.defaultValue;
   }
 
-  setDefault(value) {
-    this.defaultValue = value;
+  setDefault(exvalue) {
+    this.defaultValue = exvalue;
   }
 
   intervalAt(t) {

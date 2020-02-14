@@ -121,14 +121,17 @@ export function tweak(newText) {
   // for handler events. We work around this by undoing before each tweak.
   if (hasTweak) {
     editor.undo();
+    hasTweak = false;
   }
 
   let range = editor.getSelectionRange();
   let doc = editor.getSession().getDocument();
+  console.log("range:", range.start.row, range.start.column, range.end.row, range.end.column);
 
   let oldText = doc.getTextRange(range);
   if (oldText != newText) {
     doc.replace(range, newText);
+    hasTweak = true;
   }
 
   range.setEnd(range.end.row, range.start.column + newText.length);
