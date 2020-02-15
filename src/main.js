@@ -126,7 +126,6 @@ export function tweak(newText) {
 
   let range = editor.getSelectionRange();
   let doc = editor.getSession().getDocument();
-  console.log("range:", range.start.row, range.start.column, range.end.row, range.end.column);
 
   let oldText = doc.getTextRange(range);
   if (oldText != newText) {

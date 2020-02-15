@@ -792,7 +792,7 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
       }
 
       this.distanceExpression.x = distance;
-      return this.distanceExpression.value.toString();
+      return this.distanceExpression.value.toPretty();
     });
   }
 
@@ -1226,7 +1226,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
         }
 
         this.degreesExpression.x = degrees;
-        return this.degreesExpression.value.toString();
+        return this.degreesExpression.value.toPretty();
       } else {
         let x = parseFloat((this.originalCenterExpression.get(0).value + delta[0]).toShortFloat());
         let y = parseFloat((this.originalCenterExpression.get(1).value + delta[1]).toShortFloat());
@@ -1297,7 +1297,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
 
         this.degreesExpression.x = degrees;
 
-        return this.degreesExpression.toString();
+        return this.degreesExpression.toPretty();
       }
     });
   }
@@ -1532,7 +1532,7 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
       }
 
       this.factorsExpression.set(0, new ExpressionReal(factor));
-      return this.factorsExpression.get(0).value.toString();
+      return this.factorsExpression.get(0).toPretty();
     });
 
     new HandleListener(this, env, this.scaleHandles[1], () => {
@@ -1546,7 +1546,7 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
       }
 
       this.factorsExpression.set(1, new ExpressionReal(factor));
-      return this.factorsExpression.get(1).value.toString();
+      return this.factorsExpression.get(1).toPretty();
     });
   }
 
@@ -2560,9 +2560,9 @@ class VectorComponentPanHandle extends PanHandle {
     // console.log("this.expression:", this.expression);
     // console.log("this.originalExpression.unevaluated:", this.originalExpression.get(this.dimension).unevaluated);
     const unevaluated = this.originalExpression.get(this.dimension).unevaluated;
-    console.log("unevaluated:", unevaluated);
+    // console.log("unevaluated:", unevaluated);
     const originalValue = this.originalExpression.get(this.dimension).value;
-    console.log("originalValue:", originalValue);
+    // console.log("originalValue:", originalValue);
 
     let x = parseFloat((originalValue + delta[this.dimension] * (this.owner.hasCenter ? 2 : 1)).toShortFloat());
 
@@ -2572,12 +2572,19 @@ class VectorComponentPanHandle extends PanHandle {
 
     this.expression.set(this.dimension, new ExpressionReal(x));
     if (unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
-      return this.expression.get(this.dimension).toString();
+      return this.expression.get(this.dimension).toPretty();
     } else if (unevaluated instanceof ExpressionAdd &&
                (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
       const right = unevaluated.b.value;
       const left = originalValue - right;
-      return new ExpressionAdd(unevaluated.a, (x - left).toShortFloat()).toString();
+      return new ExpressionAdd(unevaluated.a, new ExpressionReal((x - left).toShortFloat())).toPretty();
+    } else if (unevaluated instanceof ExpressionAdd &&
+               (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
+      const left = unevaluated.a.value;
+      const right = originalValue - left;
+      return new ExpressionAdd(new ExpressionReal((x - right).toShortFloat()), unevaluated.b).toPretty();
+    } else {
+      return new ExpressionAdd(unevaluated, new ExpressionReal((x - originalValue).toShortFloat())).toPretty();
     }
   }
 }
@@ -2596,6 +2603,6 @@ class HorizontalPanHandle extends PanHandle {
 
     this.expression.x = x;
 
-    return this.expression.value.toString();
+    return this.expression.value.toPretty();
   }
 }
