@@ -392,7 +392,10 @@ export function parse(tokens) {
     while (has(Tokens.Circumflex)) {
       let operator = consume();
       let b = expressionMember();
+      console.log("a.where:", a.where);
+      console.log("b.where:", b.where);
       a = new ExpressionPower(a, b, SourceLocation.span(a.where, b.where));
+      console.log("a:", a);
     }
     return a;
   }

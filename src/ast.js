@@ -776,7 +776,11 @@ export class ExpressionSubtract extends ExpressionBinaryOperator {
   evaluate(env, fromTime, toTime) {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.subtract(evalB);
+
+    let difference = evalA.subtract(evalB);
+    difference.unevaluated = this;
+
+    return difference;
   }
 
   isTimeSensitive(env) {
@@ -814,7 +818,11 @@ export class ExpressionDivide extends ExpressionBinaryOperator {
   evaluate(env, fromTime, toTime) {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.divide(evalB);
+
+    let quotient = evalA.divide(evalB);
+    quotient.unevaluated = this;
+
+    return quotient;
   }
 
   isTimeSensitive(env) {
@@ -844,13 +852,17 @@ export class ExpressionRemainder extends ExpressionBinaryOperator {
 
 export class ExpressionPower extends ExpressionBinaryOperator {
   constructor(a, b, where = null, unevaluated = null) {
-    super(a, b, '^', where, unevaluated);
+    super(a, b, '^', Precedence.Power, where, unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
     let evalA = this.a.evaluate(env, fromTime, toTime);
     let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.power(evalB);
+
+    let power = evalA.power(evalB);
+    power.unevaluated = this;
+
+    return power;
   }
 
   isTimeSensitive(env) {
