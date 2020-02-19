@@ -2606,7 +2606,7 @@ class VectorComponentPanHandle extends PanHandle {
     } else if (unevaluated instanceof ExpressionDivide &&
                (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
       const right = unevaluated.b.value;
-      const left = oldValue * right;
+      const left = this.originalExpression.get(this.dimension).prevalues[0].value;
       return new ExpressionDivide(unevaluated.a, new ExpressionReal((left / newValue).toShortFloat())).toPretty();
     } else if (unevaluated instanceof ExpressionDivide &&
                (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {

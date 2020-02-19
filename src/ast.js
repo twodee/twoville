@@ -135,8 +135,9 @@ export class Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionData extends Expression {
-  constructor(type, article, where = null, unevaluated = null) {
+  constructor(type, article, where = null, unevaluated = null, prevalues = null) {
     super(Precedence.Atom, where, unevaluated);
+    this.prevalues = prevalues;
     this.type = type;
     this.article = article;
   }
@@ -149,13 +150,13 @@ export class ExpressionData extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionBoolean extends ExpressionData {
-  constructor(x, where = null) {
-    super('boolean', 'a', where);
+  constructor(x, where = null, unevaluated = null, prevalues = null) {
+    super('boolean', 'a', where, unevaluated, prevalues);
     this.x = x;
   }
 
   clone() {
-    return new ExpressionBoolean(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
+    return new ExpressionBoolean(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -206,13 +207,14 @@ export class ExpressionBoolean extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionInteger extends ExpressionData {
-  constructor(x, where = null, unevaluated = null) {
-    super('integer', 'an', where, unevaluated);
+  constructor(x, where = null, unevaluated = null, prevalues = null) {
+    super('integer', 'an', where, unevaluated, prevalues);
     this.x = x;
   }
 
   clone() {
-    return new ExpressionInteger(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
+    console.log("this.prevalues:", this.prevalues);
+    return new ExpressionInteger(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -356,13 +358,13 @@ export class ExpressionInteger extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionCharacter extends ExpressionData {
-  constructor(x, where = null, unevaluated = null) {
-    super('character', 'a', where, unevaluated);
+  constructor(x, where = null, unevaluated = null, prevalues = null) {
+    super('character', 'a', where, unevaluated, prevalues);
     this.x = x;
   }
 
   clone() {
-    return new ExpressionCharacter(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
+    return new ExpressionCharacter(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -385,8 +387,8 @@ export class ExpressionCharacter extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionString extends ExpressionData {
-  constructor(x, where = null, unevaluated = null) {
-    super('string', 'a', where, unevaluated);
+  constructor(x, where = null, unevaluated = null, prevalues = null) {
+    super('string', 'a', where, unevaluated, prevalues);
     this.x = x;
 
     this.bindings = [];
@@ -403,7 +405,7 @@ export class ExpressionString extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionString(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
+    return new ExpressionString(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -484,8 +486,8 @@ export class ExpressionStringSize extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionReal extends ExpressionData {
-  constructor(x, where = null, unevaluated = null) {
-    super('real', 'a', where, unevaluated);
+  constructor(x, where = null, unevaluated = null, prevalues = null) {
+    super('real', 'a', where, unevaluated, prevalues);
     this.x = x;
   }
 
@@ -494,7 +496,7 @@ export class ExpressionReal extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionReal(this.x, this.where == null ? null : this.where.clone(), this.unevaluated);
+    return new ExpressionReal(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
   toPretty() {
@@ -820,7 +822,9 @@ export class ExpressionDivide extends ExpressionBinaryOperator {
     let evalB = this.b.evaluate(env, fromTime, toTime);
 
     let quotient = evalA.divide(evalB);
+    quotient.prevalues = [evalA, evalB];
     quotient.unevaluated = this;
+    console.log("quotient.clone():", quotient.clone());
 
     return quotient;
   }
@@ -1989,8 +1993,8 @@ export class ExpressionCutout extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVector extends ExpressionData {
-  constructor(elements, where = null, unevaluated = null) {
-    super('vector', 'a', where, unevaluated);
+  constructor(elements, where = null, unevaluated = null, prevalues = null) {
+    super('vector', 'a', where, unevaluated, prevalues);
     this.elements = elements;
     this.bindings = [];
 
@@ -2025,7 +2029,7 @@ export class ExpressionVector extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionVector(this.elements.map(e => e.clone()), this.where == null ? null : this.where.clone(), this.unevaluated);
+    return new ExpressionVector(this.elements.map(e => e.clone()), this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
