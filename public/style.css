@@ -164,10 +164,26 @@ a {
   }
 }
 
-svg .selectable {
+html {
+  cursor: default;
+}
+
+html.cursor-selectable {
   cursor: pointer;
 }
 
-svg .handle {
+html.cursor-pan {
   cursor: move;
+}
+
+html.cursor-horizontal-pan {
+  cursor: ew-resize;
+}
+
+html.cursor-vertical-pan {
+  cursor: ns-resize;
+}
+
+html.cursor-rotate {
+  cursor: wait;
 }

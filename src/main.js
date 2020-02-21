@@ -47,6 +47,7 @@ let spinner;
 let scrubber;
 let timeSpinner;
 let hasTweak;
+let foregroundHandleGroup;
 
 export let env;
 export let isDirty = false;
@@ -301,11 +302,12 @@ function scrubTo(tick) {
   });
 }
 
-export function redraw() {
+export function drawAfterHandling() {
   let t = tickToTime(parseInt(scrubber.value));
   env.shapes.forEach(shape => {
     shape.draw(env, t);
   });
+  scaleCircleHandles();
 }
 
 function animateFrame(i, isLoop = false) {
@@ -435,7 +437,7 @@ export function interpret(isTweak = false) {
     backgroundHandleGroup.setAttributeNS(null, 'id', 'background-handle-group');
     svg.appendChild(backgroundHandleGroup);
 
-    let foregroundHandleGroup = document.createElementNS(svgNamespace, 'g');
+    foregroundHandleGroup = document.createElementNS(svgNamespace, 'g');
     foregroundHandleGroup.setAttributeNS(null, 'id', 'foreground-handle-group');
     svg.appendChild(foregroundHandleGroup);
 
@@ -475,6 +477,8 @@ export function interpret(isTweak = false) {
     if (isTweak) {
       restoreSelection(env.shapes);
     }
+
+    scaleCircleHandles();
   } catch (e) {
     if (e instanceof MessagedException) {
       Messager.log(e.userMessage);
@@ -519,6 +523,14 @@ function syncTitle() {
   // e.stopPropagation();
   // e.preventDefault();
 // });
+
+function scaleCircleHandles() {
+  const matrix = svg.getScreenCTM();
+  const circles = foregroundHandleGroup.querySelectorAll('.handle-circle');
+  for (let circle of circles) {
+    circle.r.baseVal.value = 10 / matrix.a;
+  }
+}
 
 function initialize() {
   editor = ace.edit('editor');
@@ -657,7 +669,8 @@ function initialize() {
     if (env.bounds) {
       mouseAtSvg.x = e.clientX;
       mouseAtSvg.y = e.clientY;
-      let center = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
+      const matrix = svg.getScreenCTM();
+      let center = mouseAtSvg.matrixTransform(matrix.inverse());
 
       let factor = 1 + e.deltaY / 100;
       env.bounds.x = (env.bounds.x - center.x) * factor + center.x;
@@ -665,6 +678,8 @@ function initialize() {
       env.bounds.width *= factor;
       env.bounds.height *= factor;
       setSvgBounds(env.bounds);
+
+      scaleCircleHandles();
     }
   }, {
     passive: true

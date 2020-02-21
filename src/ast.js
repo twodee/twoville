@@ -213,7 +213,6 @@ export class ExpressionInteger extends ExpressionData {
   }
 
   clone() {
-    console.log("this.prevalues:", this.prevalues);
     return new ExpressionInteger(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
@@ -824,7 +823,6 @@ export class ExpressionDivide extends ExpressionBinaryOperator {
     let quotient = evalA.divide(evalB);
     quotient.prevalues = [evalA, evalB];
     quotient.unevaluated = this;
-    console.log("quotient.clone():", quotient.clone());
 
     return quotient;
   }
@@ -958,8 +956,9 @@ export class ExpressionIdentifier extends Expression {
 
 export class ExpressionMemberIdentifier extends ExpressionIdentifier {
   constructor(base, nameToken, where = null, unevaluated = null) {
-    super(Precedence.Property, nameToken, where, unevaluated);
+    super(Precedence.Property, where, unevaluated);
     this.base = base;
+    this.nameToken = nameToken;
   }
 
   evaluate(env, fromTime, toTime) {
@@ -989,6 +988,14 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
     baseValue.bind(this.nameToken.source, rhsValue, fromTime, toTime, rhs);
 
     return rhsValue;
+  }
+
+  isTimeSensitive(env) {
+    return false;
+  }
+
+  toPretty() {
+    return `.${this.nameToken.source}`;
   }
 }
 
@@ -1448,7 +1455,7 @@ export class ExpressionRepeat extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let count = this.count.evaluate(env, fromTime, toTime);
+    let count = this.count.evaluate(env, fromTime, toTime).value;
     let last = null;
     for (let i = 0; i < count; ++i) {
       last = this.body.evaluate(env, fromTime, toTime);

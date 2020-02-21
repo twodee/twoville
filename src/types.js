@@ -11,7 +11,7 @@ import {
   interpret,
   isDirty,
   mouseAtSvg,
-  redraw,
+  drawAfterHandling,
 } from './main.js';
 
 import { 
@@ -146,6 +146,28 @@ export function moveCursor(column, row, shapes) {
       } else if (shape.sourceSpans.some(span => span.contains(column, row))) {
         shape.showHandles();
         selectedShape = shape;
+      }
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+const cursors = [
+  'cursor-selectable',
+  'cursor-pan',
+  'cursor-horizontal-pan',
+  'cursor-vertical-pan',
+  'cursor-rotate',
+];
+
+function situateCursor(element) {
+  document.documentElement.classList.remove(...cursors);
+  if (element) {
+    for (let cursor of cursors) {
+      if (element.classList.contains(cursor)) {
+        document.documentElement.classList.add(cursor);
+        break;
       }
     }
   }
@@ -713,7 +735,7 @@ export class TwovilleTurtle extends TwovilleTimelinedEnvironment {
     this.positionHandle = new VectorPanHandle(this, this, env);
 
     this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
-    this.addForegroundHandle(this.degreesHandle);
+    this.addForegroundHandle(this.degreesHandle, 'cursor-rotate');
 
     let degreesListener = new HandleListener(this, env, this.degreesHandle, () => {
       this.originalDegreesExpression = this.degreesExpression.clone();
@@ -770,7 +792,7 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
 
     this.distanceExpression = null;
     this.distanceHandle = document.createElementNS(svgNamespace, 'circle');
-    this.addForegroundHandle(this.distanceHandle);
+    this.addForegroundHandle(this.distanceHandle, 'cursor-pan');
 
     let listener = new HandleListener(this, env, this.distanceHandle, () => {
       this.originalDistanceExpression = this.distanceExpression.clone();
@@ -796,7 +818,7 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
       }
 
       this.distanceExpression.x = distance;
-      return this.distanceExpression.value.toPretty();
+      return this.distanceExpression.toPretty();
     });
   }
 
@@ -830,7 +852,7 @@ export class TwovilleTurtleTurn extends TwovilleTimelinedEnvironment {
     env.nodes.push(this);
 
     this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
-    this.addForegroundHandle(this.degreesHandle);
+    this.addForegroundHandle(this.degreesHandle, 'cursor-rotate');
 
     let degreesListener = new HandleListener(this, env, this.degreesHandle, () => {
       this.originalDegreesExpression = this.degreesExpression.clone();
@@ -1170,8 +1192,8 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     this.centerHandle = document.createElementNS(svgNamespace, 'circle');
 
     this.addBackgroundHandle(this.circleElement);
-    this.addForegroundHandle(this.positionHandle);
-    this.addForegroundHandle(this.centerHandle);
+    this.addForegroundHandle(this.positionHandle, 'cursor-pan');
+    this.addForegroundHandle(this.centerHandle, 'cursor-pan');
 
     new HandleListener(this, env, this.centerHandle, () => {
       if (this.positionExpression) {
@@ -1230,7 +1252,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
         }
 
         this.degreesExpression.x = degrees;
-        return this.degreesExpression.value.toPretty();
+        return this.degreesExpression.toPretty();
       } else {
         let x = parseFloat((this.originalCenterExpression.get(0).value + delta[0]).toShortFloat());
         let y = parseFloat((this.originalCenterExpression.get(1).value + delta[1]).toShortFloat());
@@ -1427,7 +1449,7 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
     this.pivotHandle = new VectorPanHandle(this, this, env);
 
     this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
-    this.addForegroundHandle(this.degreesHandle);
+    this.addForegroundHandle(this.degreesHandle, 'cursor-rotate');
 
     let degreesListener = new HandleListener(this, env, this.degreesHandle, () => {
       this.originalDegreesExpression = this.degreesExpression.clone();
@@ -1522,8 +1544,8 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
       document.createElementNS(svgNamespace, 'circle'),
     ];
 
-    this.addForegroundHandle(this.scaleHandles[0]);
-    this.addForegroundHandle(this.scaleHandles[1]);
+    this.addForegroundHandle(this.scaleHandles[0], 'cursor-horizontal-pan');
+    this.addForegroundHandle(this.scaleHandles[1], 'cursor-vertical-pan');
 
     new HandleListener(this, env, this.scaleHandles[0], () => {
       this.originalFactorsExpression = this.factorsExpression.clone();
@@ -2044,6 +2066,7 @@ class HandleListener {
       interpret(true);
       isHandling = false;
       endTweaking();
+      situateCursor(e.toElement);
     }
 
     this.mouseMove = e => {
@@ -2055,7 +2078,7 @@ class HandleListener {
         tweak(replacement);
         e.stopPropagation();
 
-        redraw();
+        drawAfterHandling();
       }
     }
 
@@ -2335,12 +2358,28 @@ let handleMixin = {
     this.sourceSpans = [];
   },
 
-  addHandle(element, isForeground = false) {
+  addHandle(element, isForeground = false, cursor = null) {
     element.classList.add(`element-${this.id}-group`);
+    if (cursor) {
+      element.classList.add(cursor);
+    }
+
+    // Only update cursor if no mouse button is down.
+    element.addEventListener('mouseenter', event => {
+      if (event.buttons === 0) {
+        situateCursor(event.toElement);
+      }
+    });
+
     element.addEventListener('mouseleave', event => {
       event.stopPropagation();
+
       if ((this.backgroundHandleParentElement || this.foregroundHandleParentElement) && selectedShape != this.elementToSelect && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
         this.hideHandles();
+      }
+
+      if (event.buttons === 0) {
+        situateCursor(event.toElement);
       }
     });
 
@@ -2351,12 +2390,12 @@ let handleMixin = {
     }
   },
 
-  addForegroundHandle(element) {
-    this.addHandle(element, true);
+  addForegroundHandle(element, cursor) {
+    this.addHandle(element, true, cursor);
   },
 
   addBackgroundHandle(element) {
-    this.addHandle(element, false);
+    this.addHandle(element, false, 'cursor-selectable');
   },
 
   showHandles() {
@@ -2395,7 +2434,7 @@ let handleMixin = {
 
   registerClickHandler() {
     this.svgElement.classList.add(`element-${this.id}-group`);
-    this.svgElement.classList.add('selectable');
+    this.svgElement.classList.add('cursor-selectable');
 
     this.svgElement.addEventListener('click', event => {
       // The parent SVG also listens for clicks and deselects. We don't want the
@@ -2417,6 +2456,10 @@ let handleMixin = {
       if (this != selectedShape && !isDirty && (this.backgroundHandleParentElement || this.foregroundHandleParentElement)) {
         this.showHandles();
       }
+
+      if (event.buttons === 0) {
+        situateCursor(event.toElement);
+      }
     });
 
     this.svgElement.addEventListener('mouseleave', event => {
@@ -2432,6 +2475,10 @@ let handleMixin = {
       //  we are rolling to something that's not a handle)
       if ((this.backgroundHandleParentElement || this.foregroundHandleParentElement) && selectedShape != this && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
         this.hideHandles();
+      }
+
+      if (event.buttons === 0) {
+        situateCursor(event.toElement);
       }
     });
   },
@@ -2458,6 +2505,12 @@ function setVertexHandleAttributes(handle, position, bounds) {
   handle.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
   handle.setAttributeNS(null, 'r', 0.3);
   setCommonHandleProperties(handle);
+
+  // Non-scaling-size is not supported. :( Looks like I'll have to do
+  // this myself.
+  // handle.setAttributeNS(null, 'vector-effect', 'non-scaling-size');
+  handle.classList.add('handle-circle');
+
   handle.setAttributeNS(null, 'fill', 'black');
 }
 
@@ -2497,12 +2550,12 @@ function setCommonHandleProperties(handle) {
 // --------------------------------------------------------------------------- 
 
 class PanHandle {
-  constructor(owner, handleOwner, selectElement) {
+  constructor(owner, handleOwner, selectElement, cursor) {
     this.owner = owner;
     this.expression = null;
 
     this.element = document.createElementNS(svgNamespace, 'circle');
-    handleOwner.addForegroundHandle(this.element);
+    handleOwner.addForegroundHandle(this.element, cursor);
 
     let listener = new HandleListener(handleOwner, selectElement, this.element, () => {
       this.originalExpression = this.expression.clone();
@@ -2530,7 +2583,7 @@ class PanHandle {
 
 class VectorPanHandle extends PanHandle {
   constructor(owner, handleOwner, selectElement) {
-    super(owner, handleOwner, selectElement);
+    super(owner, handleOwner, selectElement, 'cursor-pan');
   }
 
   updateProgram(delta, isShiftModified) {
@@ -2551,7 +2604,7 @@ class VectorPanHandle extends PanHandle {
 
 class VectorComponentPanHandle extends PanHandle {
   constructor(owner, handleOwner, selectElement, dimension) {
-    super(owner, handleOwner, selectElement);
+    super(owner, handleOwner, selectElement, dimension == 0 ? 'cursor-horizontal-pan' : 'cursor-vertical-pan');
     this.dimension = dimension;
   }
 
@@ -2631,7 +2684,7 @@ class VectorComponentPanHandle extends PanHandle {
 
 class HorizontalPanHandle extends PanHandle {
   constructor(owner, handleOwner, selectElement) {
-    super(owner, handleOwner, selectElement);
+    super(owner, handleOwner, selectElement, 'horizontal-pan');
   }
 
   updateProgram(delta, isShiftModified) {
@@ -2643,6 +2696,6 @@ class HorizontalPanHandle extends PanHandle {
 
     this.expression.x = x;
 
-    return this.expression.value.toPretty();
+    return this.expression.toPretty();
   }
 }
