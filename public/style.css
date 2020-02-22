@@ -173,17 +173,17 @@ html.cursor-selectable {
 }
 
 html.cursor-pan {
-  cursor: move;
+  cursor: url(cursor_pan.svg) 16 16, move;
 }
 
 html.cursor-horizontal-pan {
-  cursor: ew-resize;
+  cursor: url(cursor_horizontal_pan.svg) 16 5, ew-resize;
 }
 
 html.cursor-vertical-pan {
-  cursor: ns-resize;
+  cursor: url(cursor_vertical_pan.svg) 5 16, ns-resize;
 }
 
 html.cursor-rotate {
-  cursor: wait;
+  cursor: url(cursor_rotate.svg) 16 16, wait;
 }

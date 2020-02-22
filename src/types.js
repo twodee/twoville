@@ -166,6 +166,7 @@ function situateCursor(element) {
   if (element) {
     for (let cursor of cursors) {
       if (element.classList.contains(cursor)) {
+        console.log("cursor:", cursor);
         document.documentElement.classList.add(cursor);
         break;
       }
@@ -1342,7 +1343,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     this.assertProperty('degrees');
     let degrees = this.valueAt(env, 'degrees', t);
     this.degreesExpression = degrees;
-    let radians = degrees * Math.PI / 180;
+    let radians = degrees.value * Math.PI / 180;
 
     let isDelta = false;
     if (this.has('delta')) {
@@ -1354,6 +1355,9 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
       center = this.valueAt(env, 'center', t);
       this.positionExpression = null;
 
+      this.positionHandle.classList.remove('cursor-pan');
+      this.positionHandle.classList.add('cursor-rotate');
+
       if (isDelta) {
         center = center.add(fromTurtle.position);
       }
@@ -1361,6 +1365,9 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
       let toPosition = this.valueAt(env, 'position', t);
       this.positionExpression = toPosition;
       this.centerExpression = null;
+
+      this.positionHandle.classList.remove('cursor-rotate');
+      this.positionHandle.classList.add('cursor-pan');
 
       if (isDelta) {
         toPosition = fromTurtle.position.add(toPosition);
@@ -1404,6 +1411,7 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     this.circleElement.setAttributeNS(null, 'stroke-width', 1);
     this.circleElement.setAttributeNS(null, 'stroke-dasharray', '2 2');
     this.circleElement.classList.add('handle');
+
 
     setVertexHandleAttributes(this.centerHandle, center, env.bounds);
     setVertexHandleAttributes(this.positionHandle, to, env.bounds);
