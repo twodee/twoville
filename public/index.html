@@ -10,12 +10,14 @@
 <body>
 
 <div id="container">
-  <div id="left" class="resizable-right">
+  <div id="left">
     <div id="editor" draggable="false"></div>
-    <div id="messagerContainer" class="resizable-top">
+    <div id="editor-messager-resizer" class="height-resizer resizer"></div>
+    <div id="messagerContainer">
       <div id="messager"></div>
     </div>
   </div>
+  <div id="left-right-resizer" class="width-resizer resizer"></div>
   <div id="canvas" draggable="false">
     <div id="right">
       <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>

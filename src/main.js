@@ -142,86 +142,6 @@ export function endTweaking() {
   hasTweak = false;
 }
 
-function registerResizeListener(bounds, gap, resize) {
-  let unlistener = (event) => {
-    document.removeEventListener('mousemove', moveListener);
-    document.removeEventListener('mouseup', unlistener);
-    document.removeEventListener('mousedown', unlistener);
-  };
-  let moveListener = (event) => {
-    event.preventDefault();
-    if (event.buttons !== 1) {
-      unlistener();
-    } else {
-      resize(event, bounds, gap);
-      editor.resize();
-    }
-  }
-  document.addEventListener('mousemove', moveListener, false);
-  document.addEventListener('mouseup', unlistener, false);
-  document.addEventListener('mousedown', unlistener, false);
-}
-
-function buildResizer(side, element) {
-  let measureGap;
-  let resize;
-
-  if (side === 'right') {
-    measureGap = (event, bounds) => event.clientX - bounds.right;
-    resize = (event, bounds, gap) => {
-      let width = event.clientX - bounds.x - gap;
-      element.style.width = width + 'px';
-    };
-  } else if (side === 'left') {
-    measureGap = (event, bounds) => event.clientX - bounds.left;
-    resize = (event, bounds, gap) => {
-      let width = bounds.right - event.clientX - gap;
-      element.style.width = width + 'px';
-    };
-  } else if (side === 'top') {
-    measureGap = (event, bounds) => event.clientY - bounds.top;
-    resize = (event, bounds, gap) => {
-      let height = bounds.bottom - event.clientY;
-      messagerContainer.style.height = height + 'px';
-    };
-  } else if (side === 'bottom') {
-    measureGap = (event, bounds) => event.clientY - bounds.bottom;
-    resize = (event, bounds, gap) => {
-      let height = bounds.bottom - event.clientY;
-      messagerContainer.style.height = height + 'px';
-    };
-  } else {
-    throw 'Resizing ' + side + ' not supported yet.';
-  }
-
-  return (event) => {
-    if (event.buttons === 1) {
-      event.stopPropagation();
-      event.preventDefault();
-      let bounds = element.getBoundingClientRect();
-      let gap = measureGap(event, bounds);
-      registerResizeListener(bounds, gap, resize);
-    }
-  }
-}
-
-let directions = {
-  horizontal: ['right', 'left'],
-  vertical: ['top', 'bottom']
-};
-for (let direction in directions) {
-  let sides = directions[direction];
-  sides.forEach(side => {
-    let resizables = document.querySelectorAll('.resizable-' + side);
-    resizables.forEach(resizable => {
-      let div = document.createElement('div');
-      div.classList.add('resizer', 'resizer-' + direction, 'resizer-' + side);
-      resizable.appendChild(div);
-      div.addEventListener('mousedown', buildResizer(side, resizable));
-    });
-  });
-}
-
 // --------------------------------------------------------------------------- 
 
 function startSpinning() {
@@ -706,6 +626,56 @@ function initialize() {
       }
     }
   }
+
+  const generateHeightResizer = resizer => {
+    const onMouseMove = e => {
+      const parentPanel = resizer.parentNode;
+      const bounds = resizer.parentNode.getBoundingClientRect();
+      const relativeY = e.clientY - bounds.y;
+      parentPanel.children[0].style['height'] = `${relativeY - 4}px`;
+      parentPanel.children[2].style['height'] = `${bounds.height - (relativeY + 4)}px`;
+      editor.resize();
+      e.preventDefault();
+    };
+
+    const onMouseDown = e => {
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', () => {
+        document.removeEventListener('mousemove', onMouseMove);
+      });
+      e.preventDefault();
+    };
+
+    return onMouseDown;
+  }
+
+  const generateWidthResizer = resizer => {
+    const onMouseMove = e => {
+      const parentPanel = resizer.parentNode;
+      const bounds = resizer.parentNode.getBoundingClientRect();
+      const relativeX = e.clientX - bounds.x;
+      parentPanel.children[0].style['width'] = `${relativeX - 4}px`;
+      parentPanel.children[2].style['width'] = `${bounds.height - (relativeX + 4)}px`;
+      editor.resize();
+      e.preventDefault();
+    };
+
+    const onMouseDown = e => {
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', () => {
+        document.removeEventListener('mousemove', onMouseMove);
+      });
+      e.preventDefault();
+    };
+
+    return onMouseDown;
+  }
+
+  const editorMessagerResizer = document.getElementById('editor-messager-resizer');
+  editorMessagerResizer.addEventListener('mousedown', generateHeightResizer(editorMessagerResizer)); 
+
+  const leftRightResizer = document.getElementById('left-right-resizer');
+  leftRightResizer.addEventListener('mousedown', generateWidthResizer(leftRightResizer)); 
 }
 
 window.addEventListener('load', initialize);

@@ -166,7 +166,6 @@ function situateCursor(element) {
   if (element) {
     for (let cursor of cursors) {
       if (element.classList.contains(cursor)) {
-        console.log("cursor:", cursor);
         document.documentElement.classList.add(cursor);
         break;
       }
@@ -2677,8 +2676,16 @@ class VectorComponentPanHandle extends PanHandle {
     } else if (unevaluated instanceof ExpressionPower &&
                (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
       const right = unevaluated.b.value;
-      const left = Math.pow(oldValue, 1 / right);
-      return new ExpressionPower(unevaluated.a, new ExpressionReal((Math.log(newValue) / Math.log(left)).toShortFloat())).toPretty();
+      const left = this.originalExpression.get(this.dimension).prevalues[0];
+      // const left = Math.pow(oldValue, 1 / right);
+
+      // If the left operand is 1, there's no hope of raising it to any value.
+      if ((left instanceof ExpressionInteger && left.value === 1) ||
+          (left instanceof ExpressionReal && Math.abs(left.value - 1) < 0.001)) {
+        return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat())).toPretty();
+      } else {
+        return new ExpressionPower(unevaluated.a, new ExpressionReal((Math.log(newValue) / Math.log(left)).toShortFloat())).toPretty();
+      }
     } else if (unevaluated instanceof ExpressionPower &&
                (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
       const left = unevaluated.a.value;

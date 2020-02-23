@@ -27,51 +27,53 @@ body {
   height: 100%;
 }
 
-.resizer {
+/* .resizer { */
   /* background-color: yellow; */
-  position: absolute;
-  z-index: 1000000000;
-}
+  /* position: absolute; */
+  /* z-index: 1000000000; */
+/* } */
 
-.resizer-horizontal {
-  width: 20px;
-  top: 0;
-  bottom: 0;
-  cursor: col-resize;
-}
+/* .resizer-horizontal { */
+  /* width: 20px; */
+  /* top: 0; */
+  /* bottom: 0; */
+  /* cursor: col-resize; */
+/* } */
 
-.resizer-vertical {
-  height: 20px;
-  left: 0;
-  right: 0;
-  cursor: row-resize;
-}
+/* .resizer-vertical { */
+  /* height: 20px; */
+  /* left: 0; */
+  /* right: 0; */
+  /* cursor: row-resize; */
+/* } */
 
-.resizer-right {
-  right: -10px;
-}
+/* .resizer-right { */
+  /* right: -10px; */
+/* } */
 
-.resizer-top {
-  top: -10px;
-}
+/* .resizer-top { */
+  /* top: -10px; */
+/* } */
 
-.resizer-bottom {
-  bottom: -10px;
-}
+/* .resizer-bottom { */
+  /* bottom: -10px; */
+/* } */
 
 #left {
-  position: relative;
+  /* position: relative; */
   min-width: 200px;
   width: 400px;
   height: 100%;
+
   display: flex;
   flex-direction: column;
 }
 
 #messagerContainer {
   /* Must be relative to anchor resizer. */
-  position: relative;
+  /* position: relative; */
 
+  flex: 0 1 auto;
   background-color: #333333;
   color: #CCCCCC;
   height: 200px;
@@ -88,7 +90,8 @@ body {
 
 #editor {
   /* border: 2px solid red; */
-  flex: 1;
+  /* flex: 1; */
+  flex: 1 1 auto;
   width: 100%;
   min-height: 200px;
 }
@@ -186,4 +189,25 @@ html.cursor-vertical-pan {
 
 html.cursor-rotate {
   cursor: url(cursor_rotate.svg) 16 16, wait;
+}
+
+.resizer {
+  background-color: white;
+  background-color: rgb(50, 50, 50);
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 0 0 8px;
+}
+
+.height-resizer {
+  background-image: url('horizontal_bars.png');
+  cursor: row-resize;
+}
+
+.width-resizer {
+  background-image: url('vertical_bars.png');
+  cursor: col-resize;
 }

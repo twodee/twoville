@@ -618,9 +618,9 @@ export class ExpressionSame extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.isSame(evalB);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    return evaluatedA.isSame(evaluatedB);
   }
 
   isTimeSensitive(env) {
@@ -638,9 +638,9 @@ export class ExpressionNotSame extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
-    return !evalA.isSame(evalB);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    return !evaluatedA.isSame(evaluatedB);
   }
 
   isTimeSensitive(env) {
@@ -658,9 +658,9 @@ export class ExpressionLess extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.isLess(evalB);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    return evaluatedA.isLess(evaluatedB);
   }
 
   isTimeSensitive(env) {
@@ -678,9 +678,9 @@ export class ExpressionLessEqual extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.isLess(evalB) || evalA.isSame(evalB);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    return evaluatedA.isLess(evaluatedB) || evaluatedA.isSame(evaluatedB);
   }
 
   isTimeSensitive(env) {
@@ -698,9 +698,9 @@ export class ExpressionMore extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.isMore(evalB);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    return evaluatedA.isMore(evaluatedB);
   }
 
   isTimeSensitive(env) {
@@ -718,9 +718,9 @@ export class ExpressionMoreEqual extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.isMore(evalB) || evalA.isSame(evalB);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    return evaluatedA.isMore(evaluatedB) || evaluatedA.isSame(evaluatedB);
   }
 
   isTimeSensitive(env) {
@@ -753,10 +753,10 @@ export class ExpressionAdd extends ExpressionBinaryOperator {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
 
-    let sum = evalA.add(evalB);
+    let sum = evaluatedA.add(evaluatedB);
     sum.unevaluated = this;
 
     return sum;
@@ -775,10 +775,10 @@ export class ExpressionSubtract extends ExpressionBinaryOperator {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
 
-    let difference = evalA.subtract(evalB);
+    let difference = evaluatedA.subtract(evaluatedB);
     difference.unevaluated = this;
 
     return difference;
@@ -797,9 +797,9 @@ export class ExpressionMultiply extends ExpressionBinaryOperator {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
-    let product = evalA.multiply(evalB);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    let product = evaluatedA.multiply(evaluatedB);
     product.unevaluated = this;
     return product;
   }
@@ -817,11 +817,11 @@ export class ExpressionDivide extends ExpressionBinaryOperator {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
 
-    let quotient = evalA.divide(evalB);
-    quotient.prevalues = [evalA, evalB];
+    let quotient = evaluatedA.divide(evaluatedB);
+    quotient.prevalues = [evaluatedA, evaluatedB];
     quotient.unevaluated = this;
 
     return quotient;
@@ -840,9 +840,9 @@ export class ExpressionRemainder extends ExpressionBinaryOperator {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
-    return evalA.remainder(evalB);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    return evaluatedA.remainder(evaluatedB);
   }
 
   isTimeSensitive(env) {
@@ -858,10 +858,11 @@ export class ExpressionPower extends ExpressionBinaryOperator {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    let evalB = this.b.evaluate(env, fromTime, toTime);
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
 
-    let power = evalA.power(evalB);
+    let power = evaluatedA.power(evaluatedB);
+    power.prevalues = [evaluatedA, evaluatedB];
     power.unevaluated = this;
 
     return power;
@@ -881,8 +882,8 @@ export class ExpressionNegative extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let evalA = this.a.evaluate(env, fromTime, toTime);
-    return evalA.negative();
+    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    return evaluatedA.negative();
   }
 
   isTimeSensitive(env) {
