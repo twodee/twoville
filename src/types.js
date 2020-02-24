@@ -2620,97 +2620,107 @@ class VectorComponentPanHandle extends PanHandle {
   }
 
   updateProgram(delta, isShiftModified) {
-    const unevaluated = this.originalExpression.get(this.dimension).unevaluated;
-    const oldValue = this.originalExpression.get(this.dimension).value;
+    const oldExpression = this.originalExpression.get(this.dimension);
+    const unevaluated = oldExpression.unevaluated;
+    const oldValue = oldExpression.value;
 
     let newValue = parseFloat((oldValue + delta[this.dimension] * (this.owner.hasCenter ? 2 : 1)).toShortFloat());
-
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
+    const newExpression = new ExpressionReal(newValue);
 
-    this.expression.set(this.dimension, new ExpressionReal(newValue));
+    this.expression.set(this.dimension, newExpression);
+    return manipulateSource(oldExpression, newExpression);
+  }
+}
 
-    if (unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
-      return this.expression.get(this.dimension).toPretty();
-    } else if (unevaluated instanceof ExpressionAdd &&
-               (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-      const right = unevaluated.b.value;
-      const left = oldValue - right;
-      return new ExpressionAdd(unevaluated.a, new ExpressionReal((newValue - left).toShortFloat())).toPretty();
-    } else if (unevaluated instanceof ExpressionAdd &&
-               (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-      const left = unevaluated.a.value;
-      const right = oldValue - left;
-      return new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat()), unevaluated.b).toPretty();
-    } else if (unevaluated instanceof ExpressionSubtract &&
-               (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-      const right = unevaluated.b.value;
-      const left = oldValue + right;
-      return new ExpressionSubtract(unevaluated.a, new ExpressionReal((left - newValue).toShortFloat())).toPretty();
-    } else if (unevaluated instanceof ExpressionSubtract &&
-               (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-      const left = unevaluated.a.value;
-      const right = left - oldValue;
-      return new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat()), unevaluated.b).toPretty();
-    } else if (unevaluated instanceof ExpressionMultiply &&
-               (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-      const right = unevaluated.b.value;
-      const left = oldValue / right;
-      return new ExpressionMultiply(unevaluated.a, new ExpressionReal((newValue / left).toShortFloat())).toPretty();
-    } else if (unevaluated instanceof ExpressionMultiply &&
-               (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-      const left = unevaluated.a.value;
-      const right = oldValue / left;
-      return new ExpressionMultiply(new ExpressionReal((newValue / right).toShortFloat()), unevaluated.b).toPretty();
-    } else if (unevaluated instanceof ExpressionDivide &&
-               (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-      const right = unevaluated.b.value;
-      const left = this.originalExpression.get(this.dimension).prevalues[0].value;
-      return new ExpressionDivide(unevaluated.a, new ExpressionReal((left / newValue).toShortFloat())).toPretty();
-    } else if (unevaluated instanceof ExpressionDivide &&
-               (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-      const left = unevaluated.a.value;
-      const right = left / oldValue;
-      return new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat()), unevaluated.b).toPretty();
-    } else if (unevaluated instanceof ExpressionPower &&
-               (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-      const right = unevaluated.b.value;
-      const left = this.originalExpression.get(this.dimension).prevalues[0];
-      // const left = Math.pow(oldValue, 1 / right);
+function manipulateSource(oldExpression, newExpression) {
+  const unevaluated = oldExpression.unevaluated;
+  const oldValue = oldExpression.value;
+  const newValue = newExpression.value;
 
-      // If the left operand is 1, there's no hope of raising it to any value.
-      if ((left instanceof ExpressionInteger && left.value === 1) ||
-          (left instanceof ExpressionReal && Math.abs(left.value - 1) < 0.001)) {
-        return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat())).toPretty();
-      } else {
-        return new ExpressionPower(unevaluated.a, new ExpressionReal((Math.log(newValue) / Math.log(left)).toShortFloat())).toPretty();
-      }
-    } else if (unevaluated instanceof ExpressionPower &&
-               (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-      const left = unevaluated.a.value;
-      const right = Math.log(oldValue) / Math.log(left);
-      return new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat()), unevaluated.b).toPretty();
-    } else {
+  if (unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
+    return newExpression.toPretty();
+  } else if (unevaluated instanceof ExpressionAdd &&
+             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
+    const right = unevaluated.b.value;
+    const left = oldValue - right;
+    return new ExpressionAdd(unevaluated.a, new ExpressionReal((newValue - left).toShortFloat())).toPretty();
+  } else if (unevaluated instanceof ExpressionAdd &&
+             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
+    const left = unevaluated.a.value;
+    const right = oldValue - left;
+    return new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat()), unevaluated.b).toPretty();
+  } else if (unevaluated instanceof ExpressionSubtract &&
+             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
+    const right = unevaluated.b.value;
+    const left = oldValue + right;
+    return new ExpressionSubtract(unevaluated.a, new ExpressionReal((left - newValue).toShortFloat())).toPretty();
+  } else if (unevaluated instanceof ExpressionSubtract &&
+             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
+    const left = unevaluated.a.value;
+    const right = left - oldValue;
+    return new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat()), unevaluated.b).toPretty();
+  } else if (unevaluated instanceof ExpressionMultiply &&
+             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
+    const right = unevaluated.b.value;
+    const left = oldValue / right;
+    return new ExpressionMultiply(unevaluated.a, new ExpressionReal((newValue / left).toShortFloat())).toPretty();
+  } else if (unevaluated instanceof ExpressionMultiply &&
+             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
+    const left = unevaluated.a.value;
+    const right = oldValue / left;
+    return new ExpressionMultiply(new ExpressionReal((newValue / right).toShortFloat()), unevaluated.b).toPretty();
+  } else if (unevaluated instanceof ExpressionDivide &&
+             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
+    const right = unevaluated.b.value;
+    const left = oldExpression.prevalues[0].value;
+    return new ExpressionDivide(unevaluated.a, new ExpressionReal((left / newValue).toShortFloat())).toPretty();
+  } else if (unevaluated instanceof ExpressionDivide &&
+             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
+    const left = unevaluated.a.value;
+    const right = left / oldValue;
+    return new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat()), unevaluated.b).toPretty();
+  } else if (unevaluated instanceof ExpressionPower &&
+             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
+    const right = unevaluated.b.value;
+    const left = oldExpression.prevalues[0];
+    // const left = Math.pow(oldValue, 1 / right);
+
+    // If the left operand is 1, there's no hope of raising it to any value.
+    if ((left instanceof ExpressionInteger && left.value === 1) ||
+        (left instanceof ExpressionReal && Math.abs(left.value - 1) < 0.001)) {
       return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat())).toPretty();
+    } else {
+      return new ExpressionPower(unevaluated.a, new ExpressionReal((Math.log(newValue) / Math.log(left.value)).toShortFloat())).toPretty();
     }
+  } else if (unevaluated instanceof ExpressionPower &&
+             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
+    const left = unevaluated.a.value;
+    const right = Math.log(oldValue) / Math.log(left);
+    return new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat()), unevaluated.b).toPretty();
+  } else {
+    return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat())).toPretty();
   }
 }
 
 class HorizontalPanHandle extends PanHandle {
   constructor(owner, handleOwner, selectElement) {
-    super(owner, handleOwner, selectElement, 'horizontal-pan');
+    super(owner, handleOwner, selectElement, 'cursor-horizontal-pan');
   }
 
   updateProgram(delta, isShiftModified) {
-    let x = parseFloat((this.originalExpression.value + delta[0]).toShortFloat());
+    const oldExpression = this.originalExpression;
+    const unevaluated = oldExpression.unevaluated;
+    const oldValue = oldExpression.value;
 
+    let newValue = parseFloat((oldValue + delta[0]).toShortFloat());
     if (isShiftModified) {
-      x = Math.round(x);
+      newValue = Math.round(newValue);
     }
 
-    this.expression.x = x;
-
-    return this.expression.toPretty();
+    this.expression.x = newValue;
+    return manipulateSource(oldExpression, this.expression);
   }
 }
