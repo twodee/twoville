@@ -1278,6 +1278,8 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
         return this.degreesExpression.where;
       }
     }, (delta, isShiftModified, mouseAt) => {
+
+      // Position is defined, not center.
       if (this.positionExpression) {
         let x = parseFloat((this.originalPositionExpression.get(0).value + delta[0]).toShortFloat());
         let y = parseFloat((this.originalPositionExpression.get(1).value + delta[1]).toShortFloat());
@@ -1291,7 +1293,10 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
         this.positionExpression.set(1, new ExpressionReal(y));
 
         return '[' + this.positionExpression.get(0).value + ', ' + this.positionExpression.get(1).value + ']';
-      } else {
+      }
+
+      // Center is defined, not position.
+      else {
         // Find vector from center to root position.
         let centerToRoot = this.rootPosition.subtract(this.centerExpression).normalize();
 
@@ -1313,6 +1318,10 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
         let signedArea = rootToCenter.get(0).value * rootToMouse.get(1).value - rootToCenter.get(1).value * rootToMouse.get(0).value;
         if (signedArea > 0) {
           degrees = 360 - degrees;
+        }
+
+        if (this.originalDegreesExpression.value < 0) {
+          degrees -= 360;
         }
 
         degrees = parseFloat(degrees.toShortFloat())

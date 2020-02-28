@@ -1077,7 +1077,7 @@ export class ExpressionFunctionCall extends Expression {
 
 export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
   constructor(host, nameToken, actuals, where = null, unevaluated = null) {
-    super(Precedence.Call, nameToken, actuals, where, unevaluated);
+    super(nameToken, actuals, where, unevaluated);
     this.host = host;
   }
 
