@@ -217,15 +217,15 @@ function scrubTo(tick) {
   let t = tickToTime(tick);
   timeSpinner.value = t;
   scrubber.value = tick;
-  env.shapes.forEach(shape => {
-    shape.draw(env, t);
+  env.drawables.forEach(drawable => {
+    drawable.draw(env, t, env.bounds);
   });
 }
 
 export function drawAfterHandling() {
   let t = tickToTime(parseInt(scrubber.value));
-  env.shapes.forEach(shape => {
-    shape.draw(env, t);
+  env.drawables.forEach(drawable => {
+    drawable.draw(env, t, env.bounds);
   });
   scaleCircleHandles();
 }
@@ -395,7 +395,7 @@ export function interpret(isTweak = false) {
     isDirty = false;
 
     if (isTweak) {
-      restoreSelection(env.shapes);
+      restoreSelection(env.drawables);
     }
 
     scaleCircleHandles();
@@ -482,9 +482,9 @@ function initialize() {
   editor.getSession().on('change', onSourceChanged);
   editor.getSession().setMode("ace/mode/twoville");
   editor.getSession().selection.on('changeCursor', () => {
-    if (env && env.shapes) {
+    if (env && env.drawables) {
       const cursor = editor.getCursorPosition();
-      moveCursor(cursor.column, cursor.row, env.shapes);
+      moveCursor(cursor.column, cursor.row, env.drawables);
     }
   });
 
@@ -527,7 +527,7 @@ function initialize() {
         if (i >= scrubber.max) {
           gif.render();
         } else {
-          env.shapes.forEach(shape => shape.draw(env, i));
+          env.drawables.forEach(drawable => drawable.draw(env, i, env.bounds));
 
           let data = new XMLSerializer().serializeToString(svg);
           let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});

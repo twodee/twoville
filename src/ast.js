@@ -883,7 +883,11 @@ export class ExpressionNegative extends Expression {
 
   evaluate(env, fromTime, toTime) {
     let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    return evaluatedA.negative();
+
+    let negation = evaluatedA.negative();
+    negation.unevaluated = this;
+
+    return negation;
   }
 
   isTimeSensitive(env) {
@@ -1533,7 +1537,6 @@ export class ExpressionRectangle extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     let r = new TwovilleRectangle(env, callExpression);
-    env.shapes.push(r);
     return r;
   }
 }
@@ -1716,9 +1719,7 @@ export class ExpressionLine extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let r = new TwovilleLine(env, callExpression);
-    env.shapes.push(r);
-    return r;
+    return new TwovilleLine(env, callExpression);
   }
 }
 
@@ -1730,9 +1731,7 @@ export class ExpressionPolygon extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let r = new TwovillePolygon(env, callExpression);
-    env.shapes.push(r);
-    return r;
+    return new TwovillePolygon(env, callExpression);
   }
 }
 
@@ -1744,9 +1743,7 @@ export class ExpressionUngon extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let r = new TwovilleUngon(env, callExpression);
-    env.shapes.push(r);
-    return r;
+    return new TwovilleUngon(env, callExpression);
   }
 }
 
@@ -1758,9 +1755,7 @@ export class ExpressionPolyline extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let r = new TwovillePolyline(env, callExpression);
-    env.shapes.push(r);
-    return r;
+    return new TwovillePolyline(env, callExpression);
   }
 }
 
@@ -1772,9 +1767,7 @@ export class ExpressionPath extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let r = new TwovillePath(env, callExpression);
-    env.shapes.push(r);
-    return r;
+    return new TwovillePath(env, callExpression);
   }
 }
 
@@ -1786,9 +1779,7 @@ export class ExpressionLabel extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let r = new TwovilleLabel(env, callExpression);
-    env.shapes.push(r);
-    return r;
+    return new TwovilleLabel(env, callExpression);
   }
 }
 
@@ -1800,9 +1791,7 @@ export class ExpressionCircle extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let c = new TwovilleCircle(env, callExpression);
-    env.shapes.push(c);
-    return c;
+    return new TwovilleCircle(env, callExpression);
   }
 }
 
@@ -1901,6 +1890,20 @@ export class ExpressionTangent extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionArcCosine extends Expression {
+  constructor() {
+    super(Precedence.Call, null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let ratio = env.get('ratio').value;
+    let angle = Math.acos(ratio) * 180 / Math.PI;
+    return new ExpressionReal(angle);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionArcSine extends Expression {
   constructor() {
     super(Precedence.Call, null);
@@ -1909,6 +1912,35 @@ export class ExpressionArcSine extends Expression {
   evaluate(env, fromTime, toTime, callExpression) {
     let ratio = env.get('ratio').value;
     let angle = Math.asin(ratio) * 180 / Math.PI;
+    return new ExpressionReal(angle);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionHypotenuse extends Expression {
+  constructor() {
+    super(Precedence.Call, null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let a = env.get('a').value;
+    let b = env.get('b').value;
+    let hypotenuse = Math.sqrt(a * a + b * b);
+    return new ExpressionReal(hypotenuse);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionArcTangent extends Expression {
+  constructor() {
+    super(Precedence.Call, null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let ratio = env.get('ratio').value;
+    let angle = Math.atan(ratio) * 180 / Math.PI;
     return new ExpressionReal(angle);
   }
 }
@@ -1950,9 +1982,7 @@ export class ExpressionGroup extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let group = new TwovilleGroup(env, callExpression);
-    env.shapes.push(group);
-    return group;
+    return new TwovilleGroup(env, callExpression);
   }
 }
 
@@ -1964,9 +1994,7 @@ export class ExpressionMarker extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let marker = new TwovilleMarker(env, callExpression);
-    env.shapes.push(marker);
-    return marker;
+    return new TwovilleMarker(env, callExpression);
   }
 }
 
@@ -1978,9 +2006,7 @@ export class ExpressionMask extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let mask = new TwovilleMask(env, callExpression);
-    env.shapes.push(mask);
-    return mask;
+    return new TwovilleMask(env, callExpression);
   }
 }
 
@@ -1992,9 +2018,7 @@ export class ExpressionCutout extends Expression {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    let cutout = new TwovilleCutout(env, callExpression);
-    env.shapes.push(cutout);
-    return cutout;
+    return new TwovilleCutout(env, callExpression);
   }
 }
 
