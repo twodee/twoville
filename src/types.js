@@ -10,6 +10,9 @@ import {
   tweak,
   interpret,
   isDirty,
+  isDraggingHandle,
+  startDragging,
+  stopDragging,
   mouseAtSvg,
   drawAfterHandling,
 } from './main.js';
@@ -20,6 +23,7 @@ import {
   ExpressionArcCosine,
   ExpressionArcSine,
   ExpressionArcTangent,
+  ExpressionArcTangent2,
   ExpressionBoolean,
   ExpressionCircle,
   ExpressionCosine,
@@ -76,7 +80,6 @@ import {
 export let svgNamespace = "http://www.w3.org/2000/svg";
 let selectedShape = null;
 let selectedHandlers = [];
-let isHandling = false;
 export let serial = 0;
 
 // --------------------------------------------------------------------------- 
@@ -112,7 +115,7 @@ export function restoreSelection(drawables) {
 }
 
 export function moveCursor(column, row, drawables) {
-  if (isHandling) return;
+  if (isDraggingHandle) return;
 
   if (selectedShape) {
     selectedHandlers.forEach(handler => handler.hideHandles());
@@ -752,24 +755,30 @@ export class TwovilleTurtle extends TwovilleTimelinedEnvironment {
 
     let degreesListener = new HandleListener(this, env, this.degreesHandle, () => {
       this.originalDegreesExpression = this.degreesExpression.clone();
-      return this.degreesExpression.where;
+      return this.degreesExpression.unevaluated.where;
     }, (delta, isShiftModified, mouseAt) => {
+      const oldExpression = this.originalDegreesExpression;
+
       let diff = new ExpressionVector([
         new ExpressionReal(mouseAt.x),
         new ExpressionReal(mouseAt.y),
       ]).subtract(this.positionHandle.expression);
+
       let newRadians = Math.atan2(diff.get(0).value, -diff.get(1).value);
       let newDegrees = newRadians * 180 / Math.PI - 90;
       if (newDegrees < 0) {
         newDegrees = 360 + newDegrees;
       }
       newDegrees = parseFloat(newDegrees.toShortFloat());
+
       if (isShiftModified) {
         newDegrees = Math.round(newDegrees);
       }
+
+      const newExpression = new ExpressionReal(newDegrees);
+
       this.degreesExpression.x = newDegrees;
-      let replacement = '' + newDegrees;
-      return replacement;
+      return manipulateSource(oldExpression, newExpression);
     });
   }
 
@@ -809,8 +818,10 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
 
     let listener = new HandleListener(this, env, this.distanceHandle, () => {
       this.originalDistanceExpression = this.distanceExpression.clone();
-      return this.distanceExpression.where;
+      return this.distanceExpression.unevaluated.where;
     }, (delta, isShiftModified, mouseAt) => {
+      const oldExpression = this.originalDistanceExpression;
+
       let positionToHeading = new ExpressionVector([
         new ExpressionReal(1),
         this.headingExpression
@@ -824,14 +835,15 @@ export class TwovilleTurtleMove extends TwovilleTimelinedEnvironment {
       let positionToMouse = mouse.subtract(this.positionExpression);
       let dot = new ExpressionReal(positionToMouse.dot(positionToHeading));
 
-      let distance = parseFloat(dot.value.toShortFloat());
+      let newDistance = parseFloat(dot.value.toShortFloat());
 
       if (isShiftModified) {
-        distance = Math.round(distance);
+        newDistance = Math.round(newDistance);
       }
 
-      this.distanceExpression.x = distance;
-      return this.distanceExpression.toPretty();
+      const newExpression = new ExpressionReal(newDistance);
+      this.distanceExpression.x = newDistance;
+      return manipulateSource(oldExpression, newExpression);
     });
   }
 
@@ -867,36 +879,38 @@ export class TwovilleTurtleTurn extends TwovilleTimelinedEnvironment {
     this.degreesHandle = document.createElementNS(svgNamespace, 'circle');
     this.addForegroundHandle(this.degreesHandle, 'cursor-rotate');
 
-    // TODO add handlelisterners where functions need to point to unevaluated
     let degreesListener = new HandleListener(this, env, this.degreesHandle, () => {
-      // console.log("this.degreesExpression:", this.degreesExpression);
       this.originalDegreesExpression = this.degreesExpression.clone();
       return this.degreesExpression.unevaluated.where;
-      // return this.degreesExpression.where;
     }, (delta, isShiftModified, mouseAt) => {
+      const oldExpression = this.originalDegreesExpression;
+
       let diff = new ExpressionVector([
         new ExpressionReal(mouseAt.x),
         new ExpressionReal(mouseAt.y),
       ]).subtract(this.positionExpression);
+
       let newRadians = Math.atan2(diff.get(0).value, -diff.get(1).value);
       let newDegrees = newRadians * 180 / Math.PI - 90 - this.headingExpression.value;
       if (newDegrees < 0) {
         newDegrees = 360 + newDegrees;
       }
-      newDegrees = parseFloat(newDegrees.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 3}));
+      newDegrees = parseFloat(newDegrees.toShortFloat());
+
       if (isShiftModified) {
         newDegrees = Math.round(newDegrees);
       }
+
+      const newExpression = new ExpressionReal(newDegrees);
+
       this.degreesExpression.x = newDegrees;
-      let replacement = '' + newDegrees;
-      return replacement;
+      return manipulateSource(oldExpression, newExpression);
     });
   }
 
   evolve(env, t, bounds, fromTurtle) {
     this.assertProperty('degrees');
     let degrees = this.valueAt(env, 'degrees', t);
-    // console.log("degrees:", degrees);
 
     this.positionExpression = fromTurtle.position;
     this.headingExpression = fromTurtle.heading;
@@ -1215,10 +1229,10 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     new HandleListener(this, env, this.centerHandle, () => {
       if (this.positionExpression) {
         this.originalDegreesExpression = this.degreesExpression.clone();
-        return this.degreesExpression.where;
+        return this.degreesExpression.unevaluated.where;
       } else {
         this.originalCenterExpression = this.centerExpression.clone();
-        return this.centerExpression.where;
+        return this.centerExpression.unevaluated.where;
       }
     }, (delta, isShiftModified, mouseAt) => {
       if (this.positionExpression) {
@@ -1268,8 +1282,9 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
           degrees = Math.round(degrees);
         }
 
+        const newExpression = new ExpressionReal(degrees);
         this.degreesExpression.x = degrees;
-        return this.degreesExpression.toPretty();
+        return manipulateSource(this.originalDegreesExpression, newExpression);
       } else {
         let x = parseFloat((this.originalCenterExpression.get(0).value + delta[0]).toShortFloat());
         let y = parseFloat((this.originalCenterExpression.get(1).value + delta[1]).toShortFloat());
@@ -1289,10 +1304,10 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
     new HandleListener(this, env, this.positionHandle, () => {
       if (this.positionExpression) {
         this.originalPositionExpression = this.positionExpression.clone();
-        return this.positionExpression.where;
+        return this.positionExpression.unevaluated.where;
       } else {
         this.originalDegreesExpression = this.degreesExpression.clone();
-        return this.degreesExpression.where;
+        return this.degreesExpression.unevaluated.where;
       }
     }, (delta, isShiftModified, mouseAt) => {
 
@@ -1348,8 +1363,8 @@ export class TwovillePathArc extends TwovilleTimelinedEnvironment {
         }
 
         this.degreesExpression.x = degrees;
-
-        return this.degreesExpression.toPretty();
+        const newExpression = new ExpressionReal(degrees);
+        return manipulateSource(this.originalDegreesExpression, newExpression);
       }
     });
   }
@@ -1486,24 +1501,27 @@ export class TwovilleRotate extends TwovilleTimelinedEnvironment {
 
     let degreesListener = new HandleListener(this, env, this.degreesHandle, () => {
       this.originalDegreesExpression = this.degreesExpression.clone();
-      return this.degreesExpression.where;
+      return this.degreesExpression.unevaluated.where;
     }, (delta, isShiftModified, mouseAt) => {
       let diff = new ExpressionVector([
         new ExpressionReal(mouseAt.x),
         new ExpressionReal(mouseAt.y),
       ]).subtract(this.pivotHandle.expression);
+
       let newRadians = Math.atan2(diff.get(0).value, -diff.get(1).value);
       let newDegrees = newRadians * 180 / Math.PI - 90;
       if (newDegrees < 0) {
         newDegrees = 360 + newDegrees;
       }
       newDegrees = parseFloat(newDegrees.toShortFloat());
+
       if (isShiftModified) {
         newDegrees = Math.round(newDegrees);
       }
+
       this.degreesExpression.x = newDegrees;
-      let replacement = '' + newDegrees;
-      return replacement;
+      const newExpression = new ExpressionReal(newDegrees);
+      return manipulateSource(this.originalDegreesExpression, newExpression);
     });
   }
 
@@ -1582,7 +1600,7 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
 
     new HandleListener(this, env, this.scaleHandles[0], () => {
       this.originalFactorsExpression = this.factorsExpression.clone();
-      return this.factorsExpression.get(0).where;
+      return this.factorsExpression.get(0).unevaluated.where;
     }, (delta, isShiftModified, mouseAt) => {
       let factor = parseFloat((delta[0] + this.originalFactorsExpression.get(0).value).toShortFloat());
 
@@ -1590,13 +1608,14 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
         factor = Math.round(factor);
       }
 
+      const newExpression = new ExpressionReal(factor);
       this.factorsExpression.set(0, new ExpressionReal(factor));
-      return this.factorsExpression.get(0).toPretty();
+      return manipulateSource(this.originalFactorsExpression.get(0), newExpression);
     });
 
     new HandleListener(this, env, this.scaleHandles[1], () => {
       this.originalFactorsExpression = this.factorsExpression.clone();
-      return this.factorsExpression.get(1).where;
+      return this.factorsExpression.get(1).unevaluated.where;
     }, (delta, isShiftModified, mouseAt) => {
       let factor = parseFloat((delta[1] + this.originalFactorsExpression.get(1).value).toShortFloat());
 
@@ -1604,8 +1623,9 @@ export class TwovilleScale extends TwovilleTimelinedEnvironment {
         factor = Math.round(factor);
       }
 
-      this.factorsExpression.set(1, new ExpressionReal(factor));
-      return this.factorsExpression.get(1).toPretty();
+      const newExpression = new ExpressionReal(factor);
+      this.factorsExpression.set(1, newExpression);
+      return manipulateSource(this.originalFactorsExpression.get(1), newExpression);
     });
   }
 
@@ -2083,7 +2103,7 @@ class HandleListener {
     this.mouseDownAt = null;
 
     this.mouseDown = e => {
-      isHandling = true;
+      startDragging();
       this.mouseDownAt = this.transform(e);
       let where = range();
       beginTweaking(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
@@ -2097,7 +2117,7 @@ class HandleListener {
       window.removeEventListener('mousemove', this.mouseMove);
       window.removeEventListener('mouseup', this.mouseUp);
       interpret(true);
-      isHandling = false;
+      stopDragging();
       endTweaking();
       situateCursor(e.toElement);
     }
@@ -2377,6 +2397,7 @@ export class GlobalEnvironment extends TwovilleEnvironment {
     this.bindings['hypotenuse'] = new FunctionDefinition('hypotenuse', ['a', 'b'], new ExpressionHypotenuse());
     this.bindings['acos'] = new FunctionDefinition('acos', ['ratio'], new ExpressionArcCosine());
     this.bindings['atan'] = new FunctionDefinition('atan', ['ratio'], new ExpressionArcTangent());
+    this.bindings['atan2'] = new FunctionDefinition('atan2', ['a', 'b'], new ExpressionArcTangent2());
     this.bindings['sqrt'] = new FunctionDefinition('sqrt', ['x'], new ExpressionSquareRoot());
     this.bindings['int'] = new FunctionDefinition('int', ['x'], new ExpressionInt());
   }
@@ -2596,7 +2617,6 @@ class PanHandle {
     handleOwner.addForegroundHandle(this.element, cursor);
 
     let listener = new HandleListener(handleOwner, selectElement, this.element, () => {
-      console.log("this.expression:", this.expression);
       this.originalExpression = this.expression.clone();
       return this.locate();
     }, (delta, isShiftModified) => {

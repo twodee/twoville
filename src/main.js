@@ -60,6 +60,15 @@ let previousFitBounds;
 export let svg;
 export let fitBounds;
 export let mouseAtSvg;
+export let isDraggingHandle = false;
+
+export function startDragging() {
+  isDraggingHandle = true;
+}
+
+export function stopDragging() {
+  isDraggingHandle = false;
+}
 
 function setSvgBounds(bounds) {
   env.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
@@ -75,16 +84,18 @@ function fitSvg() {
 }
 
 export let mouseAt = [0, 0];
-export let isMouseDown = false;
+export let isPanningCanvas = false;
 
 function onMouseDown(e) {
-  isMouseDown = true;
+  // Only pan if we've evaluated the program at least once.
+  isPanningCanvas = !!env;
+
   mouseAt[0] = e.clientX;
   mouseAt[1] = e.clientY;
 }
 
 function onMouseMove(e) {
-  if (isMouseDown) {
+  if (isPanningCanvas) {
     let delta = [e.clientX - mouseAt[0], e.clientY - mouseAt[1]];
     let viewBoxAspect = env.bounds.width / env.bounds.height;
     let windowAspect = svg.clientWidth / svg.clientHeight;
@@ -102,7 +113,7 @@ function onMouseMove(e) {
 }
 
 function onMouseUp(e) {
-  isMouseDown = false;
+  isPanningCanvas = false;
   mouseAt[0] = e.clientX;
   mouseAt[1] = e.clientY;
 }
@@ -586,7 +597,7 @@ function initialize() {
 
   svg = document.getElementById('svg');
   svg.addEventListener('wheel', e => {
-    if (env.bounds) {
+    if (env.bounds && !isDraggingHandle) {
       mouseAtSvg.x = e.clientX;
       mouseAtSvg.y = e.clientY;
       const matrix = svg.getScreenCTM();

@@ -1947,6 +1947,21 @@ export class ExpressionArcTangent extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionArcTangent2 extends Expression {
+  constructor() {
+    super(Precedence.Call, null);
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    let a = env.get('a').value;
+    let b = env.get('b').value;
+    let angle = Math.atan2(a, b) * 180 / Math.PI;
+    return new ExpressionReal(angle);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionSquareRoot extends Expression {
   constructor() {
     super(Precedence.Call, null);
