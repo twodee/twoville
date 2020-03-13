@@ -79,7 +79,7 @@ import {
 
 export let svgNamespace = "http://www.w3.org/2000/svg";
 let selectedShape = null;
-let selectedHandlers = [];
+let selectedHandles = [];
 export let serial = 0;
 
 // --------------------------------------------------------------------------- 
@@ -99,17 +99,21 @@ export function restoreSelection(drawables) {
   if (selectedShape) {
     selectedShape = drawables.find(shape => shape.id == selectedShape.id);
 
-    if (selectedHandlers.length > 0) {
-      selectedHandlers = selectedHandlers.map(handler => selectedShape.subhandlers.find(subhandler => subhandler.id == handler.id));
-    }
-    
-    if (selectedHandlers.length > 0) {
-      for (let handler of selectedHandlers) {
-        handler.showHandles();
+    if (selectedShape) {
+      if (selectedHandles.length > 0) {
+        selectedHandles = selectedHandles.map(handler => selectedShape.subhandlers.find(subhandler => subhandler.id == handler.id)).filter(handler => !!handler);
       }
-      selectedShape.showBackgroundHandles();
+      
+      if (selectedHandles.length > 0) {
+        for (let handler of selectedHandles) {
+          handler.showHandles();
+        }
+        selectedShape.showBackgroundHandles();
+      } else {
+        selectedShape.showHandles();
+      }
     } else {
-      selectedShape.showHandles();
+      selectedHandles = [];
     }
   }
 }
@@ -118,18 +122,18 @@ export function moveCursor(column, row, drawables) {
   if (isDraggingHandle) return;
 
   if (selectedShape) {
-    selectedHandlers.forEach(handler => handler.hideHandles());
-    selectedHandlers = [];
+    selectedHandles.forEach(handler => handler.hideHandles());
+    selectedHandles = [];
 
     for (let subhandler of selectedShape.subhandlers) {
       if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
         subhandler.showHandles();
-        selectedHandlers.push(subhandler);
+        selectedHandles.push(subhandler);
         // break;
       }
     }
 
-    if (selectedHandlers.length > 0) {
+    if (selectedHandles.length > 0) {
       selectedShape.hideHandles();
       selectedShape.showBackgroundHandles();
     } else {
@@ -140,12 +144,12 @@ export function moveCursor(column, row, drawables) {
       for (let subhandler of shape.subhandlers) {
         if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
           subhandler.showHandles();
-          selectedHandlers.push(subhandler);
+          selectedHandles.push(subhandler);
           // break;
         }
       }
 
-      if (selectedHandlers.length > 0) {
+      if (selectedHandles.length > 0) {
         selectedShape = shape;
         selectedShape.showBackgroundHandles();
         return;
@@ -2103,14 +2107,18 @@ class HandleListener {
     this.mouseDownAt = null;
 
     this.mouseDown = e => {
-      startDragging();
-      this.mouseDownAt = this.transform(e);
-      let where = range();
-      beginTweaking(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
-      e.stopPropagation();
-      window.addEventListener('mousemove', this.mouseMove);
-      window.addEventListener('mouseup', this.mouseUp);
-      selectedShape = selectElement;
+      if (!isDirty) {
+        // e.preventDefault();
+      // } else {
+        startDragging();
+        this.mouseDownAt = this.transform(e);
+        let where = range();
+        beginTweaking(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
+        e.stopPropagation();
+        window.addEventListener('mousemove', this.mouseMove);
+        window.addEventListener('mouseup', this.mouseUp);
+        selectedShape = selectElement;
+      }
     }
 
     this.mouseUp = e => {
