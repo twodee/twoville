@@ -353,12 +353,7 @@ export function interpret(isTweak = false) {
     pageOutline.setAttributeNS(null, 'y', fitBounds.y);
     pageOutline.setAttributeNS(null, 'width', fitBounds.width);
     pageOutline.setAttributeNS(null, 'height', fitBounds.height);
-    pageOutline.setAttributeNS(null, 'fill', 'none');
-    pageOutline.setAttributeNS(null, 'stroke', 'rgb(180, 180, 180)');
-    pageOutline.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke')
-    pageOutline.setAttributeNS(null, 'stroke-width', '1px');
-    pageOutline.setAttributeNS(null, 'stroke-opacity', 1);
-    pageOutline.classList.add('handle');
+    pageOutline.classList.add('handle', 'outline-handle');
 
     let mainGroup = document.createElementNS(svgNamespace, 'g');
     mainGroup.setAttributeNS(null, 'id', 'main-group');
@@ -438,6 +433,15 @@ let resolution;
 let nTicks;
 
 function onSourceChanged() {
+  // If the source was changed through the text editor, but not through the
+  // canvas, the handles are no longer valid.
+  if (!isDraggingHandle) {
+    const circles = foregroundHandleGroup.querySelectorAll('.handle-circle');
+    for (let circle of circles) {
+      circle.classList.add('stale-handle');
+    }
+  }
+
   isDirty = true;
   // clearSelection();
   isSaved = false;

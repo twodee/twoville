@@ -211,3 +211,32 @@ html.cursor-rotate {
   background-image: url('vertical_bars.png');
   cursor: col-resize;
 }
+
+.handle {
+  stroke-width: 3;
+  stroke-opacity: 1;
+  stroke: rgb(66, 135, 245);
+  vector-effect: non-scaling-stroke;
+  fill: none;
+  stroke-dasharray: 3 3;
+}
+
+.hovered > .handle {
+  stroke: rgb(255, 169, 31);
+}
+
+.filled-handle {
+  stroke-width: 2;
+  stroke-dasharray: none;
+  fill: black;
+}
+
+.stale-handle {
+  fill: none;
+}
+
+.outline-handle {
+  stroke-width: 1;
+  stroke: rgb(180, 180, 180);
+  stroke-dasharray: none;
+}

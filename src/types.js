@@ -129,7 +129,6 @@ export function moveCursor(column, row, drawables) {
       if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
         subhandler.showHandles();
         selectedHandles.push(subhandler);
-        // break;
       }
     }
 
@@ -145,7 +144,6 @@ export function moveCursor(column, row, drawables) {
         if (subhandler.sourceSpans.some(span => span.contains(column, row))) {
           subhandler.showHandles();
           selectedHandles.push(subhandler);
-          // break;
         }
       }
 
@@ -173,7 +171,9 @@ const cursors = [
 
 function situateCursor(element) {
   document.documentElement.classList.remove(...cursors);
-  if (element) {
+  
+  // Only show the cursor when the source and canvas are synchronized.
+  if (!isDirty && element) {
     for (let cursor of cursors) {
       if (element.classList.contains(cursor)) {
         document.documentElement.classList.add(cursor);
@@ -1936,7 +1936,7 @@ export class TwovilleUngon extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
       this.handles.polygon.setAttributeNS(null, 'points', vertexPositions);
-      setCommonHandleProperties(this.handles.polygon);
+      this.handles.polygon.classList.add('handle');
 
       // Remove old vertices.
       for (let vertexHandle of this.handles.vertices) {
@@ -2007,7 +2007,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'fill', color.toColor());
 
       this.handles.polygon.setAttributeNS(null, 'points', commands);
-      setCommonHandleProperties(this.handles.polygon);
+      this.handles.polygon.classList.add('handle');
 
       // Remove old vertices.
       // for (let vertexHandle of this.handles.vertices) {
@@ -2080,7 +2080,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
       this.svgElement.setAttributeNS(null, 'fill', 'none');
 
       this.handles.polyline.setAttributeNS(null, 'points', commands);
-      setCommonHandleProperties(this.handles.polyline);
+      this.handles.polyline.classList.add('handle');
 
       // Remove old vertices.
       for (let vertexHandle of this.handles.vertices) {
@@ -2470,6 +2470,18 @@ let handleMixin = {
     this.foregroundHandleParentElement.setAttributeNS(null, 'visibility', 'visible');
   },
 
+  hoverHandles() {
+    this.backgroundHandleParentElement.classList.add('hovered');
+    this.foregroundHandleParentElement.classList.add('hovered');
+    this.showHandles();
+  },
+
+  unhoverHandles() {
+    this.backgroundHandleParentElement.classList.remove('hovered');
+    this.foregroundHandleParentElement.classList.remove('hovered');
+    this.hideHandles();
+  },
+
   showBackgroundHandles() {
     this.backgroundHandleParentElement.setAttributeNS(null, 'visibility', 'visible');
   },
@@ -2499,6 +2511,13 @@ let handleMixin = {
     this.hideHandles();
   },
 
+  select() {
+    this.backgroundHandleParentElement.classList.remove('hovered');
+    this.foregroundHandleParentElement.classList.remove('hovered');
+    this.showHandles();
+    selectedShape = this;
+  },
+
   registerClickHandler() {
     this.svgElement.classList.add(`element-${this.id}-group`);
     this.svgElement.classList.add('cursor-selectable');
@@ -2511,8 +2530,7 @@ let handleMixin = {
       if (!isDirty && (this.backgroundHandleParentElement || this.foregroundHandleParentElement)) {
         clearSelection();
         if (selectedShape != this) {
-          this.showHandles();
-          selectedShape = this;
+          this.select();
         }
       }
     });
@@ -2521,7 +2539,7 @@ let handleMixin = {
       event.stopPropagation();
       // Only show the handles if the source code has been evaluated
       if (this != selectedShape && !isDirty && (this.backgroundHandleParentElement || this.foregroundHandleParentElement)) {
-        this.showHandles();
+        this.hoverHandles();
       }
 
       if (event.buttons === 0) {
@@ -2541,7 +2559,7 @@ let handleMixin = {
       // (we are rolling off to nothing OR
       //  we are rolling to something that's not a handle)
       if ((this.backgroundHandleParentElement || this.foregroundHandleParentElement) && selectedShape != this && (!event.toElement || !event.toElement.classList.contains(`element-${this.id}-group`))) {
-        this.hideHandles();
+        this.unhoverHandles();
       }
 
       if (event.buttons === 0) {
@@ -2571,14 +2589,14 @@ function setVertexHandleAttributes(handle, position, bounds) {
   handle.setAttributeNS(null, 'cx', position.get(0).value);
   handle.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
   handle.setAttributeNS(null, 'r', 0.3);
-  setCommonHandleProperties(handle);
 
   // Non-scaling-size is not supported. :( Looks like I'll have to do
   // this myself.
   // handle.setAttributeNS(null, 'vector-effect', 'non-scaling-size');
   handle.classList.add('handle-circle');
 
-  handle.setAttributeNS(null, 'fill', 'black');
+  handle.classList.add('handle');
+  handle.classList.add('filled-handle');
 }
 
 function setLineHandleAttributes(handle, from, to, bounds) {
@@ -2586,7 +2604,8 @@ function setLineHandleAttributes(handle, from, to, bounds) {
   handle.setAttributeNS(null, 'y1', bounds.span - from.get(1).value);
   handle.setAttributeNS(null, 'x2', to.get(0).value);
   handle.setAttributeNS(null, 'y2', bounds.span - to.get(1).value);
-  setCommonHandleProperties(handle);
+
+  handle.classList.add('handle');
 }
 
 function setRectangleHandleAttributes(handle, position, size, bounds) {
@@ -2594,23 +2613,15 @@ function setRectangleHandleAttributes(handle, position, size, bounds) {
   handle.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
   handle.setAttributeNS(null, 'width', size.get(0).value);
   handle.setAttributeNS(null, 'height', size.get(1).value);
-  setCommonHandleProperties(handle);
+
+  handle.classList.add('handle');
 }
 
 function setCircleHandleAttributes(handle, center, radius, bounds) {
   handle.setAttributeNS(null, 'cx', center.get(0).value);
   handle.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
   handle.setAttributeNS(null, 'r', radius.value);
-  setCommonHandleProperties(handle);
-}
 
-function setCommonHandleProperties(handle) {
-  handle.setAttributeNS(null, 'stroke-width', 3);
-  handle.setAttributeNS(null, 'stroke-opacity', 1);
-  handle.setAttributeNS(null, 'stroke', 'gray');
-  handle.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
-  handle.setAttributeNS(null, 'fill', 'none');
-  handle.setAttributeNS(null, 'stroke-dasharray', '2 2');
   handle.classList.add('handle');
 }
 
