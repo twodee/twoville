@@ -634,6 +634,9 @@ export class TwovilleCutout extends TwovilleMask {
   draw(env, t, bounds) {
     let size = env.get('viewport').get('size');
 
+    // Update children.
+    this.children.forEach(child => child.draw(env, t, bounds));
+
     let corner;
     if (env.get('viewport').has('corner')) {
       corner = env.get('viewport').get('corner');
@@ -2281,7 +2284,6 @@ export class TwovilleCircle extends TwovilleShape {
     let opacity = this.valueAt(env, 'opacity', t).value;
     let center = this.valueAt(env, 'center', t);
     let radius = this.valueAt(env, 'radius', t);
-    // console.log("radius:", radius);
 
     this.positionHandle.attach(center);
     this.radiusHandle.attach(radius);
