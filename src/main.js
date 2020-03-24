@@ -190,6 +190,7 @@ export function exportSvgWithHandles() {
 
 export function exportSvgWithoutHandles() {
   let clone = svg.cloneNode(true);
+  clone.setAttributeNS(null, 'viewBox', `${fitBounds.x} ${fitBounds.y} ${fitBounds.width} ${fitBounds.height}`);
   removeHandles(clone);
   serializeThenDownload(clone);
 }
