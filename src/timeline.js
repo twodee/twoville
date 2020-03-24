@@ -15,7 +15,7 @@ export class Timeline {
     if (id == 'tween') {
       if (from && to) {
         for (let interval of this.intervals) {
-          if (interval.fromTime == from.value && interval.toTime == to.value) {
+          if (interval.fromTime.value == from.value && interval.toTime.value == to.value) {
             interval.setTween(rhs.value); 
           }
         }
