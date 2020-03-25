@@ -62,6 +62,14 @@ export let fitBounds;
 export let mouseAtSvg;
 export let isDraggingHandle = false;
 
+// The cutouts rely on a white rectangle that fills the viewBox. Originally I
+// just set the width and height of these rectangles to 100%, but when I zoomed
+// in and out, which changes the viewBox of the svg, the rectangles would change
+// too. I tried to fix this with a nested svg that had a fixed viewBox, but this
+// led to strange clipping. My workaround is to keep a list of the rectangles
+// whose sizes need to be adjusted when the viewBox changes.
+export let viewportFillers = [];
+
 export function startDragging() {
   isDraggingHandle = true;
 }
@@ -329,6 +337,13 @@ export function interpret(isTweak = false) {
       height: size.get(1).value,
     };
     fitBounds.span = fitBounds.y + (fitBounds.y + fitBounds.height);
+
+    for (let filler of viewportFillers) {
+      filler.setAttributeNS(null, 'x', fitBounds.x);
+      filler.setAttributeNS(null, 'y', fitBounds.y);
+      filler.setAttributeNS(null, 'width', fitBounds.width);
+      filler.setAttributeNS(null, 'height', fitBounds.height);
+    }
 
     // Retain viewBox only if we've rendered previously and the viewport hasn't
     // changed. Otherwise we fit the viewBox to the viewport.

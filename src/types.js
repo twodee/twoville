@@ -15,6 +15,7 @@ import {
   stopDragging,
   mouseAtSvg,
   drawAfterHandling,
+  viewportFillers,
 } from './main.js';
 
 import { 
@@ -600,6 +601,7 @@ export class TwovilleMask extends TwovilleShape {
   constructor(env, callExpression) {
     super(env, callExpression, 'mask', []);
     this.children = [];
+
     this.svgElement = document.createElementNS(svgNamespace, 'mask');
     this.svgElement.setAttributeNS(null, 'id', 'element-' + this.id);
     this.bind('template', new ExpressionBoolean(true));
@@ -627,6 +629,8 @@ export class TwovilleCutout extends TwovilleMask {
     this.rectangle.setAttributeNS(null, 'width', '100%');
     this.rectangle.setAttributeNS(null, 'height', '100%');
     this.rectangle.setAttributeNS(null, 'fill', 'white');
+
+    viewportFillers.push(this.rectangle); 
 
     this.getParentingElement().appendChild(this.rectangle);
   }
@@ -1871,7 +1875,7 @@ export class TwovilleUngon extends TwovilleMarkerable {
       vertices: [],
     };
     this.addBackgroundHandle(this.handles.polygon);
-    this.addHandle(this.handles.vertexGroup);
+    this.addForegroundHandle(this.handles.vertexGroup);
   }
 
   draw(env, t, bounds) {
@@ -1978,7 +1982,7 @@ export class TwovillePolygon extends TwovilleMarkerable {
       vertices: [],
     };
     this.addBackgroundHandle(this.handles.polygon);
-    this.addHandle(this.handles.vertexGroup);
+    this.addForegroundHandle(this.handles.vertexGroup);
   }
 
   draw(env, t, bounds) {
@@ -2049,7 +2053,7 @@ export class TwovillePolyline extends TwovilleMarkerable {
       vertices: [],
     };
     this.addBackgroundHandle(this.handles.polyline);
-    this.addHandle(this.handles.vertexGroup);
+    this.addForegroundHandle(this.handles.vertexGroup);
   }
 
   draw(env, t, bounds) {
