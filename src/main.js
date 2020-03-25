@@ -62,13 +62,6 @@ export let fitBounds;
 export let mouseAtSvg;
 export let isDraggingHandle = false;
 
-// The cutouts rely on a white rectangle that fills the viewBox. Originally I
-// just set the width and height of these rectangles to 100%, but when I zoomed
-// in and out, which changes the viewBox of the svg, the rectangles would change
-// too. I tried to fix this with a nested svg that had a fixed viewBox, but this
-// led to strange clipping. My workaround is to keep a list of the rectangles
-// whose sizes need to be adjusted when the viewBox changes.
-export let viewportFillers = [];
 
 export function startDragging() {
   isDraggingHandle = true;
@@ -79,15 +72,15 @@ export function stopDragging() {
 }
 
 function setSvgBounds(bounds) {
-  env.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
+  env.globals.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
 }
 
 function fitSvg() {
-  env.bounds.x = fitBounds.x;
-  env.bounds.y = fitBounds.y;
-  env.bounds.width = fitBounds.width;
-  env.bounds.height = fitBounds.height;
-  env.bounds.span = env.bounds.y + (env.bounds.y + env.bounds.height);
+  env.globals.bounds.x = fitBounds.x;
+  env.globals.bounds.y = fitBounds.y;
+  env.globals.bounds.width = fitBounds.width;
+  env.globals.bounds.height = fitBounds.height;
+  env.globals.bounds.span = env.globals.bounds.y + (env.globals.bounds.y + env.globals.bounds.height);
   setSvgBounds(fitBounds);
 }
 
@@ -105,16 +98,16 @@ function onMouseDown(e) {
 function onMouseMove(e) {
   if (isPanningCanvas) {
     let delta = [e.clientX - mouseAt[0], e.clientY - mouseAt[1]];
-    let viewBoxAspect = env.bounds.width / env.bounds.height;
+    let viewBoxAspect = env.globals.bounds.width / env.globals.bounds.height;
     let windowAspect = svg.clientWidth / svg.clientHeight;
     if (viewBoxAspect < windowAspect) {
-      env.bounds.x -= (delta[0] / svg.clientHeight) * env.bounds.height;
-      env.bounds.y -= (delta[1] / svg.clientHeight) * env.bounds.height;
+      env.globals.bounds.x -= (delta[0] / svg.clientHeight) * env.globals.bounds.height;
+      env.globals.bounds.y -= (delta[1] / svg.clientHeight) * env.globals.bounds.height;
     } else {
-      env.bounds.x -= (delta[0] / svg.clientWidth) * env.bounds.width;
-      env.bounds.y -= (delta[1] / svg.clientWidth) * env.bounds.width;
+      env.globals.bounds.x -= (delta[0] / svg.clientWidth) * env.globals.bounds.width;
+      env.globals.bounds.y -= (delta[1] / svg.clientWidth) * env.globals.bounds.width;
     }
-    setSvgBounds(env.bounds);
+    setSvgBounds(env.globals.bounds);
   }
   mouseAt[0] = e.clientX;
   mouseAt[1] = e.clientY;
@@ -237,15 +230,15 @@ function scrubTo(tick) {
   let t = tickToTime(tick);
   timeSpinner.value = t;
   scrubber.value = tick;
-  env.drawables.forEach(drawable => {
-    drawable.draw(env, t, env.bounds);
+  env.globals.drawables.forEach(drawable => {
+    drawable.draw(env, t, env.globals.bounds);
   });
 }
 
 export function drawAfterHandling() {
   let t = tickToTime(parseInt(scrubber.value));
-  env.drawables.forEach(drawable => {
-    drawable.draw(env, t, env.bounds);
+  env.globals.drawables.forEach(drawable => {
+    drawable.draw(env, t, env.globals.bounds);
   });
   scaleCircleHandles();
 }
@@ -298,7 +291,7 @@ export function interpret(isTweak = false) {
 
     TwovilleShape.serial = 0;
     if (env) {
-      previousBounds = env.bounds;
+      previousBounds = env.globals.bounds;
     }
     env = new GlobalEnvironment(svg);
 
@@ -308,9 +301,9 @@ export function interpret(isTweak = false) {
 
     if (env.get('viewport').has('color')) {
       let color = env.get('viewport').get('color');
-      env.svg.setAttributeNS(null, 'style', `background-color: ${color.toColor()}`);
+      env.globals.svg.setAttributeNS(null, 'style', `background-color: ${color.toColor()}`);
     } else {
-      env.svg.setAttributeNS(null, 'style', `initial`);
+      env.globals.svg.setAttributeNS(null, 'style', `initial`);
     }
 
     let corner;
@@ -338,7 +331,7 @@ export function interpret(isTweak = false) {
     };
     fitBounds.span = fitBounds.y + (fitBounds.y + fitBounds.height);
 
-    for (let filler of viewportFillers) {
+    for (let filler of env.globals.viewportFillers) {
       filler.setAttributeNS(null, 'x', fitBounds.x);
       filler.setAttributeNS(null, 'y', fitBounds.y);
       filler.setAttributeNS(null, 'width', fitBounds.width);
@@ -352,12 +345,12 @@ export function interpret(isTweak = false) {
         fitBounds.y == previousFitBounds.y &&
         fitBounds.width == previousFitBounds.width &&
         fitBounds.height == previousFitBounds.height) {
-      env.bounds.x = previousBounds.x;
-      env.bounds.y = previousBounds.y;
-      env.bounds.width = previousBounds.width;
-      env.bounds.height = previousBounds.height;
-      env.bounds.span = previousBounds.span;
-      setSvgBounds(env.bounds);
+      env.globals.bounds.x = previousBounds.x;
+      env.globals.bounds.y = previousBounds.y;
+      env.globals.bounds.width = previousBounds.width;
+      env.globals.bounds.height = previousBounds.height;
+      env.globals.bounds.span = previousBounds.span;
+      setSvgBounds(env.globals.bounds);
     } else {
       fitSvg();
     }
@@ -389,7 +382,7 @@ export function interpret(isTweak = false) {
     sceneHandles.appendChild(pageOutline);
     backgroundHandleGroup.appendChild(sceneHandles);
 
-    env.shapes.forEach(shape => {
+    env.globals.shapes.forEach(shape => {
       shape.domify(defs, mainGroup, backgroundHandleGroup, foregroundHandleGroup);
     });
 
@@ -417,7 +410,7 @@ export function interpret(isTweak = false) {
     isDirty = false;
 
     if (isTweak) {
-      restoreSelection(env.drawables);
+      restoreSelection(env.globals.drawables);
     }
 
     scaleCircleHandles();
@@ -513,9 +506,9 @@ function initialize() {
   editor.getSession().on('change', onSourceChanged);
   editor.getSession().setMode("ace/mode/twoville");
   editor.getSession().selection.on('changeCursor', () => {
-    if (env && env.drawables) {
+    if (env && env.globals.drawables) {
       const cursor = editor.getCursorPosition();
-      moveCursor(cursor.column, cursor.row, env.drawables);
+      moveCursor(cursor.column, cursor.row, env.globals.drawables);
     }
   });
 
@@ -558,7 +551,7 @@ function initialize() {
         if (i >= scrubber.max) {
           gif.render();
         } else {
-          env.drawables.forEach(drawable => drawable.draw(env, i, env.bounds));
+          env.globals.drawables.forEach(drawable => drawable.draw(env, i, env.globals.bounds));
 
           let data = new XMLSerializer().serializeToString(svg);
           let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
@@ -617,18 +610,18 @@ function initialize() {
 
   svg = document.getElementById('svg');
   svg.addEventListener('wheel', e => {
-    if (env.bounds && !isDraggingHandle) {
+    if (env.globals.bounds && !isDraggingHandle) {
       mouseAtSvg.x = e.clientX;
       mouseAtSvg.y = e.clientY;
       const matrix = svg.getScreenCTM();
       let center = mouseAtSvg.matrixTransform(matrix.inverse());
 
       let factor = 1 + e.deltaY / 100;
-      env.bounds.x = (env.bounds.x - center.x) * factor + center.x;
-      env.bounds.y = (env.bounds.y - center.y) * factor + center.y;
-      env.bounds.width *= factor;
-      env.bounds.height *= factor;
-      setSvgBounds(env.bounds);
+      env.globals.bounds.x = (env.globals.bounds.x - center.x) * factor + center.x;
+      env.globals.bounds.y = (env.globals.bounds.y - center.y) * factor + center.y;
+      env.globals.bounds.width *= factor;
+      env.globals.bounds.height *= factor;
+      setSvgBounds(env.globals.bounds);
 
       scaleCircleHandles();
     }

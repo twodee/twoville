@@ -1818,7 +1818,7 @@ export class ExpressionSeed extends Expression {
 
   evaluate(env, fromTime, toTime, callExpression) {
     let seed = env.get('value').value;
-    env.prng.seed(seed);
+    env.globals.prng.seed(seed);
   }
 }
 
@@ -1835,11 +1835,11 @@ export class ExpressionRandom extends Expression {
 
     let x;
     if (env.get('min') instanceof ExpressionInteger && env.get('max') instanceof ExpressionInteger) {
-      let random = env.prng.random01();
+      let random = env.globals.prng.random01();
       let x = Math.floor(random * (max - min) + min);
       return new ExpressionInteger(x);
     } else {
-      let random = env.prng.random01();
+      let random = env.globals.prng.random01();
       let x = random * (max - min) + min;
       return new ExpressionReal(x);
     }

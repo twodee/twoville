@@ -15,7 +15,6 @@ import {
   stopDragging,
   mouseAtSvg,
   drawAfterHandling,
-  viewportFillers,
 } from './main.js';
 
 import { 
@@ -233,11 +232,7 @@ export class TwovilleEnvironment {
 
     // Let's make the globals easy to access.
     if (parent) {
-      this.shapes = parent.shapes;
-      this.drawables = parent.drawables;
-      this.svg = parent.svg;
-      this.prng = parent.prng;
-      this.bounds = parent.bounds;
+      this.globals = parent.globals;
     }
   }
 
@@ -361,7 +356,7 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
     this.initializeTransforms();
     this.initializeHandles(this);
 
-    this.shapes.push(this);
+    this.globals.shapes.push(this);
   }
 
   registerSubhandler(subhandler) {
@@ -417,10 +412,10 @@ export class TwovilleShape extends TwovilleTimelinedEnvironment {
       this.get('parent').children.push(this);
     } else if (this.owns('template') && this.get('template').value) {
       this.parentElement = defs;
-      this.drawables.push(this);
+      this.globals.drawables.push(this);
     } else {
       this.parentElement = mainGroup;
-      this.drawables.push(this);
+      this.globals.drawables.push(this);
     }
 
     if (this.owns('mask')) {
@@ -630,7 +625,7 @@ export class TwovilleCutout extends TwovilleMask {
     this.rectangle.setAttributeNS(null, 'height', '100%');
     this.rectangle.setAttributeNS(null, 'fill', 'white');
 
-    viewportFillers.push(this.rectangle); 
+    this.globals.viewportFillers.push(this.rectangle); 
 
     this.getParentingElement().appendChild(this.rectangle);
   }
@@ -1095,6 +1090,7 @@ export class TwovillePathCubic extends TwovilleTimelinedEnvironment {
 
         let letter = isDelta ? 's' : 'S';
         return [`${letter} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${toPosition.get(0).value},${bounds.span - toPosition.get(1).value}`, toTurtle, segment];
+        // TODO bounds un bound?
       }
     } else {
       return null;
@@ -2156,8 +2152,8 @@ class HandleListener {
   transform(e) {
     mouseAtSvg.x = e.clientX;
     mouseAtSvg.y = e.clientY;
-    let mouseAt = mouseAtSvg.matrixTransform(svg.getScreenCTM().inverse());
-    mouseAt.y = this.env.bounds.span - mouseAt.y;
+    let mouseAt = mouseAtSvg.matrixTransform(this.globals.svg.getScreenCTM().inverse());
+    mouseAt.y = this.env.globals.bounds.span - mouseAt.y;
     return mouseAt;
   }
 }
@@ -2341,20 +2337,31 @@ export class Random {
 export class GlobalEnvironment extends TwovilleEnvironment {
   constructor(svg) {
     super(null);
-    this.svg = svg;
-    this.shapes = [];
-    this.drawables = [];
-    this.bounds = {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
+
+    this.globals = {
+      svg: svg,
+      shapes: [],
+      drawables: [],
+      bounds: {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      },
+      prng: new Random(),
+      viewportFillers: [],
     };
+ 
+    // The cutouts rely on a white rectangle that fills the viewBox. Originally
+    // I just set the width and height of these rectangles to 100%, but when I
+    // zoomed in and out, which changes the viewBox of the svg, the rectangles
+    // would change too. I tried to fix this with a nested svg that had a fixed
+    // viewBox, but this led to strange clipping. My workaround is to keep a
+    // list of the rectangles whose sizes need to be adjusted when the viewBox
+    // changes.
 
-    this.prng = new Random();
-
-    if (this.svg) {
-      this.svg.addEventListener('click', () => {
+    if (this.globals.svg) {
+      this.globals.svg.addEventListener('click', () => {
         if (selectedShape) {
           selectedShape.hideHandles();
           selectedShape = null;
@@ -2656,7 +2663,7 @@ class PanHandle {
 
   // Modify this handle's SVG element attributes.
   update(env, expression) {
-    setVertexHandleAttributes(this.element, expression, env.bounds);
+    setVertexHandleAttributes(this.element, expression, env.globals.bounds);
   }
 
   // Attach this handle to the given expression node in the AST.
