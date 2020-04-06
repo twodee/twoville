@@ -129,6 +129,9 @@ function stopInterpreting() {
 
 function postInterpret(pod) {
   const oldScene = scene;
+  if (oldScene) {
+    oldScene.stop();
+  }
   scene = RenderEnvironment.reify(document.getElementById('svg'), pod);
 
   let hasTweak;

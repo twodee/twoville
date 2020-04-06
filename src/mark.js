@@ -275,9 +275,7 @@ export class VectorComponentPanMark extends PanMark {
   }
 
   getNewSource(delta, isShiftModified) {
-    const oldExpression = this.untweakedExpression.get(this.dimension);
-    const unevaluated = oldExpression.unevaluated;
-    const oldValue = oldExpression.value;
+    const oldValue = this.untweakedExpression.value;
 
     let newValue = parseFloat((oldValue + delta[this.dimension] * (this.shape.hasCenter ? 2 : 1)).toShortFloat());
     if (isShiftModified) {
@@ -285,8 +283,8 @@ export class VectorComponentPanMark extends PanMark {
     }
     const newExpression = new ExpressionReal(newValue);
 
-    this.expression.set(this.dimension, newExpression);
-    return manipulateSource(oldExpression, newExpression);
+    this.expression.value = newValue;
+    return manipulateSource(this.untweakedExpression, newExpression);
   }
 }
 

@@ -178,6 +178,14 @@ export class RenderEnvironment extends Environment {
     this.isStarted = true;
   }
 
+  stop() {
+    this.svg.removeEventListener('wheel', this.onWheel);
+    this.svg.removeEventListener('click', this.onMouseClick);
+    this.svg.removeEventListener('mousedown', this.onMouseDown);
+    this.svg.removeEventListener('mousemove', this.onMouseMove);
+    this.svg.removeEventListener('mouseup', this.onMouseUp);
+  }
+
   update(t) {
     for (let drawable of this.drawables) {
       drawable.update(this, t, this.bounds);
