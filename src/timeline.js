@@ -1,14 +1,37 @@
-import { ExpressionInteger } from './ast.js';
-import { Interval } from './interval.js';
+import {
+  ExpressionInteger
+} from './ast.js';
 
 import {
+  Interval
+} from './interval.js';
+
+import { 
   MessagedException,
-} from "./types.js";
+  LocatedException,
+} from './common.js';
+
+// --------------------------------------------------------------------------- 
 
 export class Timeline {
   constructor() {
-    this.defaultValue = null;
+    this.defaultValue = undefined;
     this.intervals = [];
+  }
+
+  toPod() {
+    return {
+      type: 'timeline',
+      defaultValue: this.defaultValue ? this.defaultValue.toPod() : undefined,
+      intervals: this.intervals.map(interval => interval.toPod()),
+    };
+  }
+
+  static reify(env, pod) {
+    const timeline = new Timeline();
+    timeline.defaultValue = env.root.omniReify(env, pod.defaultValue);
+    timeline.intervals = pod.intervals.map(interval => Interval.reify(env, interval));
+    return timeline;
   }
 
   bind(id, rhs, from, to) {
@@ -55,7 +78,7 @@ export class Timeline {
     let interval = this.intervalAt(t);
     if (interval) {
       return interval.interpolate(env, t);
-    } else if (this.defaultValue != null) {
+    } else if (this.defaultValue) {
       if ('isTimeSensitive' in this.defaultValue && this.defaultValue.isTimeSensitive(env)) {
         env.bindings.t = new ExpressionInteger(t);
         return this.defaultValue.evaluate(env);
@@ -63,7 +86,7 @@ export class Timeline {
         return this.defaultValue;
       }
     } else {
-      return null;
+      return undefined;
     }
   }
 
@@ -96,7 +119,7 @@ export class Timeline {
       
       // Otherwise, split the spanning interval. Open the to-end and splice in a new closed interval.
       else {
-        this.intervals[i].setTo(null, null);
+        this.intervals[i].setTo();
         this.intervals.splice(i + 1, 0, new Interval(t, value, this.intervals[i].toTime, this.intervals[i].toValue));
       }
     }
@@ -104,7 +127,7 @@ export class Timeline {
 
   setToValue(t, value) {
     if (this.intervals.length == 0) {
-      this.intervals.push(new Interval(null, null, t, value));
+      this.intervals.push(new Interval(undefined, undefined, t, value));
     } else {
       let i = this.intervals.length - 1;
       while (i >= 0 && this.intervals[i].startsAfter(t.value)) {
@@ -116,7 +139,7 @@ export class Timeline {
 
       // If all the intervals start after the new one, prepend a new open to interval.
       if (i < 0) {
-        this.intervals.unshift(new Interval(null, null, t, value));
+        this.intervals.unshift(new Interval(undefined, undefined, t, value));
       }
 
       // If to is open, close it.
@@ -131,9 +154,13 @@ export class Timeline {
       
       // Otherwise, split the spanning interval. Open the from-end and splice in a new closed interval predecessor.
       else {
-        this.intervals[i].setFrom(null, null);
+        this.intervals[i].setFrom();
         this.intervals.splice(i, 0, new Interval(this.intervals[i].fromTime, this.intervals[i].fromValue, t, value));
       }
     }
   }
-};
+
+}
+
+// --------------------------------------------------------------------------- 
+

@@ -1,12 +1,13 @@
 import {
   Tokens,
-  SourceLocation
-} from './token.js';
-
-import {
+  SourceLocation,
   LocatedException,
   MessagedException,
-} from './types.js';
+} from './common.js';
+
+import {
+  Symbol,
+} from './symbol.js';
 
 import {
   ExpressionAdd,
@@ -50,73 +51,7 @@ import {
   StatementThrough,
 } from './ast.js';
 
-// import {
-  // ExpressionVector
-// } from './types.js';
-
-export let Symbols = Object.freeze({
-  None: new ExpressionInteger(-1),
-});
-
 export function parse(tokens) {
-  let symbols = {
-    ':clockwise': new ExpressionInteger(0),
-    ':counterclockwise': new ExpressionInteger(1),
-
-    // for alignment-baseline on text elements
-    // See https://vanseodesign.com/web-design/svg-text-baseline-alignment for semantics.
-    ':top': new ExpressionString('hanging'),
-    ':center': new ExpressionString('center'),
-    ':central': new ExpressionString('central'),
-    ':bottom': new ExpressionString('baseline'),
-
-    // Text anchors.
-    ':start': new ExpressionString('start'),
-    ':middle': new ExpressionString('middle'),
-    ':end': new ExpressionString('end'),
-
-    ':short': new ExpressionInteger(0),
-    ':long': new ExpressionInteger(1),
-
-    // Vectors
-    ':zero2': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]),
-    ':zero3': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
-    ':up': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1)]),
-    ':right': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0)]),
-
-    // Interpolants
-    ':linear': new ExpressionString('linear'),
-    ':nearest': new ExpressionString('nearest'),
-    // ':ease': new ExpressionString('ease'),
-    ':sineInOut': new ExpressionString('sineInOut'),
-    ':backInOut': new ExpressionString('backInOut'),
-    ':quadraticInOut': new ExpressionString('quadraticInOut'),
-    ':cubicInOut': new ExpressionString('cubicInOut'),
-    ':quarticInOut': new ExpressionString('quarticInOut'),
-    ':quinticInOut': new ExpressionString('quinticInOut'),
-
-    // Colors
-    ':black': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
-    ':red': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0), new ExpressionReal(0)]),
-    ':green': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1), new ExpressionReal(0)]),
-    ':blue': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(1)]),
-    ':white': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(1), new ExpressionReal(1)]),
-    ':yellow': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(1), new ExpressionReal(0)]),
-    ':orange': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0.5), new ExpressionReal(0)]),
-    ':cyan': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1), new ExpressionReal(1)]),
-    ':magenta': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0), new ExpressionReal(1)]),
-    ':cornflower': new ExpressionVector([new ExpressionReal(0.392), new ExpressionReal(0.584), new ExpressionReal(0.929)]),
-    ':crimson': new ExpressionVector([new ExpressionReal(0.863), new ExpressionReal(0.078), new ExpressionReal(0.235)]),
-
-    ':absolute': new ExpressionInteger(0),
-    ':relative': new ExpressionInteger(1),
-
-    // Polygon
-    ':open': new ExpressionInteger(0),
-    ':closed': new ExpressionInteger(1),
-
-    ':none': Symbols.None,
-  };
 
   let i = 0;
   let indents = [-1];
@@ -484,8 +419,8 @@ export function parse(tokens) {
       }
     } else if (has(Tokens.Symbol)) {
       let token = consume();
-      if (symbols.hasOwnProperty(token.source)) {
-        let e = symbols[token.source].clone();
+      if (Symbol.hasOwnProperty(token.source)) {
+        let e = Symbol[token.source].clone();
         e.where = token.where;
         return e;
       } else {

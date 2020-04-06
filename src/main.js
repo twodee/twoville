@@ -1,37 +1,24 @@
-import {
-  lex
-} from './lexer.js';
-
-import {
-  parse,
-  Symbols,
-} from './parser.js';
-
-import {
-  Messager
-} from './messager.js';
-
 import ace from 'ace-builds/src-min-noconflict/ace';
 import 'ace-builds/src-min-noconflict/theme-twilight';
 import './mode-twoville.js';
 
 import {
-  GlobalEnvironment,
-  LocatedException,
   MessagedException,
-  TwovilleShape,
-  clearSelection,
-  initializeShapes,
-  moveCursor,
-  restoreSelection,
-  svgNamespace,
-} from './types.js';
+} from './common.js';
 
 import {
-  ExpressionInteger,
-  ExpressionReal,
-  ExpressionVector,
-} from './ast.js';
+  RenderEnvironment,
+} from './render.js';
+
+import {
+  interpret,
+} from './interpreter.js';
+
+import {
+  Messager
+} from './messager.js';
+
+import Interpreter from './interpreter.worker.js';
 
 let editor;
 let Range;
@@ -40,136 +27,37 @@ let messagerContainer;
 let evaluateButton;
 let recordButton;
 let exportButton;
+let fitButton;
+let stopButton;
 let playOnceButton;
 let playLoopButton;
 let saveButton;
-let spinner;
+let recordSpinner;
+let evaluateSpinner;
 let scrubber;
 let timeSpinner;
-let hasTweak;
-let foregroundHandleGroup;
+let interpreterWorker;
 
-export let env;
-export let isDirty = false;
+let scene;
 let isSaved = true;
 let animateTask = null;
 let delay;
-let previousBounds = null;
-let previousFitBounds;
 
-export let svg;
-export let fitBounds;
-export let mouseAtSvg;
-export let isDraggingHandle = false;
-
-
-export function startDragging() {
-  isDraggingHandle = true;
-}
-
-export function stopDragging() {
-  isDraggingHandle = false;
-}
-
-function setSvgBounds(bounds) {
-  env.globals.svg.setAttributeNS(null, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
-}
-
-function fitSvg() {
-  env.globals.bounds.x = fitBounds.x;
-  env.globals.bounds.y = fitBounds.y;
-  env.globals.bounds.width = fitBounds.width;
-  env.globals.bounds.height = fitBounds.height;
-  env.globals.bounds.span = env.globals.bounds.y + (env.globals.bounds.y + env.globals.bounds.height);
-  setSvgBounds(fitBounds);
-}
-
-export let mouseAt = [0, 0];
-export let isPanningCanvas = false;
-
-function onMouseDown(e) {
-  // Only pan if we've evaluated the program at least once.
-  isPanningCanvas = !!env;
-
-  mouseAt[0] = e.clientX;
-  mouseAt[1] = e.clientY;
-}
-
-function onMouseMove(e) {
-  if (isPanningCanvas) {
-    let delta = [e.clientX - mouseAt[0], e.clientY - mouseAt[1]];
-    let viewBoxAspect = env.globals.bounds.width / env.globals.bounds.height;
-    let windowAspect = svg.clientWidth / svg.clientHeight;
-    if (viewBoxAspect < windowAspect) {
-      env.globals.bounds.x -= (delta[0] / svg.clientHeight) * env.globals.bounds.height;
-      env.globals.bounds.y -= (delta[1] / svg.clientHeight) * env.globals.bounds.height;
-    } else {
-      env.globals.bounds.x -= (delta[0] / svg.clientWidth) * env.globals.bounds.width;
-      env.globals.bounds.y -= (delta[1] / svg.clientWidth) * env.globals.bounds.width;
-    }
-    setSvgBounds(env.globals.bounds);
-  }
-  mouseAt[0] = e.clientX;
-  mouseAt[1] = e.clientY;
-}
-
-function onMouseUp(e) {
-  isPanningCanvas = false;
-  mouseAt[0] = e.clientX;
-  mouseAt[1] = e.clientY;
-}
-
-export function highlight(lineStart, lineEnd, columnStart, columnEnd) {
+function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
   editor.centerSelection();
 }
 
-export function beginTweaking(lineStart, lineEnd, columnStart, columnEnd) {
-  highlight(lineStart, lineEnd, columnStart, columnEnd);
-  hasTweak = false;
-}
-
-export function tweak(newText) {
-  // Ace doesn't have a way to do atomic group of changes, which is what I want
-  // for handler events. We work around this by undoing before each tweak.
-  if (hasTweak) {
-    editor.undo();
-    hasTweak = false;
-  }
-
-  let range = editor.getSelectionRange();
-  let doc = editor.getSession().getDocument();
-
-  let oldText = doc.getTextRange(range);
-  if (oldText != newText) {
-    doc.replace(range, newText);
-    hasTweak = true;
-  }
-
-  range.setEnd(range.end.row, range.start.column + newText.length);
-  editor.getSelection().setSelectionRange(range);
-}
-
-export function endTweaking() {
-  hasTweak = false;
-}
-
 // --------------------------------------------------------------------------- 
 
-function startSpinning() {
-  recordButton.disabled = true;
+function startSpinning(spinner, button) {
+  button.disabled = true;
   spinner.style.display = 'block';
 }
 
-function stopSpinning() {
-  recordButton.disabled = false;
+function stopSpinning(spinner, button) {
+  button.disabled = false;
   spinner.style.display = 'none';
-}
-
-function hideHandles() {
-  document.querySelectorAll('.handle-group').forEach(element => {
-    element.setAttributeNS(null, 'visibility', 'hidden');
-  });
 }
 
 function downloadBlob(name, blob) {
@@ -186,29 +74,12 @@ function downloadBlob(name, blob) {
 }
 
 export function exportSvgWithHandles() {
-  serializeThenDownload(svg);
+  serializeThenDownload(scene.svg);
 }
 
 export function exportSvgWithoutHandles() {
-  let clone = svg.cloneNode(true);
-  clone.setAttributeNS(null, 'viewBox', `${fitBounds.x} ${fitBounds.y} ${fitBounds.width} ${fitBounds.height}`);
-  removeHandles(clone);
+  const clone = scene.cloneSvgWithoutHandles();
   serializeThenDownload(clone);
-}
-
-// Inkscape doesn't honor the visibility: hidden attribute. As a workaround,
-// we forcibly remove them from the SVG.
-// https://bugs.launchpad.net/inkscape/+bug/166181
-function removeHandles(root) {
-  if (root.classList.contains('handle-group')) {
-    root.parentNode.removeChild(root);
-  } else {
-    for (let i = root.childNodes.length - 1; i >= 0; --i) {
-      if (root.childNodes[i].nodeType == Node.ELEMENT_NODE) {
-        removeHandles(root.childNodes[i]);
-      }
-    }
-  }
 }
 
 function serializeThenDownload(root) {
@@ -217,30 +88,11 @@ function serializeThenDownload(root) {
   downloadBlob('download.svg', svgBlob);
 }
 
-function tickToTime(tick) {
-  let proportion = tick / nTicks;
-  return Math.round(tmin + proportion * (tmax - tmin));
-}
-
-function timeToTick(time) {
-  return Math.round((time - tmin) / (tmax - tmin) * nTicks);
-}
-
 function scrubTo(tick) {
-  let t = tickToTime(tick);
+  let t = scene.tickToTime(tick);
   timeSpinner.value = t;
   scrubber.value = tick;
-  env.globals.drawables.forEach(drawable => {
-    drawable.draw(env, t, env.globals.bounds);
-  });
-}
-
-export function drawAfterHandling() {
-  let t = tickToTime(parseInt(scrubber.value));
-  env.globals.drawables.forEach(drawable => {
-    drawable.draw(env, t, env.globals.bounds);
-  });
-  scaleCircleHandles();
+  scene.update(t);
 }
 
 function animateFrame(i, isLoop = false) {
@@ -266,192 +118,134 @@ function play(isLoop) {
   animateFrame(0, isLoop);
 }
 
-export let ast;
-
-export function interpret(isTweak = false) {
-  Messager.clear();
-
-  while (svg.lastChild) {
-    svg.removeChild(svg.lastChild);
+function stopInterpreting() {
+  if (interpreterWorker) {
+    interpreterWorker.terminate();
+    interpreterWorker = undefined;
   }
-  let defs = document.createElementNS(svgNamespace, 'defs');
-  svg.appendChild(defs);
+  stopButton.classList.add('hidden');
+  stopSpinning(evaluateSpinner, evaluateButton);
+}
+
+function postInterpret(pod) {
+  const oldScene = scene;
+  scene = RenderEnvironment.reify(document.getElementById('svg'), pod);
+
+  let hasTweak;
+
+  scene.startTweak = where => {
+    highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
+    hasTweak = false;
+  };
+
+  scene.tweak = newText => {
+    // Ace doesn't have a way to do atomic group of changes, which is what I want
+    // for handler events. We work around this by undoing before each tweak.
+    if (hasTweak) {
+      editor.undo();
+      hasTweak = false;
+    }
+
+    let range = editor.getSelectionRange();
+    let doc = editor.getSession().getDocument();
+
+    let oldText = doc.getTextRange(range);
+    if (oldText != newText) {
+      doc.replace(range, newText);
+      hasTweak = true;
+    }
+
+    range.setEnd(range.end.row, range.start.column + newText.length);
+    editor.getSelection().setSelectionRange(range);
+
+    let t = scene.tickToTime(parseInt(scrubber.value));
+    scene.update(t);
+  };
+
+  scene.stopTweak = () => {
+    hasTweak = false;
+    startInterpreting();
+  };
 
   try {
-    initializeShapes();
-
-    let tokens = lex(editor.getValue());
-
-    // console.log("tokens:", tokens);
-    // tokens.forEach(token => {
-      // Messager.log(token.where.lineStart + ':' + token.where.lineEnd + ':' + token.where.columnStart + ':' + token.where.columnEnd + '|' + token.source + '<br>');
-    // });
-
-    ast = parse(tokens);
-
-    TwovilleShape.serial = 0;
-    if (env) {
-      previousBounds = env.globals.bounds;
-    }
-    env = new GlobalEnvironment(svg);
-
-    ast.evaluate(env);
-
-    let size = env.get('viewport').get('size');
-
-    if (env.get('viewport').has('color')) {
-      let color = env.get('viewport').get('color');
-      env.globals.svg.setAttributeNS(null, 'style', `background-color: ${color.toColor()}`);
-    } else {
-      env.globals.svg.setAttributeNS(null, 'style', `initial`);
-    }
-
-    let corner;
-    if (env.get('viewport').has('corner')) {
-      corner = env.get('viewport').get('corner');
-    } else if (env.get('viewport').has('center')) {
-      let center = env.get('viewport').get('center');
-      corner = new ExpressionVector([
-        new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
-        new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
-      ]);
-    } else {
-      corner = new ExpressionVector([
-        new ExpressionInteger(0),
-        new ExpressionInteger(0),
-      ]);
-    }
-
-    previousFitBounds = fitBounds;
-    fitBounds = {
-      x: corner.get(0).value,
-      y: corner.get(1).value,
-      width: size.get(0).value,
-      height: size.get(1).value,
-    };
-    fitBounds.span = fitBounds.y + (fitBounds.y + fitBounds.height);
-
-    for (let filler of env.globals.viewportFillers) {
-      filler.setAttributeNS(null, 'x', fitBounds.x);
-      filler.setAttributeNS(null, 'y', fitBounds.y);
-      filler.setAttributeNS(null, 'width', fitBounds.width);
-      filler.setAttributeNS(null, 'height', fitBounds.height);
-    }
-
-    // Retain viewBox only if we've rendered previously and the viewport hasn't
-    // changed. Otherwise we fit the viewBox to the viewport.
-    if (previousBounds &&
-        fitBounds.x == previousFitBounds.x &&
-        fitBounds.y == previousFitBounds.y &&
-        fitBounds.width == previousFitBounds.width &&
-        fitBounds.height == previousFitBounds.height) {
-      env.globals.bounds.x = previousBounds.x;
-      env.globals.bounds.y = previousBounds.y;
-      env.globals.bounds.width = previousBounds.width;
-      env.globals.bounds.height = previousBounds.height;
-      env.globals.bounds.span = previousBounds.span;
-      setSvgBounds(env.globals.bounds);
-    } else {
-      fitSvg();
-    }
-
-    let pageOutline = document.createElementNS(svgNamespace, 'rect');
-    pageOutline.setAttributeNS(null, 'id', 'x-outline');
-    pageOutline.setAttributeNS(null, 'visibility', 'visible');
-    pageOutline.setAttributeNS(null, 'x', fitBounds.x);
-    pageOutline.setAttributeNS(null, 'y', fitBounds.y);
-    pageOutline.setAttributeNS(null, 'width', fitBounds.width);
-    pageOutline.setAttributeNS(null, 'height', fitBounds.height);
-    pageOutline.classList.add('handle', 'outline-handle');
-
-    let mainGroup = document.createElementNS(svgNamespace, 'g');
-    mainGroup.setAttributeNS(null, 'id', 'main-group');
-    svg.appendChild(mainGroup);
-
-    let backgroundHandleGroup = document.createElementNS(svgNamespace, 'g');
-    backgroundHandleGroup.setAttributeNS(null, 'id', 'background-handle-group');
-    svg.appendChild(backgroundHandleGroup);
-
-    foregroundHandleGroup = document.createElementNS(svgNamespace, 'g');
-    foregroundHandleGroup.setAttributeNS(null, 'id', 'foreground-handle-group');
-    svg.appendChild(foregroundHandleGroup);
-
-    let sceneHandles = document.createElementNS(svgNamespace, 'g');
-    sceneHandles.setAttributeNS(null, 'id', 'scene-handles');
-    sceneHandles.classList.add('handle-group');
-    sceneHandles.appendChild(pageOutline);
-    backgroundHandleGroup.appendChild(sceneHandles);
-
-    env.globals.shapes.forEach(shape => {
-      shape.domify(defs, mainGroup, backgroundHandleGroup, foregroundHandleGroup);
-    });
-
-    delay = env.get('time').get('delay').value;
-
-    tmin = env.get('time').get('start').value;
-    tmax = env.get('time').get('stop').value;
-    resolution = env.get('time').get('resolution').value;
-    nTicks = (tmax - tmin) * resolution;
+    scene.clear();
+    scene.start();
 
     scrubber.min = 0;
-    scrubber.max = nTicks;
-    timeSpinner.max = nTicks;
+    scrubber.max = scene.nTicks;
+    timeSpinner.max = scene.nTicks;
 
-    let t = getT();
-    if (t < tmin) {
+    let t = scene.getTime(parseInt(scrubber.value));
+    if (t < scene.tmin) {
       scrubTo(0);
-    } else if (t > tmax) {
-      scrubTo((tmax - tmin) * resolution);
+    } else if (t > scene.tmax) {
+      scrubTo((scene.tmax - scene.tmin) * scene.resolution);
     } else {
       scrubTo(parseInt(scrubber.value));
     }
 
-    recordButton.disabled = false;
-    isDirty = false;
-
-    if (isTweak) {
-      restoreSelection(env.globals.drawables);
+    if (oldScene) {
+      if (oldScene.selectedShape) {
+        scene.reselect(oldScene.selectedShape);
+      }
+      scene.rebound(oldScene.bounds);
     }
 
-    scaleCircleHandles();
+    recordButton.disabled = false;
   } catch (e) {
     if (e instanceof MessagedException) {
       Messager.log(e.userMessage);
 
-      // The env must be wiped. Otherwise the bounds tracked between runs get
+      // The scene must be wiped. Otherwise the bounds tracked between runs get
       // messed up.
-      env = null;
+      scene = null;
 
       throw e;
     } else {
       console.trace(e);
       Messager.log(e.message);
-      env = null;
+      scene = null;
     }
   }
 }
 
-function getT() {
-  let tick = parseInt(scrubber.value);
-  return tmin + tick / resolution;
-}
+function startInterpreting() {
+  stopInterpreting();
 
-let tmin;
-let tmax;
-let resolution;
-let nTicks;
+  startSpinning(evaluateSpinner, evaluateButton);
+  stopButton.classList.remove('hidden');
+
+  Messager.clear();
+
+  interpreterWorker = new Interpreter();
+  interpreterWorker.addEventListener('message', event => {
+    if (event.data.type === 'output') {
+      Messager.log(event.data.payload);
+    } else if (event.data.type === 'environment') {
+      stopInterpreting();
+      postInterpret(event.data.payload);
+    }
+  });
+
+  const hasWorker = true;
+  if (hasWorker) {
+    interpreterWorker.postMessage({
+      command: 'interpret',
+      source: editor.getValue(),
+    });
+  } else {
+    const scene = interpret(editor.getValue(), Messager.log);
+    stopInterpreting();
+    postInterpret(scene.toPod());
+  }
+}
 
 function onSourceChanged() {
   // If the source was changed through the text editor, but not through the
   // canvas, the handles are no longer valid.
-  if (!isDraggingHandle) {
-    const circles = foregroundHandleGroup.querySelectorAll('.handle-circle');
-    for (let circle of circles) {
-      circle.classList.add('stale-handle');
-    }
+  if (scene) {
+    scene.stale();
   }
-
-  isDirty = true;
   // clearSelection();
   isSaved = false;
   syncTitle();
@@ -468,14 +262,6 @@ function syncTitle() {
   // e.preventDefault();
 // });
 
-function scaleCircleHandles() {
-  const matrix = svg.getScreenCTM();
-  const circles = foregroundHandleGroup.querySelectorAll('.handle-circle');
-  for (let circle of circles) {
-    circle.r.baseVal.value = 10 / matrix.a;
-  }
-}
-
 function initialize() {
   editor = ace.edit('editor');
   editor.setTheme('ace/theme/twilight');
@@ -488,16 +274,19 @@ function initialize() {
   Range = ace.require('ace/range').Range;
 
   left = document.getElementById('left');
-  messagerContainer = document.getElementById('messagerContainer');
-  evaluateButton = document.getElementById('evaluateButton');
-  recordButton = document.getElementById('recordButton');
-  exportButton = document.getElementById('exportButton');
-  playOnceButton = document.getElementById('playOnceButton');
-  playLoopButton = document.getElementById('playLoopButton');
-  saveButton = document.getElementById('saveButton');
-  spinner = document.getElementById('spinner');
+  messagerContainer = document.getElementById('messager-container');
+  evaluateButton = document.getElementById('evaluate-button');
+  recordButton = document.getElementById('record-button');
+  exportButton = document.getElementById('export-button');
+  fitButton = document.getElementById('fit-button');
+  stopButton = document.getElementById('stop-button');
+  playOnceButton = document.getElementById('play-once-button');
+  playLoopButton = document.getElementById('play-loop-button');
+  saveButton = document.getElementById('save-button');
+  recordSpinner = document.getElementById('record-spinner');
+  evaluateSpinner = document.getElementById('evaluate-spinner');
   scrubber = document.getElementById('scrubber');
-  timeSpinner = document.getElementById('timeSpinner');
+  timeSpinner = document.getElementById('time-spinner');
   new Messager(document.getElementById('messager'), document, highlight);
 
   if (localStorage.getItem('src') !== null) {
@@ -506,29 +295,29 @@ function initialize() {
   editor.getSession().on('change', onSourceChanged);
   editor.getSession().setMode("ace/mode/twoville");
   editor.getSession().selection.on('changeCursor', () => {
-    if (env && env.globals.drawables) {
+    if (scene && scene.drawables) {
       const cursor = editor.getCursorPosition();
-      moveCursor(cursor.column, cursor.row, env.globals.drawables);
+      // moveCursor(cursor.column, cursor.row, scene.drawables);
     }
   });
 
   recordButton.addEventListener('click', () => {
-    startSpinning();
-    let box = svg.getBoundingClientRect();
+    startSpinning(recordSpinner, recordButton);
+    let box = scene.svg.getBoundingClientRect();
 
-    hideHandles();
+    scene.hideHandles();
 
-    let size = env.get('gif').get('size');
-    let transparentColor = env.get('gif').get('transparency');
-    let name = env.get('gif').get('name');
-    let repeat = env.get('gif').get('repeat');
-    let delay = env.get('gif').get('delay');
-    let skip = env.get('gif').get('skip');
+    let size = scene.get('gif').get('size');
+    let transparentColor = scene.get('gif').get('transparency');
+    let name = scene.get('gif').get('name');
+    let repeat = scene.get('gif').get('repeat');
+    let delay = scene.get('gif').get('delay');
+    let skip = scene.get('gif').get('skip');
 
     // I don't know why I need to set the viewport explicitly. Setting the size
     // of the image isn't sufficient.
-    svg.setAttribute('width', size.get(0).value);
-    svg.setAttribute('height', size.get(1).value);
+    scene.svg.setAttribute('width', size.get(0).value);
+    scene.svg.setAttribute('height', size.get(1).value);
 
     let gif = new GIF({
       workers: 3,
@@ -542,7 +331,7 @@ function initialize() {
 
     gif.on('finished', (blob) => {
       downloadBlob(name.value, blob);
-      stopSpinning();
+      stopSpinning(recordSpinner, recordButton);
     });
 
     function tick(i) {
@@ -551,7 +340,7 @@ function initialize() {
         if (i >= scrubber.max) {
           gif.render();
         } else {
-          env.globals.drawables.forEach(drawable => drawable.draw(env, i, env.globals.bounds));
+          scene.drawables.forEach(drawable => drawable.draw(scene, i, scene.bounds));
 
           let data = new XMLSerializer().serializeToString(svg);
           let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
@@ -570,7 +359,7 @@ function initialize() {
           img.src = url;
         }
       } catch (e) {
-        stopSpinning();
+        stopSpinning(recordSpinner, recordButton);
         throw e;
       }
     }
@@ -585,7 +374,9 @@ function initialize() {
   });
 
   exportButton.addEventListener('click', exportSvgWithoutHandles);
-  fitButton.addEventListener('click', fitSvg);
+  fitButton.addEventListener('click', () => {
+    if (scene) scene.fit();
+  });
 
   scrubber.addEventListener('input', () => {
     stopAnimation();
@@ -603,37 +394,20 @@ function initialize() {
   });
 
   playLoopButton.addEventListener('click', e => {
-    play(true);
-  });
-
-  evaluateButton.addEventListener('click', interpret);
-
-  svg = document.getElementById('svg');
-  svg.addEventListener('wheel', e => {
-    if (env.globals.bounds && !isDraggingHandle) {
-      mouseAtSvg.x = e.clientX;
-      mouseAtSvg.y = e.clientY;
-      const matrix = svg.getScreenCTM();
-      let center = mouseAtSvg.matrixTransform(matrix.inverse());
-
-      let factor = 1 + e.deltaY / 100;
-      env.globals.bounds.x = (env.globals.bounds.x - center.x) * factor + center.x;
-      env.globals.bounds.y = (env.globals.bounds.y - center.y) * factor + center.y;
-      env.globals.bounds.width *= factor;
-      env.globals.bounds.height *= factor;
-      setSvgBounds(env.globals.bounds);
-
-      scaleCircleHandles();
+    if (animateTask) {
+      stopAnimation();
+    } else {
+      play(true);
     }
-  }, {
-    passive: true
   });
 
-  svg.addEventListener('mousedown', onMouseDown);
-  svg.addEventListener('mousemove', onMouseMove);
-  svg.addEventListener('mouseup', onMouseUp);
+  stopButton.addEventListener('click', e => {
+    stopInterpreting();
+  });
 
-  mouseAtSvg = svg.createSVGPoint();
+  evaluateButton.addEventListener('click', () => {
+    startInterpreting();
+  });
 
   if (source0) {
     left.style.width = '300px';
@@ -644,7 +418,7 @@ function initialize() {
   if (source0) {
     editor.setValue(source0, 1);
     if (runZeroMode) {
-      interpret();
+      startInterpreting();
       if (runZeroMode == 'loop') {
         play(true);
       }
@@ -702,4 +476,4 @@ function initialize() {
   leftRightResizer.addEventListener('mousedown', generateWidthResizer(leftRightResizer)); 
 }
 
-window.addEventListener('load', initialize);
+window.addEventListener('DOMContentLoaded', initialize);

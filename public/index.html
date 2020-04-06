@@ -13,7 +13,7 @@
   <div id="left">
     <div id="editor" draggable="false"></div>
     <div id="editor-messager-resizer" class="height-resizer resizer"></div>
-    <div id="messagerContainer">
+    <div id="messager-container">
       <div id="messager"></div>
     </div>
   </div>
@@ -23,20 +23,24 @@
       <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <div id="toolbar">
-      <input type="button" id="evaluateButton" value="Evaluate">
-      <span id="recordContainer">
-        <input type="button" id="recordButton" value="Record" disabled>
-        <div id="spinner"></div>
+      <span class="spinner-root">
+        <input type="button" id="evaluate-button" value="Evaluate">
+        <div id="evaluate-spinner" class="spinner"></div>
       </span>
-      <input type="button" id="saveButton" value="Save">
-      <input type="button" id="exportButton" value="Export">
-      <input type="button" id="fitButton" value="Fit">
+      <input type="button" id="stop-button" class="hidden" value="Stop">
+      <span class="spinner-root">
+        <input type="button" id="record-button" value="Record" disabled>
+        <div id="record-spinner" class="spinner"></div>
+      </span>
+      <input type="button" id="save-button" value="Save">
+      <input type="button" id="export-button" value="Export">
+      <input type="button" id="fit-button" value="Fit">
     </div>
-    <div id="timeToolbar">
+    <div id="time-toolbar">
       <div>
-        <input type="number" id="timeSpinner" value="0" min="0" max="100">
-        <input type="button" id="playOnceButton" value="&rarr;">
-        <input type="button" id="playLoopButton" value="&infin;">
+        <input type="number" id="time-spinner" value="0" min="0" max="100">
+        <input type="button" id="play-once-button" value="&rarr;">
+        <input type="button" id="play-loop-button" value="&infin;">
       </div>
       <input type="range" id="scrubber" value="0" min="0" max="100000">
     </div>

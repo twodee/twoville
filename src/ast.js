@@ -1,64 +1,44 @@
 // https://github.com/danro/jquery-easing/blob/master/jquery.easing.js
 
-import { Tokens } from './token.js';
-import { Messager } from './messager.js';
+// import { Messager } from './messager.js';
 
 import {
-  TwovilleEnvironment,
-  TwovilleTimelinedEnvironment,
+  Tokens,
+  FunctionDefinition,
   MessagedException,
   LocatedException,
-  TwovilleCircle,
-  TwovilleCutout,
-  TwovilleGroup,
-  TwovilleLabel,
-  TwovilleLine,
-  TwovilleMarker,
-  TwovilleMask,
-  TwovillePath,
-  TwovillePathArc,
-  TwovillePathJump,
-  TwovillePathLine,
-  TwovillePathCubic,
-  TwovillePathQuadratic,
-  TwovilleUngon,
-  TwovillePolygon,
-  TwovillePolyline,
-  TwovilleRectangle,
-  TwovilleRotate,
-  TwovilleScale,
-  TwovilleShear,
-  TwovilleTranslate,
-  TwovilleTurtle,
-  TwovilleTurtleMove,
-  TwovilleTurtleTurn,
-  TwovilleVertex,
-} from "./types.js";
+  Precedence,
+} from './common.js';
 
-export class FunctionDefinition {
-  constructor(name, formals, body) {
-    this.name = name;
-    this.formals = formals;
-    this.body = body;
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export const Precedence = Object.freeze({
-  Atom: 100,
-  Property: 99,
-  Power: 95,
-  Not: 90,
-  Multiplicative: 80,
-  Additive: 70,
-  Shift: 65,
-  And: 60,
-  Or: 59,
-  Relational: 50,
-  Equality: 45,
-  Assignment: 15,
-});
+import {
+  Environment,
+  // TwovilleTimelinedEnvironment,
+  // TwovilleCircle,
+  // TwovilleCutout,
+  // TwovilleGroup,
+  // TwovilleLabel,
+  // TwovilleLine,
+  // TwovilleMarker,
+  // TwovilleMask,
+  // TwovillePath,
+  // TwovillePathArc,
+  // TwovillePathJump,
+  // TwovillePathLine,
+  // TwovillePathCubic,
+  // TwovillePathQuadratic,
+  // TwovilleUngon,
+  // TwovillePolygon,
+  // TwovillePolyline,
+  Rectangle,
+  // TwovilleRotate,
+  // TwovilleScale,
+  // TwovilleShear,
+  // TwovilleTranslate,
+  // TwovilleTurtle,
+  // TwovilleTurtleMove,
+  // TwovilleTurtleTurn,
+  // TwovilleVertex,
+} from "./scene.js";
 
 // --------------------------------------------------------------------------- 
 // INTERPOLANTS
@@ -121,8 +101,7 @@ function interpolateBackInOut(a, b, proportion) {
 // --------------------------------------------------------------------------- 
 
 export class Expression {
-  constructor(precedence, where = null, unevaluated = null) {
-    this.precedence = precedence;
+  constructor(where, unevaluated) {
     this.where = where;
     this.unevaluated = unevaluated ? unevaluated : this;
   }
@@ -130,33 +109,61 @@ export class Expression {
   isTimeSensitive(env) {
     return false;
   }
+
+  get precedence() {
+    return this.constructor.precedence;
+  }
+
+  toPod() {
+    return {
+      type: this.constructor.name,
+      where: this.where,
+    };
+  }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionData extends Expression {
-  constructor(type, article, where = null, unevaluated = null, prevalues = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(value, where, unevaluated, prevalues) {
+    super(where, unevaluated);
+    this.value = value;
     this.prevalues = prevalues;
-    this.type = type;
-    this.article = article;
   }
 
   bind(env, id, fromTime, toTime) {
     env.bind(id, this, fromTime, toTime);
+  }
+
+  get type() {
+    return this.constructor.type;
+  }
+
+  get article() {
+    return this.constructor.article;
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.value = this.value;
+    return pod;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionBoolean extends ExpressionData {
-  constructor(x, where = null, unevaluated = null, prevalues = null) {
-    super('boolean', 'a', where, unevaluated, prevalues);
-    this.x = x;
+  static type = 'boolean';
+  static article = 'a';
+
+  constructor(value, where, unevaluated, prevalues) {
+    super(value, where, unevaluated, prevalues);
   }
 
   clone() {
-    return new ExpressionBoolean(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
+    return new ExpressionBoolean(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -164,11 +171,7 @@ export class ExpressionBoolean extends ExpressionData {
   }
    
   toPretty() {
-    return '' + this.x;
-  }
-
-  get value() {
-    return this.x;
+    return '' + this.value;
   }
 
   interpolateLinear(other, proportion) {
@@ -207,13 +210,15 @@ export class ExpressionBoolean extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionInteger extends ExpressionData {
-  constructor(x, where = null, unevaluated = null, prevalues = null) {
-    super('integer', 'an', where, unevaluated, prevalues);
-    this.x = x;
+  static type = 'integer';
+  static article = 'an';
+
+  constructor(value, where, unevaluated, prevalues) {
+    super(value, where, unevaluated, prevalues);
   }
 
   clone() {
-    return new ExpressionInteger(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
+    return new ExpressionInteger(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -221,15 +226,11 @@ export class ExpressionInteger extends ExpressionData {
   }
 
   toPretty() {
-    return '' + this.x;
-  }
-
-  get value() {
-    return this.x;
+    return '' + this.value;
   }
 
   get(i) {
-    return new ExpressionInteger(this.x >> i & 1);
+    return new ExpressionInteger(this.value >> i & 1);
   }
 
   add(other) {
@@ -357,13 +358,15 @@ export class ExpressionInteger extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionCharacter extends ExpressionData {
-  constructor(x, where = null, unevaluated = null, prevalues = null) {
-    super('character', 'a', where, unevaluated, prevalues);
-    this.x = x;
+  static type = 'character';
+  static article = 'a';
+
+  constructor(value, where, unevaluated, prevalues) {
+    super(value, where, unevaluated, prevalues);
   }
 
   clone() {
-    return new ExpressionCharacter(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
+    return new ExpressionCharacter(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -371,28 +374,26 @@ export class ExpressionCharacter extends ExpressionData {
   }
 
   toPretty() {
-    return this.x;
+    return this.value;
   }
 
   add(other) {
     return new ExpressionString(this.toPretty() + other.toPretty());
-  }
-
-  get value() {
-    return this.x;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionString extends ExpressionData {
-  constructor(x, where = null, unevaluated = null, prevalues = null) {
-    super('string', 'a', where, unevaluated, prevalues);
-    this.x = x;
+  static type = 'string';
+  static article = 'a';
 
-    this.bindings = [];
+  constructor(value, where, unevaluated, prevalues) {
+    super(value, where, unevaluated, prevalues);
 
-    this.bindings['size'] = new FunctionDefinition('size', [], new ExpressionStringSize(this));
+    this.bindings = {
+      size: new FunctionDefinition('size', [], new ExpressionStringSize(this)),
+    };
   }
 
   has(id) {
@@ -404,7 +405,7 @@ export class ExpressionString extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionString(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
+    return new ExpressionString(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -412,28 +413,24 @@ export class ExpressionString extends ExpressionData {
   }
 
   toPretty() {
-    return this.x;
-  }
-
-  get value() {
-    return this.x;
+    return this.value;
   }
 
   set(i, value) {
     // assert value is character
-    this.x = this.x.substr(0, i) + value + this.x.substr(i + 1);
+    this.value = this.value.substr(0, i) + value + this.value.substr(i + 1);
   }
 
   get(i) {
-    if (i < 0 || i >= this.x.length) {
-      throw new MessagedException(`I can't get character ${i} of this string because ${i} is not a legal index in a string of length ${this.x.length}.`)
+    if (i < 0 || i >= this.value.length) {
+      throw new MessagedException(`I can't get character ${i} of this string because ${i} is not a legal index in a string of length ${this.value.length}.`)
     } else {
-      return new ExpressionCharacter(this.x.charAt(i));
+      return new ExpressionCharacter(this.value.charAt(i));
     }
   }
 
   add(other) {
-    return new ExpressionString(this.x + other.toPretty());
+    return new ExpressionString(this.value + other.toPretty());
   }
 
   interpolateLinear(other, proportion) {
@@ -472,22 +469,26 @@ export class ExpressionString extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionStringSize extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new ExpressionInteger(this.instance.x.length);
+    return new ExpressionInteger(this.instance.value.length);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionReal extends ExpressionData {
-  constructor(x, where = null, unevaluated = null, prevalues = null) {
-    super('real', 'a', where, unevaluated, prevalues);
-    this.x = x;
+  static type = 'real';
+  static article = 'a';
+
+  constructor(value, where, unevaluated, prevalues) {
+    super(value, where, unevaluated, prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
@@ -495,15 +496,11 @@ export class ExpressionReal extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionReal(this.x, this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
+    return new ExpressionReal(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
   toPretty() {
-    return '' + this.x;
-  }
-
-  get value() {
-    return this.x;
+    return '' + this.value;
   }
 
   add(other) {
@@ -609,297 +606,282 @@ export class ExpressionReal extends ExpressionData {
 }
 
 // --------------------------------------------------------------------------- 
-
-export class ExpressionSame extends Expression {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(Precedence.Equality, where, unevaluated);
-    this.a = a;
-    this.b = b;
-  }
-
-  evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-    return evaluatedA.isSame(evaluatedB);
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class ExpressionNotSame extends Expression {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(Precedence.Equality, where, unevaluated);
-    this.a = a;
-    this.b = b;
-  }
-
-  evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-    return !evaluatedA.isSame(evaluatedB);
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class ExpressionLess extends Expression {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(Precedence.Relational, where, unevaluated);
-    this.a = a;
-    this.b = b;
-  }
-
-  evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-    return evaluatedA.isLess(evaluatedB);
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class ExpressionLessEqual extends Expression {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(Precedence.Relational, where, unevaluated);
-    this.a = a;
-    this.b = b;
-  }
-
-  evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-    return evaluatedA.isLess(evaluatedB) || evaluatedA.isSame(evaluatedB);
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class ExpressionMore extends Expression {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(Precedence.Relational, where, unevaluated);
-    this.a = a;
-    this.b = b;
-  }
-
-  evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-    return evaluatedA.isMore(evaluatedB);
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class ExpressionMoreEqual extends Expression {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(Precedence.Relational, where, unevaluated);
-    this.a = a;
-    this.b = b;
-  }
-
-  evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-    return evaluatedA.isMore(evaluatedB) || evaluatedA.isSame(evaluatedB);
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
-  }
-}
-
-// --------------------------------------------------------------------------- 
 // ARITHMETIC
 // --------------------------------------------------------------------------- 
 
 export class ExpressionBinaryOperator extends Expression {
-  constructor(a, b, operator, precedence, where = null, unevaluated = null) {
-    super(precedence, where, unevaluated);
-    this.a = a;
-    this.b = b;
+  constructor(l, r, operator, where, unevaluated) {
+    super(where, unevaluated);
+    this.l = l;
+    this.r = r;
     this.operator = operator;
   }
 
   toPretty() {
-    const prettyA = this.a.precedence < this.precedence ? `(${this.a.toPretty()})` : `${this.a.toPretty()}`;
-    const prettyB = this.b.precedence <= this.precedence ? `(${this.b.toPretty()})` : `${this.b.toPretty()}`;
+    const prettyA = this.l.precedence < this.precedence ? `(${this.l.toPretty()})` : `${this.l.toPretty()}`;
+    const prettyB = this.r.precedence <= this.precedence ? `(${this.r.toPretty()})` : `${this.r.toPretty()}`;
     return `${prettyA} ${this.operator} ${prettyB}`;
-  }
-}
-
-export class ExpressionAdd extends ExpressionBinaryOperator {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(a, b, '+', Precedence.Additive, where, unevaluated);
-  }
-
-  evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-
-    let sum = evaluatedA.add(evaluatedB);
-    sum.unevaluated = this;
-
-    return sum;
   }
 
   isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+    return this.l.isTimeSensitive(env) || this.r.isTimeSensitive(env);
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.l = l.toPod();
+    pod.r = r.toPod();
+    return pod;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionSame extends ExpressionBinaryOperator {
+  static precedence = Precedence.Equality;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '==', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+    return evaluatedL.isSame(evaluatedR);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionNotSame extends ExpressionBinaryOperator {
+  static precedence = Precedence.Equality;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '!=', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+    return !evaluatedL.isSame(evaluatedR);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionLess extends ExpressionBinaryOperator {
+  static precedence = Precedence.Relational;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '<', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+    return evaluatedL.isLess(evaluatedR);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionLessEqual extends ExpressionBinaryOperator {
+  static precedence = Precedence.Relational;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '<=', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+    return evaluatedL.isLess(evaluatedR) || evaluatedL.isSame(evaluatedR);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionMore extends ExpressionBinaryOperator {
+  static precedence = Precedence.Relational;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '>', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+    return evaluatedL.isMore(evaluatedR);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionMoreEqual extends ExpressionBinaryOperator {
+  static precedence = Precedence.Relational;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '>=', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+    return evaluatedL.isMore(evaluatedR) || evaluatedL.isSame(evaluatedR);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionAdd extends ExpressionBinaryOperator {
+  static precedence = Precedence.Additive;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '+', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+
+    let sum = evaluatedL.add(evaluatedR);
+    sum.unevaluated = this;
+
+    return sum;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSubtract extends ExpressionBinaryOperator {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(a, b, '-', Precedence.Additive, where, unevaluated);
+  static precedence = Precedence.Additive;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '-', where, unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
 
-    let difference = evaluatedA.subtract(evaluatedB);
+    let difference = evaluatedL.subtract(evaluatedR);
     difference.unevaluated = this;
 
     return difference;
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMultiply extends ExpressionBinaryOperator {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(a, b, '*', Precedence.Multiplicative, where, unevaluated);
+  static precedence = Precedence.Multiplicative;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '*', where, unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-    let product = evaluatedA.multiply(evaluatedB);
-    product.unevaluated = this;
-    return product;
-  }
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
 
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+    let product = evaluatedL.multiply(evaluatedR);
+    product.unevaluated = this;
+
+    return product;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionDivide extends ExpressionBinaryOperator {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(a, b, '/', Precedence.Multiplicative, where, unevaluated);
+  static precedence = Precedence.Multiplicative;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '/', where, unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
 
-    let quotient = evaluatedA.divide(evaluatedB);
-    quotient.prevalues = [evaluatedA, evaluatedB];
+    let quotient = evaluatedL.divide(evaluatedR);
+    quotient.prevalues = [evaluatedL, evaluatedR];
     quotient.unevaluated = this;
 
     return quotient;
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRemainder extends ExpressionBinaryOperator {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(a, b, '%', Precedence.Multiplicative, where, unevaluated);
+  static precedence = Precedence.Multiplicative;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '%', where, unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
-    return evaluatedA.remainder(evaluatedB);
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+    return evaluatedL.remainder(evaluatedR);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPower extends ExpressionBinaryOperator {
-  constructor(a, b, where = null, unevaluated = null) {
-    super(a, b, '^', Precedence.Power, where, unevaluated);
+  static precedence = Precedence.Power;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, '^', where, unevaluated);
   }
 
   evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
-    let evaluatedB = this.b.evaluate(env, fromTime, toTime);
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
 
-    let power = evaluatedA.power(evaluatedB);
-    power.prevalues = [evaluatedA, evaluatedB];
+    let power = evaluatedL.power(evaluatedR);
+    power.prevalues = [evaluatedL, evaluatedR];
     power.unevaluated = this;
 
     return power;
-  }
-
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env) || this.b.isTimeSensitive(env);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionNegative extends Expression {
-  constructor(a, where = null, unevaluated = null) {
-    super(Precedence.Unary, where, unevaluated);
-    this.a = a;
+  static precedence = Precedence.Unary;
+
+  constructor(operand, where, unevaluated) {
+    super(where, unevaluated);
+    this.operand = operand;
   }
 
   evaluate(env, fromTime, toTime) {
-    let evaluatedA = this.a.evaluate(env, fromTime, toTime);
+    let evaluatedL = this.operand.evaluate(env, fromTime, toTime);
 
-    let negation = evaluatedA.negative();
+    let negation = evaluatedL.negative();
     negation.unevaluated = this;
 
     return negation;
   }
 
-  isTimeSensitive(env) {
-    return this.a.isTimeSensitive(env);
+  toPod() {
+    const pod = super.toPod();
+    pod.operand = this.operand;
+    return pod;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionDefinition extends Expression {
-  constructor(name, formals, body, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(name, formals, body, where, unevaluated) {
+    super(where, unevaluated);
     this.name = name;
     this.formals = formals;
     this.body = body;
@@ -913,14 +895,16 @@ export class ExpressionFunctionDefinition extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionIdentifier extends Expression {
-  constructor(nameToken, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(nameToken, where, unevaluated) {
+    super(where, unevaluated);
     this.nameToken = nameToken;
   }
 
   evaluate(env, fromTime, toTime) {
     let value = env.get(this.nameToken.source);
-    if (value != null) {
+    if (value) {
       return value;
     } else {
       throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of this "${this.nameToken.source}" before.`);
@@ -960,8 +944,10 @@ export class ExpressionIdentifier extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMemberIdentifier extends ExpressionIdentifier {
-  constructor(base, nameToken, where = null, unevaluated = null) {
-    super(Precedence.Property, where, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(base, nameToken, where, unevaluated) {
+    super(where, unevaluated);
     this.base = base;
     this.nameToken = nameToken;
   }
@@ -969,7 +955,7 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
   evaluate(env, fromTime, toTime) {
     let baseValue = this.base.evaluate(env, fromTime, toTime);
     let value = baseValue.get(this.nameToken.source);
-    if (value != null) {
+    if (value) {
       return value;
     } else {
       throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of this "${this.nameToken.source}" before.`);
@@ -1007,8 +993,10 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
-  constructor(base, nameToken, where = null, unevaluated = null) {
-    super(Precedence.Property, nameToken, where, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(base, nameToken, where, unevaluated) {
+    super(nameToken, where, unevaluated);
     this.base = base;
   }
 
@@ -1038,8 +1026,10 @@ export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFunctionCall extends Expression {
-  constructor(nameToken, actuals, where = null, unevaluated = null) {
-    super(Precedence.Call, where, unevaluated);
+  static precedence = Precedence.Call;
+
+  constructor(nameToken, actuals, where, unevaluated) {
+    super(where, unevaluated);
     this.nameToken = nameToken;
     this.actuals = actuals;
   }
@@ -1061,11 +1051,11 @@ export class ExpressionFunctionCall extends Expression {
       throw new LocatedException(this.where, `I expected function ${this.nameToken.source} to be called with ${f.formals.length} parameter${f.formals.length == 1 ? '' : 's'}.`);
     }
 
-    let callEnvironment = new TwovilleEnvironment(env);
-    this.actuals.forEach((actual, i) => {
+    let callEnvironment = Environment.create(env);
+    for (let [i, actual] of this.actuals.entries()) {
       let value = actual.evaluate(env, fromTime, toTime);
       callEnvironment.bind(f.formals[i], value);
-    });
+    }
 
     let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, this);
     return returnValue;
@@ -1080,7 +1070,7 @@ export class ExpressionFunctionCall extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
-  constructor(host, nameToken, actuals, where = null, unevaluated = null) {
+  constructor(host, nameToken, actuals, where, unevaluated) {
     super(nameToken, actuals, where, unevaluated);
     this.host = host;
   }
@@ -1099,16 +1089,18 @@ export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
 // ---------------------------------------------------------------------------
 
 export class ExpressionBlock extends Expression {
-  constructor(statements, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(statements, where, unevaluated) {
+    super(where, unevaluated);
     this.statements = statements;
   }
 
   evaluate(env, a, toTime) {
-    let result = null;
-    this.statements.forEach(function(statement) {
+    let result = null; // TODO Unit
+    for (let statement of this.statements) {
       result = statement.evaluate(env, a, toTime);
-    });
+    }
     return result;
   }
 
@@ -1120,8 +1112,10 @@ export class ExpressionBlock extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAssignment extends Expression {
-  constructor(l, r, where = null, unevaluated = null) {
-    super(Precedence.Assignment, where, unevaluated);
+  static precedence = Precedence.Assignment;
+
+  constructor(l, r, where, unevaluated) {
+    super(where, unevaluated);
     this.l = l;
     this.r = r;
   }
@@ -1142,8 +1136,10 @@ export class ExpressionAssignment extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionIf extends Expression {
-  constructor(conditions, thenBlocks, elseBlock, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(conditions, thenBlocks, elseBlock, where, unevaluated) {
+    super(where, unevaluated);
     this.conditions = conditions;
     this.thenBlocks = thenBlocks;
     this.elseBlock = elseBlock;
@@ -1161,20 +1157,22 @@ export class ExpressionIf extends Expression {
     if (this.elseBlock) {
       return this.elseBlock.evaluate(env, fromTime, toTime);
     } else {
-      return null;
+      return null; // TODO unit
     }
   }
 
   isTimeSensitive(env) {
-    return this.conditions.some(e => e.isTimeSensitive(env)) || this.thenBlocks.some(e => e.isTimeSensitive(env)) || (this.elseBlock != null && this.elseBlock.isTimeSensitive(env));
+    return this.conditions.some(e => e.isTimeSensitive(env)) || this.thenBlocks.some(e => e.isTimeSensitive(env)) || (this.elseBlock && this.elseBlock.isTimeSensitive(env));
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionFor extends Expression {
-  constructor(i, start, stop, by, body, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(i, start, stop, by, body, where, unevaluated) {
+    super(where, unevaluated);
     this.i = i;
     this.start = start;
     this.stop = stop;
@@ -1191,6 +1189,8 @@ export class ExpressionFor extends Expression {
       new ExpressionAssignment(this.i, new ExpressionInteger(i), true).evaluate(env, fromTime, toTime);
       this.body.evaluate(env, fromTime, toTime);
     }
+
+    // TODO return?
   }
 
   isTimeSensitive(env) {
@@ -1201,8 +1201,10 @@ export class ExpressionFor extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSubscript extends Expression {
-  constructor(base, index, where = null, unevaluated = null) {
-    super(Precedence.Property, where, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(base, index, where, unevaluated) {
+    super(where, unevaluated);
     this.base = base;
     this.index = index;
   }
@@ -1246,8 +1248,10 @@ export class ExpressionSubscript extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorAdd extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
@@ -1260,21 +1264,25 @@ export class ExpressionVectorAdd extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorSize extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new ExpressionInteger(this.instance.elements.length);
+    return new ExpressionInteger(this.instance.value.length);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorToCartesian extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
@@ -1286,8 +1294,10 @@ export class ExpressionVectorToCartesian extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorMagnitude extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
@@ -1299,8 +1309,10 @@ export class ExpressionVectorMagnitude extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorNormalize extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
@@ -1312,8 +1324,10 @@ export class ExpressionVectorNormalize extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorRotate extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
@@ -1326,8 +1340,10 @@ export class ExpressionVectorRotate extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorRotateAround extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
@@ -1341,8 +1357,10 @@ export class ExpressionVectorRotateAround extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVectorRotate90 extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Property, null, unevaluated);
+  static precedence = Precedence.Property;
+
+  constructor(instance, unevaluated) {
+    super(undefined, unevaluated);
     this.instance = instance;
   }
 
@@ -1354,8 +1372,10 @@ export class ExpressionVectorRotate90 extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementFrom extends Expression {
-  constructor(fromTimeExpression, block, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(fromTimeExpression, block, where, unevaluated) {
+    super(where, unevaluated);
     this.fromTimeExpression = fromTimeExpression;
     this.block = block;
   }
@@ -1363,14 +1383,17 @@ export class StatementFrom extends Expression {
   evaluate(env, fromTime, toTime) {
     let realFromTime = this.fromTimeExpression.evaluate(env, fromTime, toTime);
     this.block.evaluate(env, realFromTime, null);
+    // TODO return?
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class StatementTo extends Expression {
-  constructor(toTimeExpression, block, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(toTimeExpression, block, where, unevaluated) {
+    super(where, unevaluated);
     this.toTimeExpression = toTimeExpression;
     this.block = block;
   }
@@ -1384,8 +1407,10 @@ export class StatementTo extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementBetween extends Expression {
-  constructor(fromTimeExpression, toTimeExpression, block, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(fromTimeExpression, toTimeExpression, block, where, unevaluated) {
+    super(where, unevaluated);
     this.fromTimeExpression = fromTimeExpression;
     this.toTimeExpression = toTimeExpression;
     this.block = block;
@@ -1401,8 +1426,10 @@ export class StatementBetween extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementThrough extends Expression {
-  constructor(throughTimeExpression, block, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(throughTimeExpression, block, where, unevaluated) {
+    super(where, unevaluated);
     this.throughTimeExpression = throughTimeExpression;
     this.block = block;
   }
@@ -1417,8 +1444,10 @@ export class StatementThrough extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementToStasis extends Expression {
-  constructor(startTimeExpression, endTimeExpression, block, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(startTimeExpression, endTimeExpression, block, where, unevaluated) {
+    super(where, unevaluated);
     this.startTimeExpression = startTimeExpression;
     this.endTimeExpression = endTimeExpression;
     this.block = block;
@@ -1435,8 +1464,10 @@ export class StatementToStasis extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class StatementFromStasis extends Expression {
-  constructor(startTimeExpression, endTimeExpression, block, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(startTimeExpression, endTimeExpression, block, where, unevaluated) {
+    super(where, unevaluated);
     this.startTimeExpression = startTimeExpression;
     this.endTimeExpression = endTimeExpression;
     this.block = block;
@@ -1453,8 +1484,10 @@ export class StatementFromStasis extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRepeat extends Expression {
-  constructor(count, body, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(count, body, where, unevaluated) {
+    super(where, unevaluated);
     this.count = count;
     this.body = body;
   }
@@ -1477,8 +1510,10 @@ export class ExpressionRepeat extends Expression {
 
 // TODO: better names
 export class ExpressionRepeatAround extends Expression {
-  constructor(count, body, around, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(count, body, around, where, unevaluated) {
+    super(where, unevaluated);
     this.count = count;
     this.body = body;
     this.around = around;
@@ -1504,15 +1539,17 @@ export class ExpressionRepeatAround extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionWith extends Expression {
-  constructor(scope, body, where = null, unevaluated = null) {
-    super(Precedence.Atom, where, unevaluated);
+  static precedence = Precedence.Atom;
+
+  constructor(scope, body, where, unevaluated) {
+    super(where, unevaluated);
     this.scope = scope;
     this.body = body;
   }
 
   evaluate(env, fromTime, toTime) {
     let withEnv = this.scope.evaluate(env, fromTime, toTime);
-    if (!(withEnv instanceof TwovilleEnvironment)) {
+    if (!(withEnv instanceof Environment)) {
       throw new LocatedException(this.scope.where, `I encountered a with expression whose subject isn't an environment.`);
     }
     if (withEnv.hasOwnProperty('sourceSpans')) {
@@ -1530,22 +1567,23 @@ export class ExpressionWith extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionRectangle extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
-  evaluate(env, fromTime, toTime, callExpression) {
-    let r = new TwovilleRectangle(env, callExpression);
-    return r;
-  }
+export class ExpressionFunction extends Expression {
+  static precedence = Precedence.Call;
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionVertex extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionRectangle extends ExpressionFunction {
+  evaluate(env, fromTime, toTime, callExpression) {
+    return Rectangle.create(env, callExpression.where);
+  }
+}
+ 
+// --------------------------------------------------------------------------- 
+
+export class ExpressionVertex extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1556,9 +1594,9 @@ export class ExpressionVertex extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTurtle extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionTurtle extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1569,9 +1607,9 @@ export class ExpressionTurtle extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTurtleTurn extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionTurtleTurn extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1582,9 +1620,9 @@ export class ExpressionTurtleTurn extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTurtleMove extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionTurtleMove extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1595,9 +1633,9 @@ export class ExpressionTurtleMove extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathArc extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionPathArc extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1609,9 +1647,9 @@ export class ExpressionPathArc extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathJump extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionPathJump extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1622,9 +1660,9 @@ export class ExpressionPathJump extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathLine extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionPathLine extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1635,9 +1673,9 @@ export class ExpressionPathLine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathCubic extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionPathCubic extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1648,9 +1686,9 @@ export class ExpressionPathCubic extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathQuadratic extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionPathQuadratic extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1661,9 +1699,9 @@ export class ExpressionPathQuadratic extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTranslate extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionTranslate extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1674,9 +1712,9 @@ export class ExpressionTranslate extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionScale extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionScale extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1687,9 +1725,9 @@ export class ExpressionScale extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionRotate extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionRotate extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1700,9 +1738,9 @@ export class ExpressionRotate extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionShear extends Expression {
-  constructor(instance, unevaluated = null) {
-    super(Precedence.Call, null, unevaluated);
+export class ExpressionShear extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
     this.instance = instance;
   }
 
@@ -1713,11 +1751,7 @@ export class ExpressionShear extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionLine extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionLine extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleLine(env, callExpression);
   }
@@ -1725,11 +1759,7 @@ export class ExpressionLine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPolygon extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionPolygon extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovillePolygon(env, callExpression);
   }
@@ -1737,11 +1767,7 @@ export class ExpressionPolygon extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionUngon extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionUngon extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleUngon(env, callExpression);
   }
@@ -1749,11 +1775,7 @@ export class ExpressionUngon extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPolyline extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionPolyline extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovillePolyline(env, callExpression);
   }
@@ -1761,11 +1783,7 @@ export class ExpressionPolyline extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPath extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionPath extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovillePath(env, callExpression);
   }
@@ -1773,11 +1791,7 @@ export class ExpressionPath extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionLabel extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionLabel extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleLabel(env, callExpression);
   }
@@ -1785,11 +1799,7 @@ export class ExpressionLabel extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionCircle extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionCircle extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleCircle(env, callExpression);
   }
@@ -1797,49 +1807,37 @@ export class ExpressionCircle extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPrint extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionPrint extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let message = env.get('message').toPretty();
-    Messager.log(message);
+    env.root.log(message);
     return null;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionSeed extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionSeed extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let seed = env.get('value').value;
-    env.globals.prng.seed(seed);
+    env.root.prng.seed(seed);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionRandom extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionRandom extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let min = env.get('min').value;
     let max = env.get('max').value;
 
     let x;
     if (env.get('min') instanceof ExpressionInteger && env.get('max') instanceof ExpressionInteger) {
-      let random = env.globals.prng.random01();
+      let random = env.root.prng.random01();
       let x = Math.floor(random * (max - min) + min);
       return new ExpressionInteger(x);
     } else {
-      let random = env.globals.prng.random01();
+      let random = env.root.prng.random01();
       let x = random * (max - min) + min;
       return new ExpressionReal(x);
     }
@@ -1848,11 +1846,7 @@ export class ExpressionRandom extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionSine extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionSine extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let degrees = env.get('degrees').value;
     let x = Math.sin(degrees * Math.PI / 180);
@@ -1862,11 +1856,7 @@ export class ExpressionSine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionCosine extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionCosine extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let degrees = env.get('degrees').value;
     let x = Math.cos(degrees * Math.PI / 180);
@@ -1876,11 +1866,7 @@ export class ExpressionCosine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTangent extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionTangent extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let degrees = env.get('degrees').value;
     let x = Math.tan(degrees * Math.PI / 180);
@@ -1890,11 +1876,7 @@ export class ExpressionTangent extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionArcCosine extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionArcCosine extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let ratio = env.get('ratio').value;
     let angle = Math.acos(ratio) * 180 / Math.PI;
@@ -1904,11 +1886,7 @@ export class ExpressionArcCosine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionArcSine extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionArcSine extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let ratio = env.get('ratio').value;
     let angle = Math.asin(ratio) * 180 / Math.PI;
@@ -1918,11 +1896,7 @@ export class ExpressionArcSine extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionHypotenuse extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionHypotenuse extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let a = env.get('a').value;
     let b = env.get('b').value;
@@ -1933,11 +1907,7 @@ export class ExpressionHypotenuse extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionArcTangent extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionArcTangent extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let ratio = env.get('ratio').value;
     let angle = Math.atan(ratio) * 180 / Math.PI;
@@ -1947,11 +1917,7 @@ export class ExpressionArcTangent extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionArcTangent2 extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionArcTangent2 extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let a = env.get('a').value;
     let b = env.get('b').value;
@@ -1962,11 +1928,7 @@ export class ExpressionArcTangent2 extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionSquareRoot extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionSquareRoot extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let x = env.get('x').value;
     let root = Math.sqrt(x);
@@ -1977,11 +1939,7 @@ export class ExpressionSquareRoot extends Expression {
 // --------------------------------------------------------------------------- 
 
 // The casting function.
-export class ExpressionInt extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionInt extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let f = env.get('x').value;
     let i = Math.trunc(f);
@@ -1991,11 +1949,7 @@ export class ExpressionInt extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionGroup extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionGroup extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleGroup(env, callExpression);
   }
@@ -2003,11 +1957,7 @@ export class ExpressionGroup extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionMarker extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionMarker extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleMarker(env, callExpression);
   }
@@ -2015,11 +1965,7 @@ export class ExpressionMarker extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionMask extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionMask extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleMask(env, callExpression);
   }
@@ -2027,11 +1973,7 @@ export class ExpressionMask extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionCutout extends Expression {
-  constructor() {
-    super(Precedence.Call, null);
-  }
-
+export class ExpressionCutout extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleCutout(env, callExpression);
   }
@@ -2040,19 +1982,19 @@ export class ExpressionCutout extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVector extends ExpressionData {
-  constructor(elements, where = null, unevaluated = null, prevalues = null) {
-    super('vector', 'a', where, unevaluated, prevalues);
-    this.elements = elements;
-    this.bindings = [];
+  constructor(elements, where, unevaluated, prevalues) {
+    super(elements, where, unevaluated, prevalues);
 
-    this.bindings['normalize'] = new FunctionDefinition('normalize', [], new ExpressionVectorNormalize(this));
-    this.bindings['size'] = new FunctionDefinition('size', [], new ExpressionVectorSize(this));
-    this.bindings['magnitude'] = new FunctionDefinition('magnitude', [], new ExpressionVectorMagnitude(this));
-    this.bindings['toCartesian'] = new FunctionDefinition('toCartesian', [], new ExpressionVectorToCartesian(this));
-    this.bindings['add'] = new FunctionDefinition('add', ['item'], new ExpressionVectorAdd(this));
-    this.bindings['rotateAround'] = new FunctionDefinition('rotateAround', ['pivot', 'degrees'], new ExpressionVectorRotateAround(this));
-    this.bindings['rotate'] = new FunctionDefinition('rotate', ['degrees'], new ExpressionVectorRotate(this));
-    this.bindings['rotate90'] = new FunctionDefinition('rotate90', [], new ExpressionVectorRotate90(this));
+    this.bindings = {
+      normalize: new FunctionDefinition('normalize', [], new ExpressionVectorNormalize(this)),
+      size: new FunctionDefinition('size', [], new ExpressionVectorSize(this)),
+      magnitude: new FunctionDefinition('magnitude', [], new ExpressionVectorMagnitude(this)),
+      toCartesian: new FunctionDefinition('toCartesian', [], new ExpressionVectorToCartesian(this)),
+      add: new FunctionDefinition('add', ['item'], new ExpressionVectorAdd(this)),
+      rotateAround: new FunctionDefinition('rotateAround', ['pivot', 'degrees'], new ExpressionVectorRotateAround(this)),
+      rotate: new FunctionDefinition('rotate', ['degrees'], new ExpressionVectorRotate(this)),
+      rotate90: new FunctionDefinition('rotate90', [], new ExpressionVectorRotate90(this)),
+    };
   }
 
   has(id) {
@@ -2063,53 +2005,53 @@ export class ExpressionVector extends ExpressionData {
     if (index instanceof ExpressionIdentifier) {
       let id = index.token.source;
       if (id == 'x' || id == 'r') {
-        this.elements[0] = rhs;
+        this.value[0] = rhs;
       } else if (id == 'y' || id == 'g') {
-        this.elements[1] = rhs;
+        this.value[1] = rhs;
       } else if (id == 'z' || id == 'b') {
-        this.elements[2] = rhs;
+        this.value[2] = rhs;
       }
     } else if (index instanceof ExpressionInteger) {
-      this.elements[index.value] = rhs;
+      this.value[index.value] = rhs;
     }
     return rhs;
   }
 
   clone() {
-    return new ExpressionVector(this.elements.map(e => e.clone()), this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
+    return new ExpressionVector(this.value.map(e => e.clone()), this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime) {
-    let values = this.elements.map(element => {
+    let values = this.value.map(element => {
       return element.evaluate(env, fromTime, toTime);
     });
     return new ExpressionVector(values, this.where.clone());
   }
 
   insert(item) {
-    this.elements.push(item);
+    this.value.push(item);
   }
 
   map(transform) {
-    return this.elements.map(transform);
+    return this.value.map(transform);
   }
 
   isTimeSensitive(env) {
-    return this.elements.some(e => e.isTimeSensitive(env));
+    return this.value.some(e => e.isTimeSensitive(env));
   }
 
   bind(id, value) {
     if (id == 'x' || id == 'r') {
-      this.elements[0] = value;
+      this.value[0] = value;
     } else if (id == 'y' || id == 'g') {
-      this.elements[1] = value;
+      this.value[1] = value;
     } else if (id == 'z' || id == 'b') {
-      this.elements[2] = value;
+      this.value[2] = value;
     }
   }
 
   forEach(each) {
-    this.elements.forEach(each);
+    this.value.forEach(each);
   }
 
   getFunction(id) {
@@ -2117,26 +2059,26 @@ export class ExpressionVector extends ExpressionData {
   }
 
   set(i, value) {
-    this.elements[i] = value;
+    this.value[i] = value;
   }
 
   get(i) {
     if (i == 'x' || i == 'r') {
-      return this.elements[0];
+      return this.value[0];
     } else if (i == 'y' || i == 'g') {
-      return this.elements[1];
+      return this.value[1];
     } else if (i == 'z' || i == 'b') {
-      return this.elements[2];
+      return this.value[2];
     } else if (i instanceof ExpressionFunctionCall && this.bindings.hasOwnProperty(i.name)) {
       return this.bindings[i.name];
     } else if (typeof i == 'number') {
-      if (i < 0 || i >= this.elements.length) {
-        throw new MessagedException(`I can't get element ${i} of this vector because ${i} is not a legal index in a vector of length ${this.elements.length}.`)
+      if (i < 0 || i >= this.value.length) {
+        throw new MessagedException(`I can't get element ${i} of this vector because ${i} is not a legal index in a vector of length ${this.value.length}.`)
       } else {
-        return this.elements[i];
+        return this.value[i];
       }
     } else if (i instanceof ExpressionInteger) {
-      return this.elements[i.value];
+      return this.value[i.value];
     } else {
       throw new MessagedException('uh oh');
       return super.get(i);
@@ -2144,16 +2086,16 @@ export class ExpressionVector extends ExpressionData {
   }
 
   toColor(env) {
-    let r = Math.floor(this.elements[0].value * 255);
-    let g = Math.floor(this.elements[1].value * 255);
-    let b = Math.floor(this.elements[2].value * 255);
+    let r = Math.floor(this.value[0].value * 255);
+    let g = Math.floor(this.value[1].value * 255);
+    let b = Math.floor(this.value[2].value * 255);
     return 'rgb(' + r + ', ' + g + ', ' + b + ')';
   }
 
   toHexColor(env) {
-    let r = Math.floor(this.elements[0].value * 255).toString(16);
-    let g = Math.floor(this.elements[1].value * 255).toString(16);
-    let b = Math.floor(this.elements[2].value * 255).toString(16);
+    let r = Math.floor(this.value[0].value * 255).toString(16);
+    let g = Math.floor(this.value[1].value * 255).toString(16);
+    let b = Math.floor(this.value[2].value * 255).toString(16);
     if (r.length == 1) {
       r = '0' + r;
     }
@@ -2167,48 +2109,48 @@ export class ExpressionVector extends ExpressionData {
   }
 
   toPretty(env) {
-    return '[' + this.elements.map(element => element.toPretty()).join(', ') + ']';
+    return '[' + this.value.map(element => element.toPretty()).join(', ') + ']';
   }
 
   toSpacedString(env) {
-    return this.elements.map(element => element.toPretty()).join(' ');
+    return this.value.map(element => element.toPretty()).join(' ');
   }
 
   interpolateLinear(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolateLinear(other.get(i), proportion)));
+    return new ExpressionVector(this.value.map((element, i) => element.interpolateLinear(other.get(i), proportion)));
   }
 
   interpolateNearest(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolateNearest(other.get(i), proportion)));
+    return new ExpressionVector(this.value.map((element, i) => element.interpolateNearest(other.get(i), proportion)));
   }
 
   interpolateSineInOut(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolateSineInOut(other.get(i), proportion)));
+    return new ExpressionVector(this.value.map((element, i) => element.interpolateSineInOut(other.get(i), proportion)));
   }
 
   interpolateBackInOut(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolateBackInOut(other.get(i), proportion)));
+    return new ExpressionVector(this.value.map((element, i) => element.interpolateBackInOut(other.get(i), proportion)));
   }
 
   interpolateQuadraticInOut(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolateQuadraticInOut(other.get(i), proportion)));
+    return new ExpressionVector(this.value.map((element, i) => element.interpolateQuadraticInOut(other.get(i), proportion)));
   }
 
   interpolateCubicInOut(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolateCubicInOut(other.get(i), proportion)));
+    return new ExpressionVector(this.value.map((element, i) => element.interpolateCubicInOut(other.get(i), proportion)));
   }
 
   interpolateQuarticInOut(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolateQuarticInOut(other.get(i), proportion)));
+    return new ExpressionVector(this.value.map((element, i) => element.interpolateQuarticInOut(other.get(i), proportion)));
   }
 
   interpolateQuinticInOut(other, proportion) {
-    return new ExpressionVector(this.elements.map((element, i) => element.interpolateQuinticInOut(other.get(i), proportion)));
+    return new ExpressionVector(this.value.map((element, i) => element.interpolateQuinticInOut(other.get(i), proportion)));
   }
 
   get magnitude() {
     let sum = 0;
-    for (let i = 0; i < this.elements.length; ++i) {
+    for (let i = 0; i < this.value.length; ++i) {
       sum += this.get(i).value * this.get(i).value;
     }
     return Math.sqrt(sum);
@@ -2216,7 +2158,7 @@ export class ExpressionVector extends ExpressionData {
 
   normalize() {
     let magnitude = this.magnitude;
-    let newElements = this.elements.map(element => new ExpressionReal(element.value / magnitude));
+    let newElements = this.value.map(element => new ExpressionReal(element.value / magnitude));
     return new ExpressionVector(newElements);
   }
 
@@ -2229,12 +2171,12 @@ export class ExpressionVector extends ExpressionData {
   }
 
   midpoint(that) {
-    let newElements = this.elements.map((element, i) => new ExpressionReal((element.value + that.elements[i].value) / 2));
+    let newElements = this.value.map((element, i) => new ExpressionReal((element.value + that.value[i].value) / 2));
     return new ExpressionVector(newElements);
   }
 
   rotate90() {
-    let newElements = [this.elements[1], this.elements[0].negative()];
+    let newElements = [this.value[1], this.value[0].negative()];
     return new ExpressionVector(newElements);
   }
 
@@ -2258,7 +2200,7 @@ export class ExpressionVector extends ExpressionData {
   }
 
   toCartesian() {
-    if (this.elements.length != 2) {
+    if (this.value.length != 2) {
       throw new MessagedException("only toCartesian() for 2D");
     }
 
@@ -2276,13 +2218,13 @@ export class ExpressionVector extends ExpressionData {
   multiply(other) {
     if (other instanceof ExpressionVector) {
       let result = [];
-      for (let i = 0; i < this.elements.length; ++i) {
+      for (let i = 0; i < this.value.length; ++i) {
         result.push(this.get(i).multiply(other.get(i)));
       }
       return new ExpressionVector(result);
     } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
       let result = [];
-      for (let i = 0; i < this.elements.length; ++i) {
+      for (let i = 0; i < this.value.length; ++i) {
         result.push(this.get(i).multiply(other));
       }
       return new ExpressionVector(result);
@@ -2294,13 +2236,13 @@ export class ExpressionVector extends ExpressionData {
   divide(other) {
     if (other instanceof ExpressionVector) {
       let result = [];
-      for (let i = 0; i < this.elements.length; ++i) {
+      for (let i = 0; i < this.value.length; ++i) {
         result.push(this.get(i).divide(other.get(i)));
       }
       return new ExpressionVector(result);
     } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
       let result = [];
-      for (let i = 0; i < this.elements.length; ++i) {
+      for (let i = 0; i < this.value.length; ++i) {
         result.push(this.get(i).divide(other));
       }
       return new ExpressionVector(result);
@@ -2312,13 +2254,13 @@ export class ExpressionVector extends ExpressionData {
   add(other) {
     if (other instanceof ExpressionVector) {
       let result = [];
-      for (let i = 0; i < this.elements.length; ++i) {
+      for (let i = 0; i < this.value.length; ++i) {
         result.push(this.get(i).add(other.get(i)));
       }
       return new ExpressionVector(result);
     } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
       let result = [];
-      for (let i = 0; i < this.elements.length; ++i) {
+      for (let i = 0; i < this.value.length; ++i) {
         result.push(this.get(i).add(other));
       }
       return new ExpressionVector(result);
@@ -2330,13 +2272,13 @@ export class ExpressionVector extends ExpressionData {
   subtract(other) {
     if (other instanceof ExpressionVector) {
       let result = [];
-      for (let i = 0; i < this.elements.length; ++i) {
+      for (let i = 0; i < this.value.length; ++i) {
         result.push(this.get(i).subtract(other.get(i)));
       }
       return new ExpressionVector(result);
     } else if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
       let result = [];
-      for (let i = 0; i < this.elements.length; ++i) {
+      for (let i = 0; i < this.value.length; ++i) {
         result.push(this.get(i).subtract(other));
       }
       return new ExpressionVector(result);
@@ -2347,7 +2289,7 @@ export class ExpressionVector extends ExpressionData {
 
   negative() {
     let result = [];
-    for (let i = 0; i < this.elements.length; ++i) {
+    for (let i = 0; i < this.value.length; ++i) {
       result.push(this.get(i).negative());
     }
     return new ExpressionVector(result);
@@ -2356,7 +2298,7 @@ export class ExpressionVector extends ExpressionData {
   dot(that) {
     // TODO ensure same cardinality
     let sum = 0;
-    for (let i = 0; i < this.elements.length; ++i) {
+    for (let i = 0; i < this.value.length; ++i) {
       sum += this.get(i).multiply(that.get(i)).value;
     }
     return sum;
@@ -2370,6 +2312,12 @@ export class ExpressionVector extends ExpressionData {
     normal = normal.subtract(diff);
     let reflection = point.subtract(normal);
     return reflection;
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.value = this.value.map(element => element.toPod());
+    return pod;
   }
 }
 

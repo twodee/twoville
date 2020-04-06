@@ -2,11 +2,7 @@ import {
   Tokens,
   Token,
   SourceLocation
-} from './token.js';
-
-import {
-  LocatedException,
-} from './types.js';
+} from './common.js';
 
 export function lex(source) {
   

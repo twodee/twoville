@@ -4,13 +4,32 @@ import {
 
 import {
   MessagedException,
-} from "./types.js";
+} from "./common.js";
 
 export class Interval {
   constructor(fromTime, fromValue, toTime, toValue) {
     this.setFrom(fromTime, fromValue);
     this.setTo(toTime, toValue);
     this.setTween('linear');
+  }
+
+  toPod() {
+    return {
+      fromTime: this.fromTime.toPod(),
+      fromValue: this.fromValue.toPod(),
+      toTime: this.toTime.toPod(),
+      toValue: this.toValue.toPod(),
+    };
+  }
+
+  static reify(env, pod) {
+    const interval = new Interval(
+      env.root.omniReify(env, pod.fromTime),
+      env.root.omniReify(env, pod.fromValue),
+      env.root.omniReify(env, pod.toTime),
+      env.root.omniReify(env, pod.toValue)
+    );
+    return interval;
   }
 
   setTween(tweenType) {
