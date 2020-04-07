@@ -18,9 +18,11 @@ import {
 
 import { 
   Markable,
+  CircleMark,
   RectangleMark,
   VectorPanMark,
-  VectorComponentPanMark,
+  HorizontalPanMark,
+  VerticalPanMark,
 } from './mark.js';
 
 // --------------------------------------------------------------------------- 
@@ -55,7 +57,7 @@ export class Environment {
 
     this.untimedProperties = mop(pod.untimedProperties, subpod => this.root.omniReify(this, subpod));
     if (pod.where) {
-      this.where = pod.where;
+      this.where = SourceLocation.reify(pod.where);
     }
   }
 
@@ -236,8 +238,11 @@ export class Shape extends TimelinedEnvironment {
   static reify(parentEnvironment, pod) {
     if (pod.type === 'rectangle') {
       return Rectangle.reify(parentEnvironment, pod);
+    } else if (pod.type === 'circle') {
+      return Circle.reify(parentEnvironment, pod);
     } else {
-      return super.reify(parentEnvironment, pod);
+      throw new Error('unimplemented shape:', pod.type);
+      // return super.reify(parentEnvironment, pod);
     }
   }
 
@@ -304,10 +309,8 @@ export class Rectangle extends Shape {
   }
 
   start() {
-    // Factor this into Shape?
     this.element = document.createElementNS(svgNamespace, 'rect');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    // this.element.classList.add('cursor-selectable');
 
     if (this.owns('parent')) {
       this.parentElement = this.get('parent').getParentingElement();
@@ -334,8 +337,8 @@ export class Rectangle extends Shape {
 
     this.outlineMark = new RectangleMark();
     this.positionMark = new VectorPanMark(this);
-    this.widthMark = new VectorComponentPanMark(this, 0);
-    this.heightMark = new VectorComponentPanMark(this, 1);
+    this.widthMark = new HorizontalPanMark(this, this.owns('center'));
+    this.heightMark = new VerticalPanMark(this, this.owns('center'));
 
     this.interactivate(this, [this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
   }
@@ -421,6 +424,100 @@ export class Rectangle extends Shape {
           new ExpressionReal(corner.get(1).value + size.get(1).value)
         ]), bounds);
       }
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Circle extends Shape {
+  static type = 'circle';
+  static article = 'a';
+  static timedIds = ['center', 'radius', 'color', 'opacity'];
+
+  static create(parentEnvironment, where) {
+    const shape = new Circle();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Circle();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  start() {
+    this.element = document.createElementNS(svgNamespace, 'circle');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    if (this.owns('parent')) {
+      this.parentElement = this.get('parent').getParentingElement();
+      this.get('parent').children.push(this);
+      this.isDrawable = false;
+    } else if (this.owns('template') && this.get('template').value) {
+      this.parentElement = this.root.defines;
+      this.isDrawable = false;
+    } else {
+      this.parentElement = this.root.mainGroup;
+      this.isDrawable = true;
+    }
+
+    // TODO what does this do?
+    if (this.owns('mask')) {
+      let mask = this.get('mask');
+      let maskParent = document.createElementNS(svgNamespace, 'g');
+      maskParent.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
+      maskParent.appendChild(this.element);
+      this.parentElement.appendChild(maskParent);
+    } else {
+      this.parentElement.appendChild(this.element);
+    }
+
+    this.outlineMark = new CircleMark();
+    this.centerMark = new VectorPanMark(this);
+    this.radiusMark = new HorizontalPanMark(this, false);
+
+    this.interactivate(this, [this.centerMark, this.radiusMark], [this.outlineMark]);
+  }
+
+  validate() {
+    super.validate();
+    this.assertProperty('center');
+    this.assertProperty('radius');
+  }
+
+  update(env, t, bounds) {
+    const radius = this.valueAt(env, 'radius', t);
+    this.radiusMark.setExpression(radius);
+
+    const center = this.valueAt(env, 'center', t);
+    this.centerMark.setExpression(center);
+
+    let opacity = this.valueAt(env, 'opacity', t).value;
+    let isVisible = opacity > 0.000001;
+    let color;
+    if (isVisible) {
+      color = this.getColor(env, t);
+    }
+
+    if (!center || !radius || (!color && isVisible)) {
+      this.hide();
+    } else {
+      this.show();
+
+      this.element.setAttributeNS(null, 'cx', center.get(0).value);
+      this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
+      this.element.setAttributeNS(null, 'r', radius.value);
+      this.element.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
+      this.element.setAttributeNS(null, 'fill-opacity', opacity);
+
+      this.outlineMark.update(center, radius, bounds);
+      this.centerMark.update(center, bounds);
+      this.radiusMark.update(new ExpressionVector([
+        new ExpressionReal(center.get(0).value + radius.value),
+        center.get(1)
+      ]), bounds);
     }
   }
 }

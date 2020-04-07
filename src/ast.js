@@ -12,8 +12,7 @@ import {
 
 import {
   Environment,
-  // TwovilleTimelinedEnvironment,
-  // TwovilleCircle,
+  Circle,
   // TwovilleCutout,
   // TwovilleGroup,
   // TwovilleLabel,
@@ -1573,6 +1572,14 @@ export class ExpressionFunction extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionCircle extends ExpressionFunction {
+  evaluate(env, fromTime, toTime, callExpression) {
+    return Circle.create(env, callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionRectangle extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return Rectangle.create(env, callExpression.where);
@@ -1794,14 +1801,6 @@ export class ExpressionPath extends ExpressionFunction {
 export class ExpressionLabel extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     return new TwovilleLabel(env, callExpression);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class ExpressionCircle extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleCircle(env, callExpression);
   }
 }
 

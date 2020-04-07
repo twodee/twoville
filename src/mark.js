@@ -167,6 +167,20 @@ export class RectangleMark {
 
 // --------------------------------------------------------------------------- 
 
+export class CircleMark {
+  constructor() {
+    this.element = document.createElementNS(svgNamespace, 'circle');
+  }
+
+  update(center, radius, bounds) {
+    this.element.setAttributeNS(null, 'cx', center.get(0).value);
+    this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
+    this.element.setAttributeNS(null, 'r', radius.value);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TweakableMark {
   constructor(shape, element, cursor) {
     this.shape = shape;
@@ -268,16 +282,16 @@ export class VectorPanMark extends PanMark {
 
 // --------------------------------------------------------------------------- 
 
-export class VectorComponentPanMark extends PanMark {
-  constructor(shape, dimension) {
-    super(shape, dimension == 0 ? 'cursor-horizontal-pan' : 'cursor-vertical-pan');
-    this.dimension = dimension;
+export class HorizontalPanMark extends PanMark {
+  constructor(shape, isCentered) {
+    super(shape, 'cursor-horizontal-pan');
+    this.isCentered = isCentered;
   }
 
   getNewSource(delta, isShiftModified) {
     const oldValue = this.untweakedExpression.value;
 
-    let newValue = parseFloat((oldValue + delta[this.dimension] * (this.shape.hasCenter ? 2 : 1)).toShortFloat());
+    let newValue = parseFloat((oldValue + delta[0] * (this.isCentered ? 2 : 1)).toShortFloat());
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
@@ -290,23 +304,23 @@ export class VectorComponentPanMark extends PanMark {
 
 // --------------------------------------------------------------------------- 
 
-export class HorizontalPanMark extends PanMark {
-  constructor(shape) {
-    super(shape, 'cursor-horizontal-pan');
+export class VerticalPanMark extends PanMark {
+  constructor(shape, isCentered) {
+    super(shape, 'cursor-vertical-pan');
+    this.isCentered = isCentered;
   }
 
   getNewSource(delta, isShiftModified) {
-    const oldExpression = this.untweakedExpression;
-    const unevaluated = oldExpression.unevaluated;
-    const oldValue = oldExpression.value;
+    const oldValue = this.untweakedExpression.value;
 
-    let newValue = parseFloat((oldValue + delta[0]).toShortFloat());
+    let newValue = parseFloat((oldValue + delta[1] * (this.isCentered ? 2 : 1)).toShortFloat());
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
+    const newExpression = new ExpressionReal(newValue);
 
-    this.expression.x = newValue;
-    return manipulateSource(oldExpression, this.expression);
+    this.expression.value = newValue;
+    return manipulateSource(this.untweakedExpression, newExpression);
   }
 }
 
