@@ -168,7 +168,6 @@ export class RenderEnvironment extends Environment {
     this.backgroundHandleGroup.appendChild(this.handleGroup);
 
     for (let shape of this.shapes) {
-      console.log("shape:", shape);
       shape.validate();
       shape.start();
     }

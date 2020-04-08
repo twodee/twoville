@@ -38,7 +38,7 @@ export let Markable = {
     this.foregroundHandleGroup.setAttributeNS(null, 'visibility', 'hidden');
   },
 
-  interactivate(elementToSelect, foregroundMarks, backgroundMarks) {
+  addMarks(elementToSelect, foregroundMarks, backgroundMarks) {
     this.backgroundMarks = backgroundMarks;
     this.foregroundMarks = foregroundMarks;
 

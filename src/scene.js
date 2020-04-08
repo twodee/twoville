@@ -242,7 +242,6 @@ export class Shape extends TimelinedEnvironment {
       return Circle.reify(parentEnvironment, pod);
     } else {
       throw new Error('unimplemented shape:', pod.type);
-      // return super.reify(parentEnvironment, pod);
     }
   }
 
@@ -257,6 +256,30 @@ export class Shape extends TimelinedEnvironment {
   validate() {
     if (!this.owns('color')) {
       throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose color property is not defined.`);
+    }
+  }
+
+  connect() {
+    if (this.owns('parent')) {
+      this.parentElement = this.get('parent').getParentingElement();
+      this.get('parent').children.push(this);
+      this.isDrawable = false;
+    } else if (this.owns('template') && this.get('template').value) {
+      this.parentElement = this.root.defines;
+      this.isDrawable = false;
+    } else {
+      this.parentElement = this.root.mainGroup;
+      this.isDrawable = true;
+    }
+
+    if (this.owns('mask')) {
+      let mask = this.get('mask');
+      let maskParent = document.createElementNS(svgNamespace, 'g');
+      maskParent.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
+      maskParent.appendChild(this.element);
+      this.parentElement.appendChild(maskParent);
+    } else {
+      this.parentElement.appendChild(this.element);
     }
   }
 
@@ -312,35 +335,14 @@ export class Rectangle extends Shape {
     this.element = document.createElementNS(svgNamespace, 'rect');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    if (this.owns('parent')) {
-      this.parentElement = this.get('parent').getParentingElement();
-      this.get('parent').children.push(this);
-      this.isDrawable = false;
-    } else if (this.owns('template') && this.get('template').value) {
-      this.parentElement = this.root.defines;
-      this.isDrawable = false;
-    } else {
-      this.parentElement = this.root.mainGroup;
-      this.isDrawable = true;
-    }
-
-    // TODO what does this do?
-    if (this.owns('mask')) {
-      let mask = this.get('mask');
-      let maskParent = document.createElementNS(svgNamespace, 'g');
-      maskParent.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
-      maskParent.appendChild(this.element);
-      this.parentElement.appendChild(maskParent);
-    } else {
-      this.parentElement.appendChild(this.element);
-    }
+    this.connect();
 
     this.outlineMark = new RectangleMark();
     this.positionMark = new VectorPanMark(this);
     this.widthMark = new HorizontalPanMark(this, this.owns('center'));
     this.heightMark = new VerticalPanMark(this, this.owns('center'));
 
-    this.interactivate(this, [this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
+    this.addMarks(this, [this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
   }
 
   validate() {
@@ -451,34 +453,13 @@ export class Circle extends Shape {
     this.element = document.createElementNS(svgNamespace, 'circle');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    if (this.owns('parent')) {
-      this.parentElement = this.get('parent').getParentingElement();
-      this.get('parent').children.push(this);
-      this.isDrawable = false;
-    } else if (this.owns('template') && this.get('template').value) {
-      this.parentElement = this.root.defines;
-      this.isDrawable = false;
-    } else {
-      this.parentElement = this.root.mainGroup;
-      this.isDrawable = true;
-    }
-
-    // TODO what does this do?
-    if (this.owns('mask')) {
-      let mask = this.get('mask');
-      let maskParent = document.createElementNS(svgNamespace, 'g');
-      maskParent.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
-      maskParent.appendChild(this.element);
-      this.parentElement.appendChild(maskParent);
-    } else {
-      this.parentElement.appendChild(this.element);
-    }
+    this.connect();
 
     this.outlineMark = new CircleMark();
     this.centerMark = new VectorPanMark(this);
     this.radiusMark = new HorizontalPanMark(this, false);
 
-    this.interactivate(this, [this.centerMark, this.radiusMark], [this.outlineMark]);
+    this.addMarks(this, [this.centerMark, this.radiusMark], [this.outlineMark]);
   }
 
   validate() {
