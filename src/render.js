@@ -68,11 +68,7 @@ export class RenderEnvironment extends Environment {
     this.mouseAtSvg = this.svg.createSVGPoint();
 
     this.svg.addEventListener('wheel', this.onWheel, {passive: true});
-
-    this.svg.addEventListener('click', this.onMouseClick);
     this.svg.addEventListener('mousedown', this.onMouseDown);
-    this.svg.addEventListener('mousemove', this.onMouseMove);
-    this.svg.addEventListener('mouseup', this.onMouseUp);
 
     this.defines = document.createElementNS(svgNamespace, 'defs');
     this.svg.appendChild(this.defines);
@@ -180,7 +176,7 @@ export class RenderEnvironment extends Environment {
 
   stop() {
     this.svg.removeEventListener('wheel', this.onWheel);
-    this.svg.removeEventListener('click', this.onMouseClick);
+    // this.svg.removeEventListener('click', this.onMouseClick);
     this.svg.removeEventListener('mousedown', this.onMouseDown);
     this.svg.removeEventListener('mousemove', this.onMouseMove);
     this.svg.removeEventListener('mouseup', this.onMouseUp);
@@ -296,7 +292,6 @@ export class RenderEnvironment extends Environment {
   }
 
   reselect(oldSelectedShape) {
-    console.log("oldSelectedShape.id:", oldSelectedShape.id);
     const shape = this.drawables.find(shape => shape.id == oldSelectedShape.id);
     if (shape) {
       this.select(shape);
@@ -321,42 +316,34 @@ export class RenderEnvironment extends Environment {
     }
   };
 
-  onMouseClick = e => {
-    if (this.isTweaking) {
-      this.isTweaking = false;
-    } else {
-      this.deselect();
-    }
-  };
-
   onMouseDown = e => {
-    console.log("down");
     // Since mouse drags change the SVG's matrix, I need to cache the starting
     // matrix here so that all the mouse coordinates are in the same space.
     this.mouseAtSvg.x = e.clientX;
     this.mouseAtSvg.y = e.clientY;
     this.mouseTransform = this.svg.getScreenCTM().inverse();
     this.mouseAt = this.mouseAtSvg.matrixTransform(this.mouseTransform);
-    this.isPanning = true;
+
+    this.svg.addEventListener('mousemove', this.onMouseMove);
+    this.svg.addEventListener('mouseup', this.onMouseUp);
   };
 
   onMouseMove = e => {
-    if (this.isPanning) {
-      this.mouseAtSvg.x = e.clientX;
-      this.mouseAtSvg.y = e.clientY;
-      const newMouseAt = this.mouseAtSvg.matrixTransform(this.mouseTransform);
+    this.mouseAtSvg.x = e.clientX;
+    this.mouseAtSvg.y = e.clientY;
+    const newMouseAt = this.mouseAtSvg.matrixTransform(this.mouseTransform);
 
-      let delta = [newMouseAt.x - this.mouseAt.x, newMouseAt.y - this.mouseAt.y];
-      this.bounds.x -= delta[0];
-      this.bounds.y -= delta[1];
-      this.updateViewBox();
-      this.mouseAt = newMouseAt;
-    }
+    let delta = [newMouseAt.x - this.mouseAt.x, newMouseAt.y - this.mouseAt.y];
+    this.bounds.x -= delta[0];
+    this.bounds.y -= delta[1];
+    this.updateViewBox();
+    this.mouseAt = newMouseAt;
   };
 
   onMouseUp = e => {
-    console.log("up");
-    this.isPanning = false;
+    this.deselect();
+    this.svg.removeEventListener('mousemove', this.onMouseMove);
+    this.svg.removeEventListener('mouseup', this.onMouseUp);
   };
 }
 

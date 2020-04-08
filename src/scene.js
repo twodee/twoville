@@ -354,8 +354,8 @@ export class Rectangle extends Shape {
 
     this.outlineMark = new RectangleMark();
     this.positionMark = new VectorPanMark(this);
-    this.widthMark = new HorizontalPanMark(this, this.owns('center'));
-    this.heightMark = new VerticalPanMark(this, this.owns('center'));
+    this.widthMark = new HorizontalPanMark(this, this.owns('center') ? 2 : 1);
+    this.heightMark = new VerticalPanMark(this, this.owns('center') ? 2 : 1);
 
     this.addMarks(this, [this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
   }
@@ -476,7 +476,7 @@ export class Circle extends Shape {
 
     this.outlineMark = new CircleMark();
     this.centerMark = new VectorPanMark(this);
-    this.radiusMark = new HorizontalPanMark(this, false);
+    this.radiusMark = new HorizontalPanMark(this);
 
     this.addMarks(this, [this.centerMark, this.radiusMark], [this.outlineMark]);
   }

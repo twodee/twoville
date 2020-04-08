@@ -243,7 +243,6 @@ export class TweakableMark {
     window.removeEventListener('mouseup', this.onMouseUp);
     this.shape.root.contextualizeCursor(event.toElement);
     this.shape.root.stopTweak();
-    console.log("done");
   };
 }
 
@@ -292,15 +291,15 @@ export class VectorPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class HorizontalPanMark extends PanMark {
-  constructor(shape, isCentered) {
+  constructor(shape, multiplier = 1) {
     super(shape, 'cursor-horizontal-pan');
-    this.isCentered = isCentered;
+    this.multiplier = multiplier;
   }
 
   getNewSource(delta, isShiftModified) {
     const oldValue = this.untweakedExpression.value;
 
-    let newValue = parseFloat((oldValue + delta[0] * (this.isCentered ? 2 : 1)).toShortFloat());
+    let newValue = parseFloat((oldValue + delta[0] * this.multiplier).toShortFloat());
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
@@ -314,15 +313,15 @@ export class HorizontalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class VerticalPanMark extends PanMark {
-  constructor(shape, isCentered) {
+  constructor(shape, multiplier = 1) {
     super(shape, 'cursor-vertical-pan');
-    this.isCentered = isCentered;
+    this.multiplier = multiplier;
   }
 
   getNewSource(delta, isShiftModified) {
     const oldValue = this.untweakedExpression.value;
 
-    let newValue = parseFloat((oldValue + delta[1] * (this.isCentered ? 2 : 1)).toShortFloat());
+    let newValue = parseFloat((oldValue + delta[1] * this.multiplier).toShortFloat());
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
