@@ -188,6 +188,7 @@ function postInterpret(pod) {
     }
 
     if (oldScene) {
+      console.log("oldScene.selectedShape:", oldScene.selectedShape);
       if (oldScene.selectedShape) {
         scene.reselect(oldScene.selectedShape);
       }

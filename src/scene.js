@@ -207,6 +207,21 @@ export class TimelinedEnvironment extends Environment {
   isTimed(id) {
     return this.constructor.timedIds.includes(id);
   }
+
+  applyStroke(env, t, element) {
+    if (this.owns('size') && this.owns('color') && this.owns('opacity')) {
+      let size = this.valueAt(env, 'size', t);
+      let color = this.valueAt(env, 'color', t);
+      let opacity = this.valueAt(env, 'opacity', t);
+      element.setAttributeNS(null, 'stroke', color.toColor());
+      element.setAttributeNS(null, 'stroke-width', size.value);
+      element.setAttributeNS(null, 'stroke-opacity', opacity.value);
+      if (this.owns('dashes')) {
+        let dashes = this.valueAt(env, 'dashes', t).toSpacedString();
+        element.setAttributeNS(null, 'stroke-dasharray', dashes);
+      }
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -397,6 +412,10 @@ export class Rectangle extends Shape {
         this.element.setAttributeNS(null, 'ry', rounding.value);
       }
 
+      if (this.owns('stroke')) {
+        this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      }
+
       this.element.setAttributeNS(null, 'x', corner.get(0).value);
       this.element.setAttributeNS(null, 'y', bounds.span - size.get(1).value - corner.get(1).value);
       this.element.setAttributeNS(null, 'width', size.get(0).value);
@@ -486,6 +505,10 @@ export class Circle extends Shape {
       this.hide();
     } else {
       this.show();
+
+      if (this.owns('stroke')) {
+        this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      }
 
       this.element.setAttributeNS(null, 'cx', center.get(0).value);
       this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);

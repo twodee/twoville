@@ -191,6 +191,7 @@ export class TweakableMark {
     this.element.classList.add('filled-handle');
     this.element.classList.add(cursor);
     this.element.addEventListener('mousedown', this.onMouseDown);
+    this.element.addEventListener('click', this.onMouseClick);
 
     this.mouseAtSvg = this.shape.root.svg.createSVGPoint();
   }
@@ -207,22 +208,28 @@ export class TweakableMark {
     this.expression = expression;
   }
 
+  onMouseClick = event => {
+    event.stopPropagation();
+  }
+
   onMouseDown = event => {
+    event.stopPropagation();
+
     if (!this.shape.root.isStale) {
       this.untweakedExpression = this.expression.clone();
       this.mouseDownAt = this.transform(event);
       this.shape.root.select(this.shape);
       this.shape.root.startTweak(this.expression.unevaluated.where);
-      event.stopPropagation();
+      this.shape.root.isTweaking = true;
       window.addEventListener('mousemove', this.onMouseMove);
       window.addEventListener('mouseup', this.onMouseUp);
     }
   };
 
   onMouseMove = event => {
-    if (event.buttons === 1) {
-      event.stopPropagation();
+    event.stopPropagation();
 
+    if (event.buttons === 1) {
       let mouseAt = this.transform(event);
       let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
       let replacement = this.getNewSource(delta, event.shiftKey, mouseAt);
@@ -231,10 +238,12 @@ export class TweakableMark {
   };
 
   onMouseUp = event => {
+    event.stopPropagation();
     window.removeEventListener('mousemove', this.onMouseMove);
     window.removeEventListener('mouseup', this.onMouseUp);
     this.shape.root.contextualizeCursor(event.toElement);
     this.shape.root.stopTweak();
+    console.log("done");
   };
 }
 

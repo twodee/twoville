@@ -946,9 +946,8 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
   static precedence = Precedence.Property;
 
   constructor(base, nameToken, where, unevaluated) {
-    super(where, unevaluated);
+    super(nameToken, where, unevaluated);
     this.base = base;
-    this.nameToken = nameToken;
   }
 
   evaluate(env, fromTime, toTime) {

@@ -269,7 +269,6 @@ export class RenderEnvironment extends Environment {
     document.documentElement.classList.remove(...RenderEnvironment.cursors);
     
     // Only show the cursor when the source and canvas are synchronized.
-    // TODO is dirty
     if (element && !this.isStale) {
       for (let cursor of RenderEnvironment.cursors) {
         if (element.classList.contains(cursor)) {
@@ -297,6 +296,7 @@ export class RenderEnvironment extends Environment {
   }
 
   reselect(oldSelectedShape) {
+    console.log("oldSelectedShape.id:", oldSelectedShape.id);
     const shape = this.drawables.find(shape => shape.id == oldSelectedShape.id);
     if (shape) {
       this.select(shape);
@@ -322,10 +322,15 @@ export class RenderEnvironment extends Environment {
   };
 
   onMouseClick = e => {
-    this.deselect();
+    if (this.isTweaking) {
+      this.isTweaking = false;
+    } else {
+      this.deselect();
+    }
   };
 
   onMouseDown = e => {
+    console.log("down");
     // Since mouse drags change the SVG's matrix, I need to cache the starting
     // matrix here so that all the mouse coordinates are in the same space.
     this.mouseAtSvg.x = e.clientX;
@@ -350,6 +355,7 @@ export class RenderEnvironment extends Environment {
   };
 
   onMouseUp = e => {
+    console.log("up");
     this.isPanning = false;
   };
 }
