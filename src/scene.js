@@ -25,6 +25,7 @@ import {
 import { 
   Markable,
   CircleMark,
+  PolygonMark,
   RectangleMark,
   VectorPanMark,
   HorizontalPanMark,
@@ -595,7 +596,6 @@ export class Polygon extends Shape {
   validate() {
     super.validate();
     for (let node of this.nodes) {
-      console.log("node:", node);
       node.validate();
     }
   }
@@ -606,23 +606,24 @@ export class Polygon extends Shape {
 
     this.connect();
 
-    // this.outlineMark = new PolygonMark();
-    this.addMarks(this, [], []);
+    for (let node of this.nodes) {
+      node.start();
+    }
+
+    this.outlineMark = new PolygonMark();
+    this.addMarks(this, [...this.nodes.map(node => node.positionMark)], [this.outlineMark]);
   }
 
   update(env, t, bounds) {
     let currentTurtle = new Turtle(null, null);
-    console.log("this.nodes:", this.nodes);
     let positions = [];
     for (let node of this.nodes) {
       let result = node.update(env, t, bounds, currentTurtle);
-      console.log("result:", result);
       currentTurtle = result.turtle;
-      if (result.position) {
-        positions.push(result.turtle.position);
+      if (currentTurtle) {
+        positions.push(currentTurtle.position);
       }
     }
-    console.log("positions:", positions);
 
     let opacity = this.valueAt(env, 'opacity', t).value;
     let isVisible = opacity > 0.000001;
@@ -640,12 +641,14 @@ export class Polygon extends Shape {
         this.untimedProperties.stroke.applyStroke(env, t, this.element);
       }
 
-      let pathCommands = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+      let coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
 
       // TODO ensure opacity? color?
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
-      this.element.setAttributeNS(null, 'points', pathCommands);
+      this.element.setAttributeNS(null, 'points', coordinates);
       this.element.setAttributeNS(null, 'fill', color.toColor());
+
+      this.outlineMark.update(coordinates);
     }
   }
 }
@@ -674,12 +677,18 @@ export class Vertex extends TimelinedEnvironment {
     this.assertProperty('position');
   }
 
+  start() {
+    this.positionMark = new VectorPanMark(this);
+  }
+
   update(env, t, bounds, fromTurtle) {
     const position = this.valueAt(env, 'position', t);
+    this.positionMark.setExpression(position);
     
     if (position) {
+      this.positionMark.update(position, bounds);
       return {
-        position: `${position.get(0).value},${bounds.span - position.get(1).value}`,
+        command: null,
         turtle: new Turtle(position, fromTurtle.heading),
       };
     } else {

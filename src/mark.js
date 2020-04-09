@@ -181,6 +181,18 @@ export class CircleMark {
 
 // --------------------------------------------------------------------------- 
 
+export class PolygonMark {
+  constructor() {
+    this.element = document.createElementNS(svgNamespace, 'polygon');
+  }
+
+  update(coordinates) {
+    this.element.setAttributeNS(null, 'points', coordinates);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TweakableMark {
   constructor(shape, element, cursor) {
     this.shape = shape;
