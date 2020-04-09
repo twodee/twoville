@@ -194,8 +194,9 @@ export class PolygonMark {
 // --------------------------------------------------------------------------- 
 
 export class TweakableMark {
-  constructor(shape, element, cursor) {
+  constructor(shape, component, element, cursor) {
     this.shape = shape;
+    this.component = component ?? shape;
     this.mouseDownAt = null;
 
     this.element = element;
@@ -203,7 +204,6 @@ export class TweakableMark {
     this.element.classList.add('filled-handle');
     this.element.classList.add(cursor);
     this.element.addEventListener('mousedown', this.onMouseDown);
-    this.element.addEventListener('click', this.onMouseClick);
 
     this.mouseAtSvg = this.shape.root.svg.createSVGPoint();
   }
@@ -218,10 +218,6 @@ export class TweakableMark {
 
   setExpression(expression) {
     this.expression = expression;
-  }
-
-  onMouseClick = event => {
-    event.stopPropagation();
   }
 
   onMouseDown = event => {
@@ -261,8 +257,8 @@ export class TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class PanMark extends TweakableMark {
-  constructor(shape, cursor) {
-    super(shape, document.createElementNS(svgNamespace, 'circle'), cursor);
+  constructor(shape, component, cursor) {
+    super(shape, component, document.createElementNS(svgNamespace, 'circle'), cursor);
 
     // Non-scaling-size is not supported. :( Looks like I'll have to do
     // this myself.
@@ -280,8 +276,8 @@ export class PanMark extends TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class VectorPanMark extends PanMark {
-  constructor(shape) {
-    super(shape, 'cursor-pan');
+  constructor(shape, component) {
+    super(shape, component, 'cursor-pan');
   }
 
   getNewSource(delta, isShiftModified) {
@@ -303,8 +299,8 @@ export class VectorPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class HorizontalPanMark extends PanMark {
-  constructor(shape, multiplier = 1) {
-    super(shape, 'cursor-horizontal-pan');
+  constructor(shape, component, multiplier = 1) {
+    super(shape, component, 'cursor-horizontal-pan');
     this.multiplier = multiplier;
   }
 
@@ -325,8 +321,8 @@ export class HorizontalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class VerticalPanMark extends PanMark {
-  constructor(shape, multiplier = 1) {
-    super(shape, 'cursor-vertical-pan');
+  constructor(shape, component, multiplier = 1) {
+    super(shape, component, 'cursor-vertical-pan');
     this.multiplier = multiplier;
   }
 

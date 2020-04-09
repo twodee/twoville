@@ -76,11 +76,9 @@ export class Environment {
   }
 
   toPod() {
-    console.log("this:", this);
     return {
       type: this.type,
       untimedProperties: mop(this.untimedProperties, value => {
-        console.log("value:", value);
         return value.toPod();
       }),
       where: this.where,
@@ -380,8 +378,8 @@ export class Rectangle extends Shape {
 
     this.outlineMark = new RectangleMark();
     this.positionMark = new VectorPanMark(this);
-    this.widthMark = new HorizontalPanMark(this, this.owns('center') ? 2 : 1);
-    this.heightMark = new VerticalPanMark(this, this.owns('center') ? 2 : 1);
+    this.widthMark = new HorizontalPanMark(this, this, this.owns('center') ? 2 : 1);
+    this.heightMark = new VerticalPanMark(this, this, this.owns('center') ? 2 : 1);
 
     this.addMarks(this, [this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
   }
@@ -678,7 +676,7 @@ export class Vertex extends TimelinedEnvironment {
   }
 
   start() {
-    this.positionMark = new VectorPanMark(this);
+    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
   }
 
   update(env, t, bounds, fromTurtle) {
