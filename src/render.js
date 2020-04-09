@@ -9,6 +9,7 @@ import {
   Environment,
   Stroke,
   Shape,
+  Vertex,
 } from './scene.js';
 
 import {
@@ -47,6 +48,8 @@ export class RenderEnvironment extends Environment {
       return Stroke.reify(env, pod);
     } else if (pod.type === 'timeline') {
       return Timeline.reify(env, pod);
+    } else if (pod.type === 'vertex') {
+      return Vertex.reify(env, pod);
     } else if (pod.type === 'ExpressionReal') {
       return new ExpressionReal(pod.value, SourceLocation.reify(pod.where));
     } else if (pod.type === 'ExpressionInteger') {
@@ -56,7 +59,8 @@ export class RenderEnvironment extends Environment {
     } else if (pod.type === 'ExpressionVector') {
       return new ExpressionVector(pod.value.map(element => RenderEnvironment.omniReify(env, element)), SourceLocation.reify(pod.where));
     } else {
-      return pod;
+      console.log(pod);
+      throw Error('can\'t reify');
     }
   }
 

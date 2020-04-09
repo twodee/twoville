@@ -3,8 +3,10 @@ import {
 } from './timeline.js';
 
 import { 
+  FunctionDefinition,
   LocatedException,
   SourceLocation,
+  Turtle,
   mop,
   svgNamespace,
 } from './common.js';
@@ -14,6 +16,10 @@ import {
   ExpressionReal,
   ExpressionString,
   ExpressionVector,
+  ExpressionTurtle,
+  ExpressionTurtleMove,
+  ExpressionTurtleTurn,
+  ExpressionVertex,
 } from './ast.js';
 
 import { 
@@ -32,6 +38,7 @@ export class Environment {
 
   initialize(parentEnvironment, where) {
     this.untimedProperties = {};
+    this.functions = {};
     this.parentEnvironment = parentEnvironment;
     if (where) {
       this.where = where;
@@ -68,9 +75,13 @@ export class Environment {
   }
 
   toPod() {
+    console.log("this:", this);
     return {
       type: this.type,
-      untimedProperties: mop(this.untimedProperties, value => value.toPod()),
+      untimedProperties: mop(this.untimedProperties, value => {
+        console.log("value:", value);
+        return value.toPod();
+      }),
       where: this.where,
     };
   }
@@ -80,6 +91,18 @@ export class Environment {
   // up with time.
   bind(id, value) {
     this.untimedProperties[id] = value;
+  }
+
+  bindFunction(id, method) {
+    this.functions[id] = method;
+  }
+
+  hasFunction(id) {
+    return this.functions.hasOwnProperty(id);
+  }
+
+  getFunction(id) {
+    return this.functions[id];
   }
 
   // Determine if this environment directly owns a property.
@@ -196,7 +219,7 @@ export class TimelinedEnvironment extends Environment {
     while (env) {
       if (env.untimedProperties.hasOwnProperty(id)) {
         return env.untimedProperties[id];
-      } else if (env.timedProperties.hasOwnProperty(id)) {
+      } else if (env.timedProperties && env.timedProperties.hasOwnProperty(id)) {
         return env.timedProperties[id];
       }
       env = env.parent;
@@ -255,6 +278,8 @@ export class Shape extends TimelinedEnvironment {
       return Rectangle.reify(parentEnvironment, pod);
     } else if (pod.type === 'circle') {
       return Circle.reify(parentEnvironment, pod);
+    } else if (pod.type === 'polygon') {
+      return Polygon.reify(parentEnvironment, pod);
     } else {
       throw new Error('unimplemented shape:', pod.type);
     }
@@ -528,3 +553,139 @@ export class Circle extends Shape {
 
 // --------------------------------------------------------------------------- 
 
+export class Polygon extends Shape {
+  static type = 'polygon';
+  static article = 'a';
+  static timedIds = ['color', 'opacity'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurtleTurn(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionTurtleMove(this)));
+
+    this.nodes = [];
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Polygon();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.nodes = this.nodes.map(node => node.toPod());
+    return pod;
+  }
+
+  embody(parentEnvironment, pod) {
+    super.embody(parentEnvironment, pod);
+    this.nodes = pod.nodes.map(subpod => this.root.omniReify(this, subpod));
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Polygon();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  validate() {
+    super.validate();
+    for (let node of this.nodes) {
+      console.log("node:", node);
+      node.validate();
+    }
+  }
+
+  start() {
+    this.element = document.createElementNS(svgNamespace, 'polygon');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    this.connect();
+
+    // this.outlineMark = new PolygonMark();
+    this.addMarks(this, [], []);
+  }
+
+  update(env, t, bounds) {
+    let currentTurtle = new Turtle(null, null);
+    console.log("this.nodes:", this.nodes);
+    let positions = [];
+    for (let node of this.nodes) {
+      let result = node.update(env, t, bounds, currentTurtle);
+      console.log("result:", result);
+      currentTurtle = result.turtle;
+      if (result.position) {
+        positions.push(result.turtle.position);
+      }
+    }
+    console.log("positions:", positions);
+
+    let opacity = this.valueAt(env, 'opacity', t).value;
+    let isVisible = opacity > 0.000001;
+    let color;
+    if (isVisible) {
+      color = this.getColor(env, t);
+    }
+
+    if (positions.some(position => !position) || !color) {
+      this.hide();
+    } else {
+      this.show();
+
+      if (this.owns('stroke')) {
+        this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      }
+
+      let pathCommands = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+
+      // TODO ensure opacity? color?
+      this.element.setAttributeNS(null, 'fill-opacity', opacity);
+      this.element.setAttributeNS(null, 'points', pathCommands);
+      this.element.setAttributeNS(null, 'fill', color.toColor());
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Vertex extends TimelinedEnvironment {
+  static type = 'vertex';
+  static article = 'a';
+  static timedIds = ['position'];
+
+  static create(parentEnvironment, where) {
+    const vertex = new Vertex();
+    vertex.initialize(parentEnvironment, where);
+    parentEnvironment.nodes.push(vertex);
+    return vertex;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const vertex = new Vertex();
+    vertex.embody(parentEnvironment, pod);
+    return vertex;
+  }
+
+  validate() {
+    this.assertProperty('position');
+  }
+
+  update(env, t, bounds, fromTurtle) {
+    const position = this.valueAt(env, 'position', t);
+    
+    if (position) {
+      return {
+        position: `${position.get(0).value},${bounds.span - position.get(1).value}`,
+        turtle: new Turtle(position, fromTurtle.heading),
+      };
+    } else {
+      return null;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 

@@ -130,7 +130,7 @@ export class InterpreterEnvironment extends Environment {
       new ExpressionInteger(100)
     ]));
 
-    Object.assign(this.untimedProperties, {
+    Object.assign(this.functions, {
       rectangle: new FunctionDefinition('rectangle', [], new ExpressionRectangle()),
       line: new FunctionDefinition('line', [], new ExpressionLine()),
       path: new FunctionDefinition('path', [], new ExpressionPath()),

@@ -26,7 +26,7 @@ import {
   // TwovillePathCubic,
   // TwovillePathQuadratic,
   // TwovilleUngon,
-  // TwovillePolygon,
+  Polygon,
   // TwovillePolyline,
   Rectangle,
   // TwovilleRotate,
@@ -36,7 +36,7 @@ import {
   // TwovilleTurtle,
   // TwovilleTurtleMove,
   // TwovilleTurtleTurn,
-  // TwovilleVertex,
+  Vertex,
 } from "./scene.js";
 
 // --------------------------------------------------------------------------- 
@@ -1033,11 +1033,9 @@ export class ExpressionFunctionCall extends Expression {
   }
 
   lookup(env, fromTime, toTime) {
-    let f = env.get(this.nameToken.source);
+    let f = env.getFunction(this.nameToken.source);
     if (!f) {
       throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
-    } else if (!(f instanceof FunctionDefinition)) {
-      throw new LocatedException(this.where, `I can only call functions. ${this.nameToken.source} is not a function.`);
     }
     return f;
   }
@@ -1076,8 +1074,8 @@ export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
   lookup(env, fromTime, toTime) {
     let hostValue = this.host.evaluate(env, fromTime, toTime);
 
-    if (!hostValue.has(this.nameToken.source)) {
-      throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
+    if (!hostValue.hasFunction(this.nameToken.source)) {
+      throw new LocatedException(this.where, `I've not heard of any method named "${this.nameToken.source}".`);
     }
 
     return hostValue.getFunction(this.nameToken.source);
@@ -1594,7 +1592,7 @@ export class ExpressionVertex extends ExpressionFunction {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleVertex(this.instance, callExpression);
+    return Vertex.create(this.instance, callExpression.where);
   }
 }
 
@@ -1767,7 +1765,7 @@ export class ExpressionLine extends ExpressionFunction {
 
 export class ExpressionPolygon extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePolygon(env, callExpression);
+    return Polygon.create(env, callExpression.where);
   }
 }
 
