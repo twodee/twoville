@@ -33,10 +33,10 @@ import {
   // TwovilleScale,
   // TwovilleShear,
   // TwovilleTranslate,
-  // TwovilleTurtle,
-  // TwovilleTurtleMove,
-  // TwovilleTurtleTurn,
-  Vertex,
+  TurtleNode,
+  MoveNode,
+  TurnNode,
+  VertexNode,
 } from "./scene.js";
 
 // --------------------------------------------------------------------------- 
@@ -1592,7 +1592,7 @@ export class ExpressionVertex extends ExpressionFunction {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return Vertex.create(this.instance, callExpression.where);
+    return VertexNode.create(this.instance, callExpression.where);
   }
 }
 
@@ -1605,33 +1605,33 @@ export class ExpressionTurtle extends ExpressionFunction {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleTurtle(this.instance, callExpression);
+    return TurtleNode.create(this.instance, callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTurtleTurn extends ExpressionFunction {
+export class ExpressionTurn extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleTurtleTurn(this.instance, callExpression);
+    return TurnNode.create(this.instance, callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTurtleMove extends ExpressionFunction {
+export class ExpressionMove extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleTurtleMove(this.instance, callExpression);
+    return MoveNode.create(this.instance, callExpression.where);
   }
 }
 

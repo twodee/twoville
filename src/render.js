@@ -9,7 +9,10 @@ import {
   Environment,
   Stroke,
   Shape,
-  Vertex,
+  MoveNode,
+  VertexNode,
+  TurtleNode,
+  TurnNode,
 } from './scene.js';
 
 import {
@@ -49,7 +52,13 @@ export class RenderEnvironment extends Environment {
     } else if (pod.type === 'timeline') {
       return Timeline.reify(env, pod);
     } else if (pod.type === 'vertex') {
-      return Vertex.reify(env, pod);
+      return VertexNode.reify(env, pod);
+    } else if (pod.type === 'turtle') {
+      return TurtleNode.reify(env, pod);
+    } else if (pod.type === 'move') {
+      return MoveNode.reify(env, pod);
+    } else if (pod.type === 'turn') {
+      return TurnNode.reify(env, pod);
     } else if (pod.type === 'ExpressionReal') {
       return new ExpressionReal(pod.value, SourceLocation.reify(pod.where));
     } else if (pod.type === 'ExpressionInteger') {

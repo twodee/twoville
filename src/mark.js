@@ -342,6 +342,82 @@ export class VerticalPanMark extends PanMark {
 
 // --------------------------------------------------------------------------- 
 
+export class RotationMark extends PanMark {
+  constructor(shape, component) {
+    super(shape, component, 'cursor-rotate');
+  }
+
+  setExpression(degreesExpression, pivotExpression) {
+    super.setExpression(degreesExpression);
+    this.pivotExpression = pivotExpression;
+  }
+
+  getNewSource(delta, isShiftModified, mouseAt) {
+    const pivotToMouse = new ExpressionVector([
+      new ExpressionReal(mouseAt.x),
+      new ExpressionReal(mouseAt.y),
+    ]).subtract(this.pivotExpression);
+
+    const newRadians = Math.atan2(pivotToMouse.get(0).value, -pivotToMouse.get(1).value);
+    let newDegrees = newRadians * 180 / Math.PI - 90;
+    if (newDegrees < 0) {
+      newDegrees = 360 + newDegrees;
+    }
+    newDegrees = parseFloat(newDegrees.toShortFloat());
+
+    if (isShiftModified) {
+      newDegrees = Math.round(newDegrees);
+    }
+
+    const newExpression = new ExpressionReal(newDegrees);
+
+    this.expression.value = newDegrees;
+    return manipulateSource(this.untweakedExpression, newExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class DistanceMark extends PanMark {
+  constructor(shape, component) {
+    super(shape, component, 'cursor-pan');
+  }
+
+  setExpression(distanceExpression, fromExpression, headingExpression) {
+    super.setExpression(distanceExpression);
+    this.fromExpression = fromExpression;
+    this.headingExpression = headingExpression;
+  }
+
+  getNewSource(delta, isShiftModified, mouseAt) {
+    const positionToHeading = new ExpressionVector([
+      new ExpressionReal(1),
+      this.headingExpression
+    ]).toCartesian();
+
+    const mouse = new ExpressionVector([
+      new ExpressionReal(mouseAt.x),
+      new ExpressionReal(mouseAt.y),
+    ]);
+
+    const positionToMouse = mouse.subtract(this.fromExpression);
+    const dot = new ExpressionReal(positionToMouse.dot(positionToHeading));
+
+    let newDistance = parseFloat(dot.value.toShortFloat());
+
+    if (isShiftModified) {
+      newDistance = Math.round(newDistance);
+    }
+
+    this.expression.value = newDistance;
+
+    const newExpression = new ExpressionReal(newDistance);
+    return manipulateSource(this.untweakedExpression, newExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 function manipulateSource(oldExpression, newExpression) {
   const unevaluated = oldExpression.unevaluated;
   const oldValue = oldExpression.value;
