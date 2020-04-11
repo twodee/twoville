@@ -208,6 +208,9 @@ export class RenderEnvironment extends Environment {
 
   updateViewBox() {
     svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${this.bounds.y} ${this.bounds.width} ${this.bounds.height}`);
+    if (this.isStarted) {
+      this.scaleCircleHandles();
+    }
   }
 
   rebound(oldBounds) {
@@ -238,13 +241,12 @@ export class RenderEnvironment extends Environment {
     const matrix = this.svg.getScreenCTM();
     const circles = this.foregroundHandleGroup.querySelectorAll('.handle-circle');
     for (let circle of circles) {
-      circle.r.baseVal.value = 10 / matrix.a;
+      circle.r.baseVal.value = 6 / matrix.a;
     }
   }
 
   stale() {
-    // TODO isDraggingHandle?
-    if (!this.isStale && !this.isDraggingHandle) {
+    if (!this.isStale && !this.isTweaking) {
       const circles = this.foregroundHandleGroup.querySelectorAll('.handle-circle');
       for (let circle of circles) {
         circle.classList.add('stale-handle');

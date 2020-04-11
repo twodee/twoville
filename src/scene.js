@@ -28,6 +28,7 @@ import {
   HorizontalPanMark,
   Markable,
   PolygonMark,
+  PolylineMark,
   RectangleMark,
   RotationMark,
   VectorPanMark,
@@ -353,7 +354,7 @@ Object.assign(Shape.prototype, Markable);
 export class Stroke extends TimelinedEnvironment {
   static type = 'stroke';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity'];
+  static timedIds = ['size', 'color', 'opacity', 'dashes'];
 
   static create(parentEnvironment, where) {
     const stroke = new Stroke();
@@ -690,7 +691,7 @@ export class Polygon extends NodedShape {
 export class Polyline extends NodedShape {
   static type = 'polyline';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity'];
+  static timedIds = ['size', 'color', 'opacity', 'dashes'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -727,7 +728,7 @@ export class Polyline extends NodedShape {
     this.connect();
     super.start();
 
-    this.outlineMark = new PolygonMark();
+    this.outlineMark = new PolylineMark();
     this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], [this.outlineMark]);
   }
 
@@ -752,7 +753,7 @@ export class Polyline extends NodedShape {
 export class Line extends NodedShape {
   static type = 'line';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity'];
+  static timedIds = ['size', 'color', 'opacity', 'dashes'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);

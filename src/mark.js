@@ -193,6 +193,18 @@ export class PolygonMark {
 
 // --------------------------------------------------------------------------- 
 
+export class PolylineMark {
+  constructor() {
+    this.element = document.createElementNS(svgNamespace, 'polyline');
+  }
+
+  update(coordinates) {
+    this.element.setAttributeNS(null, 'points', coordinates);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TweakableMark {
   constructor(shape, component, element, cursor) {
     this.shape = shape;
