@@ -1,7 +1,5 @@
 // https://github.com/danro/jquery-easing/blob/master/jquery.easing.js
 
-// import { Messager } from './messager.js';
-
 import {
   Tokens,
   FunctionDefinition,
@@ -11,20 +9,19 @@ import {
 } from './common.js';
 
 import {
-  Circle,
   Environment,
+} from './environment.js';
+
+import {
+  Circle,
   Line,
-  MoveNode,
   Polygon,
   Polyline,
   Rectangle,
-  TurnNode,
-  TurtleNode,
+  Text,
   Ungon,
-  VertexNode,
   // TwovilleCutout,
   // TwovilleGroup,
-  // TwovilleLabel,
   // TwovilleMarker,
   // TwovilleMask,
   // TwovillePath,
@@ -37,7 +34,14 @@ import {
   // TwovilleScale,
   // TwovilleShear,
   // TwovilleTranslate,
-} from "./scene.js";
+} from './shape.js';
+
+import {
+  MoveNode,
+  TurnNode,
+  TurtleNode,
+  VertexNode,
+} from './node.js';
 
 // --------------------------------------------------------------------------- 
 // INTERPOLANTS
@@ -1795,9 +1799,9 @@ export class ExpressionPath extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionLabel extends ExpressionFunction {
+export class ExpressionText extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleLabel(env, callExpression);
+    return new Text.create(env, callExpression.where);
   }
 }
 

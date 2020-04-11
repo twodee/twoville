@@ -230,7 +230,7 @@ function startInterpreting() {
     }
   });
 
-  const hasWorker = true;
+  const hasWorker = false;
   if (hasWorker) {
     interpreterWorker.postMessage({
       command: 'interpret',

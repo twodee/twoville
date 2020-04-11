@@ -1,28 +1,16 @@
 import { 
-  Timeline
-} from './timeline.js';
-
-import { 
   FunctionDefinition,
   LocatedException,
-  SourceLocation,
   Turtle,
   mop,
   svgNamespace,
 } from './common.js';
 
-import { 
-  ExpressionInteger,
-  ExpressionMove,
-  ExpressionReal,
-  ExpressionString,
-  ExpressionTurn,
-  ExpressionTurtle,
-  ExpressionVector,
-  ExpressionVertex,
-} from './ast.js';
+import {
+  TimelinedEnvironment,
+} from './environment.js';
 
-import { 
+import {
   CircleMark,
   DistanceMark,
   HorizontalPanMark,
@@ -35,223 +23,20 @@ import {
   VerticalPanMark,
 } from './mark.js';
 
-// --------------------------------------------------------------------------- 
+import {
+  VertexNode,
+} from './node.js';
 
-export class Environment {
-  static type = 'environment';
-
-  initialize(parentEnvironment, where) {
-    this.untimedProperties = {};
-    this.functions = {};
-    this.parentEnvironment = parentEnvironment;
-    if (where) {
-      this.where = where;
-    }
-
-    // Let's make the root easy to access.
-    if (parentEnvironment) {
-      this.root = parentEnvironment.root;
-    }
-  }
-
-  static create(parentEnvironment, where) {
-    const env = new Environment();
-    env.initialize(parentEnvironment, where);
-    return env;
-  }
-
-  embody(parentEnvironment, pod) {
-    this.parentEnvironment = parentEnvironment;
-    if (parentEnvironment) {
-      this.root = parentEnvironment.root;
-    }
-
-    this.untimedProperties = mop(pod.untimedProperties, subpod => this.root.omniReify(this, subpod));
-    if (pod.where) {
-      this.where = SourceLocation.reify(pod.where);
-    }
-  }
-
-  static reify(parentEnvironment, pod) {
-    const env = new Environment();
-    env.embody(parentEnvironment, pod);
-    return env;
-  }
-
-  toPod() {
-    return {
-      type: this.type,
-      untimedProperties: mop(this.untimedProperties, value => {
-        return value.toPod();
-      }),
-      where: this.where,
-    };
-  }
-
-  // Binding to a plain old Environment means the data isn't bound up with
-  // time. The TimelinedEnvironment will override this for data that is bound
-  // up with time.
-  bind(id, value) {
-    this.untimedProperties[id] = value;
-  }
-
-  bindFunction(id, method) {
-    this.functions[id] = method;
-  }
-
-  hasFunction(id) {
-    return this.functions.hasOwnProperty(id);
-  }
-
-  getFunction(id) {
-    return this.functions[id];
-  }
-
-  // Determine if this environment directly owns a property.
-  owns(id) {
-    return this.untimedProperties.hasOwnProperty(id);
-  }
-
-  // Determine if this environment owns or inherits a property.
-  knows(id) {
-    let env = this;
-    while (env) {
-      if (env.owns(id)) {
-        return true;
-      }
-      env = env.parent;
-    }
-    return false;
-  }
-
-  assertProperty(id) {
-    if (!this.owns(id)) {
-      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose ${id} property is not defined.`);
-    }
-  }
-
-  get(id) {
-    let env = this;
-    while (env) {
-      if (env.untimedProperties.hasOwnProperty(id)) {
-        return env.untimedProperties[id];
-      }
-      env = env.parent;
-    }
-    return undefined;
-  }
-
-  get type() {
-    return this.constructor.type;
-  }
-
-  get article() {
-    return this.constructor.article;
-  }
-
-  // evaluate(env, fromTime, toTime) {
-    // return this;
-  // }
-}
-
-// ---------------------------------------------------------------------------
-
-export class TimelinedEnvironment extends Environment {
-  static type = 'timelined environment';
-  static article = 'a';
-  static timedIds = [];
-
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
-    this.timedProperties = {};
-  }
-
-  embody(parentEnvironment, pod) {
-    super.embody(parentEnvironment, pod);
-    this.timedProperties = mop(pod.timedProperties, subpod => this.root.omniReify(this, subpod));
-  }
-
-  toPod() {
-    const pod = super.toPod();
-    pod.timedProperties = mop(this.timedProperties, value => value.toPod());
-    return pod;
-  }
-
-  owns(id) {
-    return super.owns(id) || this.timedProperties.hasOwnProperty(id);
-  }
-
-  bind(id, value, fromTime, toTime) {
-    if (!this.isTimed(id)) {
-      super.bind(id, value);
-    } else {
-      if (!this.timedProperties.hasOwnProperty(id)) {
-        this.timedProperties[id] = new Timeline();
-      }
-      const timeline = this.timedProperties[id];
-
-      // We are assigning one timeline to another...
-      if (value instanceof Timeline) {
-        if (fromTime && toTime) {
-          timeline.setFromValue(fromTime, value.intervalFrom(fromTime).fromValue);
-          timeline.setToValue(toTime, value.intervalTo(toTime).toValue);
-        } else if (fromTime) {
-          timeline.setFromValue(fromTime, value.intervalFrom(fromTime).fromValue);
-        } else if (toTime) {
-          timeline.setToValue(toTime, value.intervalTo(toTime).toValue);
-        } else {
-          timeline.setDefault(value.getDefault());
-        }
-      } else if (fromTime && toTime) {
-        timeline.setFromValue(fromTime, value);
-        timeline.setToValue(toTime, value);
-      } else if (fromTime) {
-        timeline.setFromValue(fromTime, value);
-      } else if (toTime) {
-        timeline.setToValue(toTime, value);
-      } else {
-        timeline.setDefault(value);
-      }
-    }
-  }
-
-  // Assumes property exists.
-  valueAt(env, property, t) {
-    return this.timedProperties[property].valueAt(env, t);
-  }
-
-  get(id) {
-    let env = this;
-    while (env) {
-      if (env.untimedProperties.hasOwnProperty(id)) {
-        return env.untimedProperties[id];
-      } else if (env.timedProperties && env.timedProperties.hasOwnProperty(id)) {
-        return env.timedProperties[id];
-      }
-      env = env.parent;
-    }
-    return undefined;
-  }
-
-  isTimed(id) {
-    return this.constructor.timedIds.includes(id);
-  }
-
-  applyStroke(env, t, element) {
-    if (this.owns('size') && this.owns('color') && this.owns('opacity')) {
-      const size = this.valueAt(env, 'size', t);
-      const color = this.valueAt(env, 'color', t);
-      const opacity = this.valueAt(env, 'opacity', t);
-      element.setAttributeNS(null, 'stroke', color.toColor());
-      element.setAttributeNS(null, 'stroke-width', size.value);
-      element.setAttributeNS(null, 'stroke-opacity', opacity.value);
-      if (this.owns('dashes')) {
-        const dashes = this.valueAt(env, 'dashes', t).toSpacedString();
-        element.setAttributeNS(null, 'stroke-dasharray', dashes);
-      }
-    }
-  }
-}
+import {
+  ExpressionInteger,
+  ExpressionMove,
+  ExpressionReal,
+  ExpressionString,
+  ExpressionTurn,
+  ExpressionTurtle,
+  ExpressionVector,
+  ExpressionVertex,
+} from './ast.js';
 
 // --------------------------------------------------------------------------- 
 
@@ -292,6 +77,8 @@ export class Shape extends TimelinedEnvironment {
       return Ungon.reify(parentEnvironment, pod);
     } else if (pod.type === 'line') {
       return Line.reify(parentEnvironment, pod);
+    } else if (pod.type === 'text') {
+      return Text.reify(parentEnvironment, pod);
     } else {
       throw new Error('unimplemented shape:', pod.type);
     }
@@ -340,11 +127,6 @@ export class Shape extends TimelinedEnvironment {
       this.parentElement.appendChild(this.element);
     }
   }
-
-  getColor(env, t) {
-    const color = this.valueAt(env, 'color', t);
-    return color;
-  }
 }
 
 Object.assign(Shape.prototype, Markable);
@@ -366,6 +148,103 @@ export class Stroke extends TimelinedEnvironment {
     const stroke = new Stroke();
     stroke.embody(parentEnvironment, pod);
     return stroke;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Text extends Shape {
+  static type = 'text';
+  static article = 'a';
+  static timedIds = ['position', 'message', 'size', 'color', 'opacity', 'anchor', 'baseline'];
+
+  static create(parentEnvironment, where) {
+    const shape = new Text();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Text();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  start() {
+    this.element = document.createElementNS(svgNamespace, 'text');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.appendChild(document.createTextNode('...'));
+
+    this.connect();
+
+    this.outlineMark = new RectangleMark();
+    this.positionMark = new VectorPanMark(this);
+
+    this.addMarks(this, [this.positionMark], [this.outlineMark]);
+  }
+
+  validate() {
+    super.validate();
+    this.assertProperty('position');
+    this.assertProperty('message');
+    this.assertProperty('color');
+    // TODO others?
+  }
+
+  update(env, t, bounds) {
+    let position = this.valueAt(env, 'position', t);
+    this.positionMark.setExpression(position);
+
+    let message = this.valueAt(env, 'message', t);
+    let color = this.valueAt(env, 'color', t);
+
+    let fontSize;
+    if (this.owns('size')) {
+      fontSize = this.valueAt(env, 'size', t);
+    } else {
+      fontSize = new ExpressionInteger(8);
+    }
+
+    let anchor;
+    if (this.owns('anchor')) {
+      anchor = this.valueAt(env, 'anchor', t);
+    } else {
+      anchor = new ExpressionString('middle');
+    }
+
+    let baseline;
+    if (this.owns('baseline')) {
+      baseline = this.valueAt(env, 'baseline', t);
+    } else {
+      baseline = new ExpressionString('center');
+    }
+
+    if (!position || !color) {
+      this.hide();
+    } else {
+      this.show();
+      this.element.childNodes[0].nodeValue = message.value;
+      this.element.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
+      this.element.setAttributeNS(null, 'x', position.get(0).value);
+      this.element.setAttributeNS(null, 'y', bounds.span - position.get(1).value);
+      this.element.setAttributeNS(null, 'fill', color.toColor());
+      this.element.setAttributeNS(null, 'font-size', fontSize.value);
+      this.element.setAttributeNS(null, 'text-anchor', anchor.value);
+      this.element.setAttributeNS(null, 'dominant-baseline', baseline.value);
+
+      // I have to query the SVG element to determine the bounding box of the
+      // text.
+      const box = this.element.getBBox();
+      this.outlineMark.update(new ExpressionVector([
+        new ExpressionReal(box.x),
+        new ExpressionReal(bounds.span - box.y - box.height),
+      ]), new ExpressionVector([
+        new ExpressionReal(box.width),
+        new ExpressionReal(box.height),
+      ]), bounds);
+
+      this.positionMark.update(position, bounds);
+    }
   }
 }
 
@@ -439,7 +318,7 @@ export class Rectangle extends Shape {
     const isVisible = opacity > 0.000001;
     let color;
     if (isVisible) {
-      color = this.getColor(env, t);
+      color = this.valueAt(env, 'color', t);
     }
 
     if (!corner || !size || (!color && isVisible)) {
@@ -540,7 +419,7 @@ export class Circle extends Shape {
     const isVisible = opacity > 0.000001;
     let color;
     if (isVisible) {
-      color = this.getColor(env, t);
+      color = this.valueAt(env, 'color', t);
     }
 
     if (!center || !radius || (!color && isVisible)) {
@@ -662,7 +541,7 @@ export class Polygon extends NodedShape {
     const isVisible = opacity > 0.000001;
     let color;
     if (isVisible) {
-      color = this.getColor(env, t);
+      color = this.valueAt(env, 'color', t);
     }
 
     if (positions.some(position => !position) || !color) {
@@ -876,7 +755,7 @@ export class Ungon extends NodedShape {
     const isVisible = opacity > 0.000001;
     let color;
     if (isVisible) {
-      color = this.getColor(env, t);
+      color = this.valueAt(env, 'color', t);
     }
 
     if (positions.some(position => !position) || !color) {
@@ -929,213 +808,3 @@ export class Ungon extends NodedShape {
 
 // --------------------------------------------------------------------------- 
 
-export class VertexNode extends TimelinedEnvironment {
-  static type = 'vertex';
-  static article = 'a';
-  static timedIds = ['position'];
-
-  static create(parentEnvironment, where) {
-    const node = new VertexNode();
-    node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
-    return node;
-  }
-
-  static reify(parentEnvironment, pod) {
-    const node = new VertexNode();
-    node.embody(parentEnvironment, pod);
-    return node;
-  }
-
-  getMarks() {
-    return [this.positionMark];
-  }
-
-  validate() {
-    this.assertProperty('position');
-  }
-
-  start() {
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-  }
-
-  update(env, t, bounds, fromTurtle) {
-    const position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
-    
-    if (position) {
-      this.positionMark.update(position, bounds);
-      return {
-        pathCommand: null,
-        turtle: new Turtle(position, fromTurtle.heading),
-      };
-    } else {
-      return null;
-    }
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class TurtleNode extends TimelinedEnvironment {
-  static type = 'turtle';
-  static article = 'a';
-  static timedIds = ['position', 'heading'];
-
-  static create(parentEnvironment, where) {
-    const node = new TurtleNode();
-    node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
-    return node;
-  }
-
-  static reify(parentEnvironment, pod) {
-    const node = new TurtleNode();
-    node.embody(parentEnvironment, pod);
-    return node;
-  }
-
-  getMarks() {
-    return [this.positionMark, this.headingMark];
-  }
-
-  validate() {
-    this.assertProperty('position');
-    this.assertProperty('heading');
-  }
-
-  start() {
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    this.headingMark = new RotationMark(this.parentEnvironment, this);
-  }
-
-  update(env, t, bounds, fromTurtle) {
-    const position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
-
-    const heading = this.valueAt(env, 'heading', t);
-    this.headingMark.setExpression(heading, position);
-    
-    if (position) {
-      this.positionMark.update(position, bounds);
-      const towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(heading.value).add(position);
-      this.headingMark.update(towardPosition, bounds);
-      return {
-        pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
-        turtle: new Turtle(position, heading),
-      };
-    } else {
-      return null;
-    }
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class MoveNode extends TimelinedEnvironment {
-  static type = 'move';
-  static article = 'a';
-  static timedIds = ['distance'];
-
-  static create(parentEnvironment, where) {
-    const node = new MoveNode();
-    node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
-    return node;
-  }
-
-  static reify(parentEnvironment, pod) {
-    const node = new MoveNode();
-    node.embody(parentEnvironment, pod);
-    return node;
-  }
-
-  getMarks() {
-    return [this.distanceMark];
-  }
-
-  validate() {
-    this.assertProperty('distance');
-  }
-
-  start() {
-    this.distanceMark = new DistanceMark(this.parentEnvironment, this);
-  }
-
-  update(env, t, bounds, fromTurtle) {
-    const distance = this.valueAt(env, 'distance', t);
-    this.distanceMark.setExpression(distance, fromTurtle.position, fromTurtle.heading);
-    
-    if (distance) {
-      let delta = new ExpressionVector([distance, fromTurtle.heading]).toCartesian();
-      let position = fromTurtle.position.add(delta);
-
-      this.distanceMark.update(position, bounds);
-
-      return {
-        pathCommand: `L${position.get(0).value},${bounds.span - position.get(1).value}`,
-        turtle: new Turtle(position, fromTurtle.heading),
-      };
-    } else {
-      return null;
-    }
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class TurnNode extends TimelinedEnvironment {
-  static type = 'turn';
-  static article = 'a';
-  static timedIds = ['degrees'];
-
-  static create(parentEnvironment, where) {
-    const node = new TurnNode();
-    node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
-    return node;
-  }
-
-  static reify(parentEnvironment, pod) {
-    const node = new TurnNode();
-    node.embody(parentEnvironment, pod);
-    return node;
-  }
-
-  getMarks() {
-    return [this.rotationMark];
-  }
-
-  validate() {
-    this.assertProperty('degrees');
-  }
-
-  start() {
-    this.rotationMark = new RotationMark(this.parentEnvironment, this);
-  }
-
-  update(env, t, bounds, fromTurtle) {
-    const degrees = this.valueAt(env, 'degrees', t);
-    this.rotationMark.setExpression(degrees, fromTurtle.position);
-    
-    if (degrees) {
-      let newHeading = fromTurtle.heading.add(degrees).value;
-      while (newHeading > 360) {
-        newHeading -= 360;
-      }
-      while (newHeading < 0) {
-        newHeading += 360;
-      }
-      let towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(newHeading).add(fromTurtle.position);
-      this.rotationMark.update(towardPosition, bounds);
-      return {
-        pathCommand: null,
-        turtle: new Turtle(fromTurtle.position, new ExpressionReal(newHeading)),
-      };
-    } else {
-      return null;
-    }
-  }
-}
-
-// --------------------------------------------------------------------------- 

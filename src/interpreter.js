@@ -13,7 +13,7 @@ import {
 
 import {
   Environment,
-} from './scene.js';
+} from './environment.js';
 
 const seedrandom = require('seedrandom');
 
@@ -33,7 +33,7 @@ import {
   ExpressionIdentifier,
   ExpressionInt,
   ExpressionInteger,
-  ExpressionLabel,
+  ExpressionText,
   ExpressionLine,
   ExpressionMarker,
   ExpressionMask,
@@ -137,7 +137,7 @@ export class InterpreterEnvironment extends Environment {
       ungon: new FunctionDefinition('ungon', [], new ExpressionUngon()),
       polygon: new FunctionDefinition('polygon', [], new ExpressionPolygon()),
       polyline: new FunctionDefinition('polyline', [], new ExpressionPolyline()),
-      label: new FunctionDefinition('label', [], new ExpressionLabel()),
+      text: new FunctionDefinition('text', [], new ExpressionText()),
       group: new FunctionDefinition('group', [], new ExpressionGroup()),
       marker: new FunctionDefinition('marker', [], new ExpressionMarker()),
       mask: new FunctionDefinition('mask', [], new ExpressionMask()),

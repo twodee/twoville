@@ -6,21 +6,27 @@ import {
 } from './common.js';
 
 import {
-  Environment,
-  Stroke,
-  Shape,
-  MoveNode,
-  VertexNode,
-  TurtleNode,
-  TurnNode,
-} from './scene.js';
-
-import {
   ExpressionReal,
   ExpressionInteger,
   ExpressionString,
   ExpressionVector,
 } from './ast.js';
+
+import {
+  Environment,
+} from './environment.js';
+
+import {
+  Stroke,
+  Shape,
+} from './shape.js';
+
+import {
+  MoveNode,
+  VertexNode,
+  TurtleNode,
+  TurnNode,
+} from './node.js';
 
 import {
   Timeline,
