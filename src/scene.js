@@ -144,6 +144,10 @@ export class Environment {
     return this.constructor.type;
   }
 
+  get article() {
+    return this.constructor.article;
+  }
+
   // evaluate(env, fromTime, toTime) {
     // return this;
   // }
@@ -281,6 +285,12 @@ export class Shape extends TimelinedEnvironment {
       return Circle.reify(parentEnvironment, pod);
     } else if (pod.type === 'polygon') {
       return Polygon.reify(parentEnvironment, pod);
+    } else if (pod.type === 'polyline') {
+      return Polyline.reify(parentEnvironment, pod);
+    } else if (pod.type === 'ungon') {
+      return Ungon.reify(parentEnvironment, pod);
+    } else if (pod.type === 'line') {
+      return Line.reify(parentEnvironment, pod);
     } else {
       throw new Error('unimplemented shape:', pod.type);
     }
@@ -294,10 +304,16 @@ export class Shape extends TimelinedEnvironment {
     this.element.setAttributeNS(null, 'visibility', 'hidden');
   }
 
+  start() {
+  }
+
   validate() {
     if (!this.owns('color')) {
       throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose color property is not defined.`);
     }
+  }
+
+  update() {
   }
 
   connect() {
@@ -553,26 +569,10 @@ export class Circle extends Shape {
 
 // --------------------------------------------------------------------------- 
 
-export class Polygon extends Shape {
-  static type = 'polygon';
-  static article = 'a';
-  static timedIds = ['color', 'opacity'];
-
+export class NodedShape extends Shape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
-
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
-
     this.nodes = [];
-  }
-
-  static create(parentEnvironment, where) {
-    const shape = new Polygon();
-    shape.initialize(parentEnvironment, where);
-    return shape;
   }
 
   toPod() {
@@ -586,12 +586,6 @@ export class Polygon extends Shape {
     this.nodes = pod.nodes.map(subpod => this.root.omniReify(this, subpod));
   }
 
-  static reify(parentEnvironment, pod) {
-    const shape = new Polygon();
-    shape.embody(parentEnvironment, pod);
-    return shape;
-  }
-
   validate() {
     super.validate();
     for (let node of this.nodes) {
@@ -600,29 +594,68 @@ export class Polygon extends Shape {
   }
 
   start() {
+    super.start();
+    for (let node of this.nodes) {
+      node.start();
+    }
+  }
+
+  generateTurtles(env, t, bounds) {
+    let currentTurtle = new Turtle(null, null);
+    const turtles = [];
+    for (let node of this.nodes) {
+      const result = node.update(env, t, bounds, currentTurtle);
+      currentTurtle = result.turtle;
+      if (currentTurtle) {
+        turtles.push(currentTurtle);
+      }
+    }
+    return turtles;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Polygon extends NodedShape {
+  static type = 'polygon';
+  static article = 'a';
+  static timedIds = ['color', 'opacity'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Polygon();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Polygon();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  start() {
     this.element = document.createElementNS(svgNamespace, 'polygon');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
     this.connect();
-
-    for (let node of this.nodes) {
-      node.start();
-    }
+    super.start();
 
     this.outlineMark = new PolygonMark();
     this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], [this.outlineMark]);
   }
 
   update(env, t, bounds) {
-    let currentTurtle = new Turtle(null, null);
-    const positions = [];
-    for (let node of this.nodes) {
-      const result = node.update(env, t, bounds, currentTurtle);
-      currentTurtle = result.turtle;
-      if (currentTurtle) {
-        positions.push(currentTurtle.position);
-      }
-    }
+    const turtles = this.generateTurtles(env, t, bounds);
+    const positions = turtles.map(turtle => turtle.position);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
     const isVisible = opacity > 0.000001;
@@ -648,6 +681,247 @@ export class Polygon extends Shape {
       this.element.setAttributeNS(null, 'fill', color.toColor());
 
       this.outlineMark.update(coordinates);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Polyline extends NodedShape {
+  static type = 'polyline';
+  static article = 'a';
+  static timedIds = ['size', 'color', 'opacity'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Polyline();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Polyline();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  validate() {
+    super.validate();
+    this.assertProperty('size');
+    this.assertProperty('color');
+  }
+
+  start() {
+    this.element = document.createElementNS(svgNamespace, 'polyline');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'fill', 'none');
+
+    this.connect();
+    super.start();
+
+    this.outlineMark = new PolygonMark();
+    this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], [this.outlineMark]);
+  }
+
+  update(env, t, bounds) {
+    const turtles = this.generateTurtles(env, t, bounds);
+    const positions = turtles.map(turtle => turtle.position);
+
+    if (positions.some(position => !position)) {
+      this.hide();
+    } else {
+      this.show();
+      this.applyStroke(env, t, this.element);
+      const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+      this.element.setAttributeNS(null, 'points', coordinates);
+      this.outlineMark.update(coordinates);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Line extends NodedShape {
+  static type = 'line';
+  static article = 'a';
+  static timedIds = ['size', 'color', 'opacity'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Line();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Line();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  validate() {
+    super.validate();
+    this.assertProperty('size');
+    this.assertProperty('color');
+    this.assertProperty('opacity');
+  }
+
+  start() {
+    this.element = document.createElementNS(svgNamespace, 'line');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    this.connect();
+    super.start();
+
+    this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], []);
+  }
+
+  update(env, t, bounds) {
+    const turtles = this.generateTurtles(env, t, bounds);
+    const positions = turtles.map(turtle => turtle.position);
+
+    if (positions.length != 2) {
+      throw new LocatedException(this.where, `I tried to draw a line that had ${vertices.length} ${vertices.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly two vertices.`);
+    }
+
+    if (positions.some(position => !position)) {
+      this.hide();
+    } else {
+      this.show();
+      this.applyStroke(env, t, this.element);
+
+      const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+
+      this.element.setAttributeNS(null, 'x1', positions[0].get(0).value);
+      this.element.setAttributeNS(null, 'y1', bounds.span - positions[0].get(1).value);
+      this.element.setAttributeNS(null, 'x2', positions[1].get(0).value);
+      this.element.setAttributeNS(null, 'y2', bounds.span - positions[1].get(1).value);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Ungon extends NodedShape {
+  static type = 'ungon';
+  static article = 'an';
+  static timedIds = ['rounding', 'color', 'opacity'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Ungon();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Ungon();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  validate() {
+    super.validate();
+    this.assertProperty('color');
+    this.assertProperty('rounding');
+  }
+
+  start() {
+    this.element = document.createElementNS(svgNamespace, 'path');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    this.connect();
+    super.start();
+
+    this.outlineMark = new PolygonMark();
+    this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], [this.outlineMark]);
+  }
+
+  update(env, t, bounds) {
+    const turtles = this.generateTurtles(env, t, bounds);
+    const positions = turtles.map(turtle => turtle.position);
+
+    if (positions[0].distance(positions[positions.length - 1]) < 1e-3) {
+      positions.pop();
+    }
+
+    let rounding = this.valueAt(env, 'rounding', t).value;
+
+    const opacity = this.valueAt(env, 'opacity', t).value;
+    const isVisible = opacity > 0.000001;
+    let color;
+    if (isVisible) {
+      color = this.getColor(env, t);
+    }
+
+    if (positions.some(position => !position) || !color) {
+      this.hide();
+    } else {
+      this.show();
+
+      if (this.owns('stroke')) {
+        this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      }
+
+      const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+      this.outlineMark.update(coordinates);
+
+      rounding = 1 - rounding;
+      let pathCommands = [];
+      let start = positions[0].midpoint(positions[1]);
+      pathCommands.push(`M ${start.get(0).value},${bounds.span - start.get(1).value}`);
+      let previous = start;
+      for (let i = 1; i < positions.length; ++i) {
+        let mid = positions[i].midpoint(positions[(i + 1) % positions.length]);
+
+        if (rounding) {
+          let control1 = previous.interpolateLinear(positions[i], rounding);
+          let control2 = mid.interpolateLinear(positions[i], rounding);
+          pathCommands.push(`C ${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${mid.get(0).value},${bounds.span - mid.get(1).value}`);
+        } else {
+          pathCommands.push(`Q ${positions[i].get(0).value},${bounds.span - positions[i].get(1).value} ${mid.get(0).value},${bounds.span - mid.get(1).value}`);
+        }
+        previous = mid;
+      }
+
+      if (rounding) {
+        let control1 = previous.interpolateLinear(positions[0], rounding);
+        let control2 = start.interpolateLinear(positions[0], rounding);
+        pathCommands.push(`C ${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${start.get(0).value},${bounds.span - start.get(1).value}`);
+      } else {
+        pathCommands.push(`Q${positions[0].get(0).value},${bounds.span - positions[0].get(1).value} ${start.get(0).value},${bounds.span - start.get(1).value}`);
+      }
+      // pathCommands.push('z');
+
+      this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
+
+      this.element.setAttributeNS(null, 'fill-opacity', opacity);
+      this.element.setAttributeNS(null, 'points', coordinates);
+      this.element.setAttributeNS(null, 'fill', color.toColor());
     }
   }
 }

@@ -11,12 +11,20 @@ import {
 } from './common.js';
 
 import {
-  Environment,
   Circle,
+  Environment,
+  Line,
+  MoveNode,
+  Polygon,
+  Polyline,
+  Rectangle,
+  TurnNode,
+  TurtleNode,
+  Ungon,
+  VertexNode,
   // TwovilleCutout,
   // TwovilleGroup,
   // TwovilleLabel,
-  // TwovilleLine,
   // TwovilleMarker,
   // TwovilleMask,
   // TwovillePath,
@@ -25,18 +33,10 @@ import {
   // TwovillePathLine,
   // TwovillePathCubic,
   // TwovillePathQuadratic,
-  // TwovilleUngon,
-  Polygon,
-  // TwovillePolyline,
-  Rectangle,
   // TwovilleRotate,
   // TwovilleScale,
   // TwovilleShear,
   // TwovilleTranslate,
-  TurtleNode,
-  MoveNode,
-  TurnNode,
-  VertexNode,
 } from "./scene.js";
 
 // --------------------------------------------------------------------------- 
@@ -1757,7 +1757,7 @@ export class ExpressionShear extends ExpressionFunction {
 
 export class ExpressionLine extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleLine(env, callExpression);
+    return new Line.create(env, callExpression.where);
   }
 }
 
@@ -1773,7 +1773,7 @@ export class ExpressionPolygon extends ExpressionFunction {
 
 export class ExpressionUngon extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleUngon(env, callExpression);
+    return Ungon.create(env, callExpression.where);
   }
 }
 
@@ -1781,7 +1781,7 @@ export class ExpressionUngon extends ExpressionFunction {
 
 export class ExpressionPolyline extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePolyline(env, callExpression);
+    return new Polyline.create(env, callExpression);
   }
 }
 
