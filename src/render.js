@@ -183,13 +183,11 @@ export class RenderEnvironment extends Environment {
 
     this.drawables = this.shapes.filter(shape => shape.isDrawable);
 
-    // TODO removeEventListener
     this.isStarted = true;
   }
 
   stop() {
     this.svg.removeEventListener('wheel', this.onWheel);
-    // this.svg.removeEventListener('click', this.onMouseClick);
     this.svg.removeEventListener('mousedown', this.onMouseDown);
     this.svg.removeEventListener('mousemove', this.onMouseMove);
     this.svg.removeEventListener('mouseup', this.onMouseUp);
@@ -314,7 +312,7 @@ export class RenderEnvironment extends Environment {
   }
 
   onWheel = e => {
-    if (this.bounds && !this.isDraggingHandle) {
+    if (this.isStarted && !this.isTweaking) {
       this.mouseAtSvg.x = e.clientX;
       this.mouseAtSvg.y = e.clientY;
       const matrix = this.svg.getScreenCTM().inverse();

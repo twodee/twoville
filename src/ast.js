@@ -1781,7 +1781,7 @@ export class ExpressionUngon extends ExpressionFunction {
 
 export class ExpressionPolyline extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new Polyline.create(env, callExpression);
+    return new Polyline.create(env, callExpression.where);
   }
 }
 

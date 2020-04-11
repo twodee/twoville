@@ -798,7 +798,7 @@ export class Line extends NodedShape {
     const positions = turtles.map(turtle => turtle.position);
 
     if (positions.length != 2) {
-      throw new LocatedException(this.where, `I tried to draw a line that had ${vertices.length} ${vertices.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly two vertices.`);
+      throw new LocatedException(this.where, `I tried to draw a line that had ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
     }
 
     if (positions.some(position => !position)) {
