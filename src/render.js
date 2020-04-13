@@ -6,23 +6,30 @@ import {
 } from './common.js';
 
 import {
-  ExpressionReal,
+  ExpressionBoolean,
   ExpressionInteger,
+  ExpressionReal,
   ExpressionString,
   ExpressionVector,
 } from './ast.js';
 
 import {
   Environment,
+  Mirror,
+  Stroke,
 } from './environment.js';
 
 import {
-  Stroke,
   Shape,
 } from './shape.js';
 
 import {
+  ArcNode,
+  CubicNode,
+  JumpNode,
+  LineNode,
   MoveNode,
+  QuadraticNode,
   VertexNode,
   TurtleNode,
   TurnNode,
@@ -55,6 +62,8 @@ export class RenderEnvironment extends Environment {
       return Environment.reify(env, pod);
     } else if (pod.type === 'stroke') {
       return Stroke.reify(env, pod);
+    } else if (pod.type === 'mirror') {
+      return Mirror.reify(env, pod);
     } else if (pod.type === 'timeline') {
       return Timeline.reify(env, pod);
     } else if (pod.type === 'vertex') {
@@ -65,8 +74,20 @@ export class RenderEnvironment extends Environment {
       return MoveNode.reify(env, pod);
     } else if (pod.type === 'turn') {
       return TurnNode.reify(env, pod);
+    } else if (pod.type === 'jump') {
+      return JumpNode.reify(env, pod);
+    } else if (pod.type === 'line') {
+      return LineNode.reify(env, pod);
+    } else if (pod.type === 'quadratic') {
+      return QuadraticNode.reify(env, pod);
+    } else if (pod.type === 'cubic') {
+      return CubicNode.reify(env, pod);
+    } else if (pod.type === 'arc') {
+      return ArcNode.reify(env, pod);
     } else if (pod.type === 'ExpressionReal') {
       return new ExpressionReal(pod.value, SourceLocation.reify(pod.where));
+    } else if (pod.type === 'ExpressionBoolean') {
+      return new ExpressionBoolean(pod.value, SourceLocation.reify(pod.where));
     } else if (pod.type === 'ExpressionInteger') {
       return new ExpressionInteger(pod.value, SourceLocation.reify(pod.where));
     } else if (pod.type === 'ExpressionString') {

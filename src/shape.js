@@ -8,6 +8,8 @@ import {
 
 import {
   TimelinedEnvironment,
+  Mirror,
+  Stroke,
 } from './environment.js';
 
 import {
@@ -28,14 +30,20 @@ import {
 } from './node.js';
 
 import {
+  ExpressionBoolean,
   ExpressionInteger,
-  ExpressionMove,
+  ExpressionJumpNode,
+  ExpressionLineNode,
+  ExpressionMoveNode,
+  ExpressionArcNode,
+  ExpressionCubicNode,
+  ExpressionQuadraticNode,
   ExpressionReal,
   ExpressionString,
-  ExpressionTurn,
-  ExpressionTurtle,
+  ExpressionTurnNode,
+  ExpressionTurtleNode,
   ExpressionVector,
-  ExpressionVertex,
+  ExpressionVertexNode,
 } from './ast.js';
 
 // --------------------------------------------------------------------------- 
@@ -79,6 +87,8 @@ export class Shape extends TimelinedEnvironment {
       return Line.reify(parentEnvironment, pod);
     } else if (pod.type === 'text') {
       return Text.reify(parentEnvironment, pod);
+    } else if (pod.type === 'path') {
+      return Path.reify(parentEnvironment, pod);
     } else {
       throw new Error('unimplemented shape:', pod.type);
     }
@@ -130,26 +140,6 @@ export class Shape extends TimelinedEnvironment {
 }
 
 Object.assign(Shape.prototype, Markable);
-
-// --------------------------------------------------------------------------- 
-
-export class Stroke extends TimelinedEnvironment {
-  static type = 'stroke';
-  static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes'];
-
-  static create(parentEnvironment, where) {
-    const stroke = new Stroke();
-    stroke.initialize(parentEnvironment, where);
-    return stroke;
-  }
-
-  static reify(parentEnvironment, pod) {
-    const stroke = new Stroke();
-    stroke.embody(parentEnvironment, pod);
-    return stroke;
-  }
-}
 
 // --------------------------------------------------------------------------- 
 
@@ -480,17 +470,15 @@ export class NodedShape extends Shape {
     }
   }
 
-  generateTurtles(env, t, bounds) {
+  traverseNodes(env, t, bounds) {
     let currentTurtle = new Turtle(null, null);
-    const turtles = [];
+    const pieces = [];
     for (let node of this.nodes) {
-      const result = node.update(env, t, bounds, currentTurtle);
-      currentTurtle = result.turtle;
-      if (currentTurtle) {
-        turtles.push(currentTurtle);
-      }
+      const piece = node.update(env, t, bounds, currentTurtle);
+      pieces.push(piece);
+      currentTurtle = piece.turtle;
     }
-    return turtles;
+    return pieces;
   }
 }
 
@@ -504,10 +492,10 @@ export class Polygon extends NodedShape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
 
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -530,12 +518,12 @@ export class Polygon extends NodedShape {
     super.start();
 
     this.outlineMark = new PolygonMark();
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], [this.outlineMark]);
+    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks()), this.outlineMark]);
   }
 
   update(env, t, bounds) {
-    const turtles = this.generateTurtles(env, t, bounds);
-    const positions = turtles.map(turtle => turtle.position);
+    const pieces = this.traverseNodes(env, t, bounds);
+    const positions = pieces.map(piece => piece.turtle.position);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
     const isVisible = opacity > 0.000001;
@@ -575,10 +563,10 @@ export class Polyline extends NodedShape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
 
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -608,12 +596,12 @@ export class Polyline extends NodedShape {
     super.start();
 
     this.outlineMark = new PolylineMark();
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], [this.outlineMark]);
+    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks()), this.outlineMark]);
   }
 
   update(env, t, bounds) {
-    const turtles = this.generateTurtles(env, t, bounds);
-    const positions = turtles.map(turtle => turtle.position);
+    const pieces = this.traverseNodes(env, t, bounds);
+    const positions = pieces.map(piece => piece.turtle.position);
 
     if (positions.some(position => !position)) {
       this.hide();
@@ -637,10 +625,10 @@ export class Line extends NodedShape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
 
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -669,12 +657,12 @@ export class Line extends NodedShape {
     this.connect();
     super.start();
 
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], []);
+    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks())]);
   }
 
   update(env, t, bounds) {
-    const turtles = this.generateTurtles(env, t, bounds);
-    const positions = turtles.map(turtle => turtle.position);
+    const pieces = this.traverseNodes(env, t, bounds);
+    const positions = pieces.map(piece => piece.turtle.position);
 
     if (positions.length != 2) {
       throw new LocatedException(this.where, `I tried to draw a line that had ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
@@ -706,10 +694,10 @@ export class Ungon extends NodedShape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
 
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertex(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtle(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurn(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMove(this)));
+    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -738,12 +726,12 @@ export class Ungon extends NodedShape {
     super.start();
 
     this.outlineMark = new PolygonMark();
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getMarks())], [this.outlineMark]);
+    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks()), this.outlineMark]);
   }
 
   update(env, t, bounds) {
-    const turtles = this.generateTurtles(env, t, bounds);
-    const positions = turtles.map(turtle => turtle.position);
+    const pieces = this.traverseNodes(env, t, bounds);
+    const positions = pieces.map(piece => piece.turtle.position);
 
     if (positions[0].distance(positions[positions.length - 1]) < 1e-3) {
       positions.pop();
@@ -802,6 +790,90 @@ export class Ungon extends NodedShape {
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
       this.element.setAttributeNS(null, 'points', coordinates);
       this.element.setAttributeNS(null, 'fill', color.toColor());
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Path extends NodedShape {
+  static type = 'path';
+  static article = 'a';
+  static timedIds = ['color', 'opacity'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+
+    this.untimedProperties.mirror = Mirror.create(this);
+    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindFunction('jump', new FunctionDefinition('jump', [], new ExpressionJumpNode(this)));
+    this.bindFunction('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
+    this.bindFunction('quadratic', new FunctionDefinition('line', [], new ExpressionQuadraticNode(this)));
+    this.bindFunction('cubic', new FunctionDefinition('line', [], new ExpressionCubicNode(this)));
+    this.bindFunction('arc', new FunctionDefinition('line', [], new ExpressionArcNode(this)));
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Path();
+    shape.initialize(parentEnvironment, where);
+    shape.untimedProperties.closed = new ExpressionBoolean(false);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Path();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  start() {
+    this.element = document.createElementNS(svgNamespace, 'path');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    this.connect();
+    super.start();
+
+    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks())]);
+  }
+
+  validate() {
+    super.validate();
+    this.assertProperty('closed');
+    this.assertProperty('color');
+  }
+
+  update(env, t, bounds) {
+    const pieces = this.traverseNodes(env, t, bounds);
+
+    const opacity = this.valueAt(env, 'opacity', t).value;
+    const isVisible = opacity > 0.000001;
+    let color;
+    if (isVisible) {
+      color = this.valueAt(env, 'color', t);
+    }
+
+    let isClosed = this.untimedProperties.closed.value;
+
+    if (pieces.some(piece => !piece) || !color) {
+      this.hide();
+    } else {
+      this.show();
+
+      if (this.owns('stroke')) {
+        this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      }
+
+      const pathCommands = pieces.map(piece => piece.pathCommand);
+      let commandString = pathCommands.join(' ');
+      if (isClosed) {
+        commandString += ' Z';
+      }
+
+      this.element.setAttributeNS(null, 'd', commandString);
+      this.element.setAttributeNS(null, 'fill', color.toColor());
+      this.element.setAttributeNS(null, 'fill-opacity', opacity);
     }
   }
 }

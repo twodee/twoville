@@ -15,6 +15,7 @@ import {
 import {
   Circle,
   Line,
+  Path,
   Polygon,
   Polyline,
   Rectangle,
@@ -24,12 +25,7 @@ import {
   // TwovilleGroup,
   // TwovilleMarker,
   // TwovilleMask,
-  // TwovillePath,
-  // TwovillePathArc,
-  // TwovillePathJump,
-  // TwovillePathLine,
-  // TwovillePathCubic,
-  // TwovillePathQuadratic,
+  //
   // TwovilleRotate,
   // TwovilleScale,
   // TwovilleShear,
@@ -37,7 +33,12 @@ import {
 } from './shape.js';
 
 import {
+  ArcNode,
+  CubicNode,
+  LineNode,
+  JumpNode,
   MoveNode,
+  QuadraticNode,
   TurnNode,
   TurtleNode,
   VertexNode,
@@ -1589,7 +1590,7 @@ export class ExpressionRectangle extends ExpressionFunction {
  
 // --------------------------------------------------------------------------- 
 
-export class ExpressionVertex extends ExpressionFunction {
+export class ExpressionVertexNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
@@ -1602,7 +1603,7 @@ export class ExpressionVertex extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTurtle extends ExpressionFunction {
+export class ExpressionTurtleNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
@@ -1615,7 +1616,7 @@ export class ExpressionTurtle extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTurn extends ExpressionFunction {
+export class ExpressionTurnNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
@@ -1628,7 +1629,7 @@ export class ExpressionTurn extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionMove extends ExpressionFunction {
+export class ExpressionMoveNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
@@ -1641,67 +1642,66 @@ export class ExpressionMove extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathArc extends ExpressionFunction {
+export class ExpressionArcNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    // Call has false env for local parameters. Execute inside parent.
-    return new TwovillePathArc(this.instance, callExpression);
+    return new ArcNode.create(this.instance, callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathJump extends ExpressionFunction {
+export class ExpressionJumpNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathJump(this.instance, callExpression);
+    return new JumpNode.create(this.instance, callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathLine extends ExpressionFunction {
+export class ExpressionLineNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathLine(this.instance, callExpression);
+    return new LineNode.create(this.instance, callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathCubic extends ExpressionFunction {
+export class ExpressionCubicNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathCubic(this.instance, callExpression);
+    return new CubicNode.create(this.instance, callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPathQuadratic extends ExpressionFunction {
+export class ExpressionQuadraticNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePathQuadratic(this.instance, callExpression);
+    return new QuadraticNode.create(this.instance, callExpression.where);
   }
 }
 
@@ -1793,7 +1793,7 @@ export class ExpressionPolyline extends ExpressionFunction {
 
 export class ExpressionPath extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovillePath(env, callExpression);
+    return Path.create(env, callExpression.where);
   }
 }
 

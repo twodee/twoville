@@ -181,6 +181,21 @@ export class CircleMark {
 
 // --------------------------------------------------------------------------- 
 
+export class LineMark {
+  constructor() {
+    this.element = document.createElementNS(svgNamespace, 'line');
+  }
+
+  update(a, b, bounds) {
+    this.element.setAttributeNS(null, 'x1', a.get(0).value);
+    this.element.setAttributeNS(null, 'y1', bounds.span - a.get(1).value);
+    this.element.setAttributeNS(null, 'x2', b.get(0).value);
+    this.element.setAttributeNS(null, 'y2', bounds.span - b.get(1).value);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class PolygonMark {
   constructor() {
     this.element = document.createElementNS(svgNamespace, 'polygon');

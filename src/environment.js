@@ -134,6 +134,12 @@ export class TimelinedEnvironment extends Environment {
   static article = 'a';
   static timedIds = [];
 
+  static create(parentEnvironment, where) {
+    const env = new TimelinedEnvironment();
+    env.initialize(parentEnvironment, where);
+    return env;
+  }
+
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
     this.timedProperties = {};
@@ -223,6 +229,46 @@ export class TimelinedEnvironment extends Environment {
         element.setAttributeNS(null, 'stroke-dasharray', dashes);
       }
     }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Stroke extends TimelinedEnvironment {
+  static type = 'stroke';
+  static article = 'a';
+  static timedIds = ['size', 'color', 'opacity', 'dashes'];
+
+  static create(parentEnvironment, where) {
+    const stroke = new Stroke();
+    stroke.initialize(parentEnvironment, where);
+    return stroke;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const stroke = new Stroke();
+    stroke.embody(parentEnvironment, pod);
+    return stroke;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Mirror extends TimelinedEnvironment {
+  static type = 'mirror';
+  static article = 'a';
+  static timedIds = ['point', 'axis'];
+
+  static create(parentEnvironment, where) {
+    const stroke = new Mirror();
+    stroke.initialize(parentEnvironment, where);
+    return stroke;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const stroke = new Mirror();
+    stroke.embody(parentEnvironment, pod);
+    return stroke;
   }
 }
 
