@@ -9,10 +9,14 @@ import {
 } from './ast.js';
 
 import {
+  BumpDegreesMark,
+  BumpPositionMark,
+  CircleMark,
   DistanceMark,
   LineMark,
   RotationMark,
   VectorPanMark,
+  WedgeDegreesMark,
 } from './mark.js';
 
 import {
@@ -457,6 +461,119 @@ export class QuadraticNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
+export class ArcNode extends TimelinedEnvironment {
+  static type = 'arc';
+  static article = 'an';
+  static timedIds = ['degrees', 'position', 'center'];
+
+  static create(parentEnvironment, where) {
+    const node = new ArcNode();
+    node.initialize(parentEnvironment, where);
+    parentEnvironment.nodes.push(node);
+    return node;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const node = new ArcNode();
+    node.embody(parentEnvironment, pod);
+    return node;
+  }
+
+  getForegroundMarks() {
+    const marks = [this.centerMark, this.positionMark];
+    return marks;
+  }
+
+  getBackgroundMarks() {
+    return [this.circleMark];
+  }
+
+  validate() {
+    if (this.owns('position') && this.owns('center')) {
+      throw new LocatedException(this.where, 'I found an arc whose position and center properties are both set. Define only one of these.');
+    }
+
+    if (!this.owns('position') && !this.owns('center')) {
+      throw new LocatedException(this.where, 'I found an arc whose curvature I couldn\'t figure out. Please define its center or position.');
+    }
+
+    this.assertProperty('degrees');
+  }
+
+  start() {
+    this.circleMark = new CircleMark();
+
+    this.isWedge = this.owns('center');
+    if (this.isWedge) {
+      this.centerMark = new VectorPanMark(this.parentEnvironment, this);
+      this.positionMark = new WedgeDegreesMark(this.parentEnvironment, this);
+    } else {
+      this.centerMark = new BumpDegreesMark(this.parentEnvironment, this);
+      this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    }
+  }
+
+  update(env, t, bounds, fromTurtle) {
+    let degrees = this.valueAt(env, 'degrees', t);
+    let radians = degrees.value * Math.PI / 180;
+
+    let center;
+    if (this.isWedge) {
+      center = this.valueAt(env, 'center', t);
+      this.centerMark.setExpression(center);
+      this.positionMark.setExpression(degrees, fromTurtle.position, center);
+    } else {
+      let position = this.valueAt(env, 'position', t);
+      this.positionMark.setExpression(position);
+      this.positionMark.update(position, bounds);
+
+      let diff = position.subtract(fromTurtle.position);
+      let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
+      let halfway = fromTurtle.position.add(position).multiply(new ExpressionReal(0.5));
+      let normal = diff.rotate90().normalize();
+      center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
+    }
+
+    let toFrom = fromTurtle.position.subtract(center);
+    let toTo = new ExpressionVector([
+      new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
+      new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
+    ]);
+    let to = center.add(toTo);
+
+    let radius = toFrom.magnitude;
+    let large;
+    let sweep;
+
+    if (degrees.value >= 0) {
+      large = degrees.value >= 180 ? 1 : 0;
+      sweep = 0;
+    } else {
+      large = degrees.value <= -180 ? 1 : 0;
+      sweep = 1;
+    }
+
+    const pathCommand = `A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${bounds.span - to.get(1).value}`;
+
+    this.circleMark.update(center, new ExpressionReal(radius), bounds);
+    if (this.isWedge) {
+      this.centerMark.update(center, bounds);
+      this.positionMark.update(to, bounds);
+    } else {
+      this.centerMark.setExpression(degrees, fromTurtle.position, center, to);
+      this.centerMark.update(center, bounds);
+    }
+
+    return {
+      pathCommand,
+      turtle: new Turtle(to, fromTurtle.heading),
+      segment: null,
+    };
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class CubicNode extends TimelinedEnvironment {
   static type = 'cubic';
   static article = 'a';
@@ -480,7 +597,6 @@ export class CubicNode extends TimelinedEnvironment {
     if (this.owns('control1')) {
       marks.push(this.control1Mark);
     }
-    console.log("marks:", marks);
     return marks;
   }
 
@@ -489,18 +605,15 @@ export class CubicNode extends TimelinedEnvironment {
     if (this.owns('control1')) {
       marks.push(this.line1Mark);
     }
-    console.log("marks:", marks);
     return marks;
   }
 
   validate() {
-    console.log("validate!");
     this.assertProperty('position');
     this.assertProperty('control2');
   }
 
   start() {
-    console.log("start");
     this.line2Mark = new LineMark();
     this.positionMark = new VectorPanMark(this.parentEnvironment, this);
     this.control2Mark = new VectorPanMark(this.parentEnvironment, this);

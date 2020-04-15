@@ -812,7 +812,7 @@ export class Path extends NodedShape {
     this.bindFunction('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
     this.bindFunction('quadratic', new FunctionDefinition('line', [], new ExpressionQuadraticNode(this)));
     this.bindFunction('cubic', new FunctionDefinition('line', [], new ExpressionCubicNode(this)));
-    this.bindFunction('arc', new FunctionDefinition('line', [], new ExpressionArcNode(this)));
+    this.bindFunction('arc', new FunctionDefinition('arc', [], new ExpressionArcNode(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -856,7 +856,7 @@ export class Path extends NodedShape {
 
     let isClosed = this.untimedProperties.closed.value;
 
-    if (pieces.some(piece => !piece) || !color) {
+    if (pieces.some(piece => !piece)) {
       this.hide();
     } else {
       this.show();
@@ -872,7 +872,7 @@ export class Path extends NodedShape {
       }
 
       this.element.setAttributeNS(null, 'd', commandString);
-      this.element.setAttributeNS(null, 'fill', color.toColor());
+      this.element.setAttributeNS(null, 'fill', color ? color.toColor() : 'none');
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
     }
   }

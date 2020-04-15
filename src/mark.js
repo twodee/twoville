@@ -445,6 +445,126 @@ export class DistanceMark extends PanMark {
 
 // --------------------------------------------------------------------------- 
 
+export class WedgeDegreesMark extends PanMark {
+  constructor(shape, component) {
+    super(shape, component, 'cursor-rotate');
+  }
+
+  setExpression(degrees, fromPosition, centerPosition) {
+    super.setExpression(degrees);
+    this.fromPosition = fromPosition;
+    this.centerPosition = centerPosition;
+  }
+
+  getNewSource(delta, isShiftModified, mouseAt) {
+    // Find vector from center to root position.
+    let centerToRoot = this.fromPosition.subtract(this.centerPosition).normalize();
+
+    // Find vector from center to mouse.
+    let centerToProjectedMouse = new ExpressionVector([
+      new ExpressionReal(mouseAt.x),
+      new ExpressionReal(mouseAt.y),
+    ]).subtract(this.centerPosition).normalize();
+
+    // Find angle between the two vectors.
+    let degrees = Math.acos(centerToRoot.dot(centerToProjectedMouse)) * 180 / Math.PI;
+
+    // Because dot is ambiguous, find signed area and adjust angle to be > 180.
+    let rootToCenter = this.centerPosition.subtract(this.fromPosition);
+    let rootToMouse = new ExpressionVector([
+      new ExpressionReal(mouseAt.x),
+      new ExpressionReal(mouseAt.y),
+    ]).subtract(this.fromPosition);
+    let signedArea = rootToCenter.get(0).value * rootToMouse.get(1).value - rootToCenter.get(1).value * rootToMouse.get(0).value;
+    if (signedArea > 0) {
+      degrees = 360 - degrees;
+    }
+
+    if (this.untweakedExpression.value < 0) {
+      degrees -= 360;
+    }
+
+    degrees = parseFloat(degrees.toShortFloat())
+
+    if (isShiftModified) {
+      degrees = Math.round(degrees);
+    }
+
+    this.expression.value = degrees;
+    const newExpression = new ExpressionReal(degrees);
+    return manipulateSource(this.untweakedExpression, newExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class BumpDegreesMark extends PanMark {
+  constructor(shape, component) {
+    super(shape, component, 'cursor-pan');
+  }
+
+  setExpression(degrees, fromPosition, centerPosition, toPosition) {
+    super.setExpression(degrees);
+    this.fromPosition = fromPosition;
+    this.centerPosition = centerPosition;
+    this.toPosition = toPosition;
+  }
+
+  getNewSource(delta, isShiftModified, mouseAt) {
+    let centerToMouse = new ExpressionVector([
+      new ExpressionReal(mouseAt.x),
+      new ExpressionReal(mouseAt.y),
+    ]).subtract(this.centerPosition);
+
+    // The new center will be on a line perpendicular to the vector from
+    // the starting point to ending point.
+    let fromToVector = this.toPosition.subtract(this.fromPosition).normalize();
+    let direction = fromToVector.rotate90(); 
+
+    // Project the mouse point onto the perpendicular.
+    let dot = new ExpressionReal(centerToMouse.dot(direction));
+    let newCenterPosition = this.centerPosition.add(direction.multiply(dot));
+
+    // We've figured out the new center. Now we need to figure out how many
+    // degrees separate the two points. But we need to preserve the sign of
+    // the original expression to make sure the arc travels the same winding.
+
+    let newCenterFromVector = this.fromPosition.subtract(newCenterPosition).normalize();
+    let newCenterToVector = this.toPosition.subtract(newCenterPosition).normalize();
+    dot = newCenterFromVector.dot(newCenterToVector);
+    let degrees = Math.acos(dot) * 180 / Math.PI;
+
+    // Because dot is ambiguous, find signed area and adjust angle to be > 180.
+    let fromNewCenterVector = newCenterPosition.subtract(this.fromPosition);
+    fromToVector = this.toPosition.subtract(this.fromPosition);
+    let signedArea = fromNewCenterVector.get(0).value * fromToVector.get(1).value - fromNewCenterVector.get(1).value * fromToVector.get(0).value;
+    const signs = [
+      Math.sign(signedArea),
+      Math.sign(this.untweakedExpression.value),
+    ];
+
+    if (signs[0] < 0 && signs[1] < 0) {
+      degrees = degrees - 360;
+    } else if (signs[0] > 0 && signs[1] < 0) {
+      degrees = -degrees;
+    } else if (signs[0] > 0 && signs[1] > 0) {
+      degrees = 360 - degrees;
+    }
+
+    degrees = parseFloat(degrees.toShortFloat());
+
+    if (isShiftModified) {
+      degrees = Math.round(degrees);
+    }
+
+    const newExpression = new ExpressionReal(degrees);
+    this.expression.value = degrees;
+    return manipulateSource(this.untweakedExpression, newExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 function manipulateSource(oldExpression, newExpression) {
   const unevaluated = oldExpression.unevaluated;
   const oldValue = oldExpression.value;
