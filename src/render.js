@@ -338,6 +338,18 @@ export class RenderEnvironment extends Environment {
     }
   }
 
+  onCursor = (column, row) => {
+    let selectedDrawable;
+    for (let drawable of this.drawables) {
+      // check drawable's nodes
+      // check drawable's transforms
+      // check drawable itself
+      if (drawable.sourceSpans.some(span => span.contains(column, row))) {
+        selectedDrawable = drawable;
+      }
+    }
+  };
+
   onWheel = e => {
     if (this.isStarted && !this.isTweaking) {
       this.mouseAtSvg.x = e.clientX;

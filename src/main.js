@@ -298,9 +298,9 @@ function initialize() {
   editor.getSession().on('change', onSourceChanged);
   editor.getSession().setMode("ace/mode/twoville");
   editor.getSession().selection.on('changeCursor', () => {
-    if (scene && scene.drawables) {
+    if (scene) {
       const cursor = editor.getCursorPosition();
-      // moveCursor(cursor.column, cursor.row, scene.drawables);
+      scene.onCursor(cursor.column, cursor.row);
     }
   });
 

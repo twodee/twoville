@@ -1,4 +1,5 @@
 import {
+  SourceLocation,
   Turtle,
 } from './common.js';
 
@@ -25,7 +26,28 @@ import {
 
 // --------------------------------------------------------------------------- 
 
-export class VertexNode extends TimelinedEnvironment {
+export class Node extends TimelinedEnvironment {
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+    parentEnvironment.nodes.push(this);
+    this.sourceSpans = [];
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.sourceSpans = this.sourceSpans;
+    return pod;
+  }
+
+  embody(parentEnvironment, pod) {
+    super.embody(parentEnvironment, pod);
+    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class VertexNode extends Node {
   static type = 'vertex';
   static article = 'a';
   static timedIds = ['position'];
@@ -33,7 +55,6 @@ export class VertexNode extends TimelinedEnvironment {
   static create(parentEnvironment, where) {
     const node = new VertexNode();
     node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 
@@ -77,7 +98,7 @@ export class VertexNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class TurtleNode extends TimelinedEnvironment {
+export class TurtleNode extends Node {
   static type = 'turtle';
   static article = 'a';
   static timedIds = ['position', 'heading'];
@@ -85,7 +106,6 @@ export class TurtleNode extends TimelinedEnvironment {
   static create(parentEnvironment, where) {
     const node = new TurtleNode();
     node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 
@@ -136,7 +156,7 @@ export class TurtleNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class MoveNode extends TimelinedEnvironment {
+export class MoveNode extends Node {
   static type = 'move';
   static article = 'a';
   static timedIds = ['distance'];
@@ -144,7 +164,6 @@ export class MoveNode extends TimelinedEnvironment {
   static create(parentEnvironment, where) {
     const node = new MoveNode();
     node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 
@@ -192,7 +211,7 @@ export class MoveNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class TurnNode extends TimelinedEnvironment {
+export class TurnNode extends Node {
   static type = 'turn';
   static article = 'a';
   static timedIds = ['degrees'];
@@ -200,7 +219,6 @@ export class TurnNode extends TimelinedEnvironment {
   static create(parentEnvironment, where) {
     const node = new TurnNode();
     node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 
@@ -252,7 +270,7 @@ export class TurnNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class JumpNode extends TimelinedEnvironment {
+export class JumpNode extends Node {
   static type = 'jump';
   static article = 'a';
   static timedIds = ['position'];
@@ -260,7 +278,6 @@ export class JumpNode extends TimelinedEnvironment {
   static create(parentEnvironment, where) {
     const node = new JumpNode();
     node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 
@@ -304,7 +321,7 @@ export class JumpNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class LineNode extends TimelinedEnvironment {
+export class LineNode extends Node {
   static type = 'line';
   static article = 'a';
   static timedIds = ['position'];
@@ -313,7 +330,6 @@ export class LineNode extends TimelinedEnvironment {
     const node = new LineNode();
     node.initialize(parentEnvironment, where);
     node.untimedProperties.delta = new ExpressionBoolean(false);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 
@@ -380,7 +396,7 @@ export class LineNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class QuadraticNode extends TimelinedEnvironment {
+export class QuadraticNode extends Node {
   static type = 'quadratic';
   static article = 'a';
   static timedIds = ['position', 'control'];
@@ -388,7 +404,6 @@ export class QuadraticNode extends TimelinedEnvironment {
   static create(parentEnvironment, where) {
     const node = new QuadraticNode();
     node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 
@@ -461,7 +476,7 @@ export class QuadraticNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class ArcNode extends TimelinedEnvironment {
+export class ArcNode extends Node {
   static type = 'arc';
   static article = 'an';
   static timedIds = ['degrees', 'position', 'center'];
@@ -469,7 +484,6 @@ export class ArcNode extends TimelinedEnvironment {
   static create(parentEnvironment, where) {
     const node = new ArcNode();
     node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 
@@ -574,7 +588,7 @@ export class ArcNode extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class CubicNode extends TimelinedEnvironment {
+export class CubicNode extends Node {
   static type = 'cubic';
   static article = 'a';
   static timedIds = ['position', 'control1', 'control2'];
@@ -582,7 +596,6 @@ export class CubicNode extends TimelinedEnvironment {
   static create(parentEnvironment, where) {
     const node = new CubicNode();
     node.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(node);
     return node;
   }
 

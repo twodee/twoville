@@ -1,6 +1,7 @@
 import { 
   FunctionDefinition,
   LocatedException,
+  SourceLocation,
   Turtle,
   mop,
   svgNamespace,
@@ -17,6 +18,7 @@ import {
   DistanceMark,
   HorizontalPanMark,
   Markable,
+  PathMark,
   PolygonMark,
   PolylineMark,
   RectangleMark,
@@ -56,6 +58,7 @@ export class Shape extends TimelinedEnvironment {
     this.untimedProperties.stroke = Stroke.create(this);
     this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
     this.bind('opacity', new ExpressionReal(1));
+    this.sourceSpans = [];
 
     this.root.serial += 1;
     this.root.shapes.push(this);
@@ -64,12 +67,14 @@ export class Shape extends TimelinedEnvironment {
   toPod() {
     const pod = super.toPod();
     pod.id = this.id;
+    pod.sourceSpans = this.sourceSpans;
     return pod;
   }
 
   embody(parentEnvironment, pod) {
     super.embody(parentEnvironment, pod);
     this.id = pod.id;
+    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
   }
 
   static reify(parentEnvironment, pod) {
@@ -835,7 +840,10 @@ export class Path extends NodedShape {
     this.connect();
     super.start();
 
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks())]);
+    this.outlineMark = new PathMark();
+
+    this.addMarks(this, [], [this.outlineMark]);
+    // this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks())]);
   }
 
   validate() {
@@ -874,6 +882,8 @@ export class Path extends NodedShape {
       this.element.setAttributeNS(null, 'd', commandString);
       this.element.setAttributeNS(null, 'fill', color ? color.toColor() : 'none');
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
+
+      this.outlineMark.update(commandString);
     }
   }
 }

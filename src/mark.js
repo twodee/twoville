@@ -208,6 +208,18 @@ export class PolygonMark {
 
 // --------------------------------------------------------------------------- 
 
+export class PathMark {
+  constructor() {
+    this.element = document.createElementNS(svgNamespace, 'path');
+  }
+
+  update(commands) {
+    this.element.setAttributeNS(null, 'd', commands);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class PolylineMark {
   constructor() {
     this.element = document.createElementNS(svgNamespace, 'polyline');
