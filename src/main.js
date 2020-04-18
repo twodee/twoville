@@ -73,12 +73,12 @@ function downloadBlob(name, blob) {
   });
 }
 
-export function exportSvgWithHandles() {
+export function exportSvgWithMarks() {
   serializeThenDownload(scene.svg);
 }
 
-export function exportSvgWithoutHandles() {
-  const clone = scene.cloneSvgWithoutHandles();
+export function exportSvgWithoutMarks() {
+  const clone = scene.cloneSvgWithoutMarks();
   serializeThenDownload(clone);
 }
 
@@ -92,7 +92,7 @@ function scrubTo(tick) {
   let t = scene.tickToTime(tick);
   timeSpinner.value = t;
   scrubber.value = tick;
-  scene.update(t);
+  scene.scrub(t);
 }
 
 function animateFrame(i, isLoop = false) {
@@ -162,7 +162,7 @@ function postInterpret(pod) {
     editor.getSelection().setSelectionRange(range);
 
     let t = scene.tickToTime(parseInt(scrubber.value));
-    scene.update(t);
+    scene.scrub(t);
   };
 
   scene.stopTweak = () => {
@@ -245,7 +245,7 @@ function startInterpreting() {
 
 function onSourceChanged() {
   // If the source was changed through the text editor, but not through the
-  // canvas, the handles are no longer valid.
+  // canvas, the marks are no longer valid.
   if (scene) {
     scene.stale();
   }
@@ -300,7 +300,7 @@ function initialize() {
   editor.getSession().selection.on('changeCursor', () => {
     if (scene) {
       const cursor = editor.getCursorPosition();
-      scene.onCursor(cursor.column, cursor.row);
+      scene.castCursor(cursor.column, cursor.row);
     }
   });
 
@@ -308,7 +308,7 @@ function initialize() {
     startSpinning(recordSpinner, recordButton);
     let box = scene.svg.getBoundingClientRect();
 
-    scene.hideHandles();
+    scene.hideMarks();
 
     let size = scene.get('gif').get('size');
     let transparentColor = scene.get('gif').get('transparency');
@@ -376,7 +376,7 @@ function initialize() {
     syncTitle();
   });
 
-  exportButton.addEventListener('click', exportSvgWithoutHandles);
+  exportButton.addEventListener('click', exportSvgWithoutMarks);
   fitButton.addEventListener('click', () => {
     if (scene) scene.fit();
   });

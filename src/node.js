@@ -15,6 +15,7 @@ import {
   CircleMark,
   DistanceMark,
   LineMark,
+  Marker,
   RotationMark,
   VectorPanMark,
   WedgeDegreesMark,
@@ -43,6 +44,20 @@ export class Node extends TimelinedEnvironment {
     super.embody(parentEnvironment, pod);
     this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
   }
+
+  start() {
+    this.marker = new Marker(this.parentEnvironment);
+    this.parentEnvironment.addMarker(this.marker);
+  }
+
+  castCursor(column, row) {
+    const isHit = this.sourceSpans.some(span => span.contains(column, row));
+    if (isHit) {
+      this.parentEnvironment.root.select(this.parentEnvironment);
+      this.parentEnvironment.selectMarker(this.marker.id);
+    }
+    return isHit;
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -64,20 +79,14 @@ export class VertexNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    return [this.positionMark];
-  }
-
-  getBackgroundMarks() {
-    return [];
-  }
-
   validate() {
     this.assertProperty('position');
   }
 
   start() {
+    super.start();
     this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    this.marker.addMarks([this.positionMark], []);
   }
 
   update(env, t, bounds, fromTurtle) {
@@ -115,22 +124,16 @@ export class TurtleNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    return [this.positionMark, this.headingMark];
-  }
-
-  getBackgroundMarks() {
-    return [];
-  }
-
   validate() {
     this.assertProperty('position');
     this.assertProperty('heading');
   }
 
   start() {
+    super.start();
     this.positionMark = new VectorPanMark(this.parentEnvironment, this);
     this.headingMark = new RotationMark(this.parentEnvironment, this);
+    this.marker.addMarks([this.positionMark, this.headingMark], []);
   }
 
   update(env, t, bounds, fromTurtle) {
@@ -138,7 +141,7 @@ export class TurtleNode extends Node {
     this.positionMark.setExpression(position);
 
     const heading = this.valueAt(env, 'heading', t);
-    this.headingMark.setExpression(heading, position);
+    this.headingMark.setExpression(heading, new ExpressionReal(0), position);
     
     if (position) {
       this.positionMark.update(position, bounds);
@@ -173,20 +176,14 @@ export class MoveNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    return [this.distanceMark];
-  }
-
-  getBackgroundMarks() {
-    return [];
-  }
-
   validate() {
     this.assertProperty('distance');
   }
 
   start() {
+    super.start();
     this.distanceMark = new DistanceMark(this.parentEnvironment, this);
+    this.marker.addMarks([this.distanceMark], []);
   }
 
   update(env, t, bounds, fromTurtle) {
@@ -228,25 +225,19 @@ export class TurnNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    return [this.rotationMark];
-  }
-
-  getBackgroundMarks() {
-    return [];
-  }
-
   validate() {
     this.assertProperty('degrees');
   }
 
   start() {
+    super.start();
     this.rotationMark = new RotationMark(this.parentEnvironment, this);
+    this.marker.addMarks([this.rotationMark], []);
   }
 
   update(env, t, bounds, fromTurtle) {
     const degrees = this.valueAt(env, 'degrees', t);
-    this.rotationMark.setExpression(degrees, fromTurtle.position);
+    this.rotationMark.setExpression(degrees, fromTurtle.heading, fromTurtle.position);
     
     if (degrees) {
       let newHeading = fromTurtle.heading.add(degrees).value;
@@ -287,20 +278,14 @@ export class JumpNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    return [this.positionMark];
-  }
-
-  getBackgroundMarks() {
-    return [];
-  }
-
   validate() {
     this.assertProperty('position');
   }
 
   start() {
+    super.start();
     this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    this.marker.addMarks([this.positionMark], []);
   }
 
   update(env, t, bounds, fromTurtle) {
@@ -339,21 +324,14 @@ export class LineNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    return [this.positionMark];
-  }
-
-  getBackgroundMarks() {
-    return [this.lineMark];
-  }
-
   validate() {
     this.assertProperty('position');
   }
 
   start() {
-    this.lineMark = new LineMark();
+    super.start();
     this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    this.marker.addMarks([this.positionMark], []);
   }
 
   update(env, t, bounds, fromTurtle) {
@@ -374,7 +352,6 @@ export class LineNode extends Node {
     
     if (position) {
       this.positionMark.update(absolutePosition, bounds);
-      this.lineMark.update(fromTurtle.position, absolutePosition, bounds);
 
       let pathCommand;
       if (isDelta) {
@@ -413,31 +390,25 @@ export class QuadraticNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    const marks = [this.positionMark];
-    if (this.owns('control')) {
-      marks.push(this.controlMark);
-    }
-    return marks;
-  }
-
-  getBackgroundMarks() {
-    return this.lineMarks;
-  }
-
   validate() {
     this.assertProperty('position');
   }
 
   start() {
+    super.start();
     this.lineMarks = [
       new LineMark(),
       new LineMark(),
     ];
     this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+
+    const foregroundMarks = [this.positionMark];
     if (this.owns('control')) {
       this.controlMark = new VectorPanMark(this.parentEnvironment, this);
+      foregroundMarks.push(this.controlMark);
     }
+
+    this.marker.addMarks(foregroundMarks, this.lineMarks);
   }
 
   update(env, t, bounds, fromTurtle) {
@@ -493,15 +464,6 @@ export class ArcNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    const marks = [this.centerMark, this.positionMark];
-    return marks;
-  }
-
-  getBackgroundMarks() {
-    return [this.circleMark];
-  }
-
   validate() {
     if (this.owns('position') && this.owns('center')) {
       throw new LocatedException(this.where, 'I found an arc whose position and center properties are both set. Define only one of these.');
@@ -515,7 +477,7 @@ export class ArcNode extends Node {
   }
 
   start() {
-    this.circleMark = new CircleMark();
+    super.start();
 
     this.isWedge = this.owns('center');
     if (this.isWedge) {
@@ -525,6 +487,8 @@ export class ArcNode extends Node {
       this.centerMark = new BumpDegreesMark(this.parentEnvironment, this);
       this.positionMark = new VectorPanMark(this.parentEnvironment, this);
     }
+
+    this.marker.addMarks([this.centerMark, this.positionMark], []);
   }
 
   update(env, t, bounds, fromTurtle) {
@@ -569,7 +533,6 @@ export class ArcNode extends Node {
 
     const pathCommand = `A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${bounds.span - to.get(1).value}`;
 
-    this.circleMark.update(center, new ExpressionReal(radius), bounds);
     if (this.isWedge) {
       this.centerMark.update(center, bounds);
       this.positionMark.update(to, bounds);
@@ -605,35 +568,29 @@ export class CubicNode extends Node {
     return node;
   }
 
-  getForegroundMarks() {
-    const marks = [this.positionMark, this.control2Mark];
-    if (this.owns('control1')) {
-      marks.push(this.control1Mark);
-    }
-    return marks;
-  }
-
-  getBackgroundMarks() {
-    const marks = [this.line2Mark];
-    if (this.owns('control1')) {
-      marks.push(this.line1Mark);
-    }
-    return marks;
-  }
-
   validate() {
     this.assertProperty('position');
     this.assertProperty('control2');
   }
 
   start() {
+    super.start();
+
     this.line2Mark = new LineMark();
     this.positionMark = new VectorPanMark(this.parentEnvironment, this);
     this.control2Mark = new VectorPanMark(this.parentEnvironment, this);
+
+    const foregroundMarks = [this.positionMark, this.control2Mark];
+    const backgroundMarks = [this.line2Mark];
+
     if (this.owns('control1')) {
       this.line1Mark = new LineMark();
       this.control1Mark = new VectorPanMark(this.parentEnvironment, this);
+      foregroundMarks.push(this.control1Mark);
+      backgroundMarks.push(this.line1Mark);
     }
+
+    this.addMarks(this.foregroundMarks, this.backgroundMarks);
   }
 
   update(env, t, bounds, fromTurtle) {

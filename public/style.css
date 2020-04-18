@@ -220,7 +220,7 @@ html.cursor-rotate {
   cursor: col-resize;
 }
 
-.handle {
+.mark {
   stroke-width: 3;
   stroke-opacity: 1;
   stroke: rgb(66, 135, 245);
@@ -229,21 +229,21 @@ html.cursor-rotate {
   stroke-dasharray: 3 3;
 }
 
-.hovered > .handle {
+.hovered > .mark {
   stroke: rgb(255, 169, 31);
 }
 
-.filled-handle {
+.filled-mark {
   stroke-width: 2;
   stroke-dasharray: none;
   fill: black;
 }
 
-.stale-handle {
+.stale-mark {
   fill: none;
 }
 
-.outline-handle {
+.outline-mark {
   stroke-width: 1;
   stroke: rgb(180, 180, 180);
   stroke-dasharray: none;

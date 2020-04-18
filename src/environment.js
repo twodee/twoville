@@ -8,6 +8,10 @@ import {
   Timeline,
 } from './timeline.js';
 
+// import { 
+  // Shape,
+// } from './shape.js';
+
 // --------------------------------------------------------------------------- 
 
 export class Environment {
@@ -55,7 +59,13 @@ export class Environment {
     return {
       type: this.type,
       untimedProperties: mop(this.untimedProperties, value => {
-        return value.toPod();
+        // For properties like parent, I want to maintain the reference. So, we export
+        // the id instead.
+        if (value.hasOwnProperty('id')) {
+          return {type: 'reference', id: value.id};
+        } else {
+          return value.toPod();
+        }
       }),
       where: this.where,
     };

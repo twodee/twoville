@@ -21,6 +21,7 @@ import {
 
 import {
   Shape,
+  Group,
 } from './shape.js';
 
 import {
@@ -36,13 +37,23 @@ import {
 } from './node.js';
 
 import {
+  Rotate,
+  Scale,
+  Shear,
+  Translate,
+} from './transform.js';
+
+import {
   Timeline,
 } from './timeline.js';
 
 export class RenderEnvironment extends Environment {
   embody(env, pod) {
     super.embody(env, pod);
-    this.shapes = pod.shapes.map(shape => Shape.reify(this, shape));
+    this.shapes = [];
+    for (let shape of pod.shapes) {
+      this.shapes.push(Shape.reify(this, shape));
+    }
     this.bounds = {x: 0, y: 0, width: 0, height: 0};
   }
 
@@ -60,6 +71,8 @@ export class RenderEnvironment extends Environment {
       return undefined;
     } else if (pod.type === 'environment') {
       return Environment.reify(env, pod);
+    } else if (pod.type === 'reference') {
+      return env.root.shapes.find(shape => shape.id === pod.id);
     } else if (pod.type === 'stroke') {
       return Stroke.reify(env, pod);
     } else if (pod.type === 'mirror') {
@@ -84,6 +97,16 @@ export class RenderEnvironment extends Environment {
       return CubicNode.reify(env, pod);
     } else if (pod.type === 'arc') {
       return ArcNode.reify(env, pod);
+    } else if (pod.type === 'translate') {
+      return Translate.reify(env, pod);
+    } else if (pod.type === 'scale') {
+      return Scale.reify(env, pod);
+    } else if (pod.type === 'rotate') {
+      return Rotate.reify(env, pod);
+    } else if (pod.type === 'group') {
+      return Group.reify(env, pod);
+    } else if (pod.type === 'shear') {
+      return Shear.reify(env, pod);
     } else if (pod.type === 'ExpressionReal') {
       return new ExpressionReal(pod.value, SourceLocation.reify(pod.where));
     } else if (pod.type === 'ExpressionBoolean') {
@@ -178,7 +201,7 @@ export class RenderEnvironment extends Environment {
     pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
     pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
     pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
-    pageOutline.classList.add('handle', 'outline-handle');
+    pageOutline.classList.add('mark', 'outline-mark');
 
     this.delay = this.get('time').get('delay').value;
     this.tmin = this.get('time').get('start').value;
@@ -190,18 +213,18 @@ export class RenderEnvironment extends Environment {
     this.mainGroup.setAttributeNS(null, 'id', 'main-group');
     this.svg.appendChild(this.mainGroup);
 
-    this.backgroundHandleGroup = document.createElementNS(svgNamespace, 'g');
-    this.backgroundHandleGroup.setAttributeNS(null, 'id', 'background-handle-group');
-    this.svg.appendChild(this.backgroundHandleGroup);
+    this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.backgroundMarkGroup.setAttributeNS(null, 'id', 'background-mark-group');
+    this.svg.appendChild(this.backgroundMarkGroup);
 
-    this.foregroundHandleGroup = document.createElementNS(svgNamespace, 'g');
-    this.foregroundHandleGroup.setAttributeNS(null, 'id', 'foreground-handle-group');
-    this.svg.appendChild(this.foregroundHandleGroup);
+    this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.foregroundMarkGroup.setAttributeNS(null, 'id', 'foreground-mark-group');
+    this.svg.appendChild(this.foregroundMarkGroup);
 
-    this.handleGroup = document.createElementNS(svgNamespace, 'g');
-    this.handleGroup.setAttributeNS(null, 'id', 'handle-group');
-    this.handleGroup.appendChild(pageOutline);
-    this.backgroundHandleGroup.appendChild(this.handleGroup);
+    this.markGroup = document.createElementNS(svgNamespace, 'g');
+    this.markGroup.setAttributeNS(null, 'id', 'mark-group');
+    this.markGroup.appendChild(pageOutline);
+    this.backgroundMarkGroup.appendChild(this.markGroup);
 
     for (let shape of this.shapes) {
       shape.validate();
@@ -220,21 +243,21 @@ export class RenderEnvironment extends Environment {
     this.svg.removeEventListener('mouseup', this.onMouseUp);
   }
 
-  update(t) {
+  scrub(t) {
     for (let drawable of this.drawables) {
-      drawable.update(this, t, this.bounds);
+      drawable.scrub(this, t, this.bounds);
     }
-    this.scaleCircleHandles();
+    this.unscaleMarks();
   }
 
-  hideHandles() {
-    this.handleGroup.setAttributeNS(null, 'visibility', 'hidden');
+  hideMarks() {
+    this.markGroup.setAttributeNS(null, 'visibility', 'hidden');
   }
 
   updateViewBox() {
     svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${this.bounds.y} ${this.bounds.width} ${this.bounds.height}`);
     if (this.isStarted) {
-      this.scaleCircleHandles();
+      this.unscaleMarks();
     }
   }
 
@@ -252,7 +275,7 @@ export class RenderEnvironment extends Environment {
     this.updateViewBox();
   }
 
-  cloneSvgWithoutHandles() {
+  cloneSvgWithoutMarks() {
     // Inkscape doesn't honor the visibility: hidden attribute. As a workaround,
     // we forcibly remove them from the SVG.
     // https://bugs.launchpad.net/inkscape/+bug/166181
@@ -262,19 +285,17 @@ export class RenderEnvironment extends Environment {
     return clone;
   }
 
-  scaleCircleHandles() {
-    const matrix = this.svg.getScreenCTM();
-    const circles = this.foregroundHandleGroup.querySelectorAll('.handle-circle');
-    for (let circle of circles) {
-      circle.r.baseVal.value = 6 / matrix.a;
+  unscaleMarks() {
+    for (let shape of this.shapes) {
+      shape.unscaleMarks();
     }
   }
 
   stale() {
     if (!this.isStale && !this.isTweaking) {
-      const circles = this.foregroundHandleGroup.querySelectorAll('.handle-circle');
+      const circles = this.foregroundMarkGroup.querySelectorAll('.mark-circle');
       for (let circle of circles) {
-        circle.classList.add('stale-handle');
+        circle.classList.add('stale-mark');
       }
       this.isStale = true;
     }
@@ -335,20 +356,20 @@ export class RenderEnvironment extends Environment {
     const shape = this.drawables.find(shape => shape.id == oldSelectedShape.id);
     if (shape) {
       this.select(shape);
+      if (oldSelectedShape.selectedMarker) {
+        shape.selectMarker(oldSelectedShape.selectedMarker.id);
+      }
     }
   }
 
-  onCursor = (column, row) => {
+  castCursor(column, row) {
     let selectedDrawable;
-    for (let drawable of this.drawables) {
-      // check drawable's nodes
-      // check drawable's transforms
-      // check drawable itself
-      if (drawable.sourceSpans.some(span => span.contains(column, row))) {
-        selectedDrawable = drawable;
+    for (let shape of this.shapes) {
+      if (shape.castCursor(column, row)) {
+        break;
       }
     }
-  };
+  }
 
   onWheel = e => {
     if (this.isStarted && !this.isTweaking) {
@@ -364,7 +385,7 @@ export class RenderEnvironment extends Environment {
       this.bounds.height *= factor;
       this.updateViewBox();
 
-      this.scaleCircleHandles();
+      this.unscaleMarks();
     }
   };
 

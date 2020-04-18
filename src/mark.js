@@ -11,140 +11,104 @@ import {
 
 // --------------------------------------------------------------------------- 
 
-export let Markable = {
+export class Marker {
+  constructor(shape) {
+    this.shape = shape;
+  }
+
   showMarks() {
     this.showBackgroundMarks();
-    this.foregroundHandleGroup.setAttributeNS(null, 'visibility', 'visible');
-  },
+    this.foregroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
+  }
 
   hoverMarks() {
-    this.backgroundHandleGroup.classList.add('hovered');
-    this.foregroundHandleGroup.classList.add('hovered');
+    this.backgroundMarkGroup.classList.add('hovered');
+    this.foregroundMarkGroup.classList.add('hovered');
     this.showMarks();
-  },
+  }
 
   unhoverMarks() {
-    this.backgroundHandleGroup.classList.remove('hovered');
-    this.foregroundHandleGroup.classList.remove('hovered');
+    this.backgroundMarkGroup.classList.remove('hovered');
+    this.foregroundMarkGroup.classList.remove('hovered');
     this.hideMarks();
-  },
+  }
 
   showBackgroundMarks() {
-    this.backgroundHandleGroup.setAttributeNS(null, 'visibility', 'visible');
-  },
+    this.backgroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
+  }
 
   hideMarks() {
-    this.backgroundHandleGroup.setAttributeNS(null, 'visibility', 'hidden');
-    this.foregroundHandleGroup.setAttributeNS(null, 'visibility', 'hidden');
-  },
+    this.backgroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
+    this.foregroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
+  }
 
-  addMarks(elementToSelect, foregroundMarks, backgroundMarks) {
+  addMarks(foregroundMarks, backgroundMarks) {
     this.backgroundMarks = backgroundMarks;
     this.foregroundMarks = foregroundMarks;
 
-    this.element.classList.add('cursor-selectable');
-    this.element.classList.add(`tag-${this.id}`);
-    this.elementToSelect = elementToSelect;
- 
-    this.backgroundHandleGroup = document.createElementNS(svgNamespace, 'g');
-    this.backgroundHandleGroup.setAttributeNS(null, 'id', `element-${this.id}-background-handles`);
-    this.backgroundHandleGroup.classList.add('handle-group');
-    for (let handle of this.backgroundMarks) {
-      handle.element.classList.add('handle');
-      handle.element.classList.add(`tag-${this.id}`);
-      this.backgroundHandleGroup.appendChild(handle.element);
+    this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.backgroundMarkGroup.classList.add('mark-group');
+    for (let mark of this.backgroundMarks) {
+      mark.element.classList.add('mark');
+      mark.element.classList.add(`tag-${this.id}`);
+      this.backgroundMarkGroup.appendChild(mark.element);
     }
 
-    this.foregroundHandleGroup = document.createElementNS(svgNamespace, 'g');
-    this.foregroundHandleGroup.setAttributeNS(null, 'id', `element-${this.id}-foreground-handles`);
-    this.foregroundHandleGroup.classList.add('handle-group');
-    for (let handle of this.foregroundMarks) {
-      handle.element.classList.add('handle');
-      handle.element.classList.add(`tag-${this.id}`);
-      this.foregroundHandleGroup.appendChild(handle.element);
+    this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.foregroundMarkGroup.classList.add('mark-group');
+    for (let mark of this.foregroundMarks) {
+      mark.element.classList.add('mark');
+      mark.element.classList.add(`tag-${this.id}`);
+      this.foregroundMarkGroup.appendChild(mark.element);
     }
-
-    this.root.backgroundHandleGroup.appendChild(this.backgroundHandleGroup);
-    this.root.foregroundHandleGroup.appendChild(this.foregroundHandleGroup);
 
     this.hideMarks();
     this.registerListeners();
-  },
+  }
 
   deselect() {
-    this.isSelected = false;
     this.hideMarks();
-  },
+  }
 
   select() {
-    this.isSelected = true;
-    this.backgroundHandleGroup.classList.remove('hovered');
-    this.foregroundHandleGroup.classList.remove('hovered');
+    this.backgroundMarkGroup.classList.remove('hovered');
+    this.foregroundMarkGroup.classList.remove('hovered');
     this.showMarks();
-  },
+  }
+
+  unscale() {
+    for (let mark of this.foregroundMarks) {
+      mark.unscale();
+    }
+  }
 
   registerListeners() {
-    this.element.addEventListener('click', event => {
-      // If the event bubbles up to the parent SVG, that means no shape was
-      // clicked on, and everything will be deselected. We don't want that.
-      event.stopPropagation();
-
-      if (!this.root.isStale) {
-        this.root.select(this);
-      }
-    });
-
-    this.element.addEventListener('mouseenter', event => {
-      event.stopPropagation();
-
-      // Only show the handles if the source code is evaluated and fresh.
-      if (!this.isSelected && !this.root.isStale) {
-        this.hoverMarks();
-      }
-
-      if (event.buttons === 0) {
-        this.root.contextualizeCursor(event.toElement);
-      }
-    });
-
-    this.element.addEventListener('mouseleave', event => {
-      event.stopPropagation();
-
-      if (this.isUnhoverTransition(event)) {
-        this.unhoverMarks();
-      }
-
-      if (event.buttons === 0) {
-        this.root.contextualizeCursor(event.toElement);
-      }
-    });
-
-    for (let handle of [...this.backgroundMarks, ...this.foregroundMarks]) {
-      handle.element.addEventListener('mouseenter', event => {
+    for (let mark of [...this.backgroundMarks, ...this.foregroundMarks]) {
+      mark.element.addEventListener('mouseenter', event => {
         if (event.buttons === 0) {
-          this.root.contextualizeCursor(event.toElement);
+          this.shape.root.contextualizeCursor(event.toElement);
         }
       });
 
-      handle.element.addEventListener('mouseleave', event => {
+      mark.element.addEventListener('mouseleave', event => {
         if (this.isUnhoverTransition(event)) {
           this.unhoverMarks();
         }
 
         if (event.buttons === 0) {
-          this.root.contextualizeCursor(event.toElement);
+          this.shape.root.contextualizeCursor(event.toElement);
         }
       });
     }
-  },
+  }
 
   isUnhoverTransition(event) {
-    // Only turn off handles if shape wasn't explicitly click-selected and the
+    // Only turn off marks if shape wasn't explicitly click-selected and the
     // mouse is dragged onto to some other entity that isn't the shape or its
-    // handles.
-    return !this.isSelected && (!event.toElement || !event.toElement.classList.contains(`tag-${this.id}`));
+    // marks.
+    return !this.shape.isSelected && (!event.toElement || !event.toElement.classList.contains(`tag-${this.id}`));
   }
-};
+}
 
 // --------------------------------------------------------------------------- 
 
@@ -239,8 +203,8 @@ export class TweakableMark {
     this.mouseDownAt = null;
 
     this.element = element;
-    this.element.classList.add('handle');
-    this.element.classList.add('filled-handle');
+    this.element.classList.add('mark');
+    this.element.classList.add('filled-mark');
     this.element.classList.add(cursor);
     this.element.addEventListener('mousedown', this.onMouseDown);
 
@@ -301,14 +265,23 @@ export class PanMark extends TweakableMark {
 
     // Non-scaling-size is not supported. :( Looks like I'll have to do
     // this myself.
-    // handle.setAttributeNS(null, 'vector-effect', 'non-scaling-size');
-    this.element.classList.add('handle-circle');
+    // mark.setAttributeNS(null, 'vector-effect', 'non-scaling-size');
+    this.element.classList.add('mark-circle');
   }
 
   update(position, bounds) {
+    this.cx = position.get(0).value;
+    this.cy = bounds.span - position.get(1).value;
     this.element.setAttributeNS(null, 'cx', position.get(0).value);
     this.element.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
-    this.element.setAttributeNS(null, 'r', 0.3);
+    this.element.setAttributeNS(null, 'r', 1);
+  }
+
+  unscale() {
+    const matrix = this.element.parentElement.getScreenCTM();
+    const factorX = matrix.a;
+    const factorY = matrix.d;
+    this.element.setAttributeNS(null, "transform", `translate(${this.cx} ${this.cy}) scale(${6 / factorX}, ${6 / factorY}) translate(${-this.cx} ${-this.cy})`);
   }
 }
 
@@ -386,8 +359,9 @@ export class RotationMark extends PanMark {
     super(shape, component, 'cursor-rotate');
   }
 
-  setExpression(degreesExpression, pivotExpression) {
+  setExpression(degreesExpression, headingExpression, pivotExpression) {
     super.setExpression(degreesExpression);
+    this.headingExpression = headingExpression;
     this.pivotExpression = pivotExpression;
   }
 
@@ -398,7 +372,7 @@ export class RotationMark extends PanMark {
     ]).subtract(this.pivotExpression);
 
     const newRadians = Math.atan2(pivotToMouse.get(0).value, -pivotToMouse.get(1).value);
-    let newDegrees = newRadians * 180 / Math.PI - 90;
+    let newDegrees = newRadians * 180 / Math.PI - 90 - this.headingExpression.value;
     if (newDegrees < 0) {
       newDegrees = 360 + newDegrees;
     }

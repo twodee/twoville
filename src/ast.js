@@ -14,6 +14,7 @@ import {
 
 import {
   Circle,
+  Group,
   Line,
   Path,
   Polygon,
@@ -22,15 +23,16 @@ import {
   Text,
   Ungon,
   // TwovilleCutout,
-  // TwovilleGroup,
   // TwovilleMarker,
   // TwovilleMask,
-  //
-  // TwovilleRotate,
-  // TwovilleScale,
-  // TwovilleShear,
-  // TwovilleTranslate,
 } from './shape.js';
+
+import {
+  Rotate,
+  Scale,
+  Shear,
+  Translate,
+} from './transform.js';
 
 import {
   ArcNode,
@@ -1714,7 +1716,7 @@ export class ExpressionTranslate extends ExpressionFunction {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleTranslate(this.instance, callExpression);
+    return new Translate.create(this.instance, callExpression.where);
   }
 }
 
@@ -1727,7 +1729,7 @@ export class ExpressionScale extends ExpressionFunction {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleScale(this.instance, callExpression);
+    return Scale.create(this.instance, callExpression.where);
   }
 }
 
@@ -1740,7 +1742,7 @@ export class ExpressionRotate extends ExpressionFunction {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleRotate(this.instance, callExpression);
+    return Rotate.create(this.instance, callExpression.where);
   }
 }
 
@@ -1753,7 +1755,7 @@ export class ExpressionShear extends ExpressionFunction {
   }
 
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleShear(this.instance, callExpression);
+    return Shear.create(this.instance, callExpression.where);
   }
 }
 
@@ -1951,7 +1953,7 @@ export class ExpressionInt extends ExpressionFunction {
 
 export class ExpressionGroup extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleGroup(env, callExpression);
+    return Group.create(env, callExpression.where);
   }
 }
 

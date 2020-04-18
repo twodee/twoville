@@ -15,14 +15,12 @@ import {
 
 import {
   CircleMark,
-  DistanceMark,
   HorizontalPanMark,
-  Markable,
+  Marker,
   PathMark,
   PolygonMark,
   PolylineMark,
   RectangleMark,
-  RotationMark,
   VectorPanMark,
   VerticalPanMark,
 } from './mark.js';
@@ -42,6 +40,10 @@ import {
   ExpressionQuadraticNode,
   ExpressionReal,
   ExpressionString,
+  ExpressionTranslate,
+  ExpressionRotate,
+  ExpressionScale,
+  ExpressionShear,
   ExpressionTurnNode,
   ExpressionTurtleNode,
   ExpressionVector,
@@ -57,8 +59,14 @@ export class Shape extends TimelinedEnvironment {
     this.id = this.root.serial;
     this.untimedProperties.stroke = Stroke.create(this);
     this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
-    this.bind('opacity', new ExpressionReal(1));
     this.sourceSpans = [];
+    this.transforms = [];
+
+    this.bind('opacity', new ExpressionReal(1));
+    this.bindFunction('translate', new FunctionDefinition('translate', [], new ExpressionTranslate(this)));
+    this.bindFunction('scale', new FunctionDefinition('scale', [], new ExpressionScale(this)));
+    this.bindFunction('rotate', new FunctionDefinition('rotate', [], new ExpressionRotate(this)));
+    this.bindFunction('shear', new FunctionDefinition('shear', [], new ExpressionShear(this)));
 
     this.root.serial += 1;
     this.root.shapes.push(this);
@@ -68,6 +76,7 @@ export class Shape extends TimelinedEnvironment {
     const pod = super.toPod();
     pod.id = this.id;
     pod.sourceSpans = this.sourceSpans;
+    pod.transforms = this.transforms.map(transform => transform.toPod());
     return pod;
   }
 
@@ -75,6 +84,7 @@ export class Shape extends TimelinedEnvironment {
     super.embody(parentEnvironment, pod);
     this.id = pod.id;
     this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
+    this.transforms = pod.transforms.map(subpod => this.root.omniReify(this, subpod));
   }
 
   static reify(parentEnvironment, pod) {
@@ -94,8 +104,10 @@ export class Shape extends TimelinedEnvironment {
       return Text.reify(parentEnvironment, pod);
     } else if (pod.type === 'path') {
       return Path.reify(parentEnvironment, pod);
+    } else if (pod.type === 'group') {
+      return Group.reify(parentEnvironment, pod);
     } else {
-      throw new Error('unimplemented shape:', pod.type);
+      throw new Error(`unimplemented shape: ${pod.type}`);
     }
   }
 
@@ -108,20 +120,44 @@ export class Shape extends TimelinedEnvironment {
   }
 
   start() {
-  }
-
-  validate() {
-    if (!this.owns('color')) {
-      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose color property is not defined.`);
+    this.markers = [];
+    this.addMarker(new Marker(this));
+    for (let transform of this.transforms) {
+      transform.start();
     }
   }
 
-  update() {
+  addMarker(marker) {
+    marker.id = this.markers.length;
+    this.markers.push(marker);
+  }
+
+  validate() {
+    for (let transform of this.transforms) {
+      transform.validate();
+    }
+  }
+
+  scrub(env, t, bounds) {
+    this.update(env, t, bounds);
+
+    // Update transforms.
+    if (this.transforms.length > 0) {
+      const transformCommands = this.transforms.flatMap(transform => transform.update(env, t, bounds));
+      const commandString = transformCommands.join(' ');
+      this.element.setAttributeNS(null, 'transform', commandString);
+      this.backgroundMarkGroup.setAttributeNS(null, 'transform', commandString);
+      this.foregroundMarkGroup.setAttributeNS(null, 'transform', commandString);
+    }
+  }
+
+  update(env, t, bounds) {
   }
 
   connect() {
+    // TODO assert that parent is a group
     if (this.owns('parent')) {
-      this.parentElement = this.get('parent').getParentingElement();
+      this.parentElement = this.get('parent').element;
       this.get('parent').children.push(this);
       this.isDrawable = false;
     } else if (this.owns('template') && this.get('template').value) {
@@ -141,10 +177,116 @@ export class Shape extends TimelinedEnvironment {
     } else {
       this.parentElement.appendChild(this.element);
     }
+
+    this.initializeMarks();
+  }
+
+  select() {
+    this.isSelected = true;
+    this.markers[0].select();
+  }
+
+  deselect() {
+    this.isSelected = false;
+    this.selectedMarker = undefined;
+    this.markers[0].deselect();
+  }
+
+  initializeMarks() {
+    this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.backgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-background-marks`);
+    this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.foregroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-foreground-marks`);
+    this.element.classList.add('cursor-selectable');
+    this.element.classList.add(`tag-${this.id}`);
+
+    if (this.owns('parent')) {
+      this.get('parent').backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
+      this.get('parent').foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+    } else {
+      this.root.backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
+      this.root.foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+    }
+
+    this.element.addEventListener('click', event => {
+      // If the event bubbles up to the parent SVG, that means no shape was
+      // clicked on, and everything will be deselected. We don't want that.
+      event.stopPropagation();
+
+      if (!this.root.isStale) {
+        this.root.select(this);
+      }
+    });
+
+    this.element.addEventListener('mouseenter', event => {
+      event.stopPropagation();
+
+      // Only show the marks if the source code is evaluated and fresh.
+      if (!this.isSelected && !this.root.isStale) {
+        this.markers[0].hoverMarks();
+      }
+
+      if (event.buttons === 0) {
+        this.root.contextualizeCursor(event.toElement);
+      }
+    });
+
+    this.element.addEventListener('mouseleave', event => {
+      event.stopPropagation();
+
+      if (this.markers[0].isUnhoverTransition(event)) {
+        this.markers[0].unhoverMarks();
+      }
+
+      if (event.buttons === 0) {
+        this.root.contextualizeCursor(event.toElement);
+      }
+    });
+
+    for (let marker of this.markers) {
+      this.backgroundMarkGroup.appendChild(marker.backgroundMarkGroup);
+      this.foregroundMarkGroup.appendChild(marker.foregroundMarkGroup);
+    }
+  }
+
+  selectMarker(id) {
+    if (id >= this.markers.length) return;
+
+    for (let marker of this.markers) {
+      marker.hideMarks();
+    }
+
+    this.selectedMarker = this.markers[id];
+    this.markers[0].showBackgroundMarks();
+    this.markers[id].select();
+  }
+
+  castCursor(column, row) {
+    let isHit = this.castCursorIntoComponents(column, row); 
+    if (!isHit) {
+      isHit = this.sourceSpans.some(span => span.contains(column, row));
+      if (isHit) {
+        this.root.select(this);
+      }
+    }
+    return isHit;
+  }
+
+  castCursorIntoComponents(column, row) {
+    for (let transform of this.transforms) {
+      if (transform.castCursor(column, row)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  unscaleMarks() {
+    for (let marker of this.markers) {
+      marker.unscale();
+    }
   }
 }
-
-Object.assign(Shape.prototype, Markable);
 
 // --------------------------------------------------------------------------- 
 
@@ -166,16 +308,17 @@ export class Text extends Shape {
   }
 
   start() {
+    super.start();
     this.element = document.createElementNS(svgNamespace, 'text');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.appendChild(document.createTextNode('...'));
 
-    this.connect();
-
     this.outlineMark = new RectangleMark();
     this.positionMark = new VectorPanMark(this);
 
-    this.addMarks(this, [this.positionMark], [this.outlineMark]);
+    this.markers[0].addMarks([this.positionMark], [this.outlineMark]);
+
+    this.connect();
   }
 
   validate() {
@@ -187,6 +330,8 @@ export class Text extends Shape {
   }
 
   update(env, t, bounds) {
+    super.update(env, t, bounds);
+
     let position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
@@ -238,6 +383,10 @@ export class Text extends Shape {
         new ExpressionReal(box.height),
       ]), bounds);
 
+      this.centroid = new ExpressionVector([
+        new ExpressionReal(box.x + box.width * 0.5),
+        new ExpressionReal(box.y + box.height * 0.5),
+      ]);
       this.positionMark.update(position, bounds);
     }
   }
@@ -263,17 +412,18 @@ export class Rectangle extends Shape {
   }
 
   start() {
+    super.start();
     this.element = document.createElementNS(svgNamespace, 'rect');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-
-    this.connect();
 
     this.outlineMark = new RectangleMark();
     this.positionMark = new VectorPanMark(this);
     this.widthMark = new HorizontalPanMark(this, this, this.owns('center') ? 2 : 1);
     this.heightMark = new VerticalPanMark(this, this, this.owns('center') ? 2 : 1);
 
-    this.addMarks(this, [this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
+    this.markers[0].addMarks([this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
+
+    this.connect();
   }
 
   validate() {
@@ -287,10 +437,13 @@ export class Rectangle extends Shape {
       throw new LocatedException(this.where, 'I found a rectangle whose location I couldn\'t figure out. Please define its corner or center.');
     }
     
+    this.assertProperty('color');
     this.assertProperty('size');
   }
 
   update(env, t, bounds) {
+    super.update(env, t, bounds);
+
     const size = this.valueAt(env, 'size', t);
     this.widthMark.setExpression(size.get(0));
     this.heightMark.setExpression(size.get(1));
@@ -361,6 +514,8 @@ export class Rectangle extends Shape {
           new ExpressionReal(corner.get(1).value + size.get(1).value)
         ]), bounds);
       }
+
+      this.centroid = corner.add(size.multiply(new ExpressionReal(0.5)));
     }
   }
 }
@@ -385,25 +540,28 @@ export class Circle extends Shape {
   }
 
   start() {
+    super.start();
     this.element = document.createElementNS(svgNamespace, 'circle');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-
-    this.connect();
 
     this.outlineMark = new CircleMark();
     this.centerMark = new VectorPanMark(this);
     this.radiusMark = new HorizontalPanMark(this);
 
-    this.addMarks(this, [this.centerMark, this.radiusMark], [this.outlineMark]);
+    this.markers[0].addMarks([this.centerMark, this.radiusMark], [this.outlineMark]);
+    this.connect();
   }
 
   validate() {
     super.validate();
     this.assertProperty('center');
     this.assertProperty('radius');
+    this.assertProperty('color');
   }
 
   update(env, t, bounds) {
+    super.update(env, t, bounds);
+
     const radius = this.valueAt(env, 'radius', t);
     this.radiusMark.setExpression(radius);
 
@@ -438,6 +596,8 @@ export class Circle extends Shape {
         new ExpressionReal(center.get(0).value + radius.value),
         center.get(1)
       ]), bounds);
+      
+      this.centroid = center;
     }
   }
 }
@@ -485,6 +645,15 @@ export class NodedShape extends Shape {
     }
     return pieces;
   }
+
+  castCursorIntoComponents(column, row) {
+    for (let node of this.nodes) {
+      if (node.castCursor(column, row)) {
+        return true;
+      }
+    }
+    return super.castCursorIntoComponents(column, row);
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -516,17 +685,19 @@ export class Polygon extends NodedShape {
   }
 
   start() {
+    super.start();
+
     this.element = document.createElementNS(svgNamespace, 'polygon');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.connect();
-    super.start();
-
     this.outlineMark = new PolygonMark();
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks()), this.outlineMark]);
+    this.markers[0].addMarks([], [this.outlineMark]);
+    this.connect();
   }
 
   update(env, t, bounds) {
+    super.update(env, t, bounds);
+
     const pieces = this.traverseNodes(env, t, bounds);
     const positions = pieces.map(piece => piece.turtle.position);
 
@@ -554,6 +725,9 @@ export class Polygon extends NodedShape {
       this.element.setAttributeNS(null, 'fill', color.toColor());
 
       this.outlineMark.update(coordinates);
+
+      const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+      this.centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
     }
   }
 }
@@ -593,18 +767,20 @@ export class Polyline extends NodedShape {
   }
 
   start() {
+    super.start();
+
     this.element = document.createElementNS(svgNamespace, 'polyline');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.setAttributeNS(null, 'fill', 'none');
 
-    this.connect();
-    super.start();
-
     this.outlineMark = new PolylineMark();
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks()), this.outlineMark]);
+    this.markers[0].addMarks([], [this.outlineMark]);
+    this.connect();
   }
 
   update(env, t, bounds) {
+    super.update(env, t, bounds);
+
     const pieces = this.traverseNodes(env, t, bounds);
     const positions = pieces.map(piece => piece.turtle.position);
 
@@ -616,6 +792,9 @@ export class Polyline extends NodedShape {
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
       this.element.setAttributeNS(null, 'points', coordinates);
       this.outlineMark.update(coordinates);
+
+      const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+      this.centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
     }
   }
 }
@@ -656,16 +835,18 @@ export class Line extends NodedShape {
   }
 
   start() {
+    super.start();
+
     this.element = document.createElementNS(svgNamespace, 'line');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
+    this.markers[0].addMarks([], []);
     this.connect();
-    super.start();
-
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks())]);
   }
 
   update(env, t, bounds) {
+    super.update(env, t, bounds);
+
     const pieces = this.traverseNodes(env, t, bounds);
     const positions = pieces.map(piece => piece.turtle.position);
 
@@ -685,6 +866,9 @@ export class Line extends NodedShape {
       this.element.setAttributeNS(null, 'y1', bounds.span - positions[0].get(1).value);
       this.element.setAttributeNS(null, 'x2', positions[1].get(0).value);
       this.element.setAttributeNS(null, 'y2', bounds.span - positions[1].get(1).value);
+
+      const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+      this.centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
     }
   }
 }
@@ -724,17 +908,19 @@ export class Ungon extends NodedShape {
   }
 
   start() {
+    super.start();
+
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.connect();
-    super.start();
-
     this.outlineMark = new PolygonMark();
-    this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks()), this.outlineMark]);
+    this.markers[0].addMarks([], [this.outlineMark]);
+    this.connect();
   }
 
   update(env, t, bounds) {
+    super.update(env, t, bounds);
+
     const pieces = this.traverseNodes(env, t, bounds);
     const positions = pieces.map(piece => piece.turtle.position);
 
@@ -795,6 +981,9 @@ export class Ungon extends NodedShape {
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
       this.element.setAttributeNS(null, 'points', coordinates);
       this.element.setAttributeNS(null, 'fill', color.toColor());
+
+      const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+      this.centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
     }
   }
 }
@@ -834,16 +1023,15 @@ export class Path extends NodedShape {
   }
 
   start() {
+    super.start();
+
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.connect();
-    super.start();
-
     this.outlineMark = new PathMark();
 
-    this.addMarks(this, [], [this.outlineMark]);
-    // this.addMarks(this, [...this.nodes.flatMap(node => node.getForegroundMarks())], [...this.nodes.flatMap(node => node.getBackgroundMarks())]);
+    this.markers[0].addMarks([], [this.outlineMark]);
+    this.connect();
   }
 
   validate() {
@@ -853,6 +1041,8 @@ export class Path extends NodedShape {
   }
 
   update(env, t, bounds) {
+    super.update(env, t, bounds);
+
     const pieces = this.traverseNodes(env, t, bounds);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
@@ -889,4 +1079,58 @@ export class Path extends NodedShape {
 }
 
 // --------------------------------------------------------------------------- 
+
+export class Group extends Shape {
+  static type = 'group';
+  static article = 'a';
+  static timedIds = [];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+    this.children = [];
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.children = this.children.map(child => child.toPod());
+    return pod;
+  }
+
+  embody(parentEnvironment, pod) {
+    super.embody(parentEnvironment, pod);
+    this.children = pod.children.map(subpod => Shape.reify(this, subpod));
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Group();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Group();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  start() {
+    super.start();
+    this.element = document.createElementNS(svgNamespace, 'g');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    this.markers[0].addMarks([], []);
+    this.connect();
+  }
+
+  update(env, t, bounds) {
+    super.update(env, t, bounds);
+
+    for (let child of this.children) {
+      child.update(env, t, bounds);
+    }
+
+    const total = this.children.reduce((acc, child) => acc.add(child.centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+    this.centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
+  }
+}
 

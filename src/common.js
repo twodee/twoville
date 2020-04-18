@@ -186,7 +186,7 @@ export function removeClassMembers(root, className) {
   } else {
     for (let i = root.childNodes.length - 1; i >= 0; --i) {
       if (root.childNodes[i].nodeType == Node.ELEMENT_NODE) {
-        removeHandles(root.childNodes[i], className);
+        removeClassMembers(root.childNodes[i], className);
       }
     }
   }
