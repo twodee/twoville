@@ -152,12 +152,11 @@ export class Translate extends Transform {
     this.marker.addMarks([this.offsetMark], []);
   }
 
-  update(env, t, bounds, matrix) {
+  update(env, t, bounds, matrix, centroid) {
     const offset = this.valueAt(env, 'offset', t);
     this.offsetMark.setExpression(offset);
 
-    console.log("this.parentEnvironment.centroid:", this.parentEnvironment.centroid);
-    this.offsetMark.update(this.parentEnvironment.centroid, bounds, matrix);
+    this.offsetMark.update(centroid, bounds, matrix);
     
     return {
       matrix: Matrix.translate(offset.get(0).value, -offset.get(1).value),
@@ -186,20 +185,32 @@ export class Rotate extends Transform {
   }
 
   validate() {
-    this.assertProperty('pivot');
     this.assertProperty('degrees');
   }
 
   start() {
     super.start();
-    this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+
+    const foregroundMarks = [];
+    if (this.owns('pivot')) {
+      this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+      foregroundMarks.push(this.pivotMark);
+    }
+
     this.degreesMark = new RotationMark(this.parentEnvironment, this);
-    this.marker.addMarks([this.pivotMark, this.degreesMark], []);
+    foregroundMarks.push(this.degreesMark);
+
+    this.marker.addMarks(foregroundMarks, []);
   }
 
-  update(env, t, bounds, matrix) {
-    const pivot = this.valueAt(env, 'pivot', t);
-    this.pivotMark.setExpression(pivot);
+  update(env, t, bounds, matrix, centroid) {
+    let pivot;
+    if (this.owns('pivot')) {
+      pivot = this.valueAt(env, 'pivot', t);
+      this.pivotMark.setExpression(pivot);
+    } else {
+      pivot = centroid;
+    }
 
     const degrees = this.valueAt(env, 'degrees', t);
     this.degreesMark.setExpression(degrees, new ExpressionReal(0), pivot);
@@ -211,7 +222,9 @@ export class Rotate extends Transform {
     const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
     const applied = matrix.multiplyMatrix(composite);
 
-    this.pivotMark.update(pivot, bounds, applied);
+    if (this.owns('pivot')) {
+      this.pivotMark.update(pivot, bounds, applied);
+    }
     const towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
     this.degreesMark.update(towardPosition, bounds, applied);
     
@@ -304,22 +317,33 @@ export class Scale extends Transform {
 
   validate() {
     this.assertProperty('factors');
-    this.assertProperty('pivot');
   }
 
   start() {
     super.start();
+
     this.factorMarks = [
       new HorizontalPanMark(this.parentEnvironment, this),
       new VerticalPanMark(this.parentEnvironment, this),
     ];
-    this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks(this.factorMarks, []);
+
+    const foregroundMarks = [...this.factorMarks];
+    if (this.owns('pivot')) {
+      this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+      foregroundMarks.push(this.pivotMark);
+    }
+
+    this.marker.addMarks(foregroundMarks, []);
   }
 
-  update(env, t, bounds, matrix) {
-    const pivot = this.valueAt(env, 'pivot', t);
-    this.pivotMark.setExpression(pivot);
+  update(env, t, bounds, matrix, centroid) {
+    let pivot;
+    if (this.owns('pivot')) {
+      pivot = this.valueAt(env, 'pivot', t);
+      this.pivotMark.setExpression(pivot);
+    } else {
+      pivot = centroid;
+    }
 
     const factors = this.valueAt(env, 'factors', t);
     this.factorMarks[0].setExpression(factors.get(0));
@@ -340,6 +364,10 @@ export class Scale extends Transform {
       new ExpressionReal(0),
       new ExpressionReal(1),
     ])), bounds, applied);
+
+    if (this.owns('pivot')) {
+      this.pivotMark.update(pivot, bounds, applied);
+    }
 
     return {
       matrix: composite,

@@ -143,17 +143,17 @@ export class Shape extends TimelinedEnvironment {
   }
 
   scrub(env, t, bounds) {
-    this.update(env, t, bounds);
-    this.updateTransforms(env, t, bounds, Matrix.identity());
+    const centroid = this.update(env, t, bounds);
+    this.updateTransforms(env, t, bounds, Matrix.identity(), centroid);
   }
 
-  updateTransforms(env, t, bounds, initialMatrix) {
+  updateTransforms(env, t, bounds, initialMatrix, centroid) {
     let matrix = initialMatrix;
 
     if (this.transforms.length > 0) {
       let commands = [];
       for (let transform of this.transforms) {
-        const result = transform.update(env, t, bounds, matrix);
+        const result = transform.update(env, t, bounds, matrix, centroid);
         matrix = matrix.multiplyMatrix(result.matrix);
         transform.marker.updateForegroundTransforms(matrix);
         commands.push(...result.commands);
@@ -385,6 +385,7 @@ export class Text extends Shape {
 
     if (!position || !color) {
       this.hide();
+      return null;
     } else {
       this.show();
       this.element.childNodes[0].nodeValue = message.value;
@@ -407,11 +408,13 @@ export class Text extends Shape {
         new ExpressionReal(box.height),
       ]), bounds);
 
-      this.centroid = new ExpressionVector([
+      this.positionMark.update(position, bounds);
+
+      const centroid = new ExpressionVector([
         new ExpressionReal(box.x + box.width * 0.5),
         new ExpressionReal(box.y + box.height * 0.5),
       ]);
-      this.positionMark.update(position, bounds);
+      return centroid;
     }
   }
 }
@@ -539,7 +542,7 @@ export class Rectangle extends Shape {
         ]), bounds);
       }
 
-      this.centroid = corner.add(size.multiply(new ExpressionReal(0.5)));
+      return corner.add(size.multiply(new ExpressionReal(0.5)));
     }
   }
 }
@@ -621,7 +624,7 @@ export class Circle extends Shape {
         center.get(1)
       ]), bounds);
       
-      this.centroid = center;
+      return center;
     }
   }
 }
@@ -758,7 +761,7 @@ export class Polygon extends NodedShape {
       this.outlineMark.update(coordinates);
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      this.centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      return positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
     }
   }
 }
@@ -825,7 +828,7 @@ export class Polyline extends NodedShape {
       this.outlineMark.update(coordinates);
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      this.centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      return positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
     }
   }
 }
@@ -899,7 +902,7 @@ export class Line extends NodedShape {
       this.element.setAttributeNS(null, 'y2', bounds.span - positions[1].get(1).value);
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      this.centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      return positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
     }
   }
 }
@@ -1014,7 +1017,7 @@ export class Ungon extends NodedShape {
       this.element.setAttributeNS(null, 'fill', color.toColor());
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      this.centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      return positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
     }
   }
 }
@@ -1155,13 +1158,9 @@ export class Group extends Shape {
 
   update(env, t, bounds) {
     super.update(env, t, bounds);
-
-    for (let child of this.children) {
-      child.update(env, t, bounds);
-    }
-
-    const total = this.children.reduce((acc, child) => acc.add(child.centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-    this.centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
+    const childCentroids = this.children.map(child => child.update(env, t, bounds));
+    const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+    return this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
   }
 
   updateTransforms(env, t, bounds, initialMatrix) {
