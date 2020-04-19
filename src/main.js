@@ -239,7 +239,9 @@ function startInterpreting() {
   } else {
     const scene = interpret(editor.getValue(), Messager.log);
     stopInterpreting();
-    postInterpret(scene.toPod());
+    if (scene) {
+      postInterpret(scene.toPod());
+    }
   }
 }
 

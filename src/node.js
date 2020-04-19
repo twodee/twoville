@@ -89,12 +89,12 @@ export class VertexNode extends Node {
     this.marker.addMarks([this.positionMark], []);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
     
     if (position) {
-      this.positionMark.update(position, bounds);
+      this.positionMark.update(position, bounds, matrix);
       return {
         pathCommand: null,
         turtle: new Turtle(position, fromTurtle.heading),
@@ -136,7 +136,7 @@ export class TurtleNode extends Node {
     this.marker.addMarks([this.positionMark, this.headingMark], []);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
@@ -144,9 +144,9 @@ export class TurtleNode extends Node {
     this.headingMark.setExpression(heading, new ExpressionReal(0), position);
     
     if (position) {
-      this.positionMark.update(position, bounds);
+      this.positionMark.update(position, bounds, matrix);
       const towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(heading.value).add(position);
-      this.headingMark.update(towardPosition, bounds);
+      this.headingMark.update(towardPosition, bounds, matrix);
       return {
         pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
         turtle: new Turtle(position, heading),
@@ -186,7 +186,7 @@ export class MoveNode extends Node {
     this.marker.addMarks([this.distanceMark], []);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     const distance = this.valueAt(env, 'distance', t);
     this.distanceMark.setExpression(distance, fromTurtle.position, fromTurtle.heading);
     
@@ -194,7 +194,7 @@ export class MoveNode extends Node {
       let delta = new ExpressionVector([distance, fromTurtle.heading]).toCartesian();
       let position = fromTurtle.position.add(delta);
 
-      this.distanceMark.update(position, bounds);
+      this.distanceMark.update(position, bounds, matrix);
 
       return {
         pathCommand: `L${position.get(0).value},${bounds.span - position.get(1).value}`,
@@ -235,7 +235,7 @@ export class TurnNode extends Node {
     this.marker.addMarks([this.rotationMark], []);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     const degrees = this.valueAt(env, 'degrees', t);
     this.rotationMark.setExpression(degrees, fromTurtle.heading, fromTurtle.position);
     
@@ -248,7 +248,7 @@ export class TurnNode extends Node {
         newHeading += 360;
       }
       let towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(newHeading).add(fromTurtle.position);
-      this.rotationMark.update(towardPosition, bounds);
+      this.rotationMark.update(towardPosition, bounds, matrix);
       return {
         pathCommand: null,
         turtle: new Turtle(fromTurtle.position, new ExpressionReal(newHeading)),
@@ -288,12 +288,12 @@ export class JumpNode extends Node {
     this.marker.addMarks([this.positionMark], []);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
     
     if (position) {
-      this.positionMark.update(position, bounds);
+      this.positionMark.update(position, bounds, matrix);
       return {
         pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
         turtle: new Turtle(position, fromTurtle.heading),
@@ -334,7 +334,7 @@ export class LineNode extends Node {
     this.marker.addMarks([this.positionMark], []);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
@@ -351,7 +351,7 @@ export class LineNode extends Node {
     }
     
     if (position) {
-      this.positionMark.update(absolutePosition, bounds);
+      this.positionMark.update(absolutePosition, bounds, matrix);
 
       let pathCommand;
       if (isDelta) {
@@ -411,7 +411,7 @@ export class QuadraticNode extends Node {
     this.marker.addMarks(foregroundMarks, this.lineMarks);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
@@ -422,13 +422,13 @@ export class QuadraticNode extends Node {
     }
     
     if (position) {
-      this.positionMark.update(position, bounds);
+      this.positionMark.update(position, bounds, matrix);
 
       let pathCommand;
       if (control) {
-        this.controlMark.update(control, bounds);
-        this.lineMarks[0].update(fromTurtle.position, control, bounds);
-        this.lineMarks[1].update(control, position, bounds);
+        this.controlMark.update(control, bounds, matrix);
+        this.lineMarks[0].update(fromTurtle.position, control, bounds, matrix);
+        this.lineMarks[1].update(control, position, bounds, matrix);
         pathCommand = `Q${control.get(0).value},${bounds.span - control.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
       } else {
         pathCommand = `T${position.get(0).value},${bounds.span - position.get(1).value}`;
@@ -491,7 +491,7 @@ export class ArcNode extends Node {
     this.marker.addMarks([this.centerMark, this.positionMark], []);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     let degrees = this.valueAt(env, 'degrees', t);
     let radians = degrees.value * Math.PI / 180;
 
@@ -503,7 +503,7 @@ export class ArcNode extends Node {
     } else {
       let position = this.valueAt(env, 'position', t);
       this.positionMark.setExpression(position);
-      this.positionMark.update(position, bounds);
+      this.positionMark.update(position, bounds, matrix);
 
       let diff = position.subtract(fromTurtle.position);
       let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
@@ -534,11 +534,11 @@ export class ArcNode extends Node {
     const pathCommand = `A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${bounds.span - to.get(1).value}`;
 
     if (this.isWedge) {
-      this.centerMark.update(center, bounds);
-      this.positionMark.update(to, bounds);
+      this.centerMark.update(center, bounds, matrix);
+      this.positionMark.update(to, bounds, matrix);
     } else {
       this.centerMark.setExpression(degrees, fromTurtle.position, center, to);
-      this.centerMark.update(center, bounds);
+      this.centerMark.update(center, bounds, matrix);
     }
 
     return {
@@ -593,7 +593,7 @@ export class CubicNode extends Node {
     this.addMarks(this.foregroundMarks, this.backgroundMarks);
   }
 
-  update(env, t, bounds, fromTurtle) {
+  update(env, t, bounds, fromTurtle, matrix) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
@@ -607,14 +607,14 @@ export class CubicNode extends Node {
     this.control2Mark.setExpression(control2);
     
     if (position && control2) {
-      this.positionMark.update(position, bounds);
-      this.control2Mark.update(control2, bounds);
-      this.line2Mark.update(control2, position, bounds);
+      this.positionMark.update(position, bounds, matrix);
+      this.control2Mark.update(control2, bounds, matrix);
+      this.line2Mark.update(control2, position, bounds, matrix);
 
       let pathCommand;
       if (control1) {
-        this.control1Mark.update(control1, bounds);
-        this.line1Mark.update(fromTurtle.position, control1, bounds);
+        this.control1Mark.update(control1, bounds, matrix);
+        this.line1Mark.update(fromTurtle.position, control1, bounds, matrix);
         pathCommand = `C${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
       } else {
         pathCommand = `T${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;

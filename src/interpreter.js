@@ -7,6 +7,7 @@ import {
 } from './parser.js';
 
 import {
+  MessagedException,
   SourceLocation,
   FunctionDefinition,
 } from './common.js';
@@ -158,14 +159,18 @@ export class InterpreterEnvironment extends Environment {
 }
 
 export function interpret(source, log) {
-
-  // for (let i = 0; i < 10000000; ++i) {
-    // console.log(i);
-  // }
-
-  let tokens = lex(source);
-  let ast = parse(tokens);
-  const env = InterpreterEnvironment.create(log);
-  ast.evaluate(env);
-  return env;
+  try {
+    let tokens = lex(source);
+    let ast = parse(tokens);
+    const env = InterpreterEnvironment.create(log);
+    ast.evaluate(env);
+    return env;
+  } catch (e) {
+    if (e instanceof MessagedException) {
+      log(e.userMessage);
+    } else {
+      log(e);
+    }
+    return null;
+  }
 }

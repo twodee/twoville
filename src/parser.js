@@ -101,7 +101,11 @@ export function parse(tokens) {
     let indentation = tokens[i];
 
     if (indentation.source.length <= indents[indents.length - 1]) {
-      throw new LocatedException(indentation.where, 'I expected the indentation to increase upon entering a block.');
+      if (has(Tokens.Linebreak, 1) || has(Tokens.EOF, 1)) {
+        throw new LocatedException(indentation.where, 'I encountered an empty block, but those are forbidden.');
+      } else {
+        throw new LocatedException(indentation.where, 'I expected the indentation to increase upon entering a block.');
+      }
     }
     indents.push(indentation.source.length);
 

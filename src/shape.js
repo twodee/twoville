@@ -26,6 +26,10 @@ import {
 } from './mark.js';
 
 import {
+  Matrix,
+} from './transform.js';
+
+import {
   VertexNode,
 } from './node.js';
 
@@ -140,15 +144,29 @@ export class Shape extends TimelinedEnvironment {
 
   scrub(env, t, bounds) {
     this.update(env, t, bounds);
+    this.updateTransforms(env, t, bounds, Matrix.identity());
+  }
 
-    // Update transforms.
+  updateTransforms(env, t, bounds, initialMatrix) {
+    let matrix = initialMatrix;
+
     if (this.transforms.length > 0) {
-      const transformCommands = this.transforms.flatMap(transform => transform.update(env, t, bounds));
-      const commandString = transformCommands.join(' ');
+      let commands = [];
+      for (let transform of this.transforms) {
+        const result = transform.update(env, t, bounds, matrix);
+        matrix = matrix.multiplyMatrix(result.matrix);
+        transform.marker.updateForegroundTransforms(matrix);
+        commands.push(...result.commands);
+      }
+
+      const commandString = commands.join(' ');
       this.element.setAttributeNS(null, 'transform', commandString);
       this.backgroundMarkGroup.setAttributeNS(null, 'transform', commandString);
-      this.foregroundMarkGroup.setAttributeNS(null, 'transform', commandString);
     }
+
+    this.markers[0].updateForegroundTransforms(matrix);
+
+    return matrix;
   }
 
   update(env, t, bounds) {
@@ -219,6 +237,8 @@ export class Shape extends TimelinedEnvironment {
     });
 
     this.element.addEventListener('mouseenter', event => {
+      if (this.root.isTweaking) return;
+
       event.stopPropagation();
 
       // Only show the marks if the source code is evaluated and fresh.
@@ -266,7 +286,11 @@ export class Shape extends TimelinedEnvironment {
     if (!isHit) {
       isHit = this.sourceSpans.some(span => span.contains(column, row));
       if (isHit) {
-        this.root.select(this);
+        if (this.isSelected) {
+          this.selectMarker(0);
+        } else {
+          this.root.select(this);
+        }
       }
     }
     return isHit;
@@ -281,9 +305,9 @@ export class Shape extends TimelinedEnvironment {
     return false;
   }
 
-  unscaleMarks() {
+  unscaleMarks(factor) {
     for (let marker of this.markers) {
-      marker.unscale();
+      marker.unscale(factor);
     }
   }
 }
@@ -644,6 +668,13 @@ export class NodedShape extends Shape {
       currentTurtle = piece.turtle;
     }
     return pieces;
+  }
+
+  updateTransforms(env, t, bounds, initialMatrix) {
+    const matrix = super.updateTransforms(env, t, bounds, initialMatrix);
+    for (let node of this.nodes) {
+      node.marker.updateForegroundTransforms(matrix);
+    }
   }
 
   castCursorIntoComponents(column, row) {
@@ -1131,6 +1162,13 @@ export class Group extends Shape {
 
     const total = this.children.reduce((acc, child) => acc.add(child.centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
     this.centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
+  }
+
+  updateTransforms(env, t, bounds, initialMatrix) {
+    const matrix = super.updateTransforms(env, t, bounds, initialMatrix);
+    for (let child of this.children) {
+      child.updateTransforms(env, t, bounds, matrix);
+    }
   }
 }
 

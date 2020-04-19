@@ -50,7 +50,7 @@ export class Marker {
     this.backgroundMarkGroup.classList.add('mark-group');
     for (let mark of this.backgroundMarks) {
       mark.element.classList.add('mark');
-      mark.element.classList.add(`tag-${this.id}`);
+      mark.element.classList.add(`tag-${this.shape.id}`);
       this.backgroundMarkGroup.appendChild(mark.element);
     }
 
@@ -58,7 +58,7 @@ export class Marker {
     this.foregroundMarkGroup.classList.add('mark-group');
     for (let mark of this.foregroundMarks) {
       mark.element.classList.add('mark');
-      mark.element.classList.add(`tag-${this.id}`);
+      mark.element.classList.add(`tag-${this.shape.id}`);
       this.foregroundMarkGroup.appendChild(mark.element);
     }
 
@@ -76,9 +76,15 @@ export class Marker {
     this.showMarks();
   }
 
-  unscale() {
+  unscale(factor) {
     for (let mark of this.foregroundMarks) {
-      mark.unscale();
+      mark.unscale(factor);
+    }
+  }
+
+  updateForegroundTransforms(matrix) {
+    for (let mark of this.foregroundMarks) {
+      mark.updateTransform(matrix);
     }
   }
 
@@ -106,7 +112,7 @@ export class Marker {
     // Only turn off marks if shape wasn't explicitly click-selected and the
     // mouse is dragged onto to some other entity that isn't the shape or its
     // marks.
-    return !this.shape.isSelected && (!event.toElement || !event.toElement.classList.contains(`tag-${this.id}`));
+    return !this.shape.isSelected && (!event.toElement || !event.toElement.classList.contains(`tag-${this.shape.id}`));
   }
 }
 
@@ -117,7 +123,7 @@ export class RectangleMark {
     this.element = document.createElementNS(svgNamespace, 'rect');
   }
 
-  update(position, size, bounds, rounding) {
+  update(position, size, bounds, rounding, matrix) {
     this.element.setAttributeNS(null, 'x', position.get(0).value);
     this.element.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
     this.element.setAttributeNS(null, 'width', size.get(0).value);
@@ -136,7 +142,7 @@ export class CircleMark {
     this.element = document.createElementNS(svgNamespace, 'circle');
   }
 
-  update(center, radius, bounds) {
+  update(center, radius, bounds, matrix) {
     this.element.setAttributeNS(null, 'cx', center.get(0).value);
     this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
     this.element.setAttributeNS(null, 'r', radius.value);
@@ -150,7 +156,7 @@ export class LineMark {
     this.element = document.createElementNS(svgNamespace, 'line');
   }
 
-  update(a, b, bounds) {
+  update(a, b, bounds, matrix) {
     this.element.setAttributeNS(null, 'x1', a.get(0).value);
     this.element.setAttributeNS(null, 'y1', bounds.span - a.get(1).value);
     this.element.setAttributeNS(null, 'x2', b.get(0).value);
@@ -165,7 +171,7 @@ export class PolygonMark {
     this.element = document.createElementNS(svgNamespace, 'polygon');
   }
 
-  update(coordinates) {
+  update(coordinates, matrix) {
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 }
@@ -177,7 +183,7 @@ export class PathMark {
     this.element = document.createElementNS(svgNamespace, 'path');
   }
 
-  update(commands) {
+  update(commands, matrix) {
     this.element.setAttributeNS(null, 'd', commands);
   }
 }
@@ -189,7 +195,7 @@ export class PolylineMark {
     this.element = document.createElementNS(svgNamespace, 'polyline');
   }
 
-  update(coordinates) {
+  update(coordinates, matrix) {
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 }
@@ -269,19 +275,22 @@ export class PanMark extends TweakableMark {
     this.element.classList.add('mark-circle');
   }
 
-  update(position, bounds) {
+  update(position, bounds, matrix) {
     this.cx = position.get(0).value;
     this.cy = bounds.span - position.get(1).value;
-    this.element.setAttributeNS(null, 'cx', position.get(0).value);
-    this.element.setAttributeNS(null, 'cy', bounds.span - position.get(1).value);
+    this.element.setAttributeNS(null, 'cx', this.cx);
+    this.element.setAttributeNS(null, 'cy', this.cy);
     this.element.setAttributeNS(null, 'r', 1);
   }
 
-  unscale() {
-    const matrix = this.element.parentElement.getScreenCTM();
-    const factorX = matrix.a;
-    const factorY = matrix.d;
-    this.element.setAttributeNS(null, "transform", `translate(${this.cx} ${this.cy}) scale(${6 / factorX}, ${6 / factorY}) translate(${-this.cx} ${-this.cy})`);
+  updateTransform(matrix) {
+    const transformedPosition = matrix.multiplyVector([this.cx, this.cy]);
+    this.element.cx.baseVal.value = transformedPosition[0];
+    this.element.cy.baseVal.value = transformedPosition[1];
+  }
+
+  unscale(factor) {
+    this.element.r.baseVal.value = 6 / factor;
   }
 }
 

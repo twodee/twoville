@@ -244,6 +244,7 @@ export class RenderEnvironment extends Environment {
   }
 
   scrub(t) {
+    // Don't target shapes. Non-drawable shapes should get scrubbed by their parents.
     for (let drawable of this.drawables) {
       drawable.scrub(this, t, this.bounds);
     }
@@ -286,8 +287,10 @@ export class RenderEnvironment extends Environment {
   }
 
   unscaleMarks() {
+    const matrix = this.svg.getScreenCTM();
+    const factor = matrix.a;
     for (let shape of this.shapes) {
-      shape.unscaleMarks();
+      shape.unscaleMarks(factor);
     }
   }
 
