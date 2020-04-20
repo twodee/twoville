@@ -203,16 +203,22 @@ export class PolylineMark {
 // --------------------------------------------------------------------------- 
 
 export class TweakableMark {
-  constructor(shape, component, element, cursor) {
+  constructor(shape, component, cursor) {
     this.shape = shape;
     this.component = component ?? shape;
     this.mouseDownAt = null;
 
-    this.element = element;
-    this.element.classList.add('mark');
-    this.element.classList.add('filled-mark');
+    this.element = document.createElementNS(svgNamespace, 'g');
     this.element.classList.add(cursor);
     this.element.addEventListener('mousedown', this.onMouseDown);
+
+    this.circle = document.createElementNS(svgNamespace, 'circle');
+    this.circle.classList.add('mark');
+    this.circle.classList.add('filled-mark');
+    this.circle.setAttributeNS(null, 'cx', 0);
+    this.circle.setAttributeNS(null, 'cy', 0);
+    this.circle.setAttributeNS(null, 'r', 1);
+    this.element.appendChild(this.circle);
 
     this.mouseAtSvg = this.shape.root.svg.createSVGPoint();
   }
@@ -267,30 +273,22 @@ export class TweakableMark {
 
 export class PanMark extends TweakableMark {
   constructor(shape, component, cursor) {
-    super(shape, component, document.createElementNS(svgNamespace, 'circle'), cursor);
-
-    // Non-scaling-size is not supported. :( Looks like I'll have to do
-    // this myself.
-    // mark.setAttributeNS(null, 'vector-effect', 'non-scaling-size');
-    this.element.classList.add('mark-circle');
+    super(shape, component, cursor);
   }
 
   update(position, bounds, matrix) {
     this.cx = position.get(0).value;
     this.cy = bounds.span - position.get(1).value;
-    this.element.setAttributeNS(null, 'cx', this.cx);
-    this.element.setAttributeNS(null, 'cy', this.cy);
-    this.element.setAttributeNS(null, 'r', 1);
   }
 
   updateTransform(matrix) {
-    const transformedPosition = matrix.multiplyVector([this.cx, this.cy]);
-    this.element.cx.baseVal.value = transformedPosition[0];
-    this.element.cy.baseVal.value = transformedPosition[1];
+    this.transformedPosition = matrix.multiplyVector([this.cx, this.cy]);
+    this.element.setAttributeNS(null, "transform", `translate(${this.transformedPosition[0]} ${this.transformedPosition[1]})`);
   }
 
   unscale(factor) {
-    this.element.r.baseVal.value = 6 / factor;
+    this.element.setAttributeNS(null, "transform", `scale(${6 / factor}) translate(${this.transformedPosition[0]} ${this.transformedPosition[1]})`);
+    this.element.setAttributeNS(null, "transform", `translate(${this.transformedPosition[0]} ${this.transformedPosition[1]}) scale(${6 / factor})`);
   }
 }
 
@@ -299,6 +297,22 @@ export class PanMark extends TweakableMark {
 export class VectorPanMark extends PanMark {
   constructor(shape, component) {
     super(shape, component, 'cursor-pan');
+
+    this.horizontal = document.createElementNS(svgNamespace, 'line');
+    this.horizontal.setAttributeNS(null, 'x1', -0.6);
+    this.horizontal.setAttributeNS(null, 'y1', 0);
+    this.horizontal.setAttributeNS(null, 'x2', 0.6);
+    this.horizontal.setAttributeNS(null, 'y2', 0);
+    this.horizontal.classList.add('cue');
+    this.element.appendChild(this.horizontal);
+
+    this.vertical = document.createElementNS(svgNamespace, 'line');
+    this.vertical.setAttributeNS(null, 'y1', -0.6);
+    this.vertical.setAttributeNS(null, 'x1', 0);
+    this.vertical.setAttributeNS(null, 'y2', 0.6);
+    this.vertical.setAttributeNS(null, 'x2', 0);
+    this.vertical.classList.add('cue');
+    this.element.appendChild(this.vertical);
   }
 
   getNewSource(delta, isShiftModified) {
@@ -323,6 +337,14 @@ export class HorizontalPanMark extends PanMark {
   constructor(shape, component, multiplier = 1) {
     super(shape, component, 'cursor-horizontal-pan');
     this.multiplier = multiplier;
+
+    this.horizontal = document.createElementNS(svgNamespace, 'line');
+    this.horizontal.setAttributeNS(null, 'x1', -0.6);
+    this.horizontal.setAttributeNS(null, 'y1', 0);
+    this.horizontal.setAttributeNS(null, 'x2', 0.6);
+    this.horizontal.setAttributeNS(null, 'y2', 0);
+    this.horizontal.classList.add('cue');
+    this.element.appendChild(this.horizontal);
   }
 
   getNewSource(delta, isShiftModified) {
@@ -345,6 +367,14 @@ export class VerticalPanMark extends PanMark {
   constructor(shape, component, multiplier = 1) {
     super(shape, component, 'cursor-vertical-pan');
     this.multiplier = multiplier;
+
+    this.vertical = document.createElementNS(svgNamespace, 'line');
+    this.vertical.setAttributeNS(null, 'y1', -0.6);
+    this.vertical.setAttributeNS(null, 'x1', 0);
+    this.vertical.setAttributeNS(null, 'y2', 0.6);
+    this.vertical.setAttributeNS(null, 'x2', 0);
+    this.vertical.classList.add('cue');
+    this.element.appendChild(this.vertical);
   }
 
   getNewSource(delta, isShiftModified) {

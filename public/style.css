@@ -248,3 +248,10 @@ html.cursor-rotate {
   stroke: rgb(180, 180, 180);
   stroke-dasharray: none;
 }
+
+.cue {
+  stroke-width: 2;
+  stroke: white;
+  stroke-dasharray: none;
+  vector-effect: non-scaling-stroke;
+}
