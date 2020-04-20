@@ -317,24 +317,13 @@ export class RenderEnvironment extends Environment {
     return Math.round((this.time - this.tmin) / (this.tmax - this.tmin) * this.nTicks);
   }
 
-  static cursors = [
-    'cursor-selectable',
-    'cursor-pan',
-    'cursor-horizontal-pan',
-    'cursor-vertical-pan',
-    'cursor-rotate',
-  ];
-
   contextualizeCursor(element) {
-    document.documentElement.classList.remove(...RenderEnvironment.cursors);
+    document.documentElement.classList.remove('grab', 'grabbing');
     
     // Only show the cursor when the source and canvas are synchronized.
     if (element && !this.isStale) {
-      for (let cursor of RenderEnvironment.cursors) {
-        if (element.classList.contains(cursor)) {
-          document.documentElement.classList.add(cursor);
-          break;
-        }
+      if (element.classList.contains('mark')) {
+        document.documentElement.classList.add('grab');
       }
     }
   }

@@ -27,38 +27,6 @@ body {
   height: 100%;
 }
 
-/* .resizer { */
-  /* background-color: yellow; */
-  /* position: absolute; */
-  /* z-index: 1000000000; */
-/* } */
-
-/* .resizer-horizontal { */
-  /* width: 20px; */
-  /* top: 0; */
-  /* bottom: 0; */
-  /* cursor: col-resize; */
-/* } */
-
-/* .resizer-vertical { */
-  /* height: 20px; */
-  /* left: 0; */
-  /* right: 0; */
-  /* cursor: row-resize; */
-/* } */
-
-/* .resizer-right { */
-  /* right: -10px; */
-/* } */
-
-/* .resizer-top { */
-  /* top: -10px; */
-/* } */
-
-/* .resizer-bottom { */
-  /* bottom: -10px; */
-/* } */
-
 #left {
   /* position: relative; */
   min-width: 200px;
@@ -179,24 +147,12 @@ html {
   cursor: default;
 }
 
-html.cursor-selectable {
-  cursor: pointer;
+html.grab {
+  cursor: grab;
 }
 
-html.cursor-pan {
-  cursor: url(cursor_pan.svg) 16 16, move;
-}
-
-html.cursor-horizontal-pan {
-  cursor: url(cursor_horizontal_pan.svg) 16 5, ew-resize;
-}
-
-html.cursor-vertical-pan {
-  cursor: url(cursor_vertical_pan.svg) 5 16, ns-resize;
-}
-
-html.cursor-rotate {
-  cursor: url(cursor_rotate.svg) 16 16, wait;
+html.grabbing {
+  cursor: grabbing;
 }
 
 .resizer {

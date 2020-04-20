@@ -203,13 +203,12 @@ export class PolylineMark {
 // --------------------------------------------------------------------------- 
 
 export class TweakableMark {
-  constructor(shape, component, cursor) {
+  constructor(shape, component) {
     this.shape = shape;
     this.component = component ?? shape;
     this.mouseDownAt = null;
 
     this.element = document.createElementNS(svgNamespace, 'g');
-    this.element.classList.add(cursor);
     this.element.addEventListener('mousedown', this.onMouseDown);
 
     this.circle = document.createElementNS(svgNamespace, 'circle');
@@ -272,8 +271,8 @@ export class TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class PanMark extends TweakableMark {
-  constructor(shape, component, cursor) {
-    super(shape, component, cursor);
+  constructor(shape, component) {
+    super(shape, component);
   }
 
   update(position, bounds, matrix) {
@@ -296,7 +295,7 @@ export class PanMark extends TweakableMark {
 
 export class VectorPanMark extends PanMark {
   constructor(shape, component) {
-    super(shape, component, 'cursor-pan');
+    super(shape, component);
 
     this.horizontal = document.createElementNS(svgNamespace, 'line');
     this.horizontal.setAttributeNS(null, 'x1', -0.6);
@@ -335,7 +334,7 @@ export class VectorPanMark extends PanMark {
 
 export class HorizontalPanMark extends PanMark {
   constructor(shape, component, multiplier = 1) {
-    super(shape, component, 'cursor-horizontal-pan');
+    super(shape, component);
     this.multiplier = multiplier;
 
     this.horizontal = document.createElementNS(svgNamespace, 'line');
@@ -365,7 +364,7 @@ export class HorizontalPanMark extends PanMark {
 
 export class VerticalPanMark extends PanMark {
   constructor(shape, component, multiplier = 1) {
-    super(shape, component, 'cursor-vertical-pan');
+    super(shape, component);
     this.multiplier = multiplier;
 
     this.vertical = document.createElementNS(svgNamespace, 'line');
@@ -395,7 +394,15 @@ export class VerticalPanMark extends PanMark {
 
 export class RotationMark extends PanMark {
   constructor(shape, component) {
-    super(shape, component, 'cursor-rotate');
+    super(shape, component);
+
+    this.arc = document.createElementNS(svgNamespace, 'path');
+    const x = 0.25;
+    const y = 0.5;
+    const r = 0.56;
+    this.arc.setAttributeNS(null, 'd', `M${x},${y} A${r},${r} 0 1 0 ${-x},${y}`);
+    this.arc.classList.add('cue');
+    this.element.appendChild(this.arc);
   }
 
   setExpression(degreesExpression, headingExpression, pivotExpression) {
@@ -432,7 +439,7 @@ export class RotationMark extends PanMark {
 
 export class DistanceMark extends PanMark {
   constructor(shape, component) {
-    super(shape, component, 'cursor-pan');
+    super(shape, component);
   }
 
   setExpression(distanceExpression, fromExpression, headingExpression) {
@@ -472,7 +479,7 @@ export class DistanceMark extends PanMark {
 
 export class WedgeDegreesMark extends PanMark {
   constructor(shape, component) {
-    super(shape, component, 'cursor-rotate');
+    super(shape, component);
   }
 
   setExpression(degrees, fromPosition, centerPosition) {
@@ -525,7 +532,7 @@ export class WedgeDegreesMark extends PanMark {
 
 export class BumpDegreesMark extends PanMark {
   constructor(shape, component) {
-    super(shape, component, 'cursor-pan');
+    super(shape, component);
   }
 
   setExpression(degrees, fromPosition, centerPosition, toPosition) {

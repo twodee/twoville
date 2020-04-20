@@ -139,6 +139,8 @@ function postInterpret(pod) {
   scene.startTweak = where => {
     highlight(where.lineStart, where.lineEnd, where.columnStart, where.columnEnd);
     hasTweak = false;
+    document.documentElement.classList.remove('grab');
+    document.documentElement.classList.add('grabbing');
   };
 
   scene.tweak = newText => {
@@ -168,6 +170,7 @@ function postInterpret(pod) {
   scene.stopTweak = () => {
     hasTweak = false;
     startInterpreting();
+    document.documentElement.classList.remove('grabbing');
   };
 
   try {
