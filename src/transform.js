@@ -325,7 +325,7 @@ export class Scale extends Transform {
     ];
 
     this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks([...this.factorMarks, this.pivotMark], this.lineMarks);
+    this.marker.addMarks([...this.factorMarks, this.pivotMark], [], [], this.lineMarks);
   }
 
   updateProperties(env, t, bounds, matrix) {
@@ -356,8 +356,20 @@ export class Scale extends Transform {
     this.factorMarks[0].updateProperties(positionX, bounds, applied);
     this.factorMarks[1].updateProperties(positionY, bounds, applied);
 
-    this.lineMarks[0].updateProperties(pivot, positionX, bounds, matrix);
-    this.lineMarks[1].updateProperties(pivot, positionY, bounds, matrix);
+    const transformedPositionX = applied.multiplyVector([positionX.get(0).value, positionX.get(1).value]);
+    const transformedPositionY = applied.multiplyVector([positionY.get(0).value, positionY.get(1).value]);
+
+    this.lineMarks[0].updateProperties(pivot, new ExpressionVector([
+      new ExpressionReal(transformedPositionX[0]),
+      new ExpressionReal(transformedPositionX[1]),
+    ]), bounds, matrix);
+
+    this.lineMarks[1].updateProperties(pivot, new ExpressionVector([
+      new ExpressionReal(transformedPositionY[0]),
+      new ExpressionReal(transformedPositionY[1]),
+    ]), bounds, matrix);
+
+    // this.lineMarks[1].updateProperties(pivot, positionY, bounds, matrix);
 
     this.pivotMark.updateProperties(pivot, bounds, applied);
 

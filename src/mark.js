@@ -18,12 +18,14 @@ export class Marker {
 
   showMarks() {
     this.showBackgroundMarks();
+    this.midgroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
     this.foregroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
   }
 
   hoverMarks() {
     this.backgroundMarkGroup.classList.add('hovered');
+    this.midgroundMarkGroup.classList.add('hovered');
     this.foregroundMarkGroup.classList.add('hovered');
     this.centeredForegroundMarkGroup.classList.add('hovered');
     this.showMarks();
@@ -31,6 +33,7 @@ export class Marker {
 
   unhoverMarks() {
     this.backgroundMarkGroup.classList.remove('hovered');
+    this.midgroundMarkGroup.classList.remove('hovered');
     this.foregroundMarkGroup.classList.remove('hovered');
     this.centeredForegroundMarkGroup.classList.remove('hovered');
     this.hideMarks();
@@ -42,12 +45,14 @@ export class Marker {
 
   hideMarks() {
     this.backgroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
+    this.midgroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
     this.foregroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
   }
 
-  addMarks(foregroundMarks, backgroundMarks, centeredForegroundMarks = []) {
+  addMarks(foregroundMarks, backgroundMarks, centeredForegroundMarks = [], midgroundMarks = []) {
     this.backgroundMarks = backgroundMarks;
+    this.midgroundMarks = midgroundMarks;
     this.foregroundMarks = foregroundMarks;
     this.centeredForegroundMarks = centeredForegroundMarks;
 
@@ -57,6 +62,14 @@ export class Marker {
       mark.element.classList.add('mark');
       mark.element.classList.add(`tag-${this.shape.id}`);
       this.backgroundMarkGroup.appendChild(mark.element);
+    }
+
+    this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.midgroundMarkGroup.classList.add('mark-group');
+    for (let mark of this.midgroundMarks) {
+      mark.element.classList.add('mark');
+      mark.element.classList.add(`tag-${this.shape.id}`);
+      this.midgroundMarkGroup.appendChild(mark.element);
     }
 
     this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
@@ -85,6 +98,7 @@ export class Marker {
 
   select() {
     this.backgroundMarkGroup.classList.remove('hovered');
+    this.midgroundMarkGroup.classList.remove('hovered');
     this.foregroundMarkGroup.classList.remove('hovered');
     this.centeredForegroundMarkGroup.classList.remove('hovered');
     this.showMarks();
@@ -100,7 +114,7 @@ export class Marker {
   }
 
   registerListeners() {
-    for (let mark of [...this.backgroundMarks, ...this.foregroundMarks, ...this.centeredForegroundMarks]) {
+    for (let mark of [...this.backgroundMarks, ...this.foregroundMarks, ...this.centeredForegroundMarks, ...this.midgroundMarks]) {
       mark.element.addEventListener('mouseenter', event => {
         if (event.buttons === 0) {
           this.shape.root.contextualizeCursor(event.toElement);
@@ -288,22 +302,21 @@ export class PanMark extends TweakableMark {
     this.isRotated = isRotated;
   }
 
-  // This can get called from a shape's update.
   updateProperties(position, bounds, matrix) {
-    this.centerX = position.get(0).value;
-    this.centerY = position.get(1).value;
-    this.transformedPosition = matrix.multiplyVector([this.centerX, this.centerY]);
-    this.transformedPosition[1] = bounds.span - this.transformedPosition[1];
-		const result = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
-		this.rotation = result.rotation * 180 / Math.PI;
+    const transformedPosition = matrix.multiplyVector([position.get(0).value, position.get(1).value]);
+    transformedPosition[1] = bounds.span - transformedPosition[1];
+
+		const factors = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
+		const rotation = factors.rotation * 180 / Math.PI;
+
+    this.commandString = `translate(${transformedPosition[0]} ${transformedPosition[1]})`;
+    if (this.isRotated) {
+      this.commandString += ` rotate(${-rotation})`;
+    }
   }
 
   unscale(factor) {
-    let commandString = `translate(${this.transformedPosition[0]} ${this.transformedPosition[1]}) scale(${6 / factor})`;
-    if (this.isRotated) {
-      commandString += ` rotate(${-this.rotation})`;
-    }
-    this.element.setAttributeNS(null, "transform", commandString);
+    this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${6 / factor})`);
   }
 }
 

@@ -217,6 +217,10 @@ export class RenderEnvironment extends Environment {
     this.backgroundMarkGroup.setAttributeNS(null, 'id', 'background-mark-group');
     this.svg.appendChild(this.backgroundMarkGroup);
 
+    this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.midgroundMarkGroup.setAttributeNS(null, 'id', 'midground-mark-group');
+    this.svg.appendChild(this.midgroundMarkGroup);
+
     this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.foregroundMarkGroup.setAttributeNS(null, 'id', 'foreground-mark-group');
     this.svg.appendChild(this.foregroundMarkGroup);
@@ -300,7 +304,7 @@ export class RenderEnvironment extends Environment {
 
   stale() {
     if (!this.isStale && !this.isTweaking) {
-      const circles = this.foregroundMarkGroup.querySelectorAll('.mark-circle');
+      const circles = this.foregroundMarkGroup.querySelectorAll('.filled-mark');
       for (let circle of circles) {
         circle.classList.add('stale-mark');
       }

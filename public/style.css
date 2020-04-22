@@ -196,7 +196,7 @@ html.grabbing {
 }
 
 .stale-mark {
-  fill: none;
+  fill: gray;
 }
 
 .outline-mark {

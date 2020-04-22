@@ -217,8 +217,13 @@ export class Shape extends TimelinedEnvironment {
   initializeMarks() {
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.backgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-background-marks`);
+
+    this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.midgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-midground-marks`);
+
     this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.foregroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-foreground-marks`);
+
     this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-centered-foreground-marks`);
 
@@ -227,10 +232,12 @@ export class Shape extends TimelinedEnvironment {
 
     if (this.owns('parent')) {
       this.get('parent').backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
+      this.get('parent').midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
       this.get('parent').foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
       this.get('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     } else {
       this.root.backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
+      this.root.midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
       this.root.foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
       this.root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     }
@@ -274,6 +281,7 @@ export class Shape extends TimelinedEnvironment {
 
     for (let marker of this.markers) {
       this.backgroundMarkGroup.appendChild(marker.backgroundMarkGroup);
+      this.midgroundMarkGroup.appendChild(marker.midgroundMarkGroup);
       this.foregroundMarkGroup.appendChild(marker.foregroundMarkGroup);
       this.centeredForegroundMarkGroup.appendChild(marker.centeredForegroundMarkGroup);
     }
