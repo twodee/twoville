@@ -143,20 +143,16 @@ export class Shape extends TimelinedEnvironment {
   }
 
   scrub(env, t, bounds) {
-    const centroid = this.update(env, t, bounds);
-    this.updateTransforms(env, t, bounds, Matrix.identity(), centroid);
+    const centroid = this.updateProperties(env, t, bounds, Matrix.identity());
   }
 
-  updateTransforms(env, t, bounds, initialMatrix, centroid) {
-    let matrix = initialMatrix;
-
+  transform(env, t, bounds, matrix) {
     if (this.transforms.length > 0) {
       let commands = [];
       for (let transform of this.transforms) {
-        const result = transform.update(env, t, bounds, matrix, centroid);
-        matrix = matrix.multiplyMatrix(result.matrix);
-        transform.marker.updateForegroundTransforms(matrix);
-        commands.push(...result.commands);
+        const transformation = transform.updateProperties(env, t, bounds, matrix);
+        matrix = transformation.matrix;
+        commands.push(...transformation.commands);
       }
 
       const commandString = commands.join(' ');
@@ -164,12 +160,20 @@ export class Shape extends TimelinedEnvironment {
       this.backgroundMarkGroup.setAttributeNS(null, 'transform', commandString);
     }
 
-    this.markers[0].updateForegroundTransforms(matrix);
-
     return matrix;
   }
+  
+  updateCentroid(matrix, centroid, bounds) {
+    const p = matrix.multiplyVector([centroid.get(0).value, centroid.get(1).value]);
+    // Have to flip Y because we've already countered the axis.
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${p[0]} ${-p[1]})`);
+  }
 
-  update(env, t, bounds) {
+  updateProperties(env, t, bounds, matrix) {
+    throw Error('Shape.updateProperties is abstract');
+    // Step 1. Transform.
+    // Step 2. Update properties.
+    // Step 3. Fix marks that depend on centroid.
   }
 
   connect() {
@@ -215,15 +219,20 @@ export class Shape extends TimelinedEnvironment {
     this.backgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-background-marks`);
     this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.foregroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-foreground-marks`);
+    this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-centered-foreground-marks`);
+
     this.element.classList.add('cursor-selectable');
     this.element.classList.add(`tag-${this.id}`);
 
     if (this.owns('parent')) {
       this.get('parent').backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
       this.get('parent').foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+      this.get('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     } else {
       this.root.backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
       this.root.foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+      this.root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     }
 
     this.element.addEventListener('click', event => {
@@ -266,6 +275,7 @@ export class Shape extends TimelinedEnvironment {
     for (let marker of this.markers) {
       this.backgroundMarkGroup.appendChild(marker.backgroundMarkGroup);
       this.foregroundMarkGroup.appendChild(marker.foregroundMarkGroup);
+      this.centeredForegroundMarkGroup.appendChild(marker.centeredForegroundMarkGroup);
     }
   }
 
@@ -353,8 +363,8 @@ export class Text extends Shape {
     // TODO others?
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
 
     let position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
@@ -400,20 +410,22 @@ export class Text extends Shape {
       // I have to query the SVG element to determine the bounding box of the
       // text.
       const box = this.element.getBBox();
-      this.outlineMark.update(new ExpressionVector([
+      this.outlineMark.updateProperties(new ExpressionVector([
         new ExpressionReal(box.x),
         new ExpressionReal(bounds.span - box.y - box.height),
       ]), new ExpressionVector([
         new ExpressionReal(box.width),
         new ExpressionReal(box.height),
-      ]), bounds);
+      ]), bounds, matrix);
 
-      this.positionMark.update(position, bounds);
+      this.positionMark.updateProperties(position, bounds, matrix);
 
       const centroid = new ExpressionVector([
         new ExpressionReal(box.x + box.width * 0.5),
         new ExpressionReal(box.y + box.height * 0.5),
       ]);
+      this.updateCentroid(matrix, centroid, bounds);
+
       return centroid;
     }
   }
@@ -468,8 +480,8 @@ export class Rectangle extends Shape {
     this.assertProperty('size');
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
 
     const size = this.valueAt(env, 'size', t);
     this.widthMark.setExpression(size.get(0));
@@ -519,30 +531,32 @@ export class Rectangle extends Shape {
       this.element.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
-      this.outlineMark.update(corner, size, bounds, rounding);
+      this.outlineMark.updateProperties(corner, size, bounds, rounding, matrix);
       if (center) {
-        this.positionMark.update(center, bounds);
-        this.widthMark.update(new ExpressionVector([
+        this.positionMark.updateProperties(center, bounds);
+        this.widthMark.updateProperties(new ExpressionVector([
           new ExpressionReal(center.get(0).value + size.get(0).value * 0.5),
           center.get(1)
-        ]), bounds);
-        this.heightMark.update(new ExpressionVector([
+        ]), bounds, matrix);
+        this.heightMark.updateProperties(new ExpressionVector([
           center.get(0),
           new ExpressionReal(center.get(1).value + size.get(1).value * 0.5)
-        ]), bounds);
+        ]), bounds, matrix);
       } else {
-        this.positionMark.update(corner, bounds);
-        this.widthMark.update(new ExpressionVector([
+        this.positionMark.updateProperties(corner, bounds, matrix);
+        this.widthMark.updateProperties(new ExpressionVector([
           new ExpressionReal(corner.get(0).value + size.get(0).value),
           corner.get(1)
-        ]), bounds);
-        this.heightMark.update(new ExpressionVector([
+        ]), bounds, matrix);
+        this.heightMark.updateProperties(new ExpressionVector([
           corner.get(0),
           new ExpressionReal(corner.get(1).value + size.get(1).value)
-        ]), bounds);
+        ]), bounds, matrix);
       }
 
-      return corner.add(size.multiply(new ExpressionReal(0.5)));
+      const centroid = corner.add(size.multiply(new ExpressionReal(0.5)));
+      this.updateCentroid(matrix, centroid, bounds);
+      return centroid;
     }
   }
 }
@@ -586,8 +600,8 @@ export class Circle extends Shape {
     this.assertProperty('color');
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
 
     const radius = this.valueAt(env, 'radius', t);
     this.radiusMark.setExpression(radius);
@@ -617,13 +631,14 @@ export class Circle extends Shape {
       this.element.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
-      this.outlineMark.update(center, radius, bounds);
-      this.centerMark.update(center, bounds);
-      this.radiusMark.update(new ExpressionVector([
+      this.outlineMark.updateProperties(center, radius, bounds, matrix);
+      this.centerMark.updateProperties(center, bounds, matrix);
+      this.radiusMark.updateProperties(new ExpressionVector([
         new ExpressionReal(center.get(0).value + radius.value),
         center.get(1)
-      ]), bounds);
-      
+      ]), bounds, matrix);
+
+      this.updateCentroid(matrix, center, bounds);
       return center;
     }
   }
@@ -666,7 +681,7 @@ export class NodedShape extends Shape {
     let currentTurtle = new Turtle(null, null);
     const pieces = [];
     for (let node of this.nodes) {
-      const piece = node.update(env, t, bounds, currentTurtle);
+      const piece = node.updateProperties(env, t, bounds, currentTurtle, matrix);
       pieces.push(piece);
       currentTurtle = piece.turtle;
     }
@@ -729,8 +744,8 @@ export class Polygon extends NodedShape {
     this.connect();
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds);
     const positions = pieces.map(piece => piece.turtle.position);
@@ -758,10 +773,12 @@ export class Polygon extends NodedShape {
       this.element.setAttributeNS(null, 'points', coordinates);
       this.element.setAttributeNS(null, 'fill', color.toColor());
 
-      this.outlineMark.update(coordinates);
+      this.outlineMark.updateProperties(coordinates, matrix);
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      return positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      this.updateCentroid(matrix, centroid, bounds);
+      return centroid;
     }
   }
 }
@@ -812,8 +829,8 @@ export class Polyline extends NodedShape {
     this.connect();
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds);
     const positions = pieces.map(piece => piece.turtle.position);
@@ -825,10 +842,12 @@ export class Polyline extends NodedShape {
       this.applyStroke(env, t, this.element);
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
       this.element.setAttributeNS(null, 'points', coordinates);
-      this.outlineMark.update(coordinates);
+      this.outlineMark.updateProperties(coordinates, matrix);
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      return positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      this.updateCentroid(matrix, centroid, bounds);
+      return centroid;
     }
   }
 }
@@ -878,8 +897,8 @@ export class Line extends NodedShape {
     this.connect();
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds);
     const positions = pieces.map(piece => piece.turtle.position);
@@ -902,7 +921,9 @@ export class Line extends NodedShape {
       this.element.setAttributeNS(null, 'y2', bounds.span - positions[1].get(1).value);
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      return positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      this.updateCentroid(matrix, centroid, bounds);
+      return centroid;
     }
   }
 }
@@ -952,8 +973,8 @@ export class Ungon extends NodedShape {
     this.connect();
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds);
     const positions = pieces.map(piece => piece.turtle.position);
@@ -981,7 +1002,7 @@ export class Ungon extends NodedShape {
       }
 
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
-      this.outlineMark.update(coordinates);
+      this.outlineMark.updateProperties(coordinates, matrix);
 
       rounding = 1 - rounding;
       let pathCommands = [];
@@ -1017,7 +1038,9 @@ export class Ungon extends NodedShape {
       this.element.setAttributeNS(null, 'fill', color.toColor());
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      return positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      this.updateCentroid(matrix, centroid, bounds);
+      return centroid;
     }
   }
 }
@@ -1074,8 +1097,8 @@ export class Path extends NodedShape {
     this.assertProperty('color');
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds);
 
@@ -1107,7 +1130,9 @@ export class Path extends NodedShape {
       this.element.setAttributeNS(null, 'fill', color ? color.toColor() : 'none');
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
-      this.outlineMark.update(commandString);
+      this.outlineMark.updateProperties(commandString, matrix);
+
+      return null;
     }
   }
 }
@@ -1156,11 +1181,13 @@ export class Group extends Shape {
     this.connect();
   }
 
-  update(env, t, bounds) {
-    super.update(env, t, bounds);
-    const childCentroids = this.children.map(child => child.update(env, t, bounds));
+  updateProperties(env, t, bounds, matrix) {
+    matrix = this.transform(env, t, bounds, matrix);
+    const childCentroids = this.children.map(child => child.updateProperties(env, t, bounds, matrix));
     const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-    return this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
+    const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
+    this.updateCentroid(matrix, centroid, bounds);
+    return centroid;
   }
 
   updateTransforms(env, t, bounds, initialMatrix) {

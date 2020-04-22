@@ -9,6 +9,7 @@ import {
 
 import {
   HorizontalPanMark,
+  LineMark,
   Marker,
   RotationMark,
   VectorPanMark,
@@ -149,17 +150,16 @@ export class Translate extends Transform {
   start() {
     super.start();
     this.offsetMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks([this.offsetMark], []);
+    this.marker.addMarks([], [], [this.offsetMark]);
   }
 
-  update(env, t, bounds, matrix, centroid) {
+  updateProperties(env, t, bounds, matrix) {
     const offset = this.valueAt(env, 'offset', t);
     this.offsetMark.setExpression(offset);
-
-    this.offsetMark.update(centroid, bounds, matrix);
+    this.offsetMark.updateProperties(new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]), bounds, matrix);
     
     return {
-      matrix: Matrix.translate(offset.get(0).value, -offset.get(1).value),
+      matrix: matrix.multiplyMatrix(Matrix.translate(offset.get(0).value, offset.get(1).value)),
       commands: [`translate(${offset.get(0).value} ${-offset.get(1).value})`],
     };
   }
@@ -186,50 +186,41 @@ export class Rotate extends Transform {
 
   validate() {
     this.assertProperty('degrees');
+    this.assertProperty('pivot');
   }
 
   start() {
     super.start();
-
-    const foregroundMarks = [];
-    if (this.owns('pivot')) {
-      this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
-      foregroundMarks.push(this.pivotMark);
-    }
-
+    this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
     this.degreesMark = new RotationMark(this.parentEnvironment, this);
-    foregroundMarks.push(this.degreesMark);
-
-    this.marker.addMarks(foregroundMarks, []);
+    this.marker.addMarks([this.pivotMark, this.degreesMark], []);
   }
 
-  update(env, t, bounds, matrix, centroid) {
-    let pivot;
-    if (this.owns('pivot')) {
-      pivot = this.valueAt(env, 'pivot', t);
-      this.pivotMark.setExpression(pivot);
-    } else {
-      pivot = centroid;
-    }
+  updateProperties(env, t, bounds, matrix) {
+    let pivot = this.valueAt(env, 'pivot', t);
+    this.pivotMark.setExpression(pivot);
 
     const degrees = this.valueAt(env, 'degrees', t);
     this.degreesMark.setExpression(degrees, new ExpressionReal(0), pivot);
 
-    const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -(bounds.span - pivot.get(1).value));
-    const rotater = Matrix.rotate(-degrees.value);
-    const originToPivot = Matrix.translate(pivot.get(0).value, (bounds.span - pivot.get(1).value));
+    // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -(bounds.span - pivot.get(1).value));
+    // const rotater = Matrix.rotate(-degrees.value);
+    // const originToPivot = Matrix.translate(pivot.get(0).value, (bounds.span - pivot.get(1).value));
+    const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
+    const rotater = Matrix.rotate(degrees.value);
+    const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
 
     const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
     const applied = matrix.multiplyMatrix(composite);
 
     if (this.owns('pivot')) {
-      this.pivotMark.update(pivot, bounds, applied);
+      this.pivotMark.updateProperties(pivot, bounds, applied);
     }
     const towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
-    this.degreesMark.update(towardPosition, bounds, applied);
+    this.degreesMark.updateProperties(towardPosition, bounds, applied);
     
     return {
-      matrix: composite,
+      matrix: applied,
       commands: [`rotate(${-degrees.value} ${pivot.get(0).value} ${bounds.span - pivot.get(1).value})`],
     };
   }
@@ -269,7 +260,7 @@ export class Shear extends Transform {
     this.marker.addMarks(this.factorMarks, []);
   }
 
-  update(env, t, bounds, matrix) {
+  updateProperties(env, t, bounds, matrix) {
     const pivot = this.valueAt(env, 'pivot', t);
     this.pivotMark.setExpression(pivot);
 
@@ -277,12 +268,12 @@ export class Shear extends Transform {
     this.factorMarks[0].setExpression(factors.get(0));
     this.factorMarks[1].setExpression(factors.get(1));
 
-    this.factorMarks[0].update(pivot.add(new ExpressionVector([
+    this.factorMarks[0].updateProperties(pivot.add(new ExpressionVector([
       new ExpressionReal(1),
       new ExpressionReal(0),
     ])), bounds, matrix);
 
-    this.factorMarks[1].update(pivot.add(new ExpressionVector([
+    this.factorMarks[1].updateProperties(pivot.add(new ExpressionVector([
       new ExpressionReal(0),
       new ExpressionReal(1),
     ])), bounds, matrix);
@@ -317,6 +308,7 @@ export class Scale extends Transform {
 
   validate() {
     this.assertProperty('factors');
+    this.assertProperty('pivot');
   }
 
   start() {
@@ -327,50 +319,50 @@ export class Scale extends Transform {
       new VerticalPanMark(this.parentEnvironment, this),
     ];
 
-    const foregroundMarks = [...this.factorMarks];
-    if (this.owns('pivot')) {
-      this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
-      foregroundMarks.push(this.pivotMark);
-    }
+    this.lineMarks = [
+      new LineMark(),
+      new LineMark(),
+    ];
 
-    this.marker.addMarks(foregroundMarks, []);
+    this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+    this.marker.addMarks([...this.factorMarks, this.pivotMark], this.lineMarks);
   }
 
-  update(env, t, bounds, matrix, centroid) {
-    let pivot;
-    if (this.owns('pivot')) {
-      pivot = this.valueAt(env, 'pivot', t);
-      this.pivotMark.setExpression(pivot);
-    } else {
-      pivot = centroid;
-    }
+  updateProperties(env, t, bounds, matrix) {
+    let pivot = this.valueAt(env, 'pivot', t);
+    this.pivotMark.setExpression(pivot);
 
     const factors = this.valueAt(env, 'factors', t);
     this.factorMarks[0].setExpression(factors.get(0));
     this.factorMarks[1].setExpression(factors.get(1));
 
-    const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -(bounds.span - pivot.get(1).value));
+    const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
     const scaler = Matrix.scale(factors.get(0).value, factors.get(1).value);
-    const originToPivot = Matrix.translate(pivot.get(0).value, (bounds.span - pivot.get(1).value));
+    const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
 
     const composite = originToPivot.multiplyMatrix(scaler.multiplyMatrix(pivotToOrigin));
     const applied = matrix.multiplyMatrix(composite);
 
-    this.factorMarks[0].update(pivot.add(new ExpressionVector([
+    const positionX = new ExpressionVector([
       new ExpressionReal(1),
       new ExpressionReal(0),
-    ])), bounds, applied);
-    this.factorMarks[1].update(pivot.add(new ExpressionVector([
-      new ExpressionReal(0),
-      new ExpressionReal(1),
-    ])), bounds, applied);
+    ]).add(pivot);
 
-    if (this.owns('pivot')) {
-      this.pivotMark.update(pivot, bounds, applied);
-    }
+    const positionY = new ExpressionVector([
+      new ExpressionReal(0),
+      new ExpressionReal(1),
+    ]).add(pivot);
+
+    this.factorMarks[0].updateProperties(positionX, bounds, applied);
+    this.factorMarks[1].updateProperties(positionY, bounds, applied);
+
+    this.lineMarks[0].updateProperties(pivot, positionX, bounds, matrix);
+    this.lineMarks[1].updateProperties(pivot, positionY, bounds, matrix);
+
+    this.pivotMark.updateProperties(pivot, bounds, applied);
 
     return {
-      matrix: composite,
+      matrix: applied,
       commands: [
         `translate(${-pivot.get(0).value} ${(bounds.span - pivot.get(1).value)})`,
         `scale(${factors.get(0).value} ${factors.get(1).value})`,

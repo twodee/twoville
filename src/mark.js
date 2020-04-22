@@ -19,17 +19,20 @@ export class Marker {
   showMarks() {
     this.showBackgroundMarks();
     this.foregroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
   }
 
   hoverMarks() {
     this.backgroundMarkGroup.classList.add('hovered');
     this.foregroundMarkGroup.classList.add('hovered');
+    this.centeredForegroundMarkGroup.classList.add('hovered');
     this.showMarks();
   }
 
   unhoverMarks() {
     this.backgroundMarkGroup.classList.remove('hovered');
     this.foregroundMarkGroup.classList.remove('hovered');
+    this.centeredForegroundMarkGroup.classList.remove('hovered');
     this.hideMarks();
   }
 
@@ -40,11 +43,13 @@ export class Marker {
   hideMarks() {
     this.backgroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
     this.foregroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
   }
 
-  addMarks(foregroundMarks, backgroundMarks) {
+  addMarks(foregroundMarks, backgroundMarks, centeredForegroundMarks = []) {
     this.backgroundMarks = backgroundMarks;
     this.foregroundMarks = foregroundMarks;
+    this.centeredForegroundMarks = centeredForegroundMarks;
 
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.backgroundMarkGroup.classList.add('mark-group');
@@ -62,6 +67,14 @@ export class Marker {
       this.foregroundMarkGroup.appendChild(mark.element);
     }
 
+    this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.centeredForegroundMarkGroup.classList.add('mark-group');
+    for (let mark of this.centeredForegroundMarks) {
+      mark.element.classList.add('mark');
+      mark.element.classList.add(`tag-${this.shape.id}`);
+      this.centeredForegroundMarkGroup.appendChild(mark.element);
+    }
+
     this.hideMarks();
     this.registerListeners();
   }
@@ -73,6 +86,7 @@ export class Marker {
   select() {
     this.backgroundMarkGroup.classList.remove('hovered');
     this.foregroundMarkGroup.classList.remove('hovered');
+    this.centeredForegroundMarkGroup.classList.remove('hovered');
     this.showMarks();
   }
 
@@ -80,16 +94,13 @@ export class Marker {
     for (let mark of this.foregroundMarks) {
       mark.unscale(factor);
     }
-  }
-
-  updateForegroundTransforms(matrix) {
-    for (let mark of this.foregroundMarks) {
-      mark.updateTransform(matrix);
+    for (let mark of this.centeredForegroundMarks) {
+      mark.unscale(factor);
     }
   }
 
   registerListeners() {
-    for (let mark of [...this.backgroundMarks, ...this.foregroundMarks]) {
+    for (let mark of [...this.backgroundMarks, ...this.foregroundMarks, ...this.centeredForegroundMarks]) {
       mark.element.addEventListener('mouseenter', event => {
         if (event.buttons === 0) {
           this.shape.root.contextualizeCursor(event.toElement);
@@ -123,7 +134,7 @@ export class RectangleMark {
     this.element = document.createElementNS(svgNamespace, 'rect');
   }
 
-  update(position, size, bounds, rounding, matrix) {
+  updateProperties(position, size, bounds, rounding, matrix) {
     this.element.setAttributeNS(null, 'x', position.get(0).value);
     this.element.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
     this.element.setAttributeNS(null, 'width', size.get(0).value);
@@ -142,7 +153,7 @@ export class CircleMark {
     this.element = document.createElementNS(svgNamespace, 'circle');
   }
 
-  update(center, radius, bounds, matrix) {
+  updateProperties(center, radius, bounds, matrix) {
     this.element.setAttributeNS(null, 'cx', center.get(0).value);
     this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
     this.element.setAttributeNS(null, 'r', radius.value);
@@ -156,7 +167,7 @@ export class LineMark {
     this.element = document.createElementNS(svgNamespace, 'line');
   }
 
-  update(a, b, bounds, matrix) {
+  updateProperties(a, b, bounds, matrix) {
     this.element.setAttributeNS(null, 'x1', a.get(0).value);
     this.element.setAttributeNS(null, 'y1', bounds.span - a.get(1).value);
     this.element.setAttributeNS(null, 'x2', b.get(0).value);
@@ -171,7 +182,7 @@ export class PolygonMark {
     this.element = document.createElementNS(svgNamespace, 'polygon');
   }
 
-  update(coordinates, matrix) {
+  updateProperties(coordinates, matrix) {
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 }
@@ -183,7 +194,7 @@ export class PathMark {
     this.element = document.createElementNS(svgNamespace, 'path');
   }
 
-  update(commands, matrix) {
+  updateProperties(commands, matrix) {
     this.element.setAttributeNS(null, 'd', commands);
   }
 }
@@ -195,7 +206,7 @@ export class PolylineMark {
     this.element = document.createElementNS(svgNamespace, 'polyline');
   }
 
-  update(coordinates, matrix) {
+  updateProperties(coordinates, matrix) {
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 }
@@ -214,6 +225,7 @@ export class TweakableMark {
     this.circle = document.createElementNS(svgNamespace, 'circle');
     this.circle.classList.add('mark');
     this.circle.classList.add('filled-mark');
+    this.circle.classList.add(`tag-${this.shape.id}`);
     this.circle.setAttributeNS(null, 'cx', 0);
     this.circle.setAttributeNS(null, 'cy', 0);
     this.circle.setAttributeNS(null, 'r', 1);
@@ -271,23 +283,27 @@ export class TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class PanMark extends TweakableMark {
-  constructor(shape, component) {
+  constructor(shape, component, isRotated = true) {
     super(shape, component);
+    this.isRotated = isRotated;
   }
 
-  update(position, bounds, matrix) {
-    this.cx = position.get(0).value;
-    this.cy = bounds.span - position.get(1).value;
-  }
-
-  updateTransform(matrix) {
-    this.transformedPosition = matrix.multiplyVector([this.cx, this.cy]);
-    this.element.setAttributeNS(null, "transform", `translate(${this.transformedPosition[0]} ${this.transformedPosition[1]})`);
+  // This can get called from a shape's update.
+  updateProperties(position, bounds, matrix) {
+    this.centerX = position.get(0).value;
+    this.centerY = position.get(1).value;
+    this.transformedPosition = matrix.multiplyVector([this.centerX, this.centerY]);
+    this.transformedPosition[1] = bounds.span - this.transformedPosition[1];
+		const result = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
+		this.rotation = result.rotation * 180 / Math.PI;
   }
 
   unscale(factor) {
-    this.element.setAttributeNS(null, "transform", `scale(${6 / factor}) translate(${this.transformedPosition[0]} ${this.transformedPosition[1]})`);
-    this.element.setAttributeNS(null, "transform", `translate(${this.transformedPosition[0]} ${this.transformedPosition[1]}) scale(${6 / factor})`);
+    let commandString = `translate(${this.transformedPosition[0]} ${this.transformedPosition[1]}) scale(${6 / factor})`;
+    if (this.isRotated) {
+      commandString += ` rotate(${-this.rotation})`;
+    }
+    this.element.setAttributeNS(null, "transform", commandString);
   }
 }
 
@@ -303,6 +319,7 @@ export class VectorPanMark extends PanMark {
     this.horizontal.setAttributeNS(null, 'x2', 0.6);
     this.horizontal.setAttributeNS(null, 'y2', 0);
     this.horizontal.classList.add('cue');
+    this.horizontal.classList.add(`tag-${this.shape.id}`);
     this.element.appendChild(this.horizontal);
 
     this.vertical = document.createElementNS(svgNamespace, 'line');
@@ -311,6 +328,7 @@ export class VectorPanMark extends PanMark {
     this.vertical.setAttributeNS(null, 'y2', 0.6);
     this.vertical.setAttributeNS(null, 'x2', 0);
     this.vertical.classList.add('cue');
+    this.vertical.classList.add(`tag-${this.shape.id}`);
     this.element.appendChild(this.vertical);
   }
 
@@ -343,6 +361,7 @@ export class HorizontalPanMark extends PanMark {
     this.horizontal.setAttributeNS(null, 'x2', 0.6);
     this.horizontal.setAttributeNS(null, 'y2', 0);
     this.horizontal.classList.add('cue');
+    this.horizontal.classList.add(`tag-${this.shape.id}`);
     this.element.appendChild(this.horizontal);
   }
 
@@ -373,6 +392,7 @@ export class VerticalPanMark extends PanMark {
     this.vertical.setAttributeNS(null, 'y2', 0.6);
     this.vertical.setAttributeNS(null, 'x2', 0);
     this.vertical.classList.add('cue');
+    this.vertical.classList.add(`tag-${this.shape.id}`);
     this.element.appendChild(this.vertical);
   }
 
@@ -394,7 +414,7 @@ export class VerticalPanMark extends PanMark {
 
 export class RotationMark extends PanMark {
   constructor(shape, component) {
-    super(shape, component);
+    super(shape, component, false);
 
     this.arc = document.createElementNS(svgNamespace, 'path');
     const x = 0.25;
@@ -402,6 +422,8 @@ export class RotationMark extends PanMark {
     const r = 0.56;
     this.arc.setAttributeNS(null, 'd', `M${x},${y} A${r},${r} 0 1 0 ${-x},${y}`);
     this.arc.classList.add('cue');
+    this.arc.classList.add(`tag-${this.shape.id}`);
+
     this.element.appendChild(this.arc);
   }
 
@@ -669,3 +691,38 @@ function manipulateSource(oldExpression, newExpression) {
 
 // --------------------------------------------------------------------------- 
 
+function decompose_2d_matrix(mat) {
+  var a = mat[0];
+  var b = mat[1];
+  var c = mat[2];
+  var d = mat[3];
+  var e = mat[4];
+  var f = mat[5];
+
+  var delta = a * d - b * c;
+
+  let result = {
+    translation: [e, f],
+    rotation: 0,
+    scale: [0, 0],
+    skew: [0, 0],
+  };
+
+  // Apply the QR-like decomposition.
+  if (a != 0 || b != 0) {
+    var r = Math.sqrt(a * a + b * b);
+    result.rotation = b > 0 ? Math.acos(a / r) : -Math.acos(a / r);
+    result.scale = [r, delta / r];
+    result.skew = [Math.atan((a * c + b * d) / (r * r)), 0];
+  } else if (c != 0 || d != 0) {
+    var s = Math.sqrt(c * c + d * d);
+    result.rotation =
+      Math.PI / 2 - (d > 0 ? Math.acos(-c / s) : -Math.acos(c / s));
+    result.scale = [delta / s, s];
+    result.skew = [0, Math.atan((a * c + b * d) / (s * s))];
+  } else {
+    // a = b = c = d = 0
+  }
+
+  return result;
+}

@@ -221,6 +221,10 @@ export class RenderEnvironment extends Environment {
     this.foregroundMarkGroup.setAttributeNS(null, 'id', 'foreground-mark-group');
     this.svg.appendChild(this.foregroundMarkGroup);
 
+    this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'id', 'centered-foreground-mark-group');
+    this.svg.appendChild(this.centeredForegroundMarkGroup);
+
     this.markGroup = document.createElementNS(svgNamespace, 'g');
     this.markGroup.setAttributeNS(null, 'id', 'mark-group');
     this.markGroup.appendChild(pageOutline);
@@ -355,6 +359,8 @@ export class RenderEnvironment extends Environment {
   }
 
   castCursor(column, row) {
+    if (this.isTweaking) return;
+
     let selectedDrawable;
     for (let shape of this.shapes) {
       if (shape.castCursor(column, row)) {
