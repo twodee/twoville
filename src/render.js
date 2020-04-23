@@ -353,7 +353,9 @@ export class RenderEnvironment extends Environment {
   }
 
   reselect(oldSelectedShape) {
-    const shape = this.drawables.find(shape => shape.id == oldSelectedShape.id);
+    // Don't use drawables here, because the shape might be a child shape. And
+    // child shapes aren't in drawables.
+    const shape = this.shapes.find(shape => shape.id === oldSelectedShape.id);
     if (shape) {
       this.select(shape);
       if (oldSelectedShape.selectedMarker) {

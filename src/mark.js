@@ -303,13 +303,11 @@ export class PanMark extends TweakableMark {
   }
 
   updateProperties(position, bounds, matrix) {
-    const transformedPosition = matrix.multiplyVector([position.get(0).value, position.get(1).value]);
-    transformedPosition[1] = bounds.span - transformedPosition[1];
-
+    const transformedPosition = matrix.multiplyVector(position);
 		const factors = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
 		const rotation = factors.rotation * 180 / Math.PI;
 
-    this.commandString = `translate(${transformedPosition[0]} ${transformedPosition[1]})`;
+    this.commandString = `translate(${transformedPosition.get(0).value} ${bounds.span - transformedPosition.get(1).value})`;
     if (this.isRotated) {
       this.commandString += ` rotate(${-rotation})`;
     }

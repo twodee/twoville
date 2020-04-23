@@ -164,9 +164,9 @@ export class Shape extends TimelinedEnvironment {
   }
   
   updateCentroid(matrix, centroid, bounds) {
-    const p = matrix.multiplyVector([centroid.get(0).value, centroid.get(1).value]);
+    const p = matrix.multiplyVector(centroid);
     // Have to flip Y because we've already countered the axis.
-    this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${p[0]} ${-p[1]})`);
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${p.get(0).value} ${-p.get(1).value})`);
   }
 
   updateProperties(env, t, bounds, matrix) {

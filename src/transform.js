@@ -28,10 +28,10 @@ export class Matrix {
   }
 
   multiplyVector(v) {
-    return [
-      this.elements[0] * v[0] + this.elements[1] * v[1] + this.elements[2],
-      this.elements[3] * v[0] + this.elements[4] * v[1] + this.elements[5],
-    ];
+    return new ExpressionVector([
+      new ExpressionReal(this.elements[0] * v.get(0).value + this.elements[1] * v.get(1).value + this.elements[2]),
+      new ExpressionReal(this.elements[3] * v.get(0).value + this.elements[4] * v.get(1).value + this.elements[5]),
+    ]);
   }
 
   multiplyMatrix(m) {
@@ -356,29 +356,21 @@ export class Scale extends Transform {
     this.factorMarks[0].updateProperties(positionX, bounds, applied);
     this.factorMarks[1].updateProperties(positionY, bounds, applied);
 
-    const transformedPositionX = applied.multiplyVector([positionX.get(0).value, positionX.get(1).value]);
-    const transformedPositionY = applied.multiplyVector([positionY.get(0).value, positionY.get(1).value]);
+    const transformedPivot = applied.multiplyVector(pivot);
+    const transformedPositionX = applied.multiplyVector(positionX);
+    const transformedPositionY = applied.multiplyVector(positionY);
 
-    this.lineMarks[0].updateProperties(pivot, new ExpressionVector([
-      new ExpressionReal(transformedPositionX[0]),
-      new ExpressionReal(transformedPositionX[1]),
-    ]), bounds, matrix);
-
-    this.lineMarks[1].updateProperties(pivot, new ExpressionVector([
-      new ExpressionReal(transformedPositionY[0]),
-      new ExpressionReal(transformedPositionY[1]),
-    ]), bounds, matrix);
-
-    // this.lineMarks[1].updateProperties(pivot, positionY, bounds, matrix);
+    this.lineMarks[0].updateProperties(transformedPivot, transformedPositionX, bounds, matrix);
+    this.lineMarks[1].updateProperties(transformedPivot, transformedPositionY, bounds, matrix);
 
     this.pivotMark.updateProperties(pivot, bounds, applied);
 
     return {
       matrix: applied,
       commands: [
-        `translate(${-pivot.get(0).value} ${(bounds.span - pivot.get(1).value)})`,
+        `translate(${pivot.get(0).value} ${(bounds.span - pivot.get(1).value)})`,
         `scale(${factors.get(0).value} ${factors.get(1).value})`,
-        `translate(${pivot.get(0).value} ${-(bounds.span - pivot.get(1).value)})`,
+        `translate(${-pivot.get(0).value} ${-(bounds.span - pivot.get(1).value)})`,
       ],
     };
   }
