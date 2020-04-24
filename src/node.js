@@ -541,7 +541,12 @@ export class ArcNode extends Node {
       this.positionMark = new VectorPanMark(this.parentEnvironment, this);
     }
 
-    this.marker.addMarks([this.centerMark, this.positionMark], []);
+    this.lineMarks = [
+      new LineMark(),
+      new LineMark(),
+    ];
+
+    this.marker.addMarks([this.centerMark, this.positionMark], this.lineMarks);
   }
 
   updateProperties(env, t, bounds, fromTurtle, matrix) {
@@ -563,6 +568,15 @@ export class ArcNode extends Node {
       let halfway = fromTurtle.position.add(position).multiply(new ExpressionReal(0.5));
       let normal = diff.rotate90().normalize();
       center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
+
+      const movementAngle = Math.atan2(normal.get(1).value, normal.get(0).value) * 180 / Math.PI;
+      const pivotToOrigin = Matrix.translate(-center.get(0).value, -center.get(1).value);
+      const rotater = Matrix.rotate(movementAngle);
+      const originToPivot = Matrix.translate(center.get(0).value, center.get(1).value);
+      const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
+      const applied = matrix.multiplyMatrix(composite);
+
+      this.centerMark.updateProperties(center, bounds, applied);
     }
 
     let toFrom = fromTurtle.position.subtract(center);
@@ -591,8 +605,10 @@ export class ArcNode extends Node {
       this.positionMark.updateProperties(to, bounds, matrix);
     } else {
       this.centerMark.setExpression(degrees, fromTurtle.position, center, to);
-      this.centerMark.updateProperties(center, bounds, matrix);
     }
+
+    this.lineMarks[0].updateProperties(center, fromTurtle.position, bounds, matrix);
+    this.lineMarks[1].updateProperties(center, to, bounds, matrix);
 
     return {
       pathCommand,

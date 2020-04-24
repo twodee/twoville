@@ -230,6 +230,8 @@ function startInterpreting() {
     } else if (event.data.type === 'environment') {
       stopInterpreting();
       postInterpret(event.data.payload);
+    } else if (event.data.type === 'error') {
+      stopInterpreting();
     }
   });
 

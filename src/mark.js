@@ -316,14 +316,8 @@ export class PanMark extends TweakableMark {
   unscale(factor) {
     this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${6 / factor})`);
   }
-}
 
-// --------------------------------------------------------------------------- 
-
-export class VectorPanMark extends PanMark {
-  constructor(shape, component) {
-    super(shape, component);
-
+  addHorizontal() {
     this.horizontal = document.createElementNS(svgNamespace, 'line');
     this.horizontal.setAttributeNS(null, 'x1', -0.6);
     this.horizontal.setAttributeNS(null, 'y1', 0);
@@ -332,7 +326,9 @@ export class VectorPanMark extends PanMark {
     this.horizontal.classList.add('cue');
     this.horizontal.classList.add(`tag-${this.shape.id}`);
     this.element.appendChild(this.horizontal);
+  }
 
+  addVertical() {
     this.vertical = document.createElementNS(svgNamespace, 'line');
     this.vertical.setAttributeNS(null, 'y1', -0.6);
     this.vertical.setAttributeNS(null, 'x1', 0);
@@ -341,6 +337,27 @@ export class VectorPanMark extends PanMark {
     this.vertical.classList.add('cue');
     this.vertical.classList.add(`tag-${this.shape.id}`);
     this.element.appendChild(this.vertical);
+  }
+
+  addArc() {
+    this.arc = document.createElementNS(svgNamespace, 'path');
+    const x = 0.25;
+    const y = 0.5;
+    const r = 0.56;
+    this.arc.setAttributeNS(null, 'd', `M${x},${y} A${r},${r} 0 1 0 ${-x},${y}`);
+    this.arc.classList.add('cue');
+    this.arc.classList.add(`tag-${this.shape.id}`);
+    this.element.appendChild(this.arc);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class VectorPanMark extends PanMark {
+  constructor(shape, component) {
+    super(shape, component);
+    this.addHorizontal();
+    this.addVertical();
   }
 
   getNewSource(delta, isShiftModified) {
@@ -365,15 +382,7 @@ export class HorizontalPanMark extends PanMark {
   constructor(shape, component, multiplier = 1) {
     super(shape, component);
     this.multiplier = multiplier;
-
-    this.horizontal = document.createElementNS(svgNamespace, 'line');
-    this.horizontal.setAttributeNS(null, 'x1', -0.6);
-    this.horizontal.setAttributeNS(null, 'y1', 0);
-    this.horizontal.setAttributeNS(null, 'x2', 0.6);
-    this.horizontal.setAttributeNS(null, 'y2', 0);
-    this.horizontal.classList.add('cue');
-    this.horizontal.classList.add(`tag-${this.shape.id}`);
-    this.element.appendChild(this.horizontal);
+    this.addHorizontal();
   }
 
   getNewSource(delta, isShiftModified) {
@@ -396,15 +405,7 @@ export class VerticalPanMark extends PanMark {
   constructor(shape, component, multiplier = 1) {
     super(shape, component);
     this.multiplier = multiplier;
-
-    this.vertical = document.createElementNS(svgNamespace, 'line');
-    this.vertical.setAttributeNS(null, 'y1', -0.6);
-    this.vertical.setAttributeNS(null, 'x1', 0);
-    this.vertical.setAttributeNS(null, 'y2', 0.6);
-    this.vertical.setAttributeNS(null, 'x2', 0);
-    this.vertical.classList.add('cue');
-    this.vertical.classList.add(`tag-${this.shape.id}`);
-    this.element.appendChild(this.vertical);
+    this.addVertical();
   }
 
   getNewSource(delta, isShiftModified) {
@@ -426,16 +427,7 @@ export class VerticalPanMark extends PanMark {
 export class RotationMark extends PanMark {
   constructor(shape, component) {
     super(shape, component, false);
-
-    this.arc = document.createElementNS(svgNamespace, 'path');
-    const x = 0.25;
-    const y = 0.5;
-    const r = 0.56;
-    this.arc.setAttributeNS(null, 'd', `M${x},${y} A${r},${r} 0 1 0 ${-x},${y}`);
-    this.arc.classList.add('cue');
-    this.arc.classList.add(`tag-${this.shape.id}`);
-
-    this.element.appendChild(this.arc);
+    this.addArc();
   }
 
   setExpression(degreesExpression, headingExpression, pivotExpression) {
@@ -473,15 +465,7 @@ export class RotationMark extends PanMark {
 export class DistanceMark extends PanMark {
   constructor(shape, component) {
     super(shape, component);
-
-    this.horizontal = document.createElementNS(svgNamespace, 'line');
-    this.horizontal.setAttributeNS(null, 'x1', -0.6);
-    this.horizontal.setAttributeNS(null, 'y1', 0);
-    this.horizontal.setAttributeNS(null, 'x2', 0.6);
-    this.horizontal.setAttributeNS(null, 'y2', 0);
-    this.horizontal.classList.add('cue');
-    this.horizontal.classList.add(`tag-${this.shape.id}`);
-    this.element.appendChild(this.horizontal);
+    this.addHorizontal();
   }
 
   setExpression(distanceExpression, fromExpression, headingExpression) {
@@ -522,6 +506,7 @@ export class DistanceMark extends PanMark {
 export class WedgeDegreesMark extends PanMark {
   constructor(shape, component) {
     super(shape, component);
+    this.addArc();
   }
 
   setExpression(degrees, fromPosition, centerPosition) {
@@ -575,6 +560,7 @@ export class WedgeDegreesMark extends PanMark {
 export class BumpDegreesMark extends PanMark {
   constructor(shape, component) {
     super(shape, component);
+    this.addHorizontal();
   }
 
   setExpression(degrees, fromPosition, centerPosition, toPosition) {
