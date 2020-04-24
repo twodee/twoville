@@ -541,7 +541,7 @@ export class Rectangle extends Shape {
 
       this.outlineMark.updateProperties(corner, size, bounds, rounding, matrix);
       if (center) {
-        this.positionMark.updateProperties(center, bounds);
+        this.positionMark.updateProperties(center, bounds, matrix);
         this.widthMark.updateProperties(new ExpressionVector([
           new ExpressionReal(center.get(0).value + size.get(0).value * 0.5),
           center.get(1)
@@ -685,7 +685,7 @@ export class NodedShape extends Shape {
     }
   }
 
-  traverseNodes(env, t, bounds) {
+  traverseNodes(env, t, bounds, matrix) {
     let currentTurtle = new Turtle(null, null);
     const pieces = [];
     for (let node of this.nodes) {
@@ -755,7 +755,7 @@ export class Polygon extends NodedShape {
   updateProperties(env, t, bounds, matrix) {
     matrix = this.transform(env, t, bounds, matrix);
 
-    const pieces = this.traverseNodes(env, t, bounds);
+    const pieces = this.traverseNodes(env, t, bounds, matrix);
     const positions = pieces.map(piece => piece.turtle.position);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
@@ -840,7 +840,7 @@ export class Polyline extends NodedShape {
   updateProperties(env, t, bounds, matrix) {
     matrix = this.transform(env, t, bounds, matrix);
 
-    const pieces = this.traverseNodes(env, t, bounds);
+    const pieces = this.traverseNodes(env, t, bounds, matrix);
     const positions = pieces.map(piece => piece.turtle.position);
 
     if (positions.some(position => !position)) {
@@ -908,7 +908,7 @@ export class Line extends NodedShape {
   updateProperties(env, t, bounds, matrix) {
     matrix = this.transform(env, t, bounds, matrix);
 
-    const pieces = this.traverseNodes(env, t, bounds);
+    const pieces = this.traverseNodes(env, t, bounds, matrix);
     const positions = pieces.map(piece => piece.turtle.position);
 
     if (positions.length != 2) {
@@ -984,7 +984,7 @@ export class Ungon extends NodedShape {
   updateProperties(env, t, bounds, matrix) {
     matrix = this.transform(env, t, bounds, matrix);
 
-    const pieces = this.traverseNodes(env, t, bounds);
+    const pieces = this.traverseNodes(env, t, bounds, matrix);
     const positions = pieces.map(piece => piece.turtle.position);
 
     if (positions[0].distance(positions[positions.length - 1]) < 1e-3) {
@@ -1108,7 +1108,7 @@ export class Path extends NodedShape {
   updateProperties(env, t, bounds, matrix) {
     matrix = this.transform(env, t, bounds, matrix);
 
-    const pieces = this.traverseNodes(env, t, bounds);
+    const pieces = this.traverseNodes(env, t, bounds, matrix);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
     const isVisible = opacity > 0.000001;

@@ -148,7 +148,7 @@ export class RectangleMark {
     this.element = document.createElementNS(svgNamespace, 'rect');
   }
 
-  updateProperties(position, size, bounds, rounding, matrix) {
+  updateProperties(position, size, bounds, rounding) {
     this.element.setAttributeNS(null, 'x', position.get(0).value);
     this.element.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
     this.element.setAttributeNS(null, 'width', size.get(0).value);
@@ -167,7 +167,7 @@ export class CircleMark {
     this.element = document.createElementNS(svgNamespace, 'circle');
   }
 
-  updateProperties(center, radius, bounds, matrix) {
+  updateProperties(center, radius, bounds) {
     this.element.setAttributeNS(null, 'cx', center.get(0).value);
     this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
     this.element.setAttributeNS(null, 'r', radius.value);
@@ -181,7 +181,7 @@ export class LineMark {
     this.element = document.createElementNS(svgNamespace, 'line');
   }
 
-  updateProperties(a, b, bounds, matrix) {
+  updateProperties(a, b, bounds) {
     this.element.setAttributeNS(null, 'x1', a.get(0).value);
     this.element.setAttributeNS(null, 'y1', bounds.span - a.get(1).value);
     this.element.setAttributeNS(null, 'x2', b.get(0).value);
@@ -196,7 +196,7 @@ export class PolygonMark {
     this.element = document.createElementNS(svgNamespace, 'polygon');
   }
 
-  updateProperties(coordinates, matrix) {
+  updateProperties(coordinates) {
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 }
@@ -208,7 +208,7 @@ export class PathMark {
     this.element = document.createElementNS(svgNamespace, 'path');
   }
 
-  updateProperties(commands, matrix) {
+  updateProperties(commands) {
     this.element.setAttributeNS(null, 'd', commands);
   }
 }
@@ -220,7 +220,7 @@ export class PolylineMark {
     this.element = document.createElementNS(svgNamespace, 'polyline');
   }
 
-  updateProperties(coordinates, matrix) {
+  updateProperties(coordinates) {
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 }
@@ -473,6 +473,15 @@ export class RotationMark extends PanMark {
 export class DistanceMark extends PanMark {
   constructor(shape, component) {
     super(shape, component);
+
+    this.horizontal = document.createElementNS(svgNamespace, 'line');
+    this.horizontal.setAttributeNS(null, 'x1', -0.6);
+    this.horizontal.setAttributeNS(null, 'y1', 0);
+    this.horizontal.setAttributeNS(null, 'x2', 0.6);
+    this.horizontal.setAttributeNS(null, 'y2', 0);
+    this.horizontal.classList.add('cue');
+    this.horizontal.classList.add(`tag-${this.shape.id}`);
+    this.element.appendChild(this.horizontal);
   }
 
   setExpression(distanceExpression, fromExpression, headingExpression) {

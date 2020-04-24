@@ -11,6 +11,7 @@ import {
   HorizontalPanMark,
   LineMark,
   Marker,
+  PathMark,
   RotationMark,
   VectorPanMark,
   VerticalPanMark,
@@ -193,7 +194,8 @@ export class Rotate extends Transform {
     super.start();
     this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
     this.degreesMark = new RotationMark(this.parentEnvironment, this);
-    this.marker.addMarks([this.pivotMark, this.degreesMark], []);
+    this.wedgeMark = new PathMark();
+    this.marker.addMarks([this.pivotMark, this.degreesMark], [], [], [this.wedgeMark]);
   }
 
   updateProperties(env, t, bounds, matrix) {
@@ -203,9 +205,6 @@ export class Rotate extends Transform {
     const degrees = this.valueAt(env, 'degrees', t);
     this.degreesMark.setExpression(degrees, new ExpressionReal(0), pivot);
 
-    // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -(bounds.span - pivot.get(1).value));
-    // const rotater = Matrix.rotate(-degrees.value);
-    // const originToPivot = Matrix.translate(pivot.get(0).value, (bounds.span - pivot.get(1).value));
     const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
     const rotater = Matrix.rotate(degrees.value);
     const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
@@ -213,11 +212,23 @@ export class Rotate extends Transform {
     const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
     const applied = matrix.multiplyMatrix(composite);
 
-    if (this.owns('pivot')) {
-      this.pivotMark.updateProperties(pivot, bounds, applied);
-    }
-    const towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
-    this.degreesMark.updateProperties(towardPosition, bounds, applied);
+    this.pivotMark.updateProperties(pivot, bounds, applied);
+    const transformedPivot = applied.multiplyVector(pivot);
+
+    const towardPosition = rotater.multiplyVector(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)])).add(transformedPivot);
+    this.degreesMark.updateProperties(towardPosition, bounds, Matrix.identity());
+
+    // const transformedA = pivot.add(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]));
+    // const transformedPosition = composite.multiplyVector(towardPosition);
+
+    const isLarge = degrees.value > 180 ? 1 : 0;
+    const commands = [
+      `M${transformedPivot.get(0).value},${bounds.span - transformedPivot.get(1).value}`,
+      `l2,0`,
+      `A 2,2 0 ${isLarge} 0 ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
+      'z',
+    ];
+    this.wedgeMark.updateProperties(commands.join(' '));
     
     return {
       matrix: applied,

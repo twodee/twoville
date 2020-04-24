@@ -92,7 +92,7 @@ var TwovilleHighlightRules = function() {
       },
       {
         token: "constant.numeric",
-        regex: /-?\d+(?:\.\d+)?/,
+        regex: /-?\d+(?:\.\d*)?/,
         next: "start"
       }
     ],
