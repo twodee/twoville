@@ -159,17 +159,35 @@ export class TurtleNode extends Node {
 
       this.positionMark.updateProperties(position, bounds, applied);
 
-      const towardVector = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(heading.value);
+      const offset = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]);
+      const towardVector = offset.rotate(heading.value);
       const towardPosition = towardVector.add(position);
       this.headingMark.updateProperties(towardPosition, bounds, matrix);
 
       const transformedPivot = matrix.multiplyVector(position);
+      const transformedA = matrix.multiplyVector(position.add(offset));
+      const diff = transformedA.subtract(transformedPivot).normalize().multiply(new ExpressionReal(2));
+      const rdiff = diff.rotate(heading.value);
+
       const transformedToward = transformedPivot.add(towardVector);
-      const isLarge = heading.value > 180 ? 1 : 0;
+
+      const b = transformedPivot.add(diff);
+      const c = transformedPivot.add(rdiff);
+
+      let isLarge;
+      let sweep;
+      if (heading.value < 0) {
+        isLarge = heading.value < -180 ? 1 : 0;
+        sweep = 1;
+      } else {
+        isLarge = heading.value > 180 ? 1 : 0;
+        sweep = 0;
+      }
+
       const commands = [
         `M${transformedPivot.get(0).value},${bounds.span - transformedPivot.get(1).value}`,
-        `l2,0`,
-        `A 2,2 0 ${isLarge} 0 ${transformedToward.get(0).value},${bounds.span - transformedToward.get(1).value}`,
+        `L${b.get(0).value},${bounds.span - b.get(1).value}`,
+        `A 2,2 0 ${isLarge} ${sweep} ${c.get(0).value},${bounds.span - c.get(1).value}`,
       ];
       this.wedgeMark.updateProperties(commands.join(' '));
 

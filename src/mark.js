@@ -444,9 +444,27 @@ export class RotationMark extends PanMark {
 
     const newRadians = Math.atan2(pivotToMouse.get(0).value, -pivotToMouse.get(1).value);
     let newDegrees = newRadians * 180 / Math.PI - 90 - this.headingExpression.value;
-    if (newDegrees < 0) {
-      newDegrees = 360 + newDegrees;
+
+    // We were negative and we want to stay that way. 
+    if (this.untweakedExpression.value < 0) {
+      while (newDegrees > 0) {
+        newDegrees -= 360;
+      }
+      while (newDegrees < -360) {
+        newDegrees += 360;
+      }
     }
+
+    // We were positive and we want to stay that way.
+    else {
+      while (newDegrees < 0) {
+        newDegrees += 360;
+      }
+      while (newDegrees >= 360) {
+        newDegrees -= 360;
+      }
+    }
+
     newDegrees = parseFloat(newDegrees.toShortFloat());
 
     if (isShiftModified) {
