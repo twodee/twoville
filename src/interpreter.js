@@ -26,6 +26,7 @@ import {
   ExpressionCircle,
   ExpressionCosine,
   ExpressionCutout,
+  ExpressionDebug,
   ExpressionGroup,
   ExpressionHypotenuse,
   ExpressionInt,
@@ -125,6 +126,7 @@ export class InterpreterEnvironment extends Environment {
       cutout: new FunctionDefinition('cutout', [], new ExpressionCutout()),
       circle: new FunctionDefinition('circle', [], new ExpressionCircle()),
       print: new FunctionDefinition('print', ['message'], new ExpressionPrint()),
+      debug: new FunctionDefinition('debug', ['expression'], new ExpressionDebug()),
       random: new FunctionDefinition('random', ['min', 'max'], new ExpressionRandom()),
       seed: new FunctionDefinition('seed', ['value'], new ExpressionSeed()),
       sin: new FunctionDefinition('sin', ['degrees'], new ExpressionSine()),
@@ -140,9 +142,10 @@ export class InterpreterEnvironment extends Environment {
     });
   }
 
-  static create(log) {
+  static create(source, log) {
     const env = new InterpreterEnvironment();
     env.initialize(log);
+    env.source = source;
     return env;
   }
 
@@ -162,13 +165,14 @@ export function interpret(source, log) {
   try {
     let tokens = lex(source);
     let ast = parse(tokens);
-    const env = InterpreterEnvironment.create(log);
+    const env = InterpreterEnvironment.create(source, log);
     ast.evaluate(env);
     return env;
   } catch (e) {
     if (e instanceof MessagedException) {
       log(e.userMessage);
     } else {
+      console.error(e);
       log(e);
     }
     return null;

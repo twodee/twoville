@@ -1819,6 +1819,27 @@ export class ExpressionPrint extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionDebug extends ExpressionFunction {
+  evaluate(env, fromTime, toTime, callExpression) {
+    const where = callExpression.actuals[0].where;
+
+    const lines = env.root.source.split('\n');
+    const pieces = [];
+    for (let i = where.lineStart; i <= where.lineEnd; ++i) {
+      const startIndex = i === where.lineStart ? where.columnStart : 0;
+      const endIndex = i === where.lineEnd ? where.columnEnd + 1 : lines[i].length;
+      pieces.push(lines[i].substring(startIndex, endIndex));
+    }
+
+    let message = `${pieces.join("\n")}: ${env.get('expression').toPretty()}`;
+    env.root.log(message);
+
+    return null;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionSeed extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
     let seed = env.get('value').value;
