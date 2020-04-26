@@ -1,5 +1,7 @@
 import {
   SourceLocation,
+  classifyArc,
+  standardizeDegrees,
 } from './common.js';
 
 import {
@@ -221,20 +223,11 @@ export class Rotate extends Transform {
     // const transformedA = pivot.add(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]));
     // const transformedPosition = composite.multiplyVector(towardPosition);
 
-    let isLarge;
-    let sweep;
-    if (degrees.value < 0) {
-      isLarge = degrees.value < -180 ? 1 : 0;
-      sweep = 1;
-    } else {
-      isLarge = degrees.value > 180 ? 1 : 0;
-      sweep = 0;
-    }
-
+    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
     const commands = [
       `M${transformedPivot.get(0).value},${bounds.span - transformedPivot.get(1).value}`,
       `l2,0`,
-      `A 2,2 0 ${isLarge} ${sweep} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
+      `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
       'z',
     ];
     this.wedgeMark.updateProperties(commands.join(' '));

@@ -110,6 +110,10 @@ export class Shape extends TimelinedEnvironment {
       return Path.reify(parentEnvironment, pod);
     } else if (pod.type === 'group') {
       return Group.reify(parentEnvironment, pod);
+    } else if (pod.type === 'mask') {
+      return Mask.reify(parentEnvironment, pod);
+    } else if (pod.type === 'cutout') {
+      return Cutout.reify(parentEnvironment, pod);
     } else {
       throw new Error(`unimplemented shape: ${pod.type}`);
     }
@@ -176,30 +180,32 @@ export class Shape extends TimelinedEnvironment {
     // Step 3. Fix marks that depend on centroid.
   }
 
-  connect() {
-    // TODO assert that parent is a group
+  connectToParent() {
     if (this.owns('parent')) {
-      this.parentElement = this.get('parent').element;
-      this.get('parent').children.push(this);
-      this.isDrawable = false;
-    } else if (this.owns('template') && this.get('template').value) {
-      this.parentElement = this.root.defines;
+      this.get('parent').addChild(this);
       this.isDrawable = false;
     } else {
-      this.parentElement = this.root.mainGroup;
       this.isDrawable = true;
     }
 
+    let elementToConnect;
     if (this.owns('mask')) {
       const mask = this.get('mask');
-      const maskParent = document.createElementNS(svgNamespace, 'g');
-      maskParent.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
-      maskParent.appendChild(this.element);
-      this.parentElement.appendChild(maskParent);
+      const groupElement = document.createElementNS(svgNamespace, 'g');
+      groupElement.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
+      groupElement.appendChild(this.element);
+      elementToConnect = groupElement;
     } else {
-      this.parentElement.appendChild(this.element);
+      elementToConnect = this.element;
     }
 
+    if (!this.owns('parent')) {
+      this.root.mainGroup.appendChild(elementToConnect);
+    }
+  }
+
+  connect() {
+    this.connectToParent();
     this.initializeMarks();
   }
 
@@ -1180,13 +1186,21 @@ export class Group extends Shape {
     return shape;
   }
 
+  addChild(child) {
+    this.element.appendChild(child.element);
+    this.children.push(child);
+  }
+
   start() {
     super.start();
-    this.element = document.createElementNS(svgNamespace, 'g');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-
+    this.createHierarchy();
     this.markers[0].addMarks([], []);
     this.connect();
+  }
+
+  createHierarchy() {
+    this.element = document.createElementNS(svgNamespace, 'g');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
   }
 
   updateProperties(env, t, bounds, matrix) {
@@ -1205,4 +1219,74 @@ export class Group extends Shape {
     }
   }
 }
+
+// --------------------------------------------------------------------------- 
+
+export class Mask extends Group {
+  static type = 'mask';
+  static article = 'a';
+  static timedIds = [];
+
+  static create(parentEnvironment, where) {
+    const shape = new Mask();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Mask();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  createHierarchy() {
+    this.element = document.createElementNS(svgNamespace, 'g');
+
+    this.maskElement = document.createElementNS(svgNamespace, 'mask');
+    this.maskElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.maskElement.appendChild(this.element);
+  }
+
+  connectToParent() {
+    this.isDrawable = true;
+    this.root.defines.appendChild(this.maskElement);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Cutout extends Mask {
+  static type = 'cutout';
+  static article = 'a';
+  static timedIds = [];
+
+  static create(parentEnvironment, where) {
+    const shape = new Cutout();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Cutout();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  start() {
+    super.start();
+    this.rectangle = document.createElementNS(svgNamespace, 'rect');
+    this.rectangle.setAttributeNS(null, 'fill', 'white');
+    this.rectangle.setAttributeNS(null, 'x', 0);
+    this.rectangle.setAttributeNS(null, 'y', 0);
+    this.element.appendChild(this.rectangle);
+  }
+
+  updateProperties(env, t, bounds, matrix) {
+    super.updateProperties(env, t, bounds, matrix);
+    this.rectangle.setAttributeNS(null, 'width', env.root.fitBounds.width);
+    this.rectangle.setAttributeNS(null, 'height', env.root.fitBounds.height);
+  }
+}
+
+// --------------------------------------------------------------------------- 
 

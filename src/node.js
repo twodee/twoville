@@ -1,6 +1,8 @@
 import {
   SourceLocation,
   Turtle,
+  classifyArc,
+  standardizeDegrees,
 } from './common.js';
 
 import {
@@ -174,20 +176,11 @@ export class TurtleNode extends Node {
       const b = transformedPivot.add(diff);
       const c = transformedPivot.add(rdiff);
 
-      let isLarge;
-      let sweep;
-      if (heading.value < 0) {
-        isLarge = heading.value < -180 ? 1 : 0;
-        sweep = 1;
-      } else {
-        isLarge = heading.value > 180 ? 1 : 0;
-        sweep = 0;
-      }
-
+      const {isLarge, isClockwise} = classifyArc(standardizeDegrees(heading.value));
       const commands = [
         `M${transformedPivot.get(0).value},${bounds.span - transformedPivot.get(1).value}`,
         `L${b.get(0).value},${bounds.span - b.get(1).value}`,
-        `A 2,2 0 ${isLarge} ${sweep} ${c.get(0).value},${bounds.span - c.get(1).value}`,
+        `A 2,2 0 ${isLarge} ${isClockwise} ${c.get(0).value},${bounds.span - c.get(1).value}`,
       ];
       this.wedgeMark.updateProperties(commands.join(' '));
 
@@ -311,11 +304,11 @@ export class TurnNode extends Node {
       const transformedToward = transformedPivot.add(towardVector);
       const transformedB = transformedPivot.add(b);
 
-      const isLarge = degrees.value > 180 ? 1 : 0;
+      const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
       const commands = [
         `M${transformedPivot.get(0).value},${bounds.span - transformedPivot.get(1).value}`,
         `L${transformedToward.get(0).value},${bounds.span - transformedToward.get(1).value}`,
-        `A 2,2 0 ${isLarge} 0 ${transformedB.get(0).value},${bounds.span - transformedB.get(1).value}`,
+        `A 2,2 0 ${isLarge} ${isClockwise} ${transformedB.get(0).value},${bounds.span - transformedB.get(1).value}`,
       ];
 
       this.wedgeMark.updateProperties(commands.join(' '));
@@ -606,17 +599,17 @@ export class ArcNode extends Node {
 
     let radius = toFrom.magnitude;
     let large;
-    let sweep;
+    let isClockwise;
 
     if (degrees.value >= 0) {
       large = degrees.value >= 180 ? 1 : 0;
-      sweep = 0;
+      isClockwise = 0;
     } else {
       large = degrees.value <= -180 ? 1 : 0;
-      sweep = 1;
+      isClockwise = 1;
     }
 
-    const pathCommand = `A${radius},${radius} 0 ${large} ${sweep} ${to.get(0).value},${bounds.span - to.get(1).value}`;
+    const pathCommand = `A${radius},${radius} 0 ${large} ${isClockwise} ${to.get(0).value},${bounds.span - to.get(1).value}`;
 
     if (this.isWedge) {
       this.centerMark.updateProperties(center, bounds, matrix);

@@ -14,17 +14,17 @@ import {
 
 import {
   Circle,
+  Cutout,
   Group,
   Line,
+  Mask,
   Path,
   Polygon,
   Polyline,
   Rectangle,
   Text,
   Ungon,
-  // TwovilleCutout,
   // TwovilleMarker,
-  // TwovilleMask,
 } from './shape.js';
 
 import {
@@ -1990,7 +1990,7 @@ export class ExpressionMarker extends ExpressionFunction {
 
 export class ExpressionMask extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleMask(env, callExpression);
+    return Mask.create(env, callExpression.where);
   }
 }
 
@@ -1998,7 +1998,7 @@ export class ExpressionMask extends ExpressionFunction {
 
 export class ExpressionCutout extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleCutout(env, callExpression);
+    return Cutout.create(env, callExpression.where);
   }
 }
 

@@ -341,10 +341,12 @@ export class PanMark extends TweakableMark {
 
   addArc() {
     this.arc = document.createElementNS(svgNamespace, 'path');
-    const x = 0.25;
-    const y = 0.5;
-    const r = 0.56;
-    this.arc.setAttributeNS(null, 'd', `M${x},${y} A${r},${r} 0 1 0 ${-x},${y}`);
+    const degrees = 60;
+    const radians = degrees * Math.PI / 180;
+    const radius = 0.5;
+    const x = radius * Math.cos(radians);
+    const y = radius * Math.sin(radians);
+    this.arc.setAttributeNS(null, 'd', `M${x},${y} A${radius},${radius} 0 1 0 ${-x},${y}`);
     this.arc.classList.add('cue');
     this.arc.classList.add(`tag-${this.shape.id}`);
     this.element.appendChild(this.arc);

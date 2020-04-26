@@ -200,3 +200,35 @@ Number.prototype.toShortFloat = function() {
 
 // --------------------------------------------------------------------------- 
 
+export function standardizeDegrees(degrees) {
+  if (degrees < 0) {
+    while (degrees <= -360) {
+      degrees += 360;
+    }
+  } else {
+    while (degrees >= 360) {
+      degrees -= 360;
+    }
+  }
+
+  return degrees;
+}
+
+// --------------------------------------------------------------------------- 
+
+export function classifyArc(degrees) {
+  if (degrees < 0) {
+    return {
+      isLarge: degrees < -180 ? 1 : 0,
+      isClockwise: 1,
+    };
+  } else {
+    return {
+      isLarge: degrees > 180 ? 1 : 0,
+      isClockwise: 0,
+    };
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
