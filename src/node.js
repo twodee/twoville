@@ -141,7 +141,7 @@ export class TurtleNode extends Node {
     this.positionMark = new VectorPanMark(this.parentEnvironment, this);
     this.headingMark = new RotationMark(this.parentEnvironment, this);
     this.wedgeMark = new PathMark();
-    this.marker.addMarks([this.positionMark, this.headingMark], [], [], [this.wedgeMark]);
+    this.marker.addMarks([this.positionMark, this.headingMark], [this.wedgeMark]);
   }
 
   updateProperties(env, t, bounds, fromTurtle, matrix) {
@@ -166,22 +166,15 @@ export class TurtleNode extends Node {
       const towardPosition = towardVector.add(position);
       this.headingMark.updateProperties(towardPosition, bounds, matrix);
 
-      const transformedPivot = matrix.multiplyVector(position);
-      const transformedA = matrix.multiplyVector(position.add(offset));
-      const diff = transformedA.subtract(transformedPivot).normalize().multiply(new ExpressionReal(2));
-      const rdiff = diff.rotate(heading.value);
-
-      const transformedToward = transformedPivot.add(towardVector);
-
-      const b = transformedPivot.add(diff);
-      const c = transformedPivot.add(rdiff);
+      const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
 
       const {isLarge, isClockwise} = classifyArc(standardizeDegrees(heading.value));
       const commands = [
-        `M${transformedPivot.get(0).value},${bounds.span - transformedPivot.get(1).value}`,
-        `L${b.get(0).value},${bounds.span - b.get(1).value}`,
-        `A 2,2 0 ${isLarge} ${isClockwise} ${c.get(0).value},${bounds.span - c.get(1).value}`,
+        `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
+        `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
+        `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
       ];
+
       this.wedgeMark.updateProperties(commands.join(' '));
 
       return {
@@ -277,7 +270,7 @@ export class TurnNode extends Node {
     super.start();
     this.rotationMark = new RotationMark(this.parentEnvironment, this);
     this.wedgeMark = new PathMark();
-    this.marker.addMarks([this.rotationMark], [], [], [this.wedgeMark]);
+    this.marker.addMarks([this.rotationMark], [this.wedgeMark]);
   }
 
   updateProperties(env, t, bounds, fromTurtle, matrix) {
@@ -285,30 +278,18 @@ export class TurnNode extends Node {
     this.rotationMark.setExpression(degrees, fromTurtle.heading, fromTurtle.position);
     
     if (degrees) {
-      let newHeading = fromTurtle.heading.add(degrees).value;
-      while (newHeading >= 360) {
-        newHeading -= 360;
-      }
-      while (newHeading < 0) {
-        newHeading += 360;
-      }
+      let newHeading = standardizeDegrees(fromTurtle.heading.add(degrees).value);
       let towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(newHeading).add(fromTurtle.position);
       this.rotationMark.updateProperties(towardPosition, bounds, matrix);
 
       const pivot = fromTurtle.position;
-
-      const towardVector = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(fromTurtle.heading.value);
-      const b = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(newHeading);
-
-      const transformedPivot = matrix.multiplyVector(pivot);
-      const transformedToward = transformedPivot.add(towardVector);
-      const transformedB = transformedPivot.add(b);
+      const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(fromTurtle.heading.value).add(pivot);
 
       const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
       const commands = [
-        `M${transformedPivot.get(0).value},${bounds.span - transformedPivot.get(1).value}`,
-        `L${transformedToward.get(0).value},${bounds.span - transformedToward.get(1).value}`,
-        `A 2,2 0 ${isLarge} ${isClockwise} ${transformedB.get(0).value},${bounds.span - transformedB.get(1).value}`,
+        `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
+        `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
+        `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
       ];
 
       this.wedgeMark.updateProperties(commands.join(' '));

@@ -215,18 +215,18 @@ export class Rotate extends Transform {
     const applied = matrix.multiplyMatrix(composite);
 
     this.pivotMark.updateProperties(pivot, bounds, applied);
-    const transformedPivot = applied.multiplyVector(pivot);
+    const towardPosition = rotater.multiplyVector(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)])).add(pivot);
+    this.degreesMark.updateProperties(towardPosition, bounds, matrix);
 
-    const towardPosition = rotater.multiplyVector(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)])).add(transformedPivot);
-    this.degreesMark.updateProperties(towardPosition, bounds, Matrix.identity());
+    this.wedgeMark.setTransform(matrix);
+    // this.wedgeMark.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${matrix.elements[5]})`);
 
-    // const transformedA = pivot.add(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]));
-    // const transformedPosition = composite.multiplyVector(towardPosition);
+    const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
 
     const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
     const commands = [
-      `M${transformedPivot.get(0).value},${bounds.span - transformedPivot.get(1).value}`,
-      `l2,0`,
+      `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
+      `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
       `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
       'z',
     ];
