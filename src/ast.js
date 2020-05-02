@@ -23,8 +23,8 @@ import {
   Polyline,
   Rectangle,
   Text,
+  Tip,
   Ungon,
-  // TwovilleMarker,
 } from './shape.js';
 
 import {
@@ -397,17 +397,17 @@ export class ExpressionString extends ExpressionData {
   constructor(value, where, unevaluated, prevalues) {
     super(value, where, unevaluated, prevalues);
 
-    this.bindings = {
+    this.functions = {
       size: new FunctionDefinition('size', [], new ExpressionStringSize(this)),
     };
   }
 
-  has(id) {
-    return this.bindings.hasOwnProperty(id);
+  hasFunction(id) {
+    return this.functions.hasOwnProperty(id);
   }
 
   getFunction(id) {
-    return this.bindings[id];
+    return this.functions[id];
   }
 
   clone() {
@@ -635,8 +635,8 @@ export class ExpressionBinaryOperator extends Expression {
 
   toPod() {
     const pod = super.toPod();
-    pod.l = l.toPod();
-    pod.r = r.toPod();
+    pod.l = this.l.toPod();
+    pod.r = this.r.toPod();
     return pod;
   }
 }
@@ -894,7 +894,7 @@ export class ExpressionFunctionDefinition extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    env.bindings[this.name] = new FunctionDefinition(this.name, this.formals, this.body);
+    env.functions[this.name] = new FunctionDefinition(this.name, this.formals, this.body);
   }
 }
 
@@ -1980,9 +1980,9 @@ export class ExpressionGroup extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionMarker extends ExpressionFunction {
+export class ExpressionTip extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {
-    return new TwovilleMarker(env, callExpression);
+    return Tip.create(env, callExpression.where);
   }
 }
 
@@ -2008,7 +2008,7 @@ export class ExpressionVector extends ExpressionData {
   constructor(elements, where, unevaluated, prevalues) {
     super(elements, where, unevaluated, prevalues);
 
-    this.bindings = {
+    this.functions = {
       normalize: new FunctionDefinition('normalize', [], new ExpressionVectorNormalize(this)),
       size: new FunctionDefinition('size', [], new ExpressionVectorSize(this)),
       magnitude: new FunctionDefinition('magnitude', [], new ExpressionVectorMagnitude(this)),
@@ -2020,8 +2020,8 @@ export class ExpressionVector extends ExpressionData {
     };
   }
 
-  has(id) {
-    return this.bindings.hasOwnProperty(id);
+  hasFunction(id) {
+    return this.functions.hasOwnProperty(id);
   }
 
   assign(index, rhs) {
@@ -2078,7 +2078,7 @@ export class ExpressionVector extends ExpressionData {
   }
 
   getFunction(id) {
-    return this.bindings[id];
+    return this.functions[id];
   }
 
   set(i, value) {
@@ -2092,8 +2092,8 @@ export class ExpressionVector extends ExpressionData {
       return this.value[1];
     } else if (i == 'z' || i == 'b') {
       return this.value[2];
-    } else if (i instanceof ExpressionFunctionCall && this.bindings.hasOwnProperty(i.name)) {
-      return this.bindings[i.name];
+    } else if (i instanceof ExpressionFunctionCall && this.functions.hasOwnProperty(i.name)) {
+      return this.functions[i.name];
     } else if (typeof i == 'number') {
       if (i < 0 || i >= this.value.length) {
         throw new MessagedException(`I can't get element ${i} of this vector because ${i} is not a legal index in a vector of length ${this.value.length}.`)

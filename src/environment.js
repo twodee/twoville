@@ -83,11 +83,15 @@ export class Environment {
   }
 
   hasFunction(id) {
-    return this.functions.hasOwnProperty(id);
+    return this.functions.hasOwnProperty(id) || (this.parentEnvironment && this.parentEnvironment.hasFunction(id));
   }
 
   getFunction(id) {
-    return this.functions[id];
+    let f = this.functions[id];
+    if (!f && this.parentEnvironment) {
+      f = this.parentEnvironment.getFunction(id);
+    }
+    return f;
   }
 
   // Determine if this environment directly owns a property.

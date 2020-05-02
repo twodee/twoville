@@ -97,7 +97,7 @@ export class Matrix {
 export class Transform extends TimelinedEnvironment {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
-    parentEnvironment.transforms.push(this);
+    parentEnvironment.transforms.unshift(this);
     this.sourceSpans = [];
   }
 
@@ -218,7 +218,7 @@ export class Rotate extends Transform {
     const towardPosition = rotater.multiplyVector(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)])).add(pivot);
     this.degreesMark.updateProperties(towardPosition, bounds, matrix);
 
-    this.wedgeMark.setTransform(matrix);
+    this.wedgeMark.setTransform(matrix, bounds);
     // this.wedgeMark.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${matrix.elements[5]})`);
 
     const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);

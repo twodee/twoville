@@ -212,8 +212,8 @@ export class PathMark {
     this.element.setAttributeNS(null, 'd', commands);
   }
 
-  setTransform(matrix) {
-    this.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${matrix.elements[5]})`);
+  setTransform(matrix, bounds) {
+    this.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${-matrix.elements[5]})`);
   }
 }
 

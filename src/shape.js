@@ -16,6 +16,7 @@ import {
 import {
   CircleMark,
   HorizontalPanMark,
+  LineMark,
   Marker,
   PathMark,
   PolygonMark,
@@ -114,6 +115,8 @@ export class Shape extends TimelinedEnvironment {
       return Mask.reify(parentEnvironment, pod);
     } else if (pod.type === 'cutout') {
       return Cutout.reify(parentEnvironment, pod);
+    } else if (pod.type === 'tip') {
+      return Tip.reify(parentEnvironment, pod);
     } else {
       throw new Error(`unimplemented shape: ${pod.type}`);
     }
@@ -334,6 +337,22 @@ export class Shape extends TimelinedEnvironment {
       marker.unscale(factor);
     }
   }
+
+  setColor(env, t) {
+    const opacity = this.valueAt(env, 'opacity', t).value;
+    this.element.setAttributeNS(null, 'fill-opacity', opacity);
+
+    if (opacity > 0) {
+      if (this.owns('color')) {
+        let color = this.valueAt(env, 'color', t);
+        this.element.setAttributeNS(null, 'fill', color.toColor());
+      } else {
+        throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose color property is not defined.`);
+      }
+    } else {
+      this.element.setAttributeNS(null, 'fill', 'none');
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -490,7 +509,6 @@ export class Rectangle extends Shape {
       throw new LocatedException(this.where, 'I found a rectangle whose location I couldn\'t figure out. Please define its corner or center.');
     }
     
-    this.assertProperty('color');
     this.assertProperty('size');
   }
 
@@ -515,14 +533,9 @@ export class Rectangle extends Shape {
       ]);
     }
 
-    const opacity = this.valueAt(env, 'opacity', t).value;
-    const isVisible = opacity > 0.000001;
-    let color;
-    if (isVisible) {
-      color = this.valueAt(env, 'color', t);
-    }
+    this.setColor(env, t);
 
-    if (!corner || !size || (!color && isVisible)) {
+    if (!corner || !size) {
       this.hide();
     } else {
       this.show();
@@ -542,8 +555,6 @@ export class Rectangle extends Shape {
       this.element.setAttributeNS(null, 'y', bounds.span - size.get(1).value - corner.get(1).value);
       this.element.setAttributeNS(null, 'width', size.get(0).value);
       this.element.setAttributeNS(null, 'height', size.get(1).value);
-      this.element.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
-      this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
       this.outlineMark.updateProperties(corner, size, bounds, rounding, matrix);
       if (center) {
@@ -611,7 +622,6 @@ export class Circle extends Shape {
     super.validate();
     this.assertProperty('center');
     this.assertProperty('radius');
-    this.assertProperty('color');
   }
 
   updateProperties(env, t, bounds, matrix) {
@@ -624,13 +634,13 @@ export class Circle extends Shape {
     this.centerMark.setExpression(center);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
-    const isVisible = opacity > 0.000001;
+
     let color;
-    if (isVisible) {
+    if (opacity > 0) {
       color = this.valueAt(env, 'color', t);
     }
 
-    if (!center || !radius || (!color && isVisible)) {
+    if (!center || !radius || (!color && opacity > 0)) {
       this.hide();
     } else {
       this.show();
@@ -642,7 +652,7 @@ export class Circle extends Shape {
       this.element.setAttributeNS(null, 'cx', center.get(0).value);
       this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
       this.element.setAttributeNS(null, 'r', radius.value);
-      this.element.setAttributeNS(null, 'fill', isVisible ? color.toColor() : 'none');
+      this.element.setAttributeNS(null, 'fill', opacity > 0 ? color.toColor() : 'none');
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
       this.outlineMark.updateProperties(center, radius, bounds, matrix);
@@ -702,13 +712,6 @@ export class NodedShape extends Shape {
     return pieces;
   }
 
-  updateTransforms(env, t, bounds, initialMatrix) {
-    const matrix = super.updateTransforms(env, t, bounds, initialMatrix);
-    for (let node of this.nodes) {
-      node.marker.updateForegroundTransforms(matrix);
-    }
-  }
-
   castCursorIntoComponents(column, row) {
     for (let node of this.nodes) {
       if (node.castCursor(column, row)) {
@@ -716,6 +719,27 @@ export class NodedShape extends Shape {
       }
     }
     return super.castCursorIntoComponents(column, row);
+  }
+
+  connect() {
+    super.connect();
+
+    if (this.owns('elbow')) {
+      let elbow = this.get('elbow');
+      this.element.setAttributeNS(null, 'marker-mid', 'url(#element-' + elbow.id + ')');
+      this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + elbow.id + ')');
+      this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + elbow.id + ')');
+    }
+
+    if (this.owns('head')) {
+      let head = this.get('head');
+      this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + head.id + ')');
+    }
+
+    if (this.owns('tail')) {
+      let tail = this.get('tail');
+      this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
+    }
   }
 }
 
@@ -765,9 +789,9 @@ export class Polygon extends NodedShape {
     const positions = pieces.map(piece => piece.turtle.position);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
-    const isVisible = opacity > 0.000001;
+
     let color;
-    if (isVisible) {
+    if (opacity > 0) {
       color = this.valueAt(env, 'color', t);
     }
 
@@ -785,7 +809,7 @@ export class Polygon extends NodedShape {
       // TODO ensure opacity? color?
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
       this.element.setAttributeNS(null, 'points', coordinates);
-      this.element.setAttributeNS(null, 'fill', color.toColor());
+      this.element.setAttributeNS(null, 'fill', opacity > 0 ? color.toColor() : 'none');
 
       this.outlineMark.updateProperties(coordinates, matrix);
 
@@ -907,7 +931,8 @@ export class Line extends NodedShape {
     this.element = document.createElementNS(svgNamespace, 'line');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.markers[0].addMarks([], []);
+    this.outlineMark = new LineMark();
+    this.markers[0].addMarks([], [this.outlineMark]);
     this.connect();
   }
 
@@ -933,6 +958,8 @@ export class Line extends NodedShape {
       this.element.setAttributeNS(null, 'y1', bounds.span - positions[0].get(1).value);
       this.element.setAttributeNS(null, 'x2', positions[1].get(0).value);
       this.element.setAttributeNS(null, 'y2', bounds.span - positions[1].get(1).value);
+
+      this.outlineMark.updateProperties(positions[0], positions[1], bounds);
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
       const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
@@ -972,7 +999,6 @@ export class Ungon extends NodedShape {
 
   validate() {
     super.validate();
-    this.assertProperty('color');
     this.assertProperty('rounding');
   }
 
@@ -1000,9 +1026,9 @@ export class Ungon extends NodedShape {
     let rounding = this.valueAt(env, 'rounding', t).value;
 
     const opacity = this.valueAt(env, 'opacity', t).value;
-    const isVisible = opacity > 0.000001;
+
     let color;
-    if (isVisible) {
+    if (opacity > 0) {
       color = this.valueAt(env, 'color', t);
     }
 
@@ -1049,7 +1075,7 @@ export class Ungon extends NodedShape {
 
       this.element.setAttributeNS(null, 'fill-opacity', opacity);
       this.element.setAttributeNS(null, 'points', coordinates);
-      this.element.setAttributeNS(null, 'fill', color.toColor());
+      this.element.setAttributeNS(null, 'fill', opacity > 0 ? color.toColor() : 'none');
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
       const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
@@ -1108,7 +1134,6 @@ export class Path extends NodedShape {
   validate() {
     super.validate();
     this.assertProperty('closed');
-    this.assertProperty('color');
   }
 
   updateProperties(env, t, bounds, matrix) {
@@ -1117,11 +1142,8 @@ export class Path extends NodedShape {
     const pieces = this.traverseNodes(env, t, bounds, matrix);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
-    const isVisible = opacity > 0.000001;
-    let color;
-    if (isVisible) {
-      color = this.valueAt(env, 'color', t);
-    }
+
+    this.setColor(env, t);
 
     let isClosed = this.untimedProperties.closed.value;
 
@@ -1141,8 +1163,6 @@ export class Path extends NodedShape {
       }
 
       this.element.setAttributeNS(null, 'd', commandString);
-      this.element.setAttributeNS(null, 'fill', color ? color.toColor() : 'none');
-      this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
       this.outlineMark.updateProperties(commandString, matrix);
 
@@ -1211,13 +1231,6 @@ export class Group extends Shape {
     this.updateCentroid(matrix, centroid, bounds);
     return centroid;
   }
-
-  updateTransforms(env, t, bounds, initialMatrix) {
-    const matrix = super.updateTransforms(env, t, bounds, initialMatrix);
-    for (let child of this.children) {
-      child.updateTransforms(env, t, bounds, matrix);
-    }
-  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -1285,6 +1298,93 @@ export class Cutout extends Mask {
     super.updateProperties(env, t, bounds, matrix);
     this.rectangle.setAttributeNS(null, 'width', env.root.fitBounds.width);
     this.rectangle.setAttributeNS(null, 'height', env.root.fitBounds.height);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Tip extends Group {
+  static type = 'tip';
+  static article = 'a';
+  static timedIds = ['size', 'anchor', 'corner', 'center'];
+
+  static create(parentEnvironment, where) {
+    const shape = new Tip();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Tip();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  createHierarchy() {
+    this.element = document.createElementNS(svgNamespace, 'marker');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'orient', 'auto');
+    this.element.setAttributeNS(null, 'markerUnits', 'strokeWidth');
+
+    // Without this, the marker gets clipped.
+    this.element.setAttributeNS(null, 'overflow', 'visible');
+  }
+
+  connectToParent() {
+    this.isDrawable = true;
+    this.root.defines.appendChild(this.element);
+  }
+
+  validate() {
+    this.assertProperty('size');
+    this.assertProperty('anchor');
+
+    if (this.owns('corner') && this.owns('center')) {
+      throw new LocatedException(this.where, 'I found a tip whose corner and center properties were both set. Define only one of these.');
+    }
+
+    if (!this.owns('corner') && !this.owns('center')) {
+      throw new LocatedException(this.where, 'I found a tip whose location I couldn\'t figure out. Please define its corner or center.');
+    }
+  }
+
+  updateProperties(env, t, bounds, matrix) {
+    const anchor = this.valueAt(env, 'anchor', t);
+    const size = this.valueAt(env, 'size', t);
+
+    let corner;
+    if (this.owns('corner')) {
+      corner = this.valueAt(env, 'corner', t);
+    } else {
+      let center = this.valueAt(env, 'center', t);
+      corner = new ExpressionVector([
+        new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
+        new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
+      ]);
+    }
+
+    const markerBounds = {
+      x: corner.get(0).value,
+      y: corner.get(1).value,
+      width: size.get(0).value,
+      height: size.get(1).value,
+    };
+    markerBounds.span = markerBounds.y + (markerBounds.y + markerBounds.height);
+
+    this.element.setAttributeNS(null, 'viewBox', `${markerBounds.x} ${markerBounds.y} ${markerBounds.width} ${markerBounds.height}`);
+
+    this.element.setAttributeNS(null, 'markerWidth', size.get(0).value);
+    this.element.setAttributeNS(null, 'markerHeight', size.get(1).value);
+    this.element.setAttributeNS(null, 'refX', anchor.get(0).value);
+    this.element.setAttributeNS(null, 'refY', anchor.get(1).value);
+
+    matrix = this.transform(env, t, bounds, matrix);
+    const childCentroids = this.children.map(child => child.updateProperties(env, t, markerBounds, matrix));
+    const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+    const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
+    this.updateCentroid(matrix, centroid, bounds);
+
+    return centroid;
   }
 }
 
