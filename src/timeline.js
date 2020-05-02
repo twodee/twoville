@@ -80,7 +80,7 @@ export class Timeline {
       return interval.interpolate(env, t);
     } else if (this.defaultValue) {
       if ('isTimeSensitive' in this.defaultValue && this.defaultValue.isTimeSensitive(env)) {
-        env.bindings.t = new ExpressionInteger(t);
+        env.untimedProperties.t = new ExpressionInteger(t);
         return this.defaultValue.evaluate(env);
       } else { 
         return this.defaultValue;

@@ -32,15 +32,15 @@ export const Symbol = Object.freeze({
   ':right': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0)]),
 
   // Interpolants
-  ':linear': new ExpressionString('linear'),
-  ':nearest': new ExpressionString('nearest'),
+  ':linear': new ExpressionString('interpolateLinear'),
+  ':nearest': new ExpressionString('interpolateNearest'),
   // ':ease': new ExpressionString('ease'),
-  ':sineInOut': new ExpressionString('sineInOut'),
-  ':backInOut': new ExpressionString('backInOut'),
-  ':quadraticInOut': new ExpressionString('quadraticInOut'),
-  ':cubicInOut': new ExpressionString('cubicInOut'),
-  ':quarticInOut': new ExpressionString('quarticInOut'),
-  ':quinticInOut': new ExpressionString('quinticInOut'),
+  ':sineInOut': new ExpressionString('interpolateSineInOut'),
+  ':backInOut': new ExpressionString('interpolateBackInOut'),
+  ':quadraticInOut': new ExpressionString('interpolateQuadraticInOut'),
+  ':cubicInOut': new ExpressionString('interpolateCubicInOut'),
+  ':quarticInOut': new ExpressionString('interpolateQuarticInOut'),
+  ':quinticInOut': new ExpressionString('interpolateQuinticInOut'),
 
   // Colors
   ':black': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),

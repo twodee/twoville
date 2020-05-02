@@ -7,10 +7,10 @@ import {
 } from "./common.js";
 
 export class Interval {
-  constructor(fromTime, fromValue, toTime, toValue) {
+  constructor(fromTime, fromValue, toTime, toValue, tween = 'interpolateLinear') {
     this.setFrom(fromTime, fromValue);
     this.setTo(toTime, toValue);
-    this.setTween('linear');
+    this.setTween(tween);
   }
 
   toPod() {
@@ -19,6 +19,7 @@ export class Interval {
       fromValue: this.fromValue.toPod(),
       toTime: this.toTime.toPod(),
       toValue: this.toValue.toPod(),
+      interpolator: this.interpolator,
     };
   }
 
@@ -27,31 +28,15 @@ export class Interval {
       env.root.omniReify(env, pod.fromTime),
       env.root.omniReify(env, pod.fromValue),
       env.root.omniReify(env, pod.toTime),
-      env.root.omniReify(env, pod.toValue)
+      env.root.omniReify(env, pod.toValue),
+      pod.interpolator,
     );
     return interval;
   }
 
-  setTween(tweenType) {
-    if (tweenType == 'linear') {
-      this.interpolator = 'interpolateLinear';
-    } else if (tweenType == 'nearest') {
-      this.interpolator = 'interpolateNearest';
-    } else if (tweenType == 'sineInOut') {
-      this.interpolator = 'interpolateSineInOut';
-    } else if (tweenType == 'backInOut') {
-      this.interpolator = 'interpolateBackInOut';
-    } else if (tweenType == 'quadraticInOut') {
-      this.interpolator = 'interpolateQuadraticInOut';
-    } else if (tweenType == 'cubicInOut') {
-      this.interpolator = 'interpolateCubicInOut';
-    } else if (tweenType == 'quarticInOut') {
-      this.interpolator = 'interpolateQuarticInOut';
-    } else if (tweenType == 'quinticInOut') {
-      this.interpolator = 'interpolateQuinticInOut';
-    } else {
-      throw new MessagedException(`Don't know this ${tweenType}`);
-    }
+  setTween(tween) {
+    this.interpolator = tween;
+    // throw new MessagedException(`Don't know this ${tweenType}`);
   }
 
   toString() {

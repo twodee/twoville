@@ -678,7 +678,6 @@ export class CubicNode extends Node {
         this.line1Mark.updateProperties(fromTurtle.position, control1, bounds, matrix);
         pathCommand = `C${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
       } else {
-        console.log("no control1");
         pathCommand = `S${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
       }
 

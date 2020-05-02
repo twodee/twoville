@@ -945,6 +945,12 @@ export class ExpressionIdentifier extends Expression {
   toPretty() {
     return this.nameToken.source;
   }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.nameToken = this.nameToken;
+    return pod;
+  }
 }
 
 // --------------------------------------------------------------------------- 

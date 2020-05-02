@@ -98,6 +98,10 @@ export class Token {
     this.source = source;
     this.where = where;
   }
+
+  static reify(pod) {
+    return new Token(pod.type, pod.source, SourceLocation.reify(pod.where));
+  }
 }
 
 // --------------------------------------------------------------------------- 

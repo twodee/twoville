@@ -1,11 +1,14 @@
 import {
   SourceLocation,
+  Token,
   clearChildren,
   removeClassMembers,
   svgNamespace,
 } from './common.js';
 
 import {
+  ExpressionAdd,
+  ExpressionIdentifier,
   ExpressionBoolean,
   ExpressionInteger,
   ExpressionReal,
@@ -117,6 +120,11 @@ export class RenderEnvironment extends Environment {
       return new ExpressionString(pod.value, SourceLocation.reify(pod.where));
     } else if (pod.type === 'ExpressionVector') {
       return new ExpressionVector(pod.value.map(element => RenderEnvironment.omniReify(env, element)), SourceLocation.reify(pod.where));
+    } else if (pod.type === 'ExpressionAdd') {
+      return new ExpressionAdd(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
+    } else if (pod.type === 'ExpressionIdentifier') {
+      console.log("pod:", pod);
+      return new ExpressionIdentifier(Token.reify(pod.nameToken), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
     } else {
       console.log(pod);
       throw Error('can\'t reify');
