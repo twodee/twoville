@@ -3,7 +3,6 @@ import {
   LocatedException,
   SourceLocation,
   Turtle,
-  mop,
   svgNamespace,
 } from './common.js';
 
@@ -185,7 +184,7 @@ export class Shape extends TimelinedEnvironment {
 
   connectToParent() {
     if (this.owns('parent')) {
-      this.get('parent').addChild(this);
+      this.get('parent').children.push(this);
       this.isDrawable = false;
     } else {
       this.isDrawable = true;
@@ -202,14 +201,23 @@ export class Shape extends TimelinedEnvironment {
       elementToConnect = this.element;
     }
 
-    if (!this.owns('parent')) {
+    if (this.owns('parent')) {
+      this.get('parent').element.appendChild(elementToConnect);
+    } else {
       this.root.mainGroup.appendChild(elementToConnect);
     }
   }
 
   connect() {
     this.connectToParent();
+    if (this.isCutoutChild()) {
+       this.bind('color', new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]));
+    }
     this.initializeMarks();
+  }
+
+  isCutoutChild() {
+    return this.owns('parent') && (this.get('parent') instanceof Cutout || this.get('parent').isCutoutChild());
   }
 
   select() {
@@ -635,12 +643,9 @@ export class Circle extends Shape {
 
     const opacity = this.valueAt(env, 'opacity', t).value;
 
-    let color;
-    if (opacity > 0) {
-      color = this.valueAt(env, 'color', t);
-    }
+    this.setColor(env, t);
 
-    if (!center || !radius || (!color && opacity > 0)) {
+    if (!center || !radius) {
       this.hide();
     } else {
       this.show();
@@ -652,8 +657,6 @@ export class Circle extends Shape {
       this.element.setAttributeNS(null, 'cx', center.get(0).value);
       this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
       this.element.setAttributeNS(null, 'r', radius.value);
-      this.element.setAttributeNS(null, 'fill', opacity > 0 ? color.toColor() : 'none');
-      this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
       this.outlineMark.updateProperties(center, radius, bounds, matrix);
       this.centerMark.updateProperties(center, bounds, matrix);
@@ -1206,11 +1209,6 @@ export class Group extends Shape {
     return shape;
   }
 
-  addChild(child) {
-    this.element.appendChild(child.element);
-    this.children.push(child);
-  }
-
   start() {
     super.start();
     this.createHierarchy();
@@ -1289,13 +1287,13 @@ export class Cutout extends Mask {
     super.start();
     this.rectangle = document.createElementNS(svgNamespace, 'rect');
     this.rectangle.setAttributeNS(null, 'fill', 'white');
-    this.rectangle.setAttributeNS(null, 'x', 0);
-    this.rectangle.setAttributeNS(null, 'y', 0);
     this.element.appendChild(this.rectangle);
   }
 
   updateProperties(env, t, bounds, matrix) {
     super.updateProperties(env, t, bounds, matrix);
+    this.rectangle.setAttributeNS(null, 'x', env.root.fitBounds.x);
+    this.rectangle.setAttributeNS(null, 'y', env.root.fitBounds.y);
     this.rectangle.setAttributeNS(null, 'width', env.root.fitBounds.width);
     this.rectangle.setAttributeNS(null, 'height', env.root.fitBounds.height);
   }

@@ -1,4 +1,5 @@
 import { 
+  FunctionDefinition,
   LocatedException,
   SourceLocation,
   mop,
@@ -7,6 +8,44 @@ import {
 import { 
   Timeline,
 } from './timeline.js';
+
+import { 
+  ExpressionArcCosine,
+  ExpressionArcSine,
+  ExpressionArcTangent,
+  ExpressionArcTangent2,
+  ExpressionCircle,
+  ExpressionCosine,
+  ExpressionCutout,
+  ExpressionDebug,
+  ExpressionGroup,
+  ExpressionHypotenuse,
+  ExpressionInt,
+  ExpressionInteger,
+  ExpressionText,
+  ExpressionLine,
+  ExpressionMask,
+  ExpressionMultiply,
+  ExpressionPath,
+  ExpressionPolygon,
+  ExpressionPolyline,
+  ExpressionPrint,
+  ExpressionRandom,
+  ExpressionReal,
+  ExpressionRectangle,
+  ExpressionRotate,
+  ExpressionScale,
+  ExpressionShear,
+  ExpressionSeed,
+  ExpressionSine,
+  ExpressionSquareRoot,
+  ExpressionString,
+  ExpressionSubtract,
+  ExpressionTangent,
+  ExpressionTip,
+  ExpressionUngon,
+  ExpressionVector,
+} from './ast.js';
 
 // import { 
   // Shape,
@@ -106,7 +145,7 @@ export class Environment {
       if (env.owns(id)) {
         return true;
       }
-      env = env.parent;
+      env = env.parentEnvironment;
     }
     return false;
   }
@@ -123,7 +162,7 @@ export class Environment {
       if (env.untimedProperties.hasOwnProperty(id)) {
         return env.untimedProperties[id];
       }
-      env = env.parent;
+      env = env.parentEnvironment;
     }
     return undefined;
   }
@@ -139,6 +178,45 @@ export class Environment {
   // evaluate(env, fromTime, toTime) {
     // return this;
   // }
+
+  bindGlobalFunctions() {
+    Object.assign(this.functions, {
+      rectangle: new FunctionDefinition('rectangle', [], new ExpressionRectangle()),
+      line: new FunctionDefinition('line', [], new ExpressionLine()),
+      path: new FunctionDefinition('path', [], new ExpressionPath()),
+      ungon: new FunctionDefinition('ungon', [], new ExpressionUngon()),
+      polygon: new FunctionDefinition('polygon', [], new ExpressionPolygon()),
+      polyline: new FunctionDefinition('polyline', [], new ExpressionPolyline()),
+      text: new FunctionDefinition('text', [], new ExpressionText()),
+      group: new FunctionDefinition('group', [], new ExpressionGroup()),
+      tip: new FunctionDefinition('tip', [], new ExpressionTip()),
+      mask: new FunctionDefinition('mask', [], new ExpressionMask()),
+      cutout: new FunctionDefinition('cutout', [], new ExpressionCutout()),
+      circle: new FunctionDefinition('circle', [], new ExpressionCircle()),
+      print: new FunctionDefinition('print', ['message'], new ExpressionPrint()),
+      debug: new FunctionDefinition('debug', ['expression'], new ExpressionDebug()),
+      random: new FunctionDefinition('random', ['min', 'max'], new ExpressionRandom()),
+      seed: new FunctionDefinition('seed', ['value'], new ExpressionSeed()),
+      sin: new FunctionDefinition('sin', ['degrees'], new ExpressionSine()),
+      cos: new FunctionDefinition('cos', ['degrees'], new ExpressionCosine()),
+      tan: new FunctionDefinition('tan', ['degrees'], new ExpressionTangent()),
+      asin: new FunctionDefinition('asin', ['ratio'], new ExpressionArcSine()),
+      hypotenuse: new FunctionDefinition('hypotenuse', ['a', 'b'], new ExpressionHypotenuse()),
+      acos: new FunctionDefinition('acos', ['ratio'], new ExpressionArcCosine()),
+      atan: new FunctionDefinition('atan', ['ratio'], new ExpressionArcTangent()),
+      atan2: new FunctionDefinition('atan2', ['a', 'b'], new ExpressionArcTangent2()),
+      sqrt: new FunctionDefinition('sqrt', ['x'], new ExpressionSquareRoot()),
+      int: new FunctionDefinition('int', ['x'], new ExpressionInt()),
+    });
+  }
+
+  resolveReferences() {
+    for (let [property, value] of Object.entries(this.untimedProperties)) {
+      if (value.hasOwnProperty('type') && value.type === 'reference') {
+        this.untimedProperties[property] = this.root.shapes.find(shape => shape.id === value.id);
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -221,7 +299,7 @@ export class TimelinedEnvironment extends Environment {
       } else if (env.timedProperties && env.timedProperties.hasOwnProperty(id)) {
         return env.timedProperties[id];
       }
-      env = env.parent;
+      env = env.parentEnvironment;
     }
     return undefined;
   }

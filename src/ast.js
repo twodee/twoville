@@ -1074,6 +1074,13 @@ export class ExpressionFunctionCall extends Expression {
     let f = this.lookup(env);
     return this.actuals.some((actual, i) => actual.isTimeSensitive(env)) || f.body.isTimeSensitive(env);
   }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.nameToken = this.nameToken;
+    pod.actuals = this.actuals.map(actual => actual.toPod());
+    return pod;
+  }
 }
 
 // --------------------------------------------------------------------------- 

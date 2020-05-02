@@ -10,6 +10,7 @@ import {
   MessagedException,
   SourceLocation,
   FunctionDefinition,
+  mop,
 } from './common.js';
 
 import {
@@ -112,34 +113,35 @@ export class InterpreterEnvironment extends Environment {
       new ExpressionInteger(100)
     ]));
 
-    Object.assign(this.functions, {
-      rectangle: new FunctionDefinition('rectangle', [], new ExpressionRectangle()),
-      line: new FunctionDefinition('line', [], new ExpressionLine()),
-      path: new FunctionDefinition('path', [], new ExpressionPath()),
-      ungon: new FunctionDefinition('ungon', [], new ExpressionUngon()),
-      polygon: new FunctionDefinition('polygon', [], new ExpressionPolygon()),
-      polyline: new FunctionDefinition('polyline', [], new ExpressionPolyline()),
-      text: new FunctionDefinition('text', [], new ExpressionText()),
-      group: new FunctionDefinition('group', [], new ExpressionGroup()),
-      tip: new FunctionDefinition('tip', [], new ExpressionTip()),
-      mask: new FunctionDefinition('mask', [], new ExpressionMask()),
-      cutout: new FunctionDefinition('cutout', [], new ExpressionCutout()),
-      circle: new FunctionDefinition('circle', [], new ExpressionCircle()),
-      print: new FunctionDefinition('print', ['message'], new ExpressionPrint()),
-      debug: new FunctionDefinition('debug', ['expression'], new ExpressionDebug()),
-      random: new FunctionDefinition('random', ['min', 'max'], new ExpressionRandom()),
-      seed: new FunctionDefinition('seed', ['value'], new ExpressionSeed()),
-      sin: new FunctionDefinition('sin', ['degrees'], new ExpressionSine()),
-      cos: new FunctionDefinition('cos', ['degrees'], new ExpressionCosine()),
-      tan: new FunctionDefinition('tan', ['degrees'], new ExpressionTangent()),
-      asin: new FunctionDefinition('asin', ['ratio'], new ExpressionArcSine()),
-      hypotenuse: new FunctionDefinition('hypotenuse', ['a', 'b'], new ExpressionHypotenuse()),
-      acos: new FunctionDefinition('acos', ['ratio'], new ExpressionArcCosine()),
-      atan: new FunctionDefinition('atan', ['ratio'], new ExpressionArcTangent()),
-      atan2: new FunctionDefinition('atan2', ['a', 'b'], new ExpressionArcTangent2()),
-      sqrt: new FunctionDefinition('sqrt', ['x'], new ExpressionSquareRoot()),
-      int: new FunctionDefinition('int', ['x'], new ExpressionInt()),
-    });
+    this.bindGlobalFunctions();
+    // Object.assign(this.functions, {
+      // rectangle: new FunctionDefinition('rectangle', [], new ExpressionRectangle()),
+      // line: new FunctionDefinition('line', [], new ExpressionLine()),
+      // path: new FunctionDefinition('path', [], new ExpressionPath()),
+      // ungon: new FunctionDefinition('ungon', [], new ExpressionUngon()),
+      // polygon: new FunctionDefinition('polygon', [], new ExpressionPolygon()),
+      // polyline: new FunctionDefinition('polyline', [], new ExpressionPolyline()),
+      // text: new FunctionDefinition('text', [], new ExpressionText()),
+      // group: new FunctionDefinition('group', [], new ExpressionGroup()),
+      // tip: new FunctionDefinition('tip', [], new ExpressionTip()),
+      // mask: new FunctionDefinition('mask', [], new ExpressionMask()),
+      // cutout: new FunctionDefinition('cutout', [], new ExpressionCutout()),
+      // circle: new FunctionDefinition('circle', [], new ExpressionCircle()),
+      // print: new FunctionDefinition('print', ['message'], new ExpressionPrint()),
+      // debug: new FunctionDefinition('debug', ['expression'], new ExpressionDebug()),
+      // random: new FunctionDefinition('random', ['min', 'max'], new ExpressionRandom()),
+      // seed: new FunctionDefinition('seed', ['value'], new ExpressionSeed()),
+      // sin: new FunctionDefinition('sin', ['degrees'], new ExpressionSine()),
+      // cos: new FunctionDefinition('cos', ['degrees'], new ExpressionCosine()),
+      // tan: new FunctionDefinition('tan', ['degrees'], new ExpressionTangent()),
+      // asin: new FunctionDefinition('asin', ['ratio'], new ExpressionArcSine()),
+      // hypotenuse: new FunctionDefinition('hypotenuse', ['a', 'b'], new ExpressionHypotenuse()),
+      // acos: new FunctionDefinition('acos', ['ratio'], new ExpressionArcCosine()),
+      // atan: new FunctionDefinition('atan', ['ratio'], new ExpressionArcTangent()),
+      // atan2: new FunctionDefinition('atan2', ['a', 'b'], new ExpressionArcTangent2()),
+      // sqrt: new FunctionDefinition('sqrt', ['x'], new ExpressionSquareRoot()),
+      // int: new FunctionDefinition('int', ['x'], new ExpressionInt()),
+    // });
   }
 
   static create(source, log) {
@@ -151,12 +153,16 @@ export class InterpreterEnvironment extends Environment {
 
   toPod() {
     return {
-      untimedProperties: {
-        time: this.untimedProperties.time.toPod(),
-        gif: this.untimedProperties.gif.toPod(),
-        viewport: this.untimedProperties.viewport.toPod(),
-      },
       shapes: this.shapes.map(shape => shape.toPod()),
+      untimedProperties: mop(this.untimedProperties, value => {
+        // For properties like parent, I want to maintain the reference. So, we export
+        // the id instead.
+        if (value.hasOwnProperty('id')) {
+          return {type: 'reference', id: value.id};
+        } else {
+          return value.toPod();
+        }
+      }),
     };
   }
 }

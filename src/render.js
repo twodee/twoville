@@ -8,11 +8,16 @@ import {
 
 import {
   ExpressionAdd,
+  ExpressionDivide,
+  ExpressionFunctionCall,
   ExpressionIdentifier,
   ExpressionBoolean,
   ExpressionInteger,
+  ExpressionMultiply,
   ExpressionReal,
+  ExpressionRemainder,
   ExpressionString,
+  ExpressionSubtract,
   ExpressionVector,
 } from './ast.js';
 
@@ -57,7 +62,15 @@ export class RenderEnvironment extends Environment {
     for (let shape of pod.shapes) {
       this.shapes.push(Shape.reify(this, shape));
     }
+
+    this.resolveReferences();
+    for (let shape of this.shapes) {
+      shape.resolveReferences();
+    }
+
     this.bounds = {x: 0, y: 0, width: 0, height: 0};
+    this.functions = {};
+    this.bindGlobalFunctions();
   }
 
   static reify(svg, pod) {
@@ -75,7 +88,8 @@ export class RenderEnvironment extends Environment {
     } else if (pod.type === 'environment') {
       return Environment.reify(env, pod);
     } else if (pod.type === 'reference') {
-      return env.root.shapes.find(shape => shape.id === pod.id);
+      return pod;
+      // return env.root.shapes.find(shape => shape.id === pod.id);
     } else if (pod.type === 'stroke') {
       return Stroke.reify(env, pod);
     } else if (pod.type === 'mirror') {
@@ -122,9 +136,18 @@ export class RenderEnvironment extends Environment {
       return new ExpressionVector(pod.value.map(element => RenderEnvironment.omniReify(env, element)), SourceLocation.reify(pod.where));
     } else if (pod.type === 'ExpressionAdd') {
       return new ExpressionAdd(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
+    } else if (pod.type === 'ExpressionMultiply') {
+      return new ExpressionMultiply(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
+    } else if (pod.type === 'ExpressionDivide') {
+      return new ExpressionDivide(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
+    } else if (pod.type === 'ExpressionSubtract') {
+      return new ExpressionSubtract(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
+    } else if (pod.type === 'ExpressionRemainder') {
+      return new ExpressionRemainder(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
     } else if (pod.type === 'ExpressionIdentifier') {
-      console.log("pod:", pod);
       return new ExpressionIdentifier(Token.reify(pod.nameToken), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
+    } else if (pod.type === 'ExpressionFunctionCall') {
+      return new ExpressionFunctionCall(Token.reify(pod.nameToken), pod.actuals.map(actual => RenderEnvironment.omniReify(env, actual)), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
     } else {
       console.log(pod);
       throw Error('can\'t reify');
