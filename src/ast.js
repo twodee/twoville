@@ -2226,7 +2226,7 @@ export class ExpressionVector extends ExpressionData {
   }
 
   rotateAround(pivot, degrees) {
-    let radians = degrees * Math.PI / 180;
+    let radians = degrees.value * Math.PI / 180;
     let diff = this.subtract(pivot);
     let newVector = new ExpressionVector([
       new ExpressionReal(diff.get(0).value * Math.cos(radians) - diff.get(1).value * Math.sin(radians)),
@@ -2354,6 +2354,17 @@ export class ExpressionVector extends ExpressionData {
     const pod = super.toPod();
     pod.value = this.value.map(element => element.toPod());
     return pod;
+  }
+
+  resolveReferences(shapes) {
+    for (let i = 0; i < this.value.length; ++i) {
+      const element = this.value[i];
+      if (element.hasOwnProperty('type') && element.type === 'reference') {
+        this.value[i] = shapes.find(shape => shape.id === element.id);
+      } else if (element instanceof ExpressionVector) {
+        element.resolveReferences(shapes);
+      }
+    }
   }
 }
 

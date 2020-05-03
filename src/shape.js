@@ -76,12 +76,17 @@ export class Shape extends TimelinedEnvironment {
     this.root.shapes.push(this);
   }
 
-  toPod() {
+  toExpandedPod() {
+    // This version contains full data, unlike toPod, which is just a reference.
     const pod = super.toPod();
     pod.id = this.id;
     pod.sourceSpans = this.sourceSpans;
     pod.transforms = this.transforms.map(transform => transform.toPod());
     return pod;
+  }
+
+  toPod() {
+    return {type: 'reference', id: this.id};
   }
 
   embody(parentEnvironment, pod) {
@@ -213,6 +218,20 @@ export class Shape extends TimelinedEnvironment {
     if (this.isCutoutChild()) {
        this.bind('color', new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]));
     }
+
+    if (this.owns('clippers')) {
+      let clipPath = document.createElementNS(svgNamespace, 'clipPath');
+      clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
+      let clippers = this.get('clippers');
+      clippers.forEach(clipper => {
+        let use = document.createElementNS(svgNamespace, 'use');
+        use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
+        clipPath.appendChild(use);
+      });
+      this.root.defines.appendChild(clipPath);
+      this.element.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
+    }
+
     this.initializeMarks();
   }
 
@@ -457,7 +476,7 @@ export class Text extends Shape {
       ]), new ExpressionVector([
         new ExpressionReal(box.width),
         new ExpressionReal(box.height),
-      ]), bounds, matrix);
+      ]), bounds);
 
       this.positionMark.updateProperties(position, bounds, matrix);
 
@@ -679,8 +698,8 @@ export class NodedShape extends Shape {
     this.nodes = [];
   }
 
-  toPod() {
-    const pod = super.toPod();
+  toExpandedPod() {
+    const pod = super.toExpandedPod();
     pod.nodes = this.nodes.map(node => node.toPod());
     return pod;
   }
@@ -1186,9 +1205,9 @@ export class Group extends Shape {
     this.children = [];
   }
 
-  toPod() {
-    const pod = super.toPod();
-    pod.children = this.children.map(child => child.toPod());
+  toExpandedPod() {
+    const pod = super.toExpandedPod();
+    pod.children = this.children.map(child => child.toExpandedPod());
     return pod;
   }
 

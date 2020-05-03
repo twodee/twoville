@@ -97,15 +97,7 @@ export class Environment {
   toPod() {
     return {
       type: this.type,
-      untimedProperties: mop(this.untimedProperties, value => {
-        // For properties like parent, I want to maintain the reference. So, we export
-        // the id instead.
-        if (value.hasOwnProperty('id')) {
-          return {type: 'reference', id: value.id};
-        } else {
-          return value.toPod();
-        }
-      }),
+      untimedProperties: mop(this.untimedProperties, property => property.toPod()),
       where: this.where,
     };
   }
@@ -214,6 +206,8 @@ export class Environment {
     for (let [property, value] of Object.entries(this.untimedProperties)) {
       if (value.hasOwnProperty('type') && value.type === 'reference') {
         this.untimedProperties[property] = this.root.shapes.find(shape => shape.id === value.id);
+      } else if (value instanceof ExpressionVector) {
+        value.resolveReferences(this.root.shapes);
       }
     }
   }

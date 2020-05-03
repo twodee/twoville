@@ -1,5 +1,6 @@
 import {
   SourceLocation,
+  LocatedException,
   classifyArc,
   standardizeDegrees,
 } from './common.js';
@@ -202,9 +203,17 @@ export class Rotate extends Transform {
 
   updateProperties(env, t, bounds, matrix) {
     let pivot = this.valueAt(env, 'pivot', t);
-    this.pivotMark.setExpression(pivot);
+    if (!pivot) {
+      throw new LocatedException(this.where, `I found a rotate transform that didn't have a pivot defined for time ${t}.`);
+    }
+    // TODO check all valueAt calls ugh
 
     const degrees = this.valueAt(env, 'degrees', t);
+    if (!degrees) {
+      throw new LocatedException(this.where, `I found a rotate transform that didn't have a degrees defined for time ${t}.`);
+    }
+
+    this.pivotMark.setExpression(pivot);
     this.degreesMark.setExpression(degrees, new ExpressionReal(0), pivot);
 
     const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);

@@ -153,16 +153,8 @@ export class InterpreterEnvironment extends Environment {
 
   toPod() {
     return {
-      shapes: this.shapes.map(shape => shape.toPod()),
-      untimedProperties: mop(this.untimedProperties, value => {
-        // For properties like parent, I want to maintain the reference. So, we export
-        // the id instead.
-        if (value.hasOwnProperty('id')) {
-          return {type: 'reference', id: value.id};
-        } else {
-          return value.toPod();
-        }
-      }),
+      shapes: this.shapes.map(shape => shape.toExpandedPod()),
+      untimedProperties: mop(this.untimedProperties, value => value.toPod()),
     };
   }
 }
