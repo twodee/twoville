@@ -307,12 +307,19 @@ export class TimelinedEnvironment extends Environment {
       const size = this.valueAt(env, 'size', t);
       const color = this.valueAt(env, 'color', t);
       const opacity = this.valueAt(env, 'opacity', t);
+
       element.setAttributeNS(null, 'stroke', color.toColor());
       element.setAttributeNS(null, 'stroke-width', size.value);
       element.setAttributeNS(null, 'stroke-opacity', opacity.value);
+
       if (this.owns('dashes')) {
         const dashes = this.valueAt(env, 'dashes', t).toSpacedString();
         element.setAttributeNS(null, 'stroke-dasharray', dashes);
+      }
+
+      if (this.owns('join')) {
+        const type = this.valueAt(env, 'join', t).value;
+        element.setAttributeNS(null, 'stroke-linejoin', type);
       }
     }
   }
@@ -323,7 +330,7 @@ export class TimelinedEnvironment extends Environment {
 export class Stroke extends TimelinedEnvironment {
   static type = 'stroke';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes'];
+  static timedIds = ['size', 'color', 'opacity', 'dashes', 'join'];
 
   static create(parentEnvironment, where) {
     const stroke = new Stroke();

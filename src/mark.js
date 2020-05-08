@@ -3,9 +3,14 @@ import {
 } from './common.js';
 
 import { 
+  ExpressionAdd,
+  ExpressionDivide,
   ExpressionInteger,
+  ExpressionMultiply,
+  ExpressionPower,
   ExpressionReal,
   ExpressionString,
+  ExpressionSubtract,
   ExpressionVector,
 } from './ast.js';
 
@@ -657,48 +662,48 @@ function manipulateSource(oldExpression, newExpression) {
   if (unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
     return newExpression.toPretty();
   } else if (unevaluated instanceof ExpressionAdd &&
-             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-    const right = unevaluated.b.value;
+             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+    const right = unevaluated.r.value;
     const left = oldValue - right;
-    return new ExpressionAdd(unevaluated.a, new ExpressionReal((newValue - left).toShortFloat())).toPretty();
+    return new ExpressionAdd(unevaluated.l, new ExpressionReal((newValue - left).toShortFloat())).toPretty();
   } else if (unevaluated instanceof ExpressionAdd &&
-             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-    const left = unevaluated.a.value;
+             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+    const left = unevaluated.l.value;
     const right = oldValue - left;
-    return new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat()), unevaluated.b).toPretty();
+    return new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat()), unevaluated.r).toPretty();
   } else if (unevaluated instanceof ExpressionSubtract &&
-             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-    const right = unevaluated.b.value;
+             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+    const right = unevaluated.r.value;
     const left = oldValue + right;
-    return new ExpressionSubtract(unevaluated.a, new ExpressionReal((left - newValue).toShortFloat())).toPretty();
+    return new ExpressionSubtract(unevaluated.l, new ExpressionReal((left - newValue).toShortFloat())).toPretty();
   } else if (unevaluated instanceof ExpressionSubtract &&
-             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-    const left = unevaluated.a.value;
+             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+    const left = unevaluated.l.value;
     const right = left - oldValue;
-    return new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat()), unevaluated.b).toPretty();
+    return new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat()), unevaluated.r).toPretty();
   } else if (unevaluated instanceof ExpressionMultiply &&
-             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-    const right = unevaluated.b.value;
+             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+    const right = unevaluated.r.value;
     const left = oldValue / right;
-    return new ExpressionMultiply(unevaluated.a, new ExpressionReal((newValue / left).toShortFloat())).toPretty();
+    return new ExpressionMultiply(unevaluated.l, new ExpressionReal((newValue / left).toShortFloat())).toPretty();
   } else if (unevaluated instanceof ExpressionMultiply &&
-             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-    const left = unevaluated.a.value;
+             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+    const left = unevaluated.l.value;
     const right = oldValue / left;
-    return new ExpressionMultiply(new ExpressionReal((newValue / right).toShortFloat()), unevaluated.b).toPretty();
+    return new ExpressionMultiply(new ExpressionReal((newValue / right).toShortFloat()), unevaluated.r).toPretty();
   } else if (unevaluated instanceof ExpressionDivide &&
-             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-    const right = unevaluated.b.value;
+             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+    const right = unevaluated.r.value;
     const left = oldExpression.prevalues[0].value;
-    return new ExpressionDivide(unevaluated.a, new ExpressionReal((left / newValue).toShortFloat())).toPretty();
+    return new ExpressionDivide(unevaluated.l, new ExpressionReal((left / newValue).toShortFloat())).toPretty();
   } else if (unevaluated instanceof ExpressionDivide &&
-             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-    const left = unevaluated.a.value;
+             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+    const left = unevaluated.l.value;
     const right = left / oldValue;
-    return new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat()), unevaluated.b).toPretty();
+    return new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat()), unevaluated.r).toPretty();
   } else if (unevaluated instanceof ExpressionPower &&
-             (unevaluated.b instanceof ExpressionReal || unevaluated.b instanceof ExpressionInteger)) {
-    const right = unevaluated.b.value;
+             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+    const right = unevaluated.r.value;
     const left = oldExpression.prevalues[0];
     // const left = Math.pow(oldValue, 1 / right);
 
@@ -707,13 +712,13 @@ function manipulateSource(oldExpression, newExpression) {
         (left instanceof ExpressionReal && Math.abs(left.value - 1) < 0.001)) {
       return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat())).toPretty();
     } else {
-      return new ExpressionPower(unevaluated.a, new ExpressionReal((Math.log(newValue) / Math.log(left.value)).toShortFloat())).toPretty();
+      return new ExpressionPower(unevaluated.l, new ExpressionReal((Math.log(newValue) / Math.log(left.value)).toShortFloat())).toPretty();
     }
   } else if (unevaluated instanceof ExpressionPower &&
-             (unevaluated.a instanceof ExpressionReal || unevaluated.a instanceof ExpressionInteger)) {
-    const left = unevaluated.a.value;
+             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+    const left = unevaluated.l.value;
     const right = Math.log(oldValue) / Math.log(left);
-    return new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat()), unevaluated.b).toPretty();
+    return new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat()), unevaluated.r).toPretty();
   } else {
     return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat())).toPretty();
   }
@@ -722,6 +727,8 @@ function manipulateSource(oldExpression, newExpression) {
 // --------------------------------------------------------------------------- 
 
 function decompose_2d_matrix(mat) {
+  // http://frederic-wang.fr/decomposition-of-2d-transform-matrices.html
+  // https://math.stackexchange.com/questions/13150/extracting-rotation-scale-values-from-2d-transformation-matrix
   var a = mat[0];
   var b = mat[1];
   var c = mat[2];

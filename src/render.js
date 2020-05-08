@@ -7,17 +7,10 @@ import {
 } from './common.js';
 
 import {
-  ExpressionAdd,
-  ExpressionDivide,
-  ExpressionFunctionCall,
-  ExpressionIdentifier,
-  ExpressionBoolean,
+  Expression,
   ExpressionInteger,
-  ExpressionMultiply,
   ExpressionReal,
-  ExpressionRemainder,
   ExpressionString,
-  ExpressionSubtract,
   ExpressionVector,
 } from './ast.js';
 
@@ -124,30 +117,10 @@ export class RenderEnvironment extends Environment {
       return Group.reify(env, pod);
     } else if (pod.type === 'shear') {
       return Shear.reify(env, pod);
-    } else if (pod.type === 'ExpressionReal') {
-      return new ExpressionReal(pod.value, SourceLocation.reify(pod.where));
-    } else if (pod.type === 'ExpressionBoolean') {
-      return new ExpressionBoolean(pod.value, SourceLocation.reify(pod.where));
-    } else if (pod.type === 'ExpressionInteger') {
-      return new ExpressionInteger(pod.value, SourceLocation.reify(pod.where));
-    } else if (pod.type === 'ExpressionString') {
-      return new ExpressionString(pod.value, SourceLocation.reify(pod.where));
-    } else if (pod.type === 'ExpressionVector') {
-      return new ExpressionVector(pod.value.map(element => RenderEnvironment.omniReify(env, element)), SourceLocation.reify(pod.where));
-    } else if (pod.type === 'ExpressionAdd') {
-      return new ExpressionAdd(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
-    } else if (pod.type === 'ExpressionMultiply') {
-      return new ExpressionMultiply(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
-    } else if (pod.type === 'ExpressionDivide') {
-      return new ExpressionDivide(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
-    } else if (pod.type === 'ExpressionSubtract') {
-      return new ExpressionSubtract(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
-    } else if (pod.type === 'ExpressionRemainder') {
-      return new ExpressionRemainder(RenderEnvironment.omniReify(env, pod.l), RenderEnvironment.omniReify(env, pod.r), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
-    } else if (pod.type === 'ExpressionIdentifier') {
-      return new ExpressionIdentifier(Token.reify(pod.nameToken), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
-    } else if (pod.type === 'ExpressionFunctionCall') {
-      return new ExpressionFunctionCall(Token.reify(pod.nameToken), pod.actuals.map(actual => RenderEnvironment.omniReify(env, actual)), SourceLocation.reify(pod.where), RenderEnvironment.omniReify(env, pod.unevaluated));
+    } else if (!pod.type) {
+    } else if (pod.type.startsWith('Expression')) {
+      const e = Expression.reify(env, pod, RenderEnvironment.omniReify);
+      return e;
     } else {
       console.log(pod);
       throw Error('can\'t reify');

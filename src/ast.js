@@ -2,10 +2,12 @@
 
 import {
   Tokens,
+  Token,
   FunctionDefinition,
   MessagedException,
   LocatedException,
   Precedence,
+  SourceLocation,
 } from './common.js';
 
 import {
@@ -121,10 +123,64 @@ export class Expression {
   }
 
   toPod() {
-    return {
+    const pod = {
       type: this.constructor.name,
       where: this.where,
     };
+
+    if (this.unevaluated && this.unevaluated !== this) {
+      pod.unevaluated = this.unevaluated.toPod();
+    }
+
+    if (this.prevalues) {
+      pod.prevalues = this.prevalues.map(prevalue => prevalue.toPod());
+    }
+
+    return pod;
+  }
+
+  static reify(env, pod, omniReify) {
+    let unevaluated;
+    if (pod.unevaluated) {
+      unevaluated = omniReify(env, pod.unevaluated);
+    }
+
+    let prevalues;
+    if (pod.prevalues) {
+      prevalues = pod.prevalues.map(prevalue => omniReify(env, prevalue));
+    }
+
+    if (pod.type === 'ExpressionReal') {
+      return new ExpressionReal(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionBoolean') {
+      return new ExpressionBoolean(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionInteger') {
+      return new ExpressionInteger(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionString') {
+      return new ExpressionString(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionVector') {
+      return new ExpressionVector(pod.value.map(element => omniReify(env, element)), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionAdd') {
+      return new ExpressionAdd(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionMultiply') {
+      return new ExpressionMultiply(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionPower') {
+      return new ExpressionPower(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionDivide') {
+      return new ExpressionDivide(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionSubtract') {
+      return new ExpressionSubtract(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionRemainder') {
+      return new ExpressionRemainder(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionIdentifier') {
+      return new ExpressionIdentifier(Token.reify(pod.nameToken), SourceLocation.reify(pod.where), unevaluated);
+    } else if (pod.type === 'ExpressionFunctionCall') {
+      return new ExpressionFunctionCall(Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
+    } else if (pod.type === 'ExpressionNegative') {
+      return new ExpressionNegative(omniReify(env, pod.operand), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else {
+      throw new MessagedException(`I don't know ${pod.type}!`);
+    }
   }
 }
 
@@ -830,7 +886,12 @@ export class ExpressionRemainder extends ExpressionBinaryOperator {
   evaluate(env, fromTime, toTime) {
     let evaluatedL = this.l.evaluate(env, fromTime, toTime);
     let evaluatedR = this.r.evaluate(env, fromTime, toTime);
-    return evaluatedL.remainder(evaluatedR);
+
+    let remainder = evaluatedL.remainder(evaluatedR);
+    remainder.prevalues = [evaluatedL, evaluatedR];
+    remainder.unevaluated = this;
+
+    return remainder;
   }
 }
 
@@ -869,6 +930,7 @@ export class ExpressionNegative extends Expression {
     let evaluatedL = this.operand.evaluate(env, fromTime, toTime);
 
     let negation = evaluatedL.negative();
+    negation.prevalues = [evaluatedL];
     negation.unevaluated = this;
 
     return negation;
@@ -876,7 +938,7 @@ export class ExpressionNegative extends Expression {
 
   toPod() {
     const pod = super.toPod();
-    pod.operand = this.operand;
+    pod.operand = this.operand.toPod();
     return pod;
   }
 }
