@@ -697,7 +697,6 @@ export class NodedShape extends Shape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
     this.nodes = [];
-    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
   toExpandedPod() {
@@ -734,6 +733,18 @@ export class NodedShape extends Shape {
       currentTurtle = piece.turtle;
     }
     return pieces;
+  }
+
+  mirrorPositions(positions, env, t) {
+    const positionCount = positions.length;
+    const point = this.get('mirror').valueAt(env, 'point', t);
+    const axis = this.get('mirror').valueAt(env, 'axis', t);
+
+    for (let i = positionCount - 1; i >= 0; --i) {
+      if ((i > 0 && i < positionCount - 1) || positions[i].distanceToLine(point, axis) > 0.000001) {
+        positions.push(positions[i].mirror(point, axis));
+      }
+    }
   }
 
   castCursorIntoComponents(column, row) {
@@ -781,6 +792,7 @@ export class Polygon extends NodedShape {
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -829,15 +841,7 @@ export class Polygon extends NodedShape {
       }
 
       if (this.owns('mirror')) {
-        const positionCount = positions.length;
-        const point = this.get('mirror').valueAt(env, 'point', t);
-        const axis = this.get('mirror').valueAt(env, 'axis', t);
-
-        for (let i = positionCount - 1; i >= 0; --i) {
-          if ((i > 0 && i < positionCount - 1) || positions[i].distanceToLine(point, axis) > 0.000001) {
-            positions.push(positions[i].mirror(point, axis));
-          }
-        }
+        this.mirrorPositions(positions, env, t);
       }
 
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
@@ -871,6 +875,7 @@ export class Polyline extends NodedShape {
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -912,6 +917,10 @@ export class Polyline extends NodedShape {
     if (positions.some(position => !position)) {
       this.hide();
     } else {
+      if (this.owns('mirror')) {
+        this.mirrorPositions(positions, env, t);
+      }
+
       this.show();
       this.applyStroke(env, t, this.element);
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
@@ -1019,6 +1028,7 @@ export class Ungon extends NodedShape {
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -1077,6 +1087,10 @@ export class Ungon extends NodedShape {
         this.untimedProperties.stroke.applyStroke(env, t, this.element);
       }
 
+      if (this.owns('mirror')) {
+        this.mirrorPositions(positions, env, t);
+      }
+
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
       this.outlineMark.updateProperties(coordinates, matrix);
 
@@ -1131,7 +1145,6 @@ export class Path extends NodedShape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
 
-    this.untimedProperties.mirror = Mirror.create(this);
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
