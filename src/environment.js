@@ -353,15 +353,16 @@ export class Mirror extends TimelinedEnvironment {
   static timedIds = ['point', 'axis'];
 
   static create(parentEnvironment, where) {
-    const stroke = new Mirror();
-    stroke.initialize(parentEnvironment, where);
-    return stroke;
+    const mirror = new Mirror();
+    parentEnvironment.untimedProperties.mirror = mirror;
+    mirror.initialize(parentEnvironment, where);
+    return mirror;
   }
 
   static reify(parentEnvironment, pod) {
-    const stroke = new Mirror();
-    stroke.embody(parentEnvironment, pod);
-    return stroke;
+    const mirror = new Mirror();
+    mirror.embody(parentEnvironment, pod);
+    return mirror;
   }
 }
 

@@ -105,6 +105,7 @@ export class VertexNode extends Node {
       return {
         pathCommand: null,
         turtle: new Turtle(position, fromTurtle.heading),
+        segment: new LineSegment(),
       };
     } else {
       return null;
@@ -180,6 +181,7 @@ export class TurtleNode extends Node {
       return {
         pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
         turtle: new Turtle(position, heading),
+        segment: undefined,
       };
     } else {
       return null;
@@ -236,6 +238,7 @@ export class MoveNode extends Node {
       return {
         pathCommand: `L${position.get(0).value},${bounds.span - position.get(1).value}`,
         turtle: new Turtle(position, fromTurtle.heading),
+        segment: new LineSegment,
       };
     } else {
       return null;
@@ -297,6 +300,7 @@ export class TurnNode extends Node {
       return {
         pathCommand: null,
         turtle: new Turtle(fromTurtle.position, new ExpressionReal(newHeading)),
+        segment: undefined,
       };
     } else {
       return null;
@@ -342,6 +346,7 @@ export class JumpNode extends Node {
       return {
         pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
         turtle: new Turtle(position, fromTurtle.heading),
+        segment: undefined,
       };
     } else {
       return null;
@@ -408,7 +413,7 @@ export class LineNode extends Node {
       return {
         pathCommand,
         turtle: new Turtle(absolutePosition, fromTurtle.heading),
-        segment: null,
+        segment: new LineSegment(),
       };
     } else {
       return null;
@@ -693,4 +698,21 @@ export class CubicNode extends Node {
 }
 
 // --------------------------------------------------------------------------- 
+
+class LineSegment {
+  constructor(from, to) {
+    this.from = from;
+    this.to = to;
+  }
+
+  mirror(point, axis, predecessor, successor) {
+  }
+
+  toPathCommandString(env) {
+
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 

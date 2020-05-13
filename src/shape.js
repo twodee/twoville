@@ -41,6 +41,7 @@ import {
   ExpressionMoveNode,
   ExpressionArcNode,
   ExpressionCubicNode,
+  ExpressionMirror,
   ExpressionQuadraticNode,
   ExpressionReal,
   ExpressionString,
@@ -696,6 +697,7 @@ export class NodedShape extends Shape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
     this.nodes = [];
+    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
   toExpandedPod() {
@@ -824,6 +826,18 @@ export class Polygon extends NodedShape {
 
       if (this.owns('stroke')) {
         this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      }
+
+      if (this.owns('mirror')) {
+        const positionCount = positions.length;
+        const point = this.get('mirror').valueAt(env, 'point', t);
+        const axis = this.get('mirror').valueAt(env, 'axis', t);
+
+        for (let i = positionCount - 1; i >= 0; --i) {
+          if ((i > 0 && i < positionCount - 1) || positions[i].distanceToLine(point, axis) > 0.000001) {
+            positions.push(positions[i].mirror(point, axis));
+          }
+        }
       }
 
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');

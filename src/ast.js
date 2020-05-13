@@ -12,6 +12,7 @@ import {
 
 import {
   Environment,
+  Mirror,
 } from './environment.js';
 
 import {
@@ -2402,6 +2403,14 @@ export class ExpressionVector extends ExpressionData {
     return sum;
   }
 
+  distanceToLine(point, axis) {
+    let diff = this.subtract(point);
+    const hypotenuse = diff.magnitude;
+    diff = diff.normalize();
+    let radians = Math.acos(axis.dot(diff));
+    return hypotenuse * Math.sin(radians);
+  }
+
   mirror(point, axis) {
     let normal = axis.normalize();
     let diff = point.subtract(this); // ORDER?
@@ -2431,3 +2440,17 @@ export class ExpressionVector extends ExpressionData {
 }
 
 // --------------------------------------------------------------------------- 
+
+export class ExpressionMirror extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, callExpression) {
+    return Mirror.create(this.instance, callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
