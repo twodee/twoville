@@ -30,7 +30,7 @@ import {
 } from './transform.js';
 
 import {
-  VertexNode,
+  LineSegment,
 } from './node.js';
 
 import {
@@ -726,11 +726,13 @@ export class NodedShape extends Shape {
 
   traverseNodes(env, t, bounds, matrix) {
     let currentTurtle = new Turtle(null, null);
+    let previousSegment = undefined;
     const pieces = [];
     for (let node of this.nodes) {
-      const piece = node.updateProperties(env, t, bounds, currentTurtle, matrix);
+      const piece = node.updateProperties(env, t, bounds, currentTurtle, matrix, previousSegment);
       pieces.push(piece);
       currentTurtle = piece.turtle;
+      previousSegment = piece.segment;
     }
     return pieces;
   }
@@ -866,7 +868,7 @@ export class Polygon extends NodedShape {
 export class Polyline extends NodedShape {
   static type = 'polyline';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes'];
+  static timedIds = ['size', 'color', 'opacity', 'dashes', 'join'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -1153,6 +1155,7 @@ export class Path extends NodedShape {
     this.bindFunction('quadratic', new FunctionDefinition('line', [], new ExpressionQuadraticNode(this)));
     this.bindFunction('cubic', new FunctionDefinition('line', [], new ExpressionCubicNode(this)));
     this.bindFunction('arc', new FunctionDefinition('arc', [], new ExpressionArcNode(this)));
+    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -1205,7 +1208,25 @@ export class Path extends NodedShape {
         this.untimedProperties.stroke.applyStroke(env, t, this.element);
       }
 
+
       const pathCommands = pieces.map(piece => piece.pathCommand);
+
+      if (this.owns('mirror')) {
+        const point = this.get('mirror').valueAt(env, 'point', t);
+        const axis = this.get('mirror').valueAt(env, 'axis', t);
+
+        const segments = pieces.map(piece => piece.segment).slice(1).filter(segment => !!segment);
+        segments.reverse();
+
+        if (segments[0].to.distanceToLine(point, axis) > 1e-6) {
+          segments.unshift(new LineSegment(segments[0].to, segments[0].to.mirror(point, axis)));
+        }
+
+        for (let segment of segments) {
+          pathCommands.push(segment.mirror(point, axis).toCommandString(env, bounds));
+        }
+      }
+
       let commandString = pathCommands.join(' ');
       if (isClosed) {
         commandString += ' Z';

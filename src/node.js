@@ -1,4 +1,5 @@
 import {
+  LocatedException,
   SourceLocation,
   Turtle,
   classifyArc,
@@ -105,7 +106,6 @@ export class VertexNode extends Node {
       return {
         pathCommand: null,
         turtle: new Turtle(position, fromTurtle.heading),
-        segment: new LineSegment(),
       };
     } else {
       return null;
@@ -181,7 +181,7 @@ export class TurtleNode extends Node {
       return {
         pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
         turtle: new Turtle(position, heading),
-        segment: undefined,
+        segment: new GapSegment(fromTurtle?.position, position),
       };
     } else {
       return null;
@@ -238,7 +238,7 @@ export class MoveNode extends Node {
       return {
         pathCommand: `L${position.get(0).value},${bounds.span - position.get(1).value}`,
         turtle: new Turtle(position, fromTurtle.heading),
-        segment: new LineSegment,
+        segment: new LineSegment(fromTurtle.position, position),
       };
     } else {
       return null;
@@ -346,7 +346,7 @@ export class JumpNode extends Node {
       return {
         pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
         turtle: new Turtle(position, fromTurtle.heading),
-        segment: undefined,
+        segment: new GapSegment(fromTurtle?.position, position),
       };
     } else {
       return null;
@@ -413,7 +413,7 @@ export class LineNode extends Node {
       return {
         pathCommand,
         turtle: new Turtle(absolutePosition, fromTurtle.heading),
-        segment: new LineSegment(),
+        segment: new LineSegment(fromTurtle.position, absolutePosition),
       };
     } else {
       return null;
@@ -487,7 +487,7 @@ export class QuadraticNode extends Node {
       return {
         pathCommand,
         turtle: new Turtle(position, fromTurtle.heading),
-        segment: null,
+        segment: new QuadraticSegment(fromTurtle.position, position, control),
       };
     } else {
       return null;
@@ -584,18 +584,18 @@ export class ArcNode extends Node {
     let to = center.add(toTo);
 
     let radius = toFrom.magnitude;
-    let large;
+    let isLarge;
     let isClockwise;
 
     if (degrees.value >= 0) {
-      large = degrees.value >= 180 ? 1 : 0;
+      isLarge = degrees.value >= 180 ? 1 : 0;
       isClockwise = 0;
     } else {
-      large = degrees.value <= -180 ? 1 : 0;
+      isLarge = degrees.value <= -180 ? 1 : 0;
       isClockwise = 1;
     }
 
-    const pathCommand = `A${radius},${radius} 0 ${large} ${isClockwise} ${to.get(0).value},${bounds.span - to.get(1).value}`;
+    const pathCommand = `A${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value},${bounds.span - to.get(1).value}`;
 
     if (this.isWedge) {
       this.centerMark.updateProperties(center, bounds, matrix);
@@ -610,7 +610,7 @@ export class ArcNode extends Node {
     return {
       pathCommand,
       turtle: new Turtle(to, fromTurtle.heading),
-      segment: null,
+      segment: new ArcSegment(fromTurtle.position, to, radius, isLarge, isClockwise),
     };
   }
 }
@@ -659,7 +659,7 @@ export class CubicNode extends Node {
     this.marker.addMarks(foregroundMarks, backgroundMarks);
   }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
+  updateProperties(env, t, bounds, fromTurtle, matrix, fromSegment) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
@@ -689,7 +689,11 @@ export class CubicNode extends Node {
       return {
         pathCommand,
         turtle: new Turtle(position, fromTurtle.heading),
-        segment: null,
+        segment: (
+          control1
+            ? new CubicSegment(fromTurtle.position, position, control1, control2, false)
+            : new CubicSegment(fromTurtle.position, position, fromTurtle.position.add(fromTurtle.position.subtract(fromSegment.control2)), control2, true)
+        ),
       };
     } else {
       return null;
@@ -699,20 +703,103 @@ export class CubicNode extends Node {
 
 // --------------------------------------------------------------------------- 
 
-class LineSegment {
+class GapSegment {
   constructor(from, to) {
     this.from = from;
     this.to = to;
   }
 
-  mirror(point, axis, predecessor, successor) {
+  mirror(point, axis) {
+    return new GapSegment(this.to.mirror(point, axis), this.from.mirror(point, axis));
   }
 
-  toPathCommandString(env) {
-
+  toCommandString(env, bounds) {
+    return `M ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
   }
 }
 
 // --------------------------------------------------------------------------- 
 
+export class LineSegment {
+  constructor(from, to) {
+    this.from = from;
+    this.to = to;
+  }
+
+  mirror(point, axis) {
+    return new LineSegment(this.to.mirror(point, axis), this.from.mirror(point, axis));
+  }
+
+  toCommandString(env, bounds) {
+    return `L ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class QuadraticSegment {
+  constructor(from, to, control) {
+    this.from = from;
+    this.to = to;
+    this.control = control;
+  }
+
+  mirror(point, axis) {
+    return new QuadraticSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.control?.mirror(point, axis));
+  }
+
+  toCommandString(env, bounds) {
+    if (this.control) {
+      return `Q ${this.control.get(0).value},${bounds.span - this.control.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+    } else {
+      return `T ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class CubicSegment {
+  constructor(from, to, control1, control2, isImplicit) {
+    this.from = from;
+    this.to = to;
+    this.control1 = control1;
+    this.control2 = control2;
+    this.isImplicit = isImplicit;
+  }
+
+  mirror(point, axis) {
+    return new CubicSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.control2.mirror(point, axis), this.control1.mirror(point, axis), this.isImplicit);
+  }
+
+  toCommandString(env, bounds) {
+    if (this.control1) {
+      return `C ${this.control1.get(0).value},${bounds.span - this.control1.get(1).value} ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+    } else {
+      return `S ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ArcSegment {
+  constructor(from, to, radius, isLarge, isClockwise) {
+    this.from = from;
+    this.to = to;
+    this.radius = radius;
+    this.isLarge = isLarge;
+    this.isClockwise = isClockwise;
+  }
+
+  mirror(point, axis) {
+    return new ArcSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.radius, this.isLarge, this.isClockwise);
+  }
+
+  toCommandString(env, bounds) {
+    return `A${this.radius},${this.radius} 0 ${this.isLarge} ${this.isClockwise} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+  }
+}
+
+// --------------------------------------------------------------------------- 
 
