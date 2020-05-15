@@ -340,13 +340,29 @@ export class JumpNode extends Node {
   updateProperties(env, t, bounds, fromTurtle, matrix) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
+
+    let absolutePosition;
+    let isDelta = this.owns('delta') && this.get('delta').value;
+    if (isDelta) {
+      absolutePosition = fromTurtle.position.add(position);
+    } else {
+      absolutePosition = position;
+    }
     
     if (position) {
-      this.positionMark.updateProperties(position, bounds, matrix);
+      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
+
+      let pathCommand;
+      if (isDelta) {
+        pathCommand = `m ${position.get(0).value},${-position.get(1).value}`;
+      } else {
+        pathCommand = `M ${position.get(0).value},${bounds.span - position.get(1).value}`;
+      }
+
       return {
-        pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
-        turtle: new Turtle(position, fromTurtle.heading),
-        segment: new GapSegment(fromTurtle?.position, position),
+        pathCommand,
+        turtle: new Turtle(absolutePosition, fromTurtle.heading),
+        segment: new GapSegment(fromTurtle?.position, absolutePosition),
       };
     } else {
       return null;
@@ -364,7 +380,6 @@ export class LineNode extends Node {
   static create(parentEnvironment, where) {
     const node = new LineNode();
     node.initialize(parentEnvironment, where);
-    node.untimedProperties.delta = new ExpressionBoolean(false);
     return node;
   }
 
@@ -388,16 +403,12 @@ export class LineNode extends Node {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
-    let isDelta = this.untimedProperties.delta.value;
-
     let absolutePosition;
-    let letter;
+    let isDelta = this.owns('delta') && this.get('delta').value;
     if (isDelta) {
       absolutePosition = fromTurtle.position.add(position);
-      letter = 'l';
     } else {
       absolutePosition = position;
-      letter = 'L';
     }
     
     if (position) {
@@ -405,9 +416,9 @@ export class LineNode extends Node {
 
       let pathCommand;
       if (isDelta) {
-        pathCommand = `${letter}${position.get(0).value},${-position.get(1).value}`;
+        pathCommand = `l ${position.get(0).value},${-position.get(1).value}`;
       } else {
-        pathCommand = `${letter}${position.get(0).value},${bounds.span - position.get(1).value}`;
+        pathCommand = `L ${position.get(0).value},${bounds.span - position.get(1).value}`;
       }
 
       return {
@@ -470,18 +481,44 @@ export class QuadraticNode extends Node {
       control = this.valueAt(env, 'control', t);
       this.controlMark.setExpression(control);
     }
+
+    let isDelta = this.owns('delta') && this.get('delta').value;
+
+    let absolutePosition;
+    if (isDelta) {
+      absolutePosition = fromTurtle.position.add(position);
+    } else {
+      absolutePosition = position;
+    }
+
+    let absoluteControl;
+    if (control) {
+      if (isDelta) {
+        absoluteControl = fromTurtle.position.add(control);
+      } else {
+        absoluteControl = control;
+      }
+    }
     
     if (position) {
-      this.positionMark.updateProperties(position, bounds, matrix);
+      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
 
       let pathCommand;
       if (control) {
-        this.controlMark.updateProperties(control, bounds, matrix);
-        this.lineMarks[0].updateProperties(fromTurtle.position, control, bounds, matrix);
-        this.lineMarks[1].updateProperties(control, position, bounds, matrix);
-        pathCommand = `Q${control.get(0).value},${bounds.span - control.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        this.controlMark.updateProperties(absoluteControl, bounds, matrix);
+        this.lineMarks[0].updateProperties(fromTurtle.position, absoluteControl, bounds, matrix);
+        this.lineMarks[1].updateProperties(absoluteControl, absolutePosition, bounds, matrix);
+        if (isDelta) {
+          pathCommand = `q ${control.get(0).value},${-control.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
+        } else {
+          pathCommand = `Q ${control.get(0).value},${bounds.span - control.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        }
       } else {
-        pathCommand = `T${position.get(0).value},${bounds.span - position.get(1).value}`;
+        if (isDelta) {
+          pathCommand = `t ${position.get(0).value},${-position.get(1).value}`;
+        } else {
+          pathCommand = `T ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        }
       }
 
       return {
@@ -550,38 +587,57 @@ export class ArcNode extends Node {
     let degrees = this.valueAt(env, 'degrees', t);
     let radians = degrees.value * Math.PI / 180;
 
+    let absolutePosition;
+    let isDelta = this.owns('delta') && this.get('delta').value;
+
     let center;
+    let absoluteCenter;
     if (this.isWedge) {
       center = this.valueAt(env, 'center', t);
+
+      if (isDelta) {
+        absoluteCenter = fromTurtle.position.add(center);
+      } else {
+        absoluteCenter = center;
+      }
+
       this.centerMark.setExpression(center);
-      this.positionMark.setExpression(degrees, fromTurtle.position, center);
+      this.positionMark.setExpression(degrees, fromTurtle.position, absoluteCenter);
     } else {
       let position = this.valueAt(env, 'position', t);
-      this.positionMark.setExpression(position);
-      this.positionMark.updateProperties(position, bounds, matrix);
 
-      let diff = position.subtract(fromTurtle.position);
+      let absolutePosition;
+      if (isDelta) {
+        absolutePosition = fromTurtle.position.add(position);
+      } else {
+        absolutePosition = position;
+      }
+
+      this.positionMark.setExpression(position);
+      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
+
+      let diff = absolutePosition.subtract(fromTurtle.position);
       let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
-      let halfway = fromTurtle.position.add(position).multiply(new ExpressionReal(0.5));
+      let halfway = fromTurtle.position.add(absolutePosition).multiply(new ExpressionReal(0.5));
       let normal = diff.rotate90().normalize();
-      center = halfway.add(normal.multiply(new ExpressionReal(-distance)));
+      absoluteCenter = halfway.add(normal.multiply(new ExpressionReal(-distance)));
 
       const movementAngle = Math.atan2(normal.get(1).value, normal.get(0).value) * 180 / Math.PI;
-      const pivotToOrigin = Matrix.translate(-center.get(0).value, -center.get(1).value);
+      const pivotToOrigin = Matrix.translate(-absoluteCenter.get(0).value, -absoluteCenter.get(1).value);
       const rotater = Matrix.rotate(movementAngle);
-      const originToPivot = Matrix.translate(center.get(0).value, center.get(1).value);
+      const originToPivot = Matrix.translate(absoluteCenter.get(0).value, absoluteCenter.get(1).value);
       const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
       const applied = matrix.multiplyMatrix(composite);
 
-      this.centerMark.updateProperties(center, bounds, applied);
+      this.centerMark.updateProperties(absoluteCenter, bounds, applied);
     }
 
-    let toFrom = fromTurtle.position.subtract(center);
+    let toFrom = fromTurtle.position.subtract(absoluteCenter);
     let toTo = new ExpressionVector([
       new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
       new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
     ]);
-    let to = center.add(toTo);
+    let to = absoluteCenter.add(toTo);
 
     let radius = toFrom.magnitude;
     let isLarge;
@@ -595,22 +651,27 @@ export class ArcNode extends Node {
       isClockwise = 1;
     }
 
-    const pathCommand = `A${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value},${bounds.span - to.get(1).value}`;
-
-    if (this.isWedge) {
-      this.centerMark.updateProperties(center, bounds, matrix);
-      this.positionMark.updateProperties(to, bounds, matrix);
+    let pathCommand;
+    if (isDelta) {
+      pathCommand = `a ${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value - fromTurtle.position.get(0).value},${-(to.get(1).value - fromTurtle.position.get(1).value)}`;
     } else {
-      this.centerMark.setExpression(degrees, fromTurtle.position, center, to);
+      pathCommand = `A ${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value},${bounds.span - to.get(1).value}`;
     }
 
-    this.lineMarks[0].updateProperties(center, fromTurtle.position, bounds, matrix);
-    this.lineMarks[1].updateProperties(center, to, bounds, matrix);
+    if (this.isWedge) {
+      this.centerMark.updateProperties(absoluteCenter, bounds, matrix);
+      this.positionMark.updateProperties(to, bounds, matrix);
+    } else {
+      this.centerMark.setExpression(degrees, fromTurtle.position, absoluteCenter, to);
+    }
+
+    this.lineMarks[0].updateProperties(absoluteCenter, fromTurtle.position, bounds, matrix);
+    this.lineMarks[1].updateProperties(absoluteCenter, to, bounds, matrix);
 
     return {
       pathCommand,
-      turtle: new Turtle(to, fromTurtle.heading),
-      segment: new ArcSegment(fromTurtle.position, to, radius, isLarge, isClockwise),
+      turtle: new Turtle(absolutePosition, fromTurtle.heading),
+      segment: new ArcSegment(fromTurtle.position, absolutePosition, radius, isLarge, isClockwise),
     };
   }
 }
@@ -663,27 +724,57 @@ export class CubicNode extends Node {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
+    let isDelta = this.owns('delta') && this.get('delta').value;
+
+    let absolutePosition;
+    if (isDelta) {
+      absolutePosition = fromTurtle.position.add(position);
+    } else {
+      absolutePosition = position;
+    }
+
     let control1;
+    let absoluteControl1;
     if (this.owns('control1')) {
       control1 = this.valueAt(env, 'control1', t);
       this.control1Mark.setExpression(control1);
+      if (isDelta) {
+        absoluteControl1 = fromTurtle.position.add(control1);
+      } else {
+        absoluteControl1 = control1;
+      }
     }
 
     let control2 = this.valueAt(env, 'control2', t);
     this.control2Mark.setExpression(control2);
+
+    let absoluteControl2;
+    if (isDelta) {
+      absoluteControl2 = fromTurtle.position.add(control2);
+    } else {
+      absoluteControl2 = control2;
+    }
     
     if (position && control2) {
-      this.positionMark.updateProperties(position, bounds, matrix);
-      this.control2Mark.updateProperties(control2, bounds, matrix);
-      this.line2Mark.updateProperties(control2, position, bounds, matrix);
+      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
+      this.control2Mark.updateProperties(absoluteControl2, bounds, matrix);
+      this.line2Mark.updateProperties(absoluteControl2, absolutePosition, bounds, matrix);
 
       let pathCommand;
       if (control1) {
-        this.control1Mark.updateProperties(control1, bounds, matrix);
-        this.line1Mark.updateProperties(fromTurtle.position, control1, bounds, matrix);
-        pathCommand = `C${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        this.control1Mark.updateProperties(absoluteControl1, bounds, matrix);
+        this.line1Mark.updateProperties(fromTurtle.position, absoluteControl1, bounds, matrix);
+        if (isDelta) {
+          pathCommand = `c ${control1.get(0).value},${-control1.get(1).value} ${control2.get(0).value},${-control2.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
+        } else {
+          pathCommand = `C ${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        }
       } else {
-        pathCommand = `S${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        if (isDelta) {
+          pathCommand = `s ${control2.get(0).value},${-control2.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
+        } else {
+          pathCommand = `S ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        }
       }
 
       return {
