@@ -465,6 +465,9 @@ function initialize() {
       parentPanel.children[0].style['width'] = `${relativeX - 4}px`;
       parentPanel.children[2].style['width'] = `${bounds.height - (relativeX + 4)}px`;
       editor.resize();
+
+      localStorage.setItem('left-width', parentPanel.children[0].style.width);
+
       e.preventDefault();
     };
 
@@ -484,6 +487,12 @@ function initialize() {
 
   const leftRightResizer = document.getElementById('left-right-resizer');
   leftRightResizer.addEventListener('mousedown', generateWidthResizer(leftRightResizer)); 
+
+  // Restore editor width from last time, unless we're embedded.
+  const leftWidth0 = localStorage.getItem('left-width');
+  if (leftWidth0 && !isEmbedded) {
+    left.style['width'] = leftWidth0;
+  }
 }
 
 window.addEventListener('DOMContentLoaded', initialize);
