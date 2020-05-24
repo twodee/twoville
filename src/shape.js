@@ -3,6 +3,7 @@ import {
   LocatedException,
   SourceLocation,
   Turtle,
+  sentenceCase,
   svgNamespace,
 } from './common.js';
 
@@ -31,6 +32,9 @@ import {
 
 import {
   LineSegment,
+  JumpNode,
+  TurtleNode,
+  VertexNode,
 } from './node.js';
 
 import {
@@ -693,7 +697,7 @@ export class Circle extends Shape {
 
 // --------------------------------------------------------------------------- 
 
-export class NodedShape extends Shape {
+export class NodeShape extends Shape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
     this.nodes = [];
@@ -782,7 +786,19 @@ export class NodedShape extends Shape {
 
 // --------------------------------------------------------------------------- 
 
-export class Polygon extends NodedShape {
+export class VertexShape extends NodeShape {
+  addNode(node) {
+    if (this.nodes.length === 0 && !(node instanceof VertexNode || node instanceof TurtleNode)) {
+      throw new LocatedException(node.where, `I saw ${this.article} ${this.type} whose first step is ${node.type}. ${sentenceCase(this.article)} ${this.type} must begin with vertex or turtle.`);
+    } else {
+      this.nodes.push(node);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Polygon extends VertexShape {
   static type = 'polygon';
   static article = 'a';
   static timedIds = ['color', 'opacity'];
@@ -865,7 +881,7 @@ export class Polygon extends NodedShape {
 
 // --------------------------------------------------------------------------- 
 
-export class Polyline extends NodedShape {
+export class Polyline extends VertexShape {
   static type = 'polyline';
   static article = 'a';
   static timedIds = ['size', 'color', 'opacity', 'dashes', 'join'];
@@ -939,7 +955,7 @@ export class Polyline extends NodedShape {
 
 // --------------------------------------------------------------------------- 
 
-export class Line extends NodedShape {
+export class Line extends VertexShape {
   static type = 'line';
   static article = 'a';
   static timedIds = ['size', 'color', 'opacity', 'dashes'];
@@ -1018,7 +1034,7 @@ export class Line extends NodedShape {
 
 // --------------------------------------------------------------------------- 
 
-export class Ungon extends NodedShape {
+export class Ungon extends VertexShape {
   static type = 'ungon';
   static article = 'an';
   static timedIds = ['rounding', 'color', 'opacity'];
@@ -1139,7 +1155,7 @@ export class Ungon extends NodedShape {
 
 // --------------------------------------------------------------------------- 
 
-export class Path extends NodedShape {
+export class Path extends NodeShape {
   static type = 'path';
   static article = 'a';
   static timedIds = ['color', 'opacity'];
@@ -1169,6 +1185,14 @@ export class Path extends NodedShape {
     const shape = new Path();
     shape.embody(parentEnvironment, pod);
     return shape;
+  }
+
+  addNode(node) {
+    if (this.nodes.length === 0 && !(node instanceof JumpNode || node instanceof TurtleNode)) {
+      throw new LocatedException(node.where, `I saw a path whose first step is ${node.type}. A path must begin with jump or turtle.`);
+    } else {
+      this.nodes.push(node);
+    }
   }
 
   start() {

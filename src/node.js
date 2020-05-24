@@ -38,7 +38,7 @@ import {
 export class Node extends TimelinedEnvironment {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
-    parentEnvironment.nodes.push(this);
+    parentEnvironment.addNode(this);
     this.sourceSpans = [];
   }
 
