@@ -1083,14 +1083,9 @@ export class Ungon extends VertexShape {
 
     let rounding = this.valueAt(env, 'rounding', t).value;
 
-    const opacity = this.valueAt(env, 'opacity', t).value;
+    this.setColor(env, t);
 
-    let color;
-    if (opacity > 0) {
-      color = this.valueAt(env, 'color', t);
-    }
-
-    if (positions.some(position => !position) || !color) {
+    if (positions.some(position => !position)) {
       this.hide();
     } else {
       this.show();
@@ -1134,10 +1129,6 @@ export class Ungon extends VertexShape {
       // pathCommands.push('z');
 
       this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
-
-      this.element.setAttributeNS(null, 'fill-opacity', opacity);
-      this.element.setAttributeNS(null, 'points', coordinates);
-      this.element.setAttributeNS(null, 'fill', opacity > 0 ? color.toColor() : 'none');
 
       const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
       const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
