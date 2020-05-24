@@ -844,12 +844,9 @@ export class Polygon extends VertexShape {
 
     const opacity = this.valueAt(env, 'opacity', t).value;
 
-    let color;
-    if (opacity > 0) {
-      color = this.valueAt(env, 'color', t);
-    }
+    this.setColor(env, t);
 
-    if (positions.some(position => !position) || !color) {
+    if (positions.some(position => !position)) {
       this.hide();
     } else {
       this.show();
@@ -864,10 +861,7 @@ export class Polygon extends VertexShape {
 
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
 
-      // TODO ensure opacity? color?
-      this.element.setAttributeNS(null, 'fill-opacity', opacity);
       this.element.setAttributeNS(null, 'points', coordinates);
-      this.element.setAttributeNS(null, 'fill', opacity > 0 ? color.toColor() : 'none');
 
       this.outlineMark.updateProperties(coordinates, matrix);
 
