@@ -251,6 +251,9 @@ export class Shape extends TimelinedEnvironment {
 
   deselect() {
     this.isSelected = false;
+    if (this.selectedMarker) {
+      this.selectedMarker.deselect();
+    }
     this.selectedMarker = undefined;
     this.markers[0].deselect();
   }

@@ -219,24 +219,29 @@ export class RenderEnvironment extends Environment {
 
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.backgroundMarkGroup.setAttributeNS(null, 'id', 'background-mark-group');
+    this.backgroundMarkGroup.classList.add('mark-group');
     this.svg.appendChild(this.backgroundMarkGroup);
 
     this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.midgroundMarkGroup.setAttributeNS(null, 'id', 'midground-mark-group');
+    this.midgroundMarkGroup.classList.add('mark-group');
     this.svg.appendChild(this.midgroundMarkGroup);
 
     this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.foregroundMarkGroup.setAttributeNS(null, 'id', 'foreground-mark-group');
+    this.foregroundMarkGroup.classList.add('mark-group');
     this.svg.appendChild(this.foregroundMarkGroup);
 
     this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'id', 'centered-foreground-mark-group');
+    this.centeredForegroundMarkGroup.classList.add('mark-group');
     this.svg.appendChild(this.centeredForegroundMarkGroup);
 
-    this.markGroup = document.createElementNS(svgNamespace, 'g');
-    this.markGroup.setAttributeNS(null, 'id', 'mark-group');
-    this.markGroup.appendChild(pageOutline);
-    this.backgroundMarkGroup.appendChild(this.markGroup);
+    this.sceneMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.sceneMarkGroup.setAttributeNS(null, 'id', 'mark-group');
+    this.sceneMarkGroup.classList.add('mark-group');
+    this.sceneMarkGroup.appendChild(pageOutline);
+    this.backgroundMarkGroup.appendChild(this.sceneMarkGroup);
 
     for (let shape of this.shapes) {
       shape.validate();
@@ -264,7 +269,7 @@ export class RenderEnvironment extends Environment {
   }
 
   hideMarks() {
-    this.markGroup.setAttributeNS(null, 'visibility', 'hidden');
+    this.sceneMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
   }
 
   updateViewBox() {
@@ -290,11 +295,11 @@ export class RenderEnvironment extends Environment {
 
   cloneSvgWithoutMarks() {
     // Inkscape doesn't honor the visibility: hidden attribute. As a workaround,
-    // we forcibly remove them from the SVG.
+    // we forcibly remove marks from the SVG.
     // https://bugs.launchpad.net/inkscape/+bug/166181
     let clone = this.svg.cloneNode(true);
     clone.setAttributeNS(null, 'viewBox', `${this.fitBounds.x} ${this.fitBounds.y} ${this.fitBounds.width} ${this.fitBounds.height}`);
-    removeClassMembers(clone);
+    removeClassMembers(clone, 'mark-group');
     return clone;
   }
 
