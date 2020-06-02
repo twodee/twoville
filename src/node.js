@@ -864,10 +864,10 @@ export class CubicSegment {
   }
 
   toCommandString(env, bounds) {
-    if (this.control1) {
-      return `C ${this.control1.get(0).value},${bounds.span - this.control1.get(1).value} ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
-    } else {
+    if (this.isImplicit) {
       return `S ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+    } else {
+      return `C ${this.control1.get(0).value},${bounds.span - this.control1.get(1).value} ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
     }
   }
 }

@@ -31,8 +31,10 @@ import {
 } from './transform.js';
 
 import {
-  LineSegment,
+  CubicSegment,
   JumpNode,
+  LineSegment,
+  QuadraticSegment,
   TurtleNode,
   VertexNode,
 } from './node.js';
@@ -1220,7 +1222,6 @@ export class Path extends NodeShape {
         this.untimedProperties.stroke.applyStroke(env, t, this.element);
       }
 
-
       const pathCommands = pieces.map(piece => piece.pathCommand);
 
       if (this.owns('mirror')) {
@@ -1231,7 +1232,12 @@ export class Path extends NodeShape {
         segments.reverse();
 
         if (segments[0].to.distanceToLine(point, axis) > 1e-6) {
-          segments.unshift(new LineSegment(segments[0].to, segments[0].to.mirror(point, axis)));
+          // if a spline
+          console.log("segments[0]:", segments[0]);
+          // segments.unshift(new LineSegment(segments[0].to, segments[0].to.mirror(point, axis)));
+          const diff = segments[0].control2.subtract(segments[0].to);
+          const control1 = segments[0].to.subtract(diff);
+          segments.unshift(new CubicSegment(segments[0].to, segments[0].to.mirror(point, axis), control1, control1.mirror(point, axis), true));
         }
 
         for (let segment of segments) {
