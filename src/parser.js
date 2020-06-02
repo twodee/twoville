@@ -636,8 +636,26 @@ export function parse(tokens) {
       }
     } else if (has(Tokens.LeftSquareBracket)) {
       let sourceStart = tokens[i].where;
-      consume(); // eat [
+      const leftToken = consume(); // eat [
       let elements = [];
+
+      // Allow linebreak followed by indentation.
+      let hasLinebreaks = false;
+      if (has(Tokens.Linebreak)) {
+        consume();
+        if (has(Tokens.Indentation)) {
+          if (indents[indents.length - 1] < tokens[i].source.length) {
+            indents.push(tokens[i].source.length);
+            hasLinebreaks = true;
+            consume();
+          } else {
+            throw new LocatedException(tokens[i].where, 'I expected the vector\'s elements to be indented one level.');
+          }
+        } else {
+          throw new LocatedException(leftToken.where, 'I expected the vector\'s elements to be indented one level.');
+        }
+      }
+
       while (!has(Tokens.RightSquareBracket)) {
         let e;
         if (has(Tokens.Tilde)) {
@@ -653,6 +671,38 @@ export function parse(tokens) {
         if (!has(Tokens.RightSquareBracket)) {
           if (has(Tokens.Comma)) {
             consume(); // eat ,
+
+            if (has(Tokens.Linebreak)) {
+              if (hasLinebreaks) {
+                consume(); // eat break
+                if (has(Tokens.Indentation)) {
+                  if (indents[indents.length - 1] === tokens[i].source.length) {
+                    consume();
+                  } else {
+                    throw new LocatedException(tokens[i].where, 'I expected all of the vector\'s elements to have the same level of indentation. But this element has a different indentation.');
+                  }
+                }
+              } else {
+                throw new LocatedException(tokens[i].where, 'I expected no linebreaks in this vector because there was no linebreak after the opening [.');
+              }
+            }
+          } else if (has(Tokens.Linebreak)) {
+            if (hasLinebreaks) {
+              consume();
+              if (has(Tokens.Indentation) && has(Tokens.RightSquareBracket, 1)) {
+                indents.pop();
+                if (indents[indents.length - 1] === tokens[i].source.length) {
+                  consume();
+                } else {
+                  consume();
+                  throw new LocatedException(tokens[i].where, 'I expected the vector\'s closing line to have the same indentation as its opening line.');
+                }
+              } else {
+                throw new LocatedException(tokens[i].where, 'I expected the vector to be closed with ].');
+              }
+            } else {
+              throw new LocatedException(tokens[i].where, 'I expected no linebreaks in this vector because there was no linebreak after the opening [.');
+            }
           } else {
             throw new LocatedException(tokens[i].where, 'I expected a comma between vector elements.');
           }
@@ -665,14 +715,66 @@ export function parse(tokens) {
       let sourceStart = tokens[i].where;
 
       let nameToken = consume();
-      consume(); // eat (
+      const leftToken = consume(); // eat (
+
+      // Allow linebreak followed by indentation.
+      let hasLinebreaks = false;
+      if (has(Tokens.Linebreak)) {
+        consume();
+        if (has(Tokens.Indentation)) {
+          if (indents[indents.length - 1] < tokens[i].source.length) {
+            indents.push(tokens[i].source.length);
+            hasLinebreaks = true;
+            consume();
+          } else {
+            throw new LocatedException(tokens[i].where, 'I expected the parameters to be indented one level.');
+          }
+        } else {
+          throw new LocatedException(leftToken.where, 'I expected the parameters to be indented one level.');
+        }
+      }
 
       let actuals = [];
-      if (isFirstOfExpression()) {
+      while (!has(Tokens.RightParenthesis)) {
         actuals.push(expression());
-        while (has(Tokens.Comma) && isFirstOfExpression(1)) {
-          consume(); // eat ,
-          actuals.push(expression());
+        if (!has(Tokens.RightParenthesis)) {
+          if (has(Tokens.Comma)) {
+            consume(); // eat ,
+
+            if (has(Tokens.Linebreak)) {
+              if (hasLinebreaks) {
+                consume(); // eat break
+                if (has(Tokens.Indentation)) {
+                  if (indents[indents.length - 1] === tokens[i].source.length) {
+                    consume();
+                  } else {
+                    throw new LocatedException(tokens[i].where, 'I expected all of the parameters to have the same level of indentation. But this element has a different indentation.');
+                  }
+                }
+              } else {
+                throw new LocatedException(tokens[i].where, 'I expected no linebreaks in this call because there was no linebreak after the opening (.');
+              }
+            }
+          } else if (has(Tokens.Linebreak)) {
+            if (hasLinebreaks) {
+              consume();
+              if (has(Tokens.Indentation) && has(Tokens.RightParenthesis, 1)) {
+                indents.pop();
+                if (indents[indents.length - 1] === tokens[i].source.length) {
+                  consume();
+                } else {
+                  consume();
+                  throw new LocatedException(tokens[i].where, 'I expected the call\'s closing line to have the same indentation as its opening line.');
+                }
+              } else {
+                throw new LocatedException(tokens[i].where, 'I expected the call to be closed with ).');
+              }
+            } else {
+              throw new LocatedException(tokens[i].where, 'I expected no linebreaks in this call because there was no linebreak after the opening (.');
+            }
+          } else {
+            throw new LocatedException(tokens[i].where, 'I expected a comma between parameters.');
+          }
         }
       }
 

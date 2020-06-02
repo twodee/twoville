@@ -524,7 +524,11 @@ export class QuadraticNode extends Node {
       return {
         pathCommand,
         turtle: new Turtle(position, fromTurtle.heading),
-        segment: new QuadraticSegment(fromTurtle.position, position, control),
+        segment: (
+          control
+            ? new QuadraticSegment(fromTurtle.position, position, control, false)
+            : new QuadraticSegment(fromTurtle.position, position, fromTurtle.position.add(fromTurtle.position.subtract(fromSegment.control)), true)
+        ),
       };
     } else {
       return null;
@@ -821,6 +825,10 @@ export class LineSegment {
     return new LineSegment(this.to.mirror(point, axis), this.from.mirror(point, axis));
   }
 
+  mirrorBridge(point, axis) {
+    return new LineSegment(this.to, this.to.mirror(point, axis));
+  }
+
   toCommandString(env, bounds) {
     return `L ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
   }
@@ -829,21 +837,28 @@ export class LineSegment {
 // --------------------------------------------------------------------------- 
 
 export class QuadraticSegment {
-  constructor(from, to, control) {
+  constructor(from, to, control, isImplicit) {
     this.from = from;
     this.to = to;
     this.control = control;
+    this.isImplicit;
   }
 
   mirror(point, axis) {
-    return new QuadraticSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.control?.mirror(point, axis));
+    return new QuadraticSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.control.mirror(point, axis));
+  }
+
+  mirrorBridge(point, axis) {
+    const diff = this.control.subtract(this.to);
+    const opposite = this.to.subtract(diff);
+    return new CubicSegment(this.to, this.to.mirror(point, axis), opposite, opposite.mirror(point, axis), false);
   }
 
   toCommandString(env, bounds) {
-    if (this.control) {
-      return `Q ${this.control.get(0).value},${bounds.span - this.control.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
-    } else {
+    if (this.isImplicit) {
       return `T ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+    } else {
+      return `Q ${this.control.get(0).value},${bounds.span - this.control.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
     }
   }
 }
@@ -863,11 +878,17 @@ export class CubicSegment {
     return new CubicSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.control2.mirror(point, axis), this.control1.mirror(point, axis), this.isImplicit);
   }
 
+  mirrorBridge(point, axis) {
+    const diff = this.control2.subtract(this.to);
+    const opposite = this.to.subtract(diff);
+    return new CubicSegment(this.to, this.to.mirror(point, axis), opposite, opposite.mirror(point, axis), true);
+  }
+
   toCommandString(env, bounds) {
-    if (this.control1) {
-      return `C ${this.control1.get(0).value},${bounds.span - this.control1.get(1).value} ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
-    } else {
+    if (this.isImplicit) {
       return `S ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+    } else {
+      return `C ${this.control1.get(0).value},${bounds.span - this.control1.get(1).value} ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
     }
   }
 }
