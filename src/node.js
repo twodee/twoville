@@ -675,7 +675,7 @@ export class ArcNode extends Node {
     return {
       pathCommand,
       turtle: new Turtle(absolutePosition, fromTurtle.heading),
-      segment: new ArcSegment(fromTurtle.position, absolutePosition, radius, isLarge, isClockwise),
+      segment: new ArcSegment(fromTurtle.position, to, radius, isLarge, isClockwise),
     };
   }
 }
@@ -906,6 +906,10 @@ export class ArcSegment {
 
   mirror(point, axis) {
     return new ArcSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.radius, this.isLarge, this.isClockwise);
+  }
+
+  mirrorBridge(point, axis) {
+    return new LineSegment(this.to, this.to.mirror(point, axis));
   }
 
   toCommandString(env, bounds) {
