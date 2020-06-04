@@ -706,23 +706,29 @@ export class NodeShape extends Shape {
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
     this.nodes = [];
+    this.mirrors = [];
   }
 
   toExpandedPod() {
     const pod = super.toExpandedPod();
     pod.nodes = this.nodes.map(node => node.toPod());
+    pod.mirrors = this.mirrors.map(mirror => mirror.toPod());
     return pod;
   }
 
   embody(parentEnvironment, pod) {
     super.embody(parentEnvironment, pod);
     this.nodes = pod.nodes.map(subpod => this.root.omniReify(this, subpod));
+    this.mirrors = pod.mirrors.map(subpod => this.root.omniReify(this, subpod));
   }
 
   validate() {
     super.validate();
     for (let node of this.nodes) {
       node.validate();
+    }
+    for (let mirror of this.mirrors) {
+      // TODO validate mirror.validate();
     }
   }
 
@@ -747,13 +753,15 @@ export class NodeShape extends Shape {
   }
 
   mirrorPositions(positions, env, t) {
-    const positionCount = positions.length;
-    const point = this.get('mirror').valueAt(env, 'point', t);
-    const axis = this.get('mirror').valueAt(env, 'axis', t);
+    for (let mirror of this.mirrors) {
+      const positionCount = positions.length;
+      const point = mirror.valueAt(env, 'point', t);
+      const axis = mirror.valueAt(env, 'axis', t);
 
-    for (let i = positionCount - 1; i >= 0; --i) {
-      if ((i > 0 && i < positionCount - 1) || positions[i].distanceToLine(point, axis) > 0.000001) {
-        positions.push(positions[i].mirror(point, axis));
+      for (let i = positionCount - 1; i >= 0; --i) {
+        if ((i > 0 && i < positionCount - 1) || positions[i].distanceToLine(point, axis) > 0.000001) {
+          positions.push(positions[i].mirror(point, axis));
+        }
       }
     }
   }
@@ -786,6 +794,10 @@ export class NodeShape extends Shape {
       let tail = this.get('tail');
       this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
     }
+  }
+
+  addMirror(mirror) {
+    this.mirrors.push(mirror);
   }
 }
 
@@ -860,7 +872,7 @@ export class Polygon extends VertexShape {
         this.untimedProperties.stroke.applyStroke(env, t, this.element);
       }
 
-      if (this.owns('mirror')) {
+      if (this.mirrors.length > 0) {
         this.mirrorPositions(positions, env, t);
       }
 
@@ -934,7 +946,7 @@ export class Polyline extends VertexShape {
     if (positions.some(position => !position)) {
       this.hide();
     } else {
-      if (this.owns('mirror')) {
+      if (this.mirrors.length > 0) {
         this.mirrorPositions(positions, env, t);
       }
 
@@ -1099,7 +1111,7 @@ export class Ungon extends VertexShape {
         this.untimedProperties.stroke.applyStroke(env, t, this.element);
       }
 
-      if (this.owns('mirror')) {
+      if (this.mirrors.length > 0) {
         this.mirrorPositions(positions, env, t);
       }
 
@@ -1224,19 +1236,27 @@ export class Path extends NodeShape {
 
       const pathCommands = pieces.map(piece => piece.pathCommand);
 
-      if (this.owns('mirror')) {
-        const point = this.get('mirror').valueAt(env, 'point', t);
-        const axis = this.get('mirror').valueAt(env, 'axis', t);
+      if (this.mirrors.length > 0) {
+        let segments = pieces.map(piece => piece.segment).slice(1).filter(segment => !!segment);
 
-        const segments = pieces.map(piece => piece.segment).slice(1).filter(segment => !!segment);
-        segments.reverse();
+        for (let mirror of this.mirrors) {
+          const point = mirror.valueAt(env, 'point', t);
+          const axis = mirror.valueAt(env, 'axis', t);
 
-        if (segments[0].to.distanceToLine(point, axis) > 1e-6) {
-          segments.unshift(segments[0].mirrorBridge(point, axis));
-        }
+          const mirroredSegments = segments.slice();
+          mirroredSegments.reverse();
 
-        for (let segment of segments) {
-          pathCommands.push(segment.mirror(point, axis).toCommandString(env, bounds));
+          if (mirroredSegments[0].to.distanceToLine(point, axis) > 1e-6) {
+            mirroredSegments.unshift(mirroredSegments[0].mirrorBridge(point, axis));
+          }
+
+          mirroredSegments = mirroredSegments.map(segment => segment.mirror(point, axis));
+
+          for (let segment of mirroredSegments) {
+            pathCommands.push(segment.toCommandString(env, bounds));
+          }
+
+          segments.push(...mirroredSegments);
         }
       }
 

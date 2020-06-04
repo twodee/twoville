@@ -354,9 +354,13 @@ export class Mirror extends TimelinedEnvironment {
 
   static create(parentEnvironment, where) {
     const mirror = new Mirror();
-    parentEnvironment.untimedProperties.mirror = mirror;
     mirror.initialize(parentEnvironment, where);
     return mirror;
+  }
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+    parentEnvironment.addMirror(this);
   }
 
   static reify(parentEnvironment, pod) {
