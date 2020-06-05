@@ -13,6 +13,7 @@ import {
 } from './ast.js';
 
 import {
+  AxisMark,
   BumpDegreesMark,
   BumpPositionMark,
   CircleMark,
@@ -804,8 +805,8 @@ class GapSegment {
     this.to = to;
   }
 
-  mirror(point, axis) {
-    return new GapSegment(this.to.mirror(point, axis), this.from.mirror(point, axis));
+  mirror(position, axis) {
+    return new GapSegment(this.to.mirror(position, axis), this.from.mirror(position, axis));
   }
 
   toCommandString(env, bounds) {
@@ -821,12 +822,12 @@ export class LineSegment {
     this.to = to;
   }
 
-  mirror(point, axis) {
-    return new LineSegment(this.to.mirror(point, axis), this.from.mirror(point, axis));
+  mirror(position, axis) {
+    return new LineSegment(this.to.mirror(position, axis), this.from.mirror(position, axis));
   }
 
-  mirrorBridge(point, axis) {
-    return new LineSegment(this.to, this.to.mirror(point, axis));
+  mirrorBridge(position, axis) {
+    return new LineSegment(this.to, this.to.mirror(position, axis));
   }
 
   toCommandString(env, bounds) {
@@ -844,14 +845,14 @@ export class QuadraticSegment {
     this.isImplicit;
   }
 
-  mirror(point, axis) {
-    return new QuadraticSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.control.mirror(point, axis));
+  mirror(position, axis) {
+    return new QuadraticSegment(this.to.mirror(position, axis), this.from.mirror(position, axis), this.control.mirror(position, axis));
   }
 
-  mirrorBridge(point, axis) {
+  mirrorBridge(position, axis) {
     const diff = this.control.subtract(this.to);
     const opposite = this.to.subtract(diff);
-    return new CubicSegment(this.to, this.to.mirror(point, axis), opposite, opposite.mirror(point, axis), false);
+    return new CubicSegment(this.to, this.to.mirror(position, axis), opposite, opposite.mirror(position, axis), false);
   }
 
   toCommandString(env, bounds) {
@@ -874,14 +875,14 @@ export class CubicSegment {
     this.isImplicit = isImplicit;
   }
 
-  mirror(point, axis) {
-    return new CubicSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.control2.mirror(point, axis), this.control1.mirror(point, axis), this.isImplicit);
+  mirror(position, axis) {
+    return new CubicSegment(this.to.mirror(position, axis), this.from.mirror(position, axis), this.control2.mirror(position, axis), this.control1.mirror(position, axis), this.isImplicit);
   }
 
-  mirrorBridge(point, axis) {
+  mirrorBridge(position, axis) {
     const diff = this.control2.subtract(this.to);
     const opposite = this.to.subtract(diff);
-    return new CubicSegment(this.to, this.to.mirror(point, axis), opposite, opposite.mirror(point, axis), true);
+    return new CubicSegment(this.to, this.to.mirror(position, axis), opposite, opposite.mirror(position, axis), true);
   }
 
   toCommandString(env, bounds) {
@@ -904,16 +905,88 @@ export class ArcSegment {
     this.isClockwise = isClockwise;
   }
 
-  mirror(point, axis) {
-    return new ArcSegment(this.to.mirror(point, axis), this.from.mirror(point, axis), this.radius, this.isLarge, this.isClockwise);
+  mirror(position, axis) {
+    return new ArcSegment(this.to.mirror(position, axis), this.from.mirror(position, axis), this.radius, this.isLarge, this.isClockwise);
   }
 
-  mirrorBridge(point, axis) {
-    return new LineSegment(this.to, this.to.mirror(point, axis));
+  mirrorBridge(position, axis) {
+    return new LineSegment(this.to, this.to.mirror(position, axis));
   }
 
   toCommandString(env, bounds) {
     return `A${this.radius},${this.radius} 0 ${this.isLarge} ${this.isClockwise} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Mirror extends TimelinedEnvironment {
+  static type = 'mirror';
+  static article = 'a';
+  static timedIds = ['position', 'axis'];
+
+  static create(parentEnvironment, where) {
+    const mirror = new Mirror();
+    mirror.initialize(parentEnvironment, where);
+    return mirror;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const mirror = new Mirror();
+    mirror.embody(parentEnvironment, pod);
+    return mirror;
+  }
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+    parentEnvironment.addMirror(this);
+    this.sourceSpans = [];
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.sourceSpans = this.sourceSpans;
+    return pod;
+  }
+
+  embody(parentEnvironment, pod) {
+    super.embody(parentEnvironment, pod);
+    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
+  }
+
+  start() {
+    this.marker = new Marker(this.parentEnvironment);
+    this.parentEnvironment.addMarker(this.marker);
+
+    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    this.lineMark = new LineMark();
+    this.axisMark = new AxisMark(this.parentEnvironment, this);
+    this.marker.addMarks([this.positionMark, this.axisMark], [this.lineMark]);
+  }
+
+  validate() {
+    this.assertProperty('position');
+    this.assertProperty('axis');
+  }
+
+  updateProperties(env, t, bounds, matrix) {
+    const position = this.valueAt(env, 'position', t);
+    const axis = this.valueAt(env, 'axis', t);
+    this.positionMark.setExpression(position);
+    this.axisMark.setExpression(axis, position);
+    this.positionMark.updateProperties(position, bounds, matrix);
+    this.axisMark.updateProperties(position.add(axis), bounds, matrix);
+    this.lineMark.updateProperties(position, position.add(axis), bounds, matrix);
+    return {position, axis};
+  }
+
+  castCursor(column, row) {
+    const isHit = this.sourceSpans.some(span => span.contains(column, row));
+    if (isHit) {
+      this.parentEnvironment.root.select(this.parentEnvironment);
+      this.parentEnvironment.selectMarker(this.marker.id);
+    }
+    return isHit;
   }
 }
 

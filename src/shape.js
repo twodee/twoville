@@ -9,7 +9,6 @@ import {
 
 import {
   TimelinedEnvironment,
-  Mirror,
   Stroke,
 } from './environment.js';
 
@@ -34,6 +33,7 @@ import {
   CubicSegment,
   JumpNode,
   LineSegment,
+  Mirror,
   QuadraticSegment,
   TurtleNode,
   VertexNode,
@@ -366,6 +366,7 @@ export class Shape extends TimelinedEnvironment {
         return true;
       }
     }
+
     return false;
   }
 
@@ -728,7 +729,7 @@ export class NodeShape extends Shape {
       node.validate();
     }
     for (let mirror of this.mirrors) {
-      // TODO validate mirror.validate();
+      mirror.validate();
     }
   }
 
@@ -736,6 +737,9 @@ export class NodeShape extends Shape {
     super.start();
     for (let node of this.nodes) {
       node.start();
+    }
+    for (let mirror of this.mirrors) {
+      mirror.start();
     }
   }
 
@@ -752,15 +756,13 @@ export class NodeShape extends Shape {
     return pieces;
   }
 
-  mirrorPositions(positions, env, t) {
+  mirrorPositions(positions, env, t, bounds, matrix) {
     for (let mirror of this.mirrors) {
+      const {position, axis} = mirror.updateProperties(env, t, bounds, matrix);
       const positionCount = positions.length;
-      const point = mirror.valueAt(env, 'point', t);
-      const axis = mirror.valueAt(env, 'axis', t);
-
       for (let i = positionCount - 1; i >= 0; --i) {
-        if ((i > 0 && i < positionCount - 1) || positions[i].distanceToLine(point, axis) > 0.000001) {
-          positions.push(positions[i].mirror(point, axis));
+        if ((i > 0 && i < positionCount - 1) || positions[i].distanceToLine(position, axis) > 0.000001) {
+          positions.push(positions[i].mirror(position, axis));
         }
       }
     }
@@ -772,6 +774,13 @@ export class NodeShape extends Shape {
         return true;
       }
     }
+
+    for (let mirror of this.mirrors) {
+      if (mirror.castCursor(column, row)) {
+        return true;
+      }
+    }
+
     return super.castCursorIntoComponents(column, row);
   }
 
@@ -873,7 +882,7 @@ export class Polygon extends VertexShape {
       }
 
       if (this.mirrors.length > 0) {
-        this.mirrorPositions(positions, env, t);
+        this.mirrorPositions(positions, env, t, bounds, matrix);
       }
 
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
@@ -947,7 +956,7 @@ export class Polyline extends VertexShape {
       this.hide();
     } else {
       if (this.mirrors.length > 0) {
-        this.mirrorPositions(positions, env, t);
+        this.mirrorPositions(positions, env, t, bounds, matrix);
       }
 
       this.show();
@@ -1112,7 +1121,7 @@ export class Ungon extends VertexShape {
       }
 
       if (this.mirrors.length > 0) {
-        this.mirrorPositions(positions, env, t);
+        this.mirrorPositions(positions, env, t, bounds, matrix);
       }
 
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
@@ -1240,17 +1249,16 @@ export class Path extends NodeShape {
         let segments = pieces.map(piece => piece.segment).slice(1).filter(segment => !!segment);
 
         for (let mirror of this.mirrors) {
-          const point = mirror.valueAt(env, 'point', t);
-          const axis = mirror.valueAt(env, 'axis', t);
+          const {position, axis} = mirror.updateProperties(env, t, bounds, matrix);
 
           const mirroredSegments = segments.slice();
           mirroredSegments.reverse();
 
-          if (mirroredSegments[0].to.distanceToLine(point, axis) > 1e-6) {
-            mirroredSegments.unshift(mirroredSegments[0].mirrorBridge(point, axis));
+          if (mirroredSegments[0].to.distanceToLine(position, axis) > 1e-6) {
+            mirroredSegments.unshift(mirroredSegments[0].mirrorBridge(position, axis));
           }
 
-          mirroredSegments = mirroredSegments.map(segment => segment.mirror(point, axis));
+          mirroredSegments = mirroredSegments.map(segment => segment.mirror(position, axis));
 
           for (let segment of mirroredSegments) {
             pathCommands.push(segment.toCommandString(env, bounds));

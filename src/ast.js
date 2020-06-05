@@ -12,7 +12,6 @@ import {
 
 import {
   Environment,
-  Mirror,
 } from './environment.js';
 
 import {
@@ -42,6 +41,7 @@ import {
   CubicNode,
   LineNode,
   JumpNode,
+  Mirror,
   MoveNode,
   QuadraticNode,
   TurnNode,

@@ -16,7 +16,6 @@ import {
 
 import {
   Environment,
-  Mirror,
   Stroke,
 } from './environment.js';
 
@@ -30,6 +29,7 @@ import {
   CubicNode,
   JumpNode,
   LineNode,
+  Mirror,
   MoveNode,
   QuadraticNode,
   VertexNode,

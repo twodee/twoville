@@ -347,28 +347,3 @@ export class Stroke extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export class Mirror extends TimelinedEnvironment {
-  static type = 'mirror';
-  static article = 'a';
-  static timedIds = ['point', 'axis'];
-
-  static create(parentEnvironment, where) {
-    const mirror = new Mirror();
-    mirror.initialize(parentEnvironment, where);
-    return mirror;
-  }
-
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
-    parentEnvironment.addMirror(this);
-  }
-
-  static reify(parentEnvironment, pod) {
-    const mirror = new Mirror();
-    mirror.embody(parentEnvironment, pod);
-    return mirror;
-  }
-}
-
-// --------------------------------------------------------------------------- 
-

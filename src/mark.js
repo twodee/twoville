@@ -491,6 +491,40 @@ export class RotationMark extends PanMark {
 
 // --------------------------------------------------------------------------- 
 
+export class AxisMark extends PanMark {
+  constructor(shape, component) {
+    super(shape, component, false);
+    this.addArc();
+  }
+
+  setExpression(axisExpression, positionExpression) {
+    super.setExpression(axisExpression);
+    this.positionExpression = positionExpression;
+  }
+
+  getNewSource(delta, isShiftModified, mouseAt) {
+    let x = parseFloat((this.untweakedExpression.get(0).value + delta[0]).toShortFloat());
+    let y = parseFloat((this.untweakedExpression.get(1).value + delta[1]).toShortFloat());
+
+    if (isShiftModified) {
+      x = Math.round(x);
+      y = Math.round(y);
+    }
+
+    const newAxis = new ExpressionVector([
+      new ExpressionReal(x),
+      new ExpressionReal(y)
+    ]).normalize();
+
+    this.expression.set(0, new ExpressionReal(newAxis.get(0).value.toShortFloat()));
+    this.expression.set(1, new ExpressionReal(newAxis.get(1).value.toShortFloat()));
+
+    return '[' + this.expression.get(0).value + ', ' + this.expression.get(1).value + ']';
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class DistanceMark extends PanMark {
   constructor(shape, component) {
     super(shape, component);
