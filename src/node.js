@@ -302,6 +302,7 @@ export class TurnNode extends Node {
         pathCommand: null,
         turtle: new Turtle(fromTurtle.position, new ExpressionReal(newHeading)),
         segment: undefined,
+        isVirtualMove: true,
       };
     } else {
       return null;
@@ -673,9 +674,10 @@ export class ArcNode extends Node {
     this.lineMarks[0].updateProperties(absoluteCenter, fromTurtle.position, bounds, matrix);
     this.lineMarks[1].updateProperties(absoluteCenter, to, bounds, matrix);
 
+    // TODO is Turtle.position = to always the right thing here?
     return {
       pathCommand,
-      turtle: new Turtle(absolutePosition, fromTurtle.heading),
+      turtle: new Turtle(to, fromTurtle.heading),
       segment: new ArcSegment(fromTurtle.position, to, radius, isLarge, isClockwise),
     };
   }

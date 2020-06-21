@@ -570,7 +570,7 @@ export class ExpressionReal extends ExpressionData {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
       return new ExpressionReal(this.value + other.value);
     } else {
-      throw '...';
+      throw 'bad real add';
     }
   }
 
@@ -578,7 +578,7 @@ export class ExpressionReal extends ExpressionData {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
       return new ExpressionReal(this.value - other.value);
     } else {
-      throw '...';
+      throw 'bad real subtract';
     }
   }
 
@@ -1599,7 +1599,7 @@ export class ExpressionRepeatAround extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let count = this.count.evaluate(env, fromTime, toTime);
+    let count = this.count.evaluate(env, fromTime, toTime).value;
     let last = null;
     for (let i = 0; i < count; ++i) {
       last = this.body.evaluate(env, fromTime, toTime);
@@ -2328,7 +2328,7 @@ export class ExpressionVector extends ExpressionData {
       }
       return new ExpressionVector(result);
     } else {
-      throw '...';
+      throw 'bad vector multiply';
     }
   }
 
@@ -2346,7 +2346,7 @@ export class ExpressionVector extends ExpressionData {
       }
       return new ExpressionVector(result);
     } else {
-      throw '...';
+      throw 'bad vector divide';
     }
   }
 
@@ -2364,7 +2364,7 @@ export class ExpressionVector extends ExpressionData {
       }
       return new ExpressionVector(result);
     } else {
-      throw '...';
+      throw 'bad vector add';
     }
   }
 
@@ -2382,7 +2382,8 @@ export class ExpressionVector extends ExpressionData {
       }
       return new ExpressionVector(result);
     } else {
-      throw '...';
+      console.trace('asdf');
+      throw 'bad vector subtract';
     }
   }
 

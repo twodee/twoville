@@ -1101,7 +1101,7 @@ export class Ungon extends VertexShape {
     matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds, matrix);
-    const positions = pieces.map(piece => piece.turtle.position);
+    const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
 
     if (positions[0].distance(positions[positions.length - 1]) < 1e-3) {
       positions.pop();
