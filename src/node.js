@@ -474,7 +474,7 @@ export class QuadraticNode extends Node {
     this.marker.addMarks(foregroundMarks, this.lineMarks);
   }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
+  updateProperties(env, t, bounds, fromTurtle, matrix, fromSegment) {
     const position = this.valueAt(env, 'position', t);
     this.positionMark.setExpression(position);
 
@@ -877,8 +877,8 @@ export class CubicSegment {
     this.isImplicit = isImplicit;
   }
 
-  mirror(position, axis) {
-    return new CubicSegment(this.to.mirror(position, axis), this.from.mirror(position, axis), this.control2.mirror(position, axis), this.control1.mirror(position, axis), this.isImplicit);
+  mirror(position, axis, allowImplicit = true) {
+    return new CubicSegment(this.to.mirror(position, axis), this.from.mirror(position, axis), this.control2.mirror(position, axis), this.control1.mirror(position, axis), allowImplicit && this.isImplicit);
   }
 
   mirrorBridge(position, axis) {

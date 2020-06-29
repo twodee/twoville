@@ -866,7 +866,7 @@ export class Polygon extends VertexShape {
     matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds, matrix);
-    const positions = pieces.map(piece => piece.turtle.position);
+    const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
 
     const opacity = this.valueAt(env, 'opacity', t).value;
 
@@ -950,7 +950,7 @@ export class Polyline extends VertexShape {
     matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds, matrix);
-    const positions = pieces.map(piece => piece.turtle.position);
+    const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
 
     if (positions.some(position => !position)) {
       this.hide();
@@ -1023,7 +1023,7 @@ export class Line extends VertexShape {
     matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds, matrix);
-    const positions = pieces.map(piece => piece.turtle.position);
+    const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
 
     if (positions.length != 2) {
       throw new LocatedException(this.where, `I tried to draw a line that had ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
@@ -1258,7 +1258,7 @@ export class Path extends NodeShape {
             mirroredSegments.unshift(mirroredSegments[0].mirrorBridge(position, axis));
           }
 
-          mirroredSegments = mirroredSegments.map(segment => segment.mirror(position, axis));
+          mirroredSegments = mirroredSegments.map((segment, i) => segment.mirror(position, axis, i > 0));
 
           for (let segment of mirroredSegments) {
             pathCommands.push(segment.toCommandString(env, bounds));

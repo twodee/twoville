@@ -175,6 +175,8 @@ export class Expression {
       return new ExpressionRemainder(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionIdentifier') {
       return new ExpressionIdentifier(Token.reify(pod.nameToken), SourceLocation.reify(pod.where), unevaluated);
+    } else if (pod.type === 'ExpressionMemberIdentifier') {
+      return new ExpressionMemberIdentifier(omniReify(pod.base), Token.reify(pod.nameToken), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionFunctionCall') {
       return new ExpressionFunctionCall(Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionNegative') {
@@ -1061,6 +1063,12 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
 
   toPretty() {
     return `.${this.nameToken.source}`;
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.base = this.base.toPod();
+    return pod;
   }
 }
 
