@@ -1570,6 +1570,27 @@ export class StatementFromStasis extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class StatementThroughStasis extends Expression {
+  static precedence = Precedence.Atom;
+
+  constructor(startTimeExpression, endTimeExpression, block, where, unevaluated) {
+    super(where, unevaluated);
+    this.startTimeExpression = startTimeExpression;
+    this.endTimeExpression = endTimeExpression;
+    this.block = block;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let startTime = this.startTimeExpression.evaluate(env, fromTime, toTime);
+    let endTime = this.endTimeExpression.evaluate(env, fromTime, toTime);
+    this.block.evaluate(env, null, startTime);
+    this.block.evaluate(env, startTime, endTime);
+    this.block.evaluate(env, endTime, null);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionRepeat extends Expression {
   static precedence = Precedence.Atom;
 

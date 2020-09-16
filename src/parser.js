@@ -49,6 +49,7 @@ import {
   StatementTo,
   StatementToStasis,
   StatementThrough,
+  StatementThroughStasis,
 } from './ast.js';
 
 export function parse(tokens) {
@@ -166,6 +167,17 @@ export function parse(tokens) {
               consume();
               let b = block();
               return new StatementToStasis(e, e2, b, SourceLocation.span(firstT.where, b.where));
+            } else if (has(Tokens.RightArrow)) {
+              // TODO check for other things
+              consume(); // eat arrow
+              if (has(Tokens.T)) {
+                consume(); // eat t
+                if (has(Tokens.Linebreak)) {
+                  consume(); // eat linebreak
+                  let b = block();
+                  return new StatementThroughStasis(e, e2, b, SourceLocation.span(firstT.where, b.where));
+                }
+              }
             } else {
               throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
             }
