@@ -139,6 +139,9 @@ export class Shape extends TimelinedEnvironment {
 
   hide() {
     this.element.setAttributeNS(null, 'visibility', 'hidden');
+    for (let marker of this.markers) {
+      marker.hideMarks();
+    }
   }
 
   start() {
@@ -554,6 +557,11 @@ export class Rectangle extends Shape {
     matrix = this.transform(env, t, bounds, matrix);
 
     const size = this.valueAt(env, 'size', t);
+    if (!size) {
+      this.hide();
+      return;
+    }
+
     this.widthMark.setExpression(size.get(0));
     this.heightMark.setExpression(size.get(1));
 

@@ -15,10 +15,10 @@ export class Interval {
 
   toPod() {
     return {
-      fromTime: this.fromTime.toPod(),
-      fromValue: this.fromValue.toPod(),
-      toTime: this.toTime.toPod(),
-      toValue: this.toValue.toPod(),
+      fromTime: this.fromTime?.toPod(),
+      fromValue: this.fromValue?.toPod(),
+      toTime: this.toTime?.toPod(),
+      toValue: this.toValue?.toPod(),
       interpolator: this.interpolator,
     };
   }

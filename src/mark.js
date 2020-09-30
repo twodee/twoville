@@ -323,7 +323,9 @@ export class PanMark extends TweakableMark {
   }
 
   unscale(factor) {
-    this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${6 / factor})`);
+    if (this.commandString) {
+      this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${6 / factor})`);
+    }
   }
 
   addHorizontal() {

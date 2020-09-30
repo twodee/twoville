@@ -235,7 +235,7 @@ function startInterpreting() {
     }
   });
 
-  const hasWorker = true;
+  const hasWorker = false;
   if (hasWorker) {
     interpreterWorker.postMessage({
       command: 'interpret',
@@ -271,6 +271,12 @@ function syncTitle() {
   // e.stopPropagation();
   // e.preventDefault();
 // });
+
+function save() {
+  localStorage.setItem('src', editor.getValue());
+  isSaved = true;
+  syncTitle();
+}
 
 function initialize() {
   editor = ace.edit('editor');
@@ -377,10 +383,16 @@ function initialize() {
     tick(parseInt(scrubber.min));
   });
 
-  saveButton.addEventListener('click', () => {
-    localStorage.setItem('src', editor.getValue());
-    isSaved = true;
-    syncTitle();
+  saveButton.addEventListener('click', save);
+
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+      save();
+      event.preventDefault();
+      return false;
+    } else {
+      return true;
+    }
   });
 
   exportButton.addEventListener('click', exportSvgWithoutMarks);
