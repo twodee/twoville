@@ -83,12 +83,12 @@ export class Interval {
     if (!this.hasFrom()) {
       return this.toValue.evaluate(env);
     } else if (this.fromValue.isTimeSensitive(env)) {
-      env.bindings.t = new ExpressionInteger(t);
+      env.bind('t', new ExpressionInteger(t));
       return this.fromValue.evaluate(env);
     } else if (!this.hasTo()) {
       return this.fromValue.evaluate(env);
     } else if (this.toValue.isTimeSensitive(env)) {
-      env.bindings.t = new ExpressionInteger(t);
+      env.bind('t', new ExpressionInteger(t));
       return this.toValue.evaluate(env);
     } else {
       let proportion = (t - this.fromTime.value) / this.duration();
