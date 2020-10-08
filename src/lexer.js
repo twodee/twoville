@@ -1,4 +1,5 @@
 import {
+  LocatedException,
   Tokens,
   Token,
   SourceLocation
@@ -84,9 +85,14 @@ export function lex(source) {
   function string() {
     consume();
     // TODO newline?
-    while (!has('"')) {
+    while (!has('"') && i < source.length) {
       consume();
     }
+
+    if (!has('"')) {
+      throw new LocatedException(new SourceLocation(iStartLine, iEndLine, iStartColumn, iEndColumn, iStartIndex, iEndIndex), `I see a string literal, but it isn't closed with ".`);
+    }
+
     consume();
     tokenSoFar = tokenSoFar.substr(1, tokenSoFar.length - 2); // chop off "
     emit(Tokens.String);

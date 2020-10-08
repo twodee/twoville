@@ -266,13 +266,12 @@ function syncTitle() {
 }
 
 // Keep scrolling from bubbling up to parent when embedded.
-// Doesn't work with Ace editor.
-// document.body.addEventListener('wheel', function (e) {
-  // e.stopPropagation();
-  // e.preventDefault();
-// });
+document.addEventListener('wheel', e => {
+  e.preventDefault();
+}, {passive: false});
 
 function save() {
+  if (isEmbedded) return;
   localStorage.setItem('src', editor.getValue());
   isSaved = true;
   syncTitle();
@@ -305,9 +304,12 @@ function initialize() {
   timeSpinner = document.getElementById('time-spinner');
   new Messager(document.getElementById('messager'), document, highlight);
 
-  if (localStorage.getItem('src') !== null) {
+  if (source0) {
+    editor.setValue(source0, 1);
+  } else if (!isEmbedded && localStorage.getItem('src') !== null) {
     editor.setValue(localStorage.getItem('src'), 1);
   }
+
   editor.getSession().on('change', onSourceChanged);
   editor.getSession().setMode("ace/mode/twoville");
   editor.getSession().selection.on('changeCursor', () => {
@@ -438,7 +440,6 @@ function initialize() {
   }
 
   if (source0) {
-    editor.setValue(source0, 1);
     if (runZeroMode) {
       startInterpreting();
       if (runZeroMode == 'loop') {
@@ -478,7 +479,9 @@ function initialize() {
       parentPanel.children[2].style['width'] = `${bounds.height - (relativeX + 4)}px`;
       editor.resize();
 
-      localStorage.setItem('left-width', parentPanel.children[0].style.width);
+      if (!isEmbedded) {
+        localStorage.setItem('left-width', parentPanel.children[0].style.width);
+      }
 
       e.preventDefault();
     };
@@ -501,9 +504,11 @@ function initialize() {
   leftRightResizer.addEventListener('mousedown', generateWidthResizer(leftRightResizer)); 
 
   // Restore editor width from last time, unless we're embedded.
-  const leftWidth0 = localStorage.getItem('left-width');
-  if (leftWidth0 && !isEmbedded) {
-    left.style['width'] = leftWidth0;
+  if (!isEmbedded) {
+    const leftWidth0 = localStorage.getItem('left-width');
+    if (leftWidth0) {
+      left.style['width'] = leftWidth0;
+    }
   }
 }
 
