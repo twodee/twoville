@@ -1,0 +1,11 @@
+gap = 6
+x = 0
+
+with polygon()
+  vertex().position = [gap + x, gap]
+  vertex().position = [100 - gap - x, 50]
+  vertex().position = [gap + x, 100 - gap]
+  color = :black
+  stroke.color = :black
+  stroke.size = gap
+  // opacity = 0

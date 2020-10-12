@@ -88,6 +88,8 @@ body {
   position: absolute;
   left: 10px;
   top: 10px;
+  display: flex;
+  flex-direction: row;
 }
 
 #time-toolbar {
@@ -167,12 +169,12 @@ html.grabbing {
 }
 
 .height-resizer {
-  background-image: url('horizontal_bars.png');
+  background-image: url('images/horizontal_bars.png');
   cursor: row-resize;
 }
 
 .width-resizer {
-  background-image: url('vertical_bars.png');
+  background-image: url('images/vertical_bars.png');
   cursor: col-resize;
 }
 
@@ -210,4 +212,32 @@ html.grabbing {
   stroke: white;
   stroke-dasharray: none;
   vector-effect: non-scaling-stroke;
+}
+
+.tool-icon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.tool-pair {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  margin: 0 5px;
+}
+
+.tool-icon-fill {
+  opacity: 0;
+  transition: opacity 0.1s linear, scale 0.1s linear;
+}
+
+.tool-pair:hover > .tool-icon-fill {
+  opacity: 1;
+}
+
+.tool-pair:hover > .tool-icon {
+  /* transform: scale(1.2); */
 }

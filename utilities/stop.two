@@ -1,0 +1,10 @@
+gap = 6
+x = 0
+
+with rectangle()
+  center = [50, 50]
+  size = [100 - 2 * gap, 100 - 2 * gap]
+  color = :black
+  stroke.color = :black
+  stroke.size = gap
+  // opacity = 0
