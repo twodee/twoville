@@ -2066,6 +2066,17 @@ export class ExpressionSquareRoot extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionAbsoluteValue extends ExpressionFunction {
+  evaluate(env, fromTime, toTime, callExpression) {
+    let x = env.get('x').value;
+    let positive = Math.abs(x);
+    return new ExpressionInteger(positive);
+    // TODO real vs. integer
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 // The casting function.
 export class ExpressionInt extends ExpressionFunction {
   evaluate(env, fromTime, toTime, callExpression) {

@@ -39,6 +39,7 @@ import {
   ExpressionSeed,
   ExpressionSine,
   ExpressionSquareRoot,
+  ExpressionAbsoluteValue,
   ExpressionString,
   ExpressionSubtract,
   ExpressionTangent,
@@ -198,6 +199,7 @@ export class Environment {
       atan: new FunctionDefinition('atan', ['ratio'], new ExpressionArcTangent()),
       atan2: new FunctionDefinition('atan2', ['a', 'b'], new ExpressionArcTangent2()),
       sqrt: new FunctionDefinition('sqrt', ['x'], new ExpressionSquareRoot()),
+      abs: new FunctionDefinition('abs', ['x'], new ExpressionAbsoluteValue()),
       int: new FunctionDefinition('int', ['x'], new ExpressionInt()),
     });
   }
