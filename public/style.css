@@ -16,6 +16,17 @@ body {
   overflow: auto;
 }
 
+var {
+  font-family: 'Roboto Mono', monospace;
+  font-style: normal;
+  font-weight: bold;
+  color: yellow;
+}
+
+.monospace {
+  font-family: 'Roboto Mono', monospace;
+}
+
 #container {
   position: fixed;
   top: 0;
@@ -48,7 +59,7 @@ body {
 }
 
 #messager {
-  font-family: monospace;
+  font-family: 'Roboto Mono', monospace;
   font-size: 150%;
   overflow: auto;
   width: 100%;

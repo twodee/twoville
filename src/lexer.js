@@ -206,9 +206,20 @@ export function lex(source) {
   }
 
   function indentation() {
-    while (has(/[ \t]/)) {
-      consume();
-    }
+    // while (true) {
+      while (has(/[ \t]/)) {
+        consume();
+      }
+
+      // If we hit a line break, then the whole line is empty. Let's
+      // automatically advance to the next line.
+      // if (has('\n')) {
+        // consume();
+        // resetToken();
+      // } else {
+        // break;
+      // }
+    // }
 
     if (has('/') && has('/', 1)) {
       consume();
@@ -362,7 +373,7 @@ export function lex(source) {
       resetToken();
     } else {
       consume();
-      throw new LocatedException(new SourceLocation(iStartLine, iEndLine, iStartColumn, iEndColumn, iStartIndex, iEndIndex), `I encountered "${tokenSoFar}", and I don't know what it means.`);
+      throw new LocatedException(new SourceLocation(iStartLine, iEndLine, iStartColumn, iEndColumn, iStartIndex, iEndIndex), `I encountered <var>${tokenSoFar}</var>, and I don't know what it means.`);
     }
   }
 

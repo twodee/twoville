@@ -20,6 +20,8 @@ import {
 
 import Interpreter from './interpreter.worker.js';
 
+const hasWorker = false;
+
 let editor;
 let Range;
 let left;
@@ -235,7 +237,6 @@ function startInterpreting() {
     }
   });
 
-  const hasWorker = true;
   if (hasWorker) {
     interpreterWorker.postMessage({
       command: 'interpret',

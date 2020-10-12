@@ -27,8 +27,9 @@ export class Messager {
 
       messagerElement.appendChild(linkNode);
 
-      let textNode = messagerDocument.createTextNode(': ' + message);
-      messagerElement.appendChild(textNode);
+      let rest = messagerDocument.createElement('span');
+      rest.innerHTML = ': ' + message;
+      messagerElement.appendChild(rest);
     } else {
       let textNode = messagerDocument.createTextNode(text);
       messagerElement.appendChild(textNode);

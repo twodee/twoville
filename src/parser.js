@@ -263,6 +263,7 @@ export function parse(tokens) {
     if (has(Tokens.Assign)) {
       consume();
       let rhs = expressionAssignment();
+      console.log("rhs:", rhs);
       lhs = new ExpressionAssignment(lhs, rhs, SourceLocation.span(lhs.where, rhs.where));
     }
     return lhs;
@@ -831,9 +832,11 @@ export function parse(tokens) {
       let body = block();
       return new ExpressionWith(scope, body, SourceLocation.span(sourceStart, body.where));
     } else {
-      if (!has(Tokens.Linebreak)) {
-        throw new LocatedException(tokens[i].where, `I don't know what "${tokens[i].source}" means here.`);
-      }
+      throw new LocatedException(tokens[i].where, `I expected an expression, but I didn't find one.`);
+      // console.log("tokens[i]:", tokens[i]);
+      // if (!has(Tokens.Linebreak)) {
+        // throw new LocatedException(tokens[i].where, `I don't know what "${tokens[i].source}" means here.`);
+      // }
     }
   }
 
