@@ -1,0 +1,60 @@
+gap = 6
+x = 0
+
+with viewport
+  center = :zero2
+  size = [100, 100]
+
+nteeth = 6
+dutyCycle = 0.6
+taper = 0.6
+innerRadius = 31
+outerRadius = 50 - gap
+holeRadius = 10
+
+wedgeDegrees = 360.0 / nteeth
+gapDegrees = (1 - dutyCycle) * wedgeDegrees
+shoulderDegrees = dutyCycle * wedgeDegrees * taper * 0.5
+flatDegrees = dutyCycle * wedgeDegrees - shoulderDegrees * 2
+print(wedgeDegrees)
+
+hole = cutout()
+
+with circle()
+  center = :zero2
+  radius = holeRadius
+  parent = hole
+
+with circle()
+  center = :zero2
+  radius = holeRadius
+  stroke.size = gap
+  stroke.color = :black
+  opacity = 0
+
+with path()
+  closed = true
+  with jump()
+    position = [innerRadius, 0]
+  for i to nteeth
+    current = i * wedgeDegrees
+    with arc()
+      center = :zero2
+      degrees = gapDegrees
+    current = current + gapDegrees
+    with line()
+      position = [outerRadius, current + shoulderDegrees].toCartesian()
+    current = current + shoulderDegrees
+    with line()
+      position = [outerRadius, current + flatDegrees].toCartesian()
+    current = current + flatDegrees
+    with line()
+      position = [innerRadius, current + shoulderDegrees].toCartesian()
+  color = :black
+  stroke.color = :black
+  stroke.size = gap
+  // opacity = 0
+  with rotate()
+    pivot = :zero2
+    degrees = -(gapDegrees + shoulderDegrees + flatDegrees * 0.5)
+  mask = hole
