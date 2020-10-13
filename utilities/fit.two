@@ -1,0 +1,36 @@
+gap = 6
+thickness = 15
+side = 35
+
+to corner(start, heading)
+  with polygon()
+    color = :orange
+    stroke.color = :black
+    stroke.size = gap
+    opacity = 0
+    closed = true
+    with turtle()
+      position = start
+      heading = heading
+    move().distance = side
+    turn().degrees = -90
+    move().distance = thickness
+    turn().degrees = -90
+    move().distance = side - thickness
+    turn().degrees = 90
+    move().distance = side - thickness
+    turn().degrees = -90
+    move().distance = thickness
+
+corner([gap, gap], 90)
+corner([100 - gap, gap], 180)
+corner([100 - gap, 100 - gap], 270)
+corner([gap, 100 - gap], 0)
+
+with circle()
+  center = [50, ~]
+  radius = 15
+  color = :orange
+  opacity = 0
+  stroke.size = gap
+  stroke.color = :black

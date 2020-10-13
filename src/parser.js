@@ -263,7 +263,6 @@ export function parse(tokens) {
     if (has(Tokens.Assign)) {
       consume();
       let rhs = expressionAssignment();
-      console.log("rhs:", rhs);
       lhs = new ExpressionAssignment(lhs, rhs, SourceLocation.span(lhs.where, rhs.where));
     }
     return lhs;

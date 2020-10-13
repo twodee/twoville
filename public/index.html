@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <title>Twoville</title>
   <link rel="icon" href="data:,">
-  <script src="dist/bundle.js"></script>
-  <link href="style.css" rel="stylesheet" type="text/css">
+  <script defer src="dist/bundle.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+  <link href="style.css" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
 <body>
 
@@ -18,40 +19,60 @@
       <div id="messager"></div>
     </div>
   </div>
-  <div id="left-right-resizer" class="width-resizer resizer"></div>
-  <div id="canvas" draggable="false">
-    <div id="right">
-      <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
-    </div>
+
+  <div id="left-middle-resizer" class="width-resizer resizer"></div>
+
+  <div id="middle" draggable="false">
+    <!-- <div id="right"> -->
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <!-- </div> -->
+
     <div id="toolbar">
-      <div class="tool-pair">
-        <img src="images/play_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
-        <img src="images/play_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+      <div id="toolbar-left">
+        <div class="tool-set" id="evaluate-button">
+          <img src="images/play_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
+          <img src="images/play_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+          <img src="images/play_active.svg" alt="run button" class="tool-icon tool-icon-active">
+        </div>
+
+        <div class="tool-set hidden" id="stop-button">
+          <img src="images/stop_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
+          <img src="images/stop_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+          <img src="images/stop_active.svg" alt="run button" class="tool-icon tool-icon-active">
+        </div>
+
+        <div class="tool-set" id="fit-button">
+          <img src="images/fit_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
+          <img src="images/fit_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+          <img src="images/fit_active.svg" alt="run button" class="tool-icon tool-icon-active">
+        </div>
+
+        <div class="tool-set" id="save-clean-button">
+          <img src="images/save_clean_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
+          <img src="images/save_clean_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+          <img src="images/save_clean_active.svg" alt="run button" class="tool-icon tool-icon-active">
+        </div>
+
+        <div class="tool-set hidden" id="save-dirty-button">
+          <img src="images/save_dirty_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
+          <img src="images/save_dirty_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+          <img src="images/save_dirty_active.svg" alt="run button" class="tool-icon tool-icon-active">
+        </div>
       </div>
 
-      <div class="tool-pair">
-        <img src="images/stop_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
-        <img src="images/stop_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+      <div id="toolbar-middle">
+        <div id="spinner" class="tool-set spinner"></div>
       </div>
 
-      <div class="tool-pair">
-        <img src="images/gear_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
-        <img src="images/gear_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+      <div id="toolbar-right">
+        <div class="tool-set" id="settings-button">
+          <img src="images/gear_stroke.svg" alt="run button" class="tool-icon tool-icon-stroke">
+          <img src="images/gear_fill.svg" alt="run button" class="tool-icon tool-icon-fill">
+          <img src="images/gear_active.svg" alt="run button" class="tool-icon tool-icon-active">
+        </div>
       </div>
-
-      <span class="spinner-root">
-        <input type="button" id="evaluate-button" value="Evaluate">
-        <div id="evaluate-spinner" class="spinner"></div>
-      </span>
-      <input type="button" id="stop-button" class="hidden" value="Stop">
-      <span class="spinner-root">
-        <input type="button" id="record-button" value="Record" disabled>
-        <div id="record-spinner" class="spinner"></div>
-      </span>
-      <input type="button" id="save-button" value="Save">
-      <input type="button" id="export-button" value="Export">
-      <input type="button" id="fit-button" value="Fit">
     </div>
+
     <div id="time-toolbar">
       <div>
         <input type="number" id="time-spinner" value="0" min="0" max="100">
@@ -60,7 +81,34 @@
       </div>
       <input type="range" id="scrubber" value="0" min="0" max="100000">
     </div>
-  </canvas>
+  </div>
+
+  <div id="middle-right-resizer" class="width-resizer resizer"></div>
+
+  <div id="right">
+    <div id="settings-root">
+
+      <div class="panel-section">
+        <h3>File</h3>
+        <div id="file-root">
+          <!-- <input type="button" id="save-button" value="Save"> -->
+          <input type="button" id="export-button" value="Export SVG">
+          <input type="button" id="record-button" value="Record Animated GIF">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Grid</h3>
+      </div>
+
+      <div class="panel-section">
+        <h3>Documentation</h3>
+      </div>
+    </div>
+    <div id="settings-docs-resizer" class="height-resizer resizer"></div>
+    <div id="docs-root">
+    </div>
+  </div>
 </div>
 
 <script>

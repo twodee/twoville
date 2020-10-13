@@ -20,7 +20,7 @@ import {
 
 import Interpreter from './interpreter.worker.js';
 
-const hasWorker = false;
+const hasWorker = true;
 
 let editor;
 let Range;
@@ -33,9 +33,10 @@ let fitButton;
 let stopButton;
 let playOnceButton;
 let playLoopButton;
-let saveButton;
+let saveDirtyButton;
+let saveCleanButton;
 let recordSpinner;
-let evaluateSpinner;
+let spinner;
 let scrubber;
 let timeSpinner;
 let interpreterWorker;
@@ -52,13 +53,11 @@ function highlight(lineStart, lineEnd, columnStart, columnEnd) {
 
 // --------------------------------------------------------------------------- 
 
-function startSpinning(spinner, button) {
-  button.disabled = true;
+function startSpinning() {
   spinner.style.display = 'block';
 }
 
-function stopSpinning(spinner, button) {
-  button.disabled = false;
+function stopSpinning() {
   spinner.style.display = 'none';
 }
 
@@ -126,7 +125,8 @@ function stopInterpreting() {
     interpreterWorker = undefined;
   }
   stopButton.classList.add('hidden');
-  stopSpinning(evaluateSpinner, evaluateButton);
+  evaluateButton.classList.remove('hidden');
+  stopSpinning();
 }
 
 function postInterpret(pod) {
@@ -220,8 +220,9 @@ function postInterpret(pod) {
 function startInterpreting() {
   stopInterpreting();
 
-  startSpinning(evaluateSpinner, evaluateButton);
+  startSpinning();
   stopButton.classList.remove('hidden');
+  evaluateButton.classList.add('hidden');
 
   Messager.clear();
 
@@ -264,6 +265,8 @@ function onSourceChanged() {
 
 function syncTitle() {
   document.title = 'Twoville' + (isSaved ? '' : '*');
+  saveDirtyButton.style.display = isSaved ? 'none' : 'block';
+  saveCleanButton.style.display = isSaved ? 'block' : 'none';
 }
 
 // Keep scrolling from bubbling up to parent when embedded.
@@ -298,9 +301,9 @@ function initialize() {
   stopButton = document.getElementById('stop-button');
   playOnceButton = document.getElementById('play-once-button');
   playLoopButton = document.getElementById('play-loop-button');
-  saveButton = document.getElementById('save-button');
-  recordSpinner = document.getElementById('record-spinner');
-  evaluateSpinner = document.getElementById('evaluate-spinner');
+  saveDirtyButton = document.getElementById('save-dirty-button');
+  saveCleanButton = document.getElementById('save-clean-button');
+  spinner = document.getElementById('spinner');
   scrubber = document.getElementById('scrubber');
   timeSpinner = document.getElementById('time-spinner');
   new Messager(document.getElementById('messager'), document, highlight);
@@ -321,7 +324,7 @@ function initialize() {
   });
 
   recordButton.addEventListener('click', () => {
-    startSpinning(recordSpinner, recordButton);
+    startSpinning();
     let box = scene.svg.getBoundingClientRect();
 
     scene.hideMarks();
@@ -350,7 +353,7 @@ function initialize() {
 
     gif.on('finished', (blob) => {
       downloadBlob(name.value, blob);
-      stopSpinning(recordSpinner, recordButton);
+      stopSpinning();
     });
 
     function tick(i) {
@@ -386,7 +389,8 @@ function initialize() {
     tick(parseInt(scrubber.min));
   });
 
-  saveButton.addEventListener('click', save);
+  saveDirtyButton.addEventListener('click', save);
+  saveCleanButton.addEventListener('click', save);
 
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {
@@ -399,6 +403,7 @@ function initialize() {
   });
 
   exportButton.addEventListener('click', exportSvgWithoutMarks);
+
   fitButton.addEventListener('click', () => {
     if (scene) scene.fit();
   });
@@ -471,38 +476,111 @@ function initialize() {
     return onMouseDown;
   }
 
-  const generateWidthResizer = resizer => {
+  // const generateWidthResizer = resizer => {
+    // const onMouseMove = e => {
+      // const parentPanel = resizer.parentNode;
+      // const bounds = resizer.parentNode.getBoundingClientRect();
+      // const relativeX = e.clientX - bounds.x;
+      // parentPanel.children[0].style['width'] = `${relativeX - 4}px`;
+      // parentPanel.children[2].style['width'] = `${bounds.height - (relativeX + 4)}px`;
+      // editor.resize();
+
+      // if (!isEmbedded) {
+        // localStorage.setItem('left-width', parentPanel.children[0].style.width);
+      // }
+
+      // e.preventDefault();
+    // };
+
+    // const onMouseDown = e => {
+      // document.addEventListener('mousemove', onMouseMove);
+      // document.addEventListener('mouseup', () => {
+        // document.removeEventListener('mousemove', onMouseMove);
+      // });
+      // e.preventDefault();
+    // };
+
+    // return onMouseDown;
+  // }
+
+  const generateLeftResizer = (resizer, i) => {
     const onMouseMove = e => {
       const parentPanel = resizer.parentNode;
-      const bounds = resizer.parentNode.getBoundingClientRect();
-      const relativeX = e.clientX - bounds.x;
-      parentPanel.children[0].style['width'] = `${relativeX - 4}px`;
-      parentPanel.children[2].style['width'] = `${bounds.height - (relativeX + 4)}px`;
-      editor.resize();
+      const bounds = parentPanel.children[i - 1].getBoundingClientRect();
+      const newWidth = e.clientX - 4 - bounds.x;
 
+      parentPanel.children[i - 1].style['width'] = `${newWidth}px`;
+
+      editor.resize();
       if (!isEmbedded) {
-        localStorage.setItem('left-width', parentPanel.children[0].style.width);
+        localStorage.setItem('left-width', parentPanel.children[i - 1].style.width);
       }
+      // resizeWindow();
+      editor.resize();
 
       e.preventDefault();
     };
 
     const onMouseDown = e => {
+      const parentPanel = resizer.parentNode;
+      const style = window.getComputedStyle(parentPanel.children[4]);
+      const originalMinWidth = style['min-width'];
+      parentPanel.children[4].style['min-width'] = style['width'];
+
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', () => {
+        parentPanel.children[4].style['min-width'] = originalMinWidth;
         document.removeEventListener('mousemove', onMouseMove);
       });
       e.preventDefault();
     };
 
     return onMouseDown;
-  }
+  };
+
+  const generateRightResizer = (resizer, i) => {
+    const onMouseMove = e => {
+      const parentPanel = resizer.parentNode;
+      const bounds = parentPanel.children[i + 1].getBoundingClientRect();
+
+      if (!isEmbedded) {
+        localStorage.setItem('right-width', parentPanel.children[i + 1].style.width);
+      }
+      // resizeWindow();
+      editor.resize();
+  
+      const newWidth = bounds.right - e.clientX + 4;
+      parentPanel.children[i + 1].style['width'] = `${newWidth}px`;
+
+      // resizeWindow();
+      e.preventDefault();
+    };
+
+    const onMouseDown = e => {
+      const parentPanel = resizer.parentNode;
+      const style = window.getComputedStyle(parentPanel.children[0]);
+      const originalMinWidth = style['min-width'];
+      parentPanel.children[0].style['min-width'] = style['width'];
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', () => {
+        parentPanel.children[0].style['min-width'] = originalMinWidth;
+        document.removeEventListener('mousemove', onMouseMove);
+      });
+      e.preventDefault();
+    };
+
+    return onMouseDown;
+  };
 
   const editorMessagerResizer = document.getElementById('editor-messager-resizer');
   editorMessagerResizer.addEventListener('mousedown', generateHeightResizer(editorMessagerResizer)); 
 
-  const leftRightResizer = document.getElementById('left-right-resizer');
-  leftRightResizer.addEventListener('mousedown', generateWidthResizer(leftRightResizer)); 
+  const leftMiddleResizer = document.getElementById('left-middle-resizer');
+  leftMiddleResizer.addEventListener('mousedown', generateLeftResizer(leftMiddleResizer, 1)); 
+
+  const middleRightResizer = document.getElementById('middle-right-resizer');
+  middleRightResizer.addEventListener('mousedown', generateRightResizer(middleRightResizer, 3));
 
   // Restore editor width from last time, unless we're embedded.
   if (!isEmbedded) {
