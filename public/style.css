@@ -91,13 +91,15 @@ var {
    * the content is big, the sidebar will be big. */
   width: 300px;
   min-width: 300px;
-
-  display: none;
 }
 
 .right-section {
   margin: 5px;
   overflow-y: auto;
+}
+
+#close-panel-button, #middle-right-resizer, #right {
+  display: none;
 }
 
 .panel-section {
@@ -258,7 +260,14 @@ html.grabbing {
   position: relative;
   width: 50px;
   height: 50px;
-  margin: 0 5px;
+}
+
+#toolbar-right > .tool-set {
+  margin: 0 0 0 15px;
+}
+
+#toolbar-left > .tool-set {
+  margin: 0 15px 0 0;
 }
 
 #close-panel-button {
