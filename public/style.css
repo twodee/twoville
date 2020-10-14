@@ -79,7 +79,26 @@ var {
   font-family: sans-serif;
   background-color: black;
   color: white;
-  padding: 5px;
+
+  display: flex;
+  flex-direction: column;
+
+  /* I'd prefer not to set width and just let it default to min-width. But
+   * that's not how it works. If I don't set the width, the sidebar will not
+   * size properly. Using auto for flex-basis means we'll get the minimum
+   * size from the width, which defaults to sizing to fit the content. If
+   * the content is big, the sidebar will be big. */
+  width: 300px;
+  min-width: 300px;
+}
+
+.right-section {
+  margin: 5px;
+  overflow-y: auto;
+}
+
+.panel-section > h3 {
+  margin: 0 0 5px 0;
 }
 
 #svg {

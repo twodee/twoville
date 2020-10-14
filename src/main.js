@@ -270,7 +270,7 @@ function syncTitle() {
 }
 
 // Keep scrolling from bubbling up to parent when embedded.
-document.addEventListener('wheel', e => {
+document.getElementById('middle').addEventListener('wheel', e => {
   e.preventDefault();
 }, {passive: false});
 
@@ -576,6 +576,9 @@ function initialize() {
   const editorMessagerResizer = document.getElementById('editor-messager-resizer');
   editorMessagerResizer.addEventListener('mousedown', generateHeightResizer(editorMessagerResizer)); 
 
+  const settingsDocsResizer = document.getElementById('settings-docs-resizer');
+  settingsDocsResizer.addEventListener('mousedown', generateHeightResizer(settingsDocsResizer)); 
+
   const leftMiddleResizer = document.getElementById('left-middle-resizer');
   leftMiddleResizer.addEventListener('mousedown', generateLeftResizer(leftMiddleResizer, 1)); 
 
@@ -591,4 +594,5 @@ function initialize() {
   }
 }
 
-window.addEventListener('DOMContentLoaded', initialize);
+// window.addEventListener('DOMContentLoaded', initialize);
+initialize();
