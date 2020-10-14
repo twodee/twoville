@@ -100,6 +100,10 @@ var {
   overflow-y: auto;
 }
 
+.panel-section {
+  margin-bottom: 20px;
+}
+
 .panel-section > h3 {
   margin: 0 0 5px 0;
 }
