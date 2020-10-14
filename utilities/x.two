@@ -1,0 +1,25 @@
+gap = 6
+l = 45
+w = 20
+
+with viewport
+  center = :zero2
+  size = [100, 100]
+
+with polygon()
+  opacity = 0
+  stroke.color = :black
+  stroke.size = 3
+  with turtle()
+    position = [w, w] * 0.5
+    heading = 90
+  repeat 4
+    move().distance = l
+    turn().degrees = 90
+    move().distance = w
+    turn().degrees = 90
+    move().distance = l
+    turn().degrees = -90
+  with rotate()
+    pivot = :zero2
+    degrees = 45

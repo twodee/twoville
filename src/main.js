@@ -25,6 +25,7 @@ const hasWorker = true;
 let editor;
 let Range;
 let left;
+let right;
 let messagerContainer;
 let evaluateButton;
 let recordButton;
@@ -293,6 +294,7 @@ function initialize() {
   Range = ace.require('ace/range').Range;
 
   left = document.getElementById('left');
+  right = document.getElementById('right');
   messagerContainer = document.getElementById('messager-container');
   evaluateButton = document.getElementById('evaluate-button');
   recordButton = document.getElementById('record-button');
@@ -585,13 +587,109 @@ function initialize() {
   const middleRightResizer = document.getElementById('middle-right-resizer');
   middleRightResizer.addEventListener('mousedown', generateRightResizer(middleRightResizer, 3));
 
+  const openPanelButton = document.getElementById('open-panel-button');
+  const closePanelButton = document.getElementById('close-panel-button');
+  const panel = document.getElementById('right');
+
+  const targetMillis = 300;
+
   // Restore editor width from last time, unless we're embedded.
   if (!isEmbedded) {
     const leftWidth0 = localStorage.getItem('left-width');
     if (leftWidth0) {
       left.style['width'] = leftWidth0;
     }
+
+    const isPanelOpen = localStorage.getItem('is-panel-open') === 'true';
+    if (isPanelOpen) {
+      right.style.display = 'flex';
+      middleRightResizer.style.display = 'block';
+      closePanelButton.style.display = 'block';
+      openPanelButton.style.display = 'none';
+    }
+
+    const rightWidth0 = localStorage.getItem('right-width');
+    if (rightWidth0) {
+      right.style['width'] = rightWidth0;
+    }
   }
+
+  openPanelButton.addEventListener('click', () => {
+    if (!isEmbedded) {
+      localStorage.setItem('is-panel-open', true);
+    }
+    openPanelButton.style.display = 'none';
+
+    panel.style.display = 'flex';
+    const bounds = panel.getBoundingClientRect(); 
+
+    const startValue = bounds.right;
+    const endValue = bounds.x;
+    const startMillis = new Date().getTime();
+
+    panel.style.position = 'absolute';
+    panel.style.top = '0';
+    panel.style.bottom = '0';
+
+    const animation = () => {
+      const currentMillis = new Date().getTime();
+      const elapsedMillis = currentMillis - startMillis;
+
+      if (elapsedMillis <= targetMillis) {
+        const proportion = elapsedMillis / targetMillis;
+        const value = startValue + (endValue - startValue) * proportion;
+        panel.style.left = `${value}px`;
+        requestAnimationFrame(animation);
+      } else {
+        panel.style.left = `${endValue}px`;
+        panel.style.position = 'static';
+        middleRightResizer.style.display = 'block';
+        closePanelButton.style.display = 'block';
+      }
+
+      // resizeWindow();
+    };
+
+    animation();
+  });
+
+  closePanelButton.addEventListener('click', () => {
+    if (!isEmbedded) {
+      localStorage.setItem('is-panel-open', false);
+    }
+    closePanelButton.style.display = 'none';
+    middleRightResizer.style.display = 'none';
+
+    const bounds = panel.getBoundingClientRect(); 
+
+    const startValue = bounds.left;
+    const endValue = bounds.right;
+    const startMillis = new Date().getTime();
+
+    panel.style.position = 'absolute';
+    panel.style.top = '0';
+    panel.style.bottom = '0';
+
+    const animation = () => {
+      const currentMillis = new Date().getTime();
+      const elapsedMillis = currentMillis - startMillis;
+
+      if (elapsedMillis <= targetMillis) {
+        const proportion = elapsedMillis / targetMillis;
+        const value = startValue + (endValue - startValue) * proportion;
+        panel.style.left = `${value}px`;
+        requestAnimationFrame(animation);
+      } else {
+        panel.style.position = 'static';
+        panel.style.display = 'none';
+        openPanelButton.style.display = 'block';
+      }
+
+      // resizeWindow();
+    };
+
+    animation();
+  });
 }
 
 // window.addEventListener('DOMContentLoaded', initialize);
