@@ -250,6 +250,44 @@ export class RenderEnvironment extends Environment {
 
     this.drawables = this.shapes.filter(shape => shape.isDrawable);
 
+    if (this.get('viewport').owns('grid')) {
+      const grid = this.get('viewport').get('grid');
+      const gridX = grid.get(0);
+      const gridY = grid.get(1);
+
+      if (gridX instanceof ExpressionReal || gridX instanceof ExpressionInteger) {
+        const gap = gridX.value;
+        const first = Math.ceil(corner.get(0).value / gap) * gap;
+        const last = corner.get(0).value + size.get(0).value;
+        for (let tick = first; tick <= last; tick += gap) {
+          const line = document.createElementNS(svgNamespace, 'line');
+          line.setAttributeNS(null, 'visibility', 'visible');
+          line.setAttributeNS(null, 'x1', tick);
+          line.setAttributeNS(null, 'x2', tick);
+          line.setAttributeNS(null, 'y1', corner.get(1).value);
+          line.setAttributeNS(null, 'y2', corner.get(1).value + size.get(1).value);
+          line.classList.add('grid-line');
+          this.sceneMarkGroup.appendChild(line);
+        }
+      }
+
+      if (gridY instanceof ExpressionReal || gridY instanceof ExpressionInteger) {
+        const gap = gridY.value;
+        const first = Math.ceil(corner.get(1).value / gap) * gap;
+        const last = corner.get(1).value + size.get(1).value;
+        for (let tick = first; tick <= last; tick += gap) {
+          const line = document.createElementNS(svgNamespace, 'line');
+          line.setAttributeNS(null, 'visibility', 'visible');
+          line.setAttributeNS(null, 'y1', tick);
+          line.setAttributeNS(null, 'y2', tick);
+          line.setAttributeNS(null, 'x1', corner.get(0).value);
+          line.setAttributeNS(null, 'x2', corner.get(0).value + size.get(0).value);
+          line.classList.add('grid-line');
+          this.sceneMarkGroup.appendChild(line);
+        }
+      }
+    }
+
     this.isStarted = true;
   }
 

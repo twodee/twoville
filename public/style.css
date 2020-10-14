@@ -103,6 +103,7 @@ var {
   top: 10px;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
 }
 
 #time-toolbar {
@@ -128,6 +129,7 @@ a {
   flex: 1 1 0;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
 }
 
@@ -199,6 +201,14 @@ html.grabbing {
   stroke-width: 1;
   stroke: rgb(180, 180, 180);
   stroke-dasharray: none;
+}
+
+.grid-line {
+  stroke-width: 1;
+  stroke-opacity: 0.5;
+  stroke: rgb(180, 180, 180);
+  stroke-dasharray: none;
+  vector-effect: non-scaling-stroke;
 }
 
 .cue {

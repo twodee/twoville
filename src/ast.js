@@ -181,6 +181,8 @@ export class Expression {
       return new ExpressionFunctionCall(Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionNegative') {
       return new ExpressionNegative(omniReify(env, pod.operand), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionUnit') {
+      return new ExpressionUnit(SourceLocation.reify(pod.where));
     } else {
       throw new MessagedException(`I don't know ${pod.type}!`);
     }
@@ -2490,6 +2492,26 @@ export class ExpressionMirror extends ExpressionFunction {
 
   evaluate(env, fromTime, toTime, callExpression) {
     return Mirror.create(this.instance, callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionUnit extends Expression {
+  constructor(where) {
+    super(where);
+  }
+
+  evaluate(env) {
+    return this;
+  }
+
+  toPretty() {
+    return ':none';
+  }
+
+  clone() {
+    return this;
   }
 }
 

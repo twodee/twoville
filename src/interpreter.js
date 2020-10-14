@@ -24,6 +24,7 @@ import {
   ExpressionReal,
   ExpressionString,
   ExpressionVector,
+  ExpressionUnit,
 } from './ast.js';
 
 // --------------------------------------------------------------------------- 

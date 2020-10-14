@@ -4,6 +4,7 @@ import {
   ExpressionReal,
   ExpressionString,
   ExpressionVector,
+  ExpressionUnit,
 } from './ast.js';
 
 export const Symbol = Object.freeze({
@@ -66,5 +67,5 @@ export const Symbol = Object.freeze({
   ':open': new ExpressionInteger(0),
   ':closed': new ExpressionInteger(1),
 
-  ':none': new ExpressionInteger(-1),
+  ':none': new ExpressionUnit(),
 });
