@@ -142,7 +142,8 @@ export class Marker {
     // Only turn off marks if shape wasn't explicitly click-selected and the
     // mouse is dragged onto to some other entity that isn't the shape or its
     // marks.
-    return !this.shape.isSelected && (!event.toElement || !event.toElement.classList.contains(`tag-${this.shape.id}`));
+    const element = event.toElement;
+    return !this.shape.isSelected && (!element || (!element.classList.contains(`tag-${this.shape.id}`) && !element.classList.contains('grid-line')));
   }
 }
 
