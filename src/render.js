@@ -207,11 +207,9 @@ export class RenderEnvironment extends Environment {
     pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
     pageOutline.classList.add('mark', 'outline-mark');
 
-    this.delay = this.get('time').get('delay').value;
     this.tmin = this.get('time').get('start').value;
     this.tmax = this.get('time').get('stop').value;
-    this.resolution = this.get('time').get('resolution').value;
-    this.nTicks = (this.tmax - this.tmin) * this.resolution;
+    this.nTicks = this.tmax - this.tmin;
 
     this.mainGroup = document.createElementNS(svgNamespace, 'g');
     this.mainGroup.setAttributeNS(null, 'id', 'main-group');

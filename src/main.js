@@ -2,6 +2,8 @@ import ace from 'ace-builds/src-min-noconflict/ace';
 import 'ace-builds/src-min-noconflict/theme-twilight';
 import './mode-twoville.js';
 
+import GIF from 'gif.js.optimized';
+
 import {
   MessagedException,
 } from './common.js';
@@ -32,6 +34,7 @@ let recordButton;
 let exportButton;
 let fitButton;
 let stopButton;
+let settingsRoot;
 let playOnceButton;
 let playLoopButton;
 let saveDirtyButton;
@@ -97,12 +100,12 @@ function scrubTo(tick) {
   scene.scrub(t);
 }
 
-function animateFrame(i, isLoop = false) {
+function animateFrame(i, isLoop, delay) {
   scrubTo(i);
   if (i < parseInt(scrubber.max)) {
-    animateTask = setTimeout(() => animateFrame(i + 1, isLoop), delay);
+    animateTask = setTimeout(() => animateFrame(i + 1, isLoop, delay), delay);
   } else if (isLoop) {
-    animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop), delay);
+    animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop, delay), delay);
   } else {
     animateTask = null;
   }
@@ -117,7 +120,9 @@ function stopAnimation() {
 
 function play(isLoop) {
   stopAnimation();
-  animateFrame(0, isLoop);
+  const time = scene.get('time');
+  const delay = (time.get('duration').value * 1000) / (time.get('stop').value - time.get('start').value);
+  animateFrame(0, isLoop, delay);
 }
 
 function stopInterpreting() {
@@ -334,9 +339,12 @@ function initialize() {
     let size = scene.get('gif').get('size');
     let transparentColor = scene.get('gif').get('transparency');
     let name = scene.get('gif').get('name');
-    let repeat = scene.get('gif').get('repeat');
-    let delay = scene.get('gif').get('delay');
+    let loop = scene.get('gif').get('loop');
     let skip = scene.get('gif').get('skip');
+
+    const time = scene.get('time');
+    let delay = (time.get('duration').value * 1000) / (time.get('stop').value - time.get('start').value);
+    delay = Math.max(20, delay);
 
     // I don't know why I need to set the viewport explicitly. Setting the size
     // of the image isn't sufficient.
@@ -348,7 +356,7 @@ function initialize() {
       quality: 1,
       background: '#FFFFFF',
       transparent: null,
-      repeat: repeat.value,
+      repeat: loop.value,
       width: size.get(0).value,
       height: size.get(1).value,
     });
@@ -364,18 +372,19 @@ function initialize() {
         if (i >= scrubber.max) {
           gif.render();
         } else {
-          scene.drawables.forEach(drawable => drawable.draw(scene, i, scene.bounds));
+          scene.scrub(i);
 
-          let data = new XMLSerializer().serializeToString(svg);
+          let data = new XMLSerializer().serializeToString(scene.cloneSvgWithoutMarks());
           let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
           let url = URL.createObjectURL(svgBlob);
 
           let img = new Image();
           img.onload = () => {
             gif.addFrame(img, {
-              delay: delay.value,
-              copy: true
+              delay: delay,
+              copy: true,
             });
+
             URL.revokeObjectURL(url);
             tick(i + skip.value);
           };
@@ -383,7 +392,7 @@ function initialize() {
           img.src = url;
         }
       } catch (e) {
-        stopSpinning(recordSpinner, recordButton);
+        stopSpinning();
         throw e;
       }
     }
@@ -590,6 +599,8 @@ function initialize() {
   const openPanelButton = document.getElementById('open-panel-button');
   const closePanelButton = document.getElementById('close-panel-button');
   const panel = document.getElementById('right');
+
+  settingsRoot = document.getElementById('settings-root');
 
   const targetMillis = 300;
 
