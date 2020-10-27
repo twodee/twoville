@@ -58,7 +58,7 @@ export class InterpreterEnvironment extends Environment {
     this.untimedProperties.time = Environment.create(this);
     this.untimedProperties.time.bind('start', new ExpressionInteger(0));
     this.untimedProperties.time.bind('stop', new ExpressionInteger(100));
-    this.untimedProperties.time.bind('duration', new ExpressionInteger(5));
+    this.untimedProperties.time.bind('delay', new ExpressionInteger(0.2));
 
     this.untimedProperties.gif = Environment.create(this);
     this.untimedProperties.gif.bind('size', new ExpressionVector([
@@ -70,6 +70,11 @@ export class InterpreterEnvironment extends Environment {
       new ExpressionReal(0),
       new ExpressionReal(0),
       new ExpressionReal(0),
+    ]));
+    this.untimedProperties.gif.bind('background', new ExpressionVector([
+      new ExpressionReal(1),
+      new ExpressionReal(1),
+      new ExpressionReal(1),
     ]));
     this.untimedProperties.gif.bind('loop', new ExpressionInteger(0));
     this.untimedProperties.gif.bind('delay', new ExpressionInteger(10));

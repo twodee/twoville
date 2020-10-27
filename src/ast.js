@@ -2226,14 +2226,14 @@ export class ExpressionVector extends ExpressionData {
     }
   }
 
-  toColor(env) {
+  toColor() {
     let r = Math.floor(this.value[0].value * 255);
     let g = Math.floor(this.value[1].value * 255);
     let b = Math.floor(this.value[2].value * 255);
     return 'rgb(' + r + ', ' + g + ', ' + b + ')';
   }
 
-  toHexColor(env) {
+  toHexColor() {
     let r = Math.floor(this.value[0].value * 255).toString(16);
     let g = Math.floor(this.value[1].value * 255).toString(16);
     let b = Math.floor(this.value[2].value * 255).toString(16);

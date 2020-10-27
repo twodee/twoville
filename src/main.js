@@ -2,7 +2,7 @@ import ace from 'ace-builds/src-min-noconflict/ace';
 import 'ace-builds/src-min-noconflict/theme-twilight';
 import './mode-twoville.js';
 
-import GIF from 'gif.js.optimized';
+import GIF from 'gif.js';
 
 import {
   MessagedException,
@@ -100,12 +100,20 @@ function scrubTo(tick) {
   scene.scrub(t);
 }
 
+let lastMillis = null;
+
 function animateFrame(i, isLoop, delay) {
   scrubTo(i);
+
+  const nowMillis = new Date().getTime();
+  const elapsedMillis = nowMillis - lastMillis;
+  const leftMillis = Math.max(0, delay - elapsedMillis);
+  lastMillis = nowMillis;
+
   if (i < parseInt(scrubber.max)) {
-    animateTask = setTimeout(() => animateFrame(i + 1, isLoop, delay), delay);
+    animateTask = setTimeout(() => animateFrame(i + 1, isLoop, delay), leftMillis);
   } else if (isLoop) {
-    animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop, delay), delay);
+    animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop, delay), leftMillis);
   } else {
     animateTask = null;
   }
@@ -121,7 +129,8 @@ function stopAnimation() {
 function play(isLoop) {
   stopAnimation();
   const time = scene.get('time');
-  const delay = (time.get('duration').value * 1000) / (time.get('stop').value - time.get('start').value);
+  const delay = time.get('delay').value * 1000;
+  lastMillis = new Date().getTime();
   animateFrame(0, isLoop, delay);
 }
 
@@ -341,9 +350,10 @@ function initialize() {
     let name = scene.get('gif').get('name');
     let loop = scene.get('gif').get('loop');
     let skip = scene.get('gif').get('skip');
+    let backgroundColor = scene.get('gif').get('background').toHexColor();
 
     const time = scene.get('time');
-    let delay = (time.get('duration').value * 1000) / (time.get('stop').value - time.get('start').value);
+    let delay = time.get('delay').value * 1000;
     delay = Math.max(20, delay);
 
     // I don't know why I need to set the viewport explicitly. Setting the size
@@ -354,7 +364,7 @@ function initialize() {
     let gif = new GIF({
       workers: 3,
       quality: 1,
-      background: '#FFFFFF',
+      background: backgroundColor,
       transparent: null,
       repeat: loop.value,
       width: size.get(0).value,
@@ -378,7 +388,7 @@ function initialize() {
           let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
           let url = URL.createObjectURL(svgBlob);
 
-          let img = new Image();
+          let img = new Image(size.get(0).value, size.get(1).value);
           img.onload = () => {
             gif.addFrame(img, {
               delay: delay,
@@ -390,6 +400,8 @@ function initialize() {
           };
 
           img.src = url;
+
+          // settingsRoot.appendChild(img);
         }
       } catch (e) {
         stopSpinning();
