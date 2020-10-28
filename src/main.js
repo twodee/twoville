@@ -144,7 +144,7 @@ function stopInterpreting() {
   stopSpinning();
 }
 
-function postInterpret(pod) {
+function postInterpret(pod, successCallback) {
   const oldScene = scene;
   if (oldScene) {
     oldScene.stop();
@@ -215,6 +215,9 @@ function postInterpret(pod) {
     }
 
     recordButton.disabled = false;
+    if (successCallback) {
+      successCallback();
+    }
   } catch (e) {
     if (e instanceof MessagedException) {
       Messager.log(e.userMessage);
@@ -232,7 +235,7 @@ function postInterpret(pod) {
   }
 }
 
-function startInterpreting() {
+function startInterpreting(successCallback) {
   stopInterpreting();
 
   startSpinning();
@@ -241,19 +244,19 @@ function startInterpreting() {
 
   Messager.clear();
 
-  interpreterWorker = new Interpreter();
-  interpreterWorker.addEventListener('message', event => {
-    if (event.data.type === 'output') {
-      Messager.log(event.data.payload);
-    } else if (event.data.type === 'environment') {
-      stopInterpreting();
-      postInterpret(event.data.payload);
-    } else if (event.data.type === 'error') {
-      stopInterpreting();
-    }
-  });
-
   if (hasWorker) {
+    interpreterWorker = new Interpreter();
+    interpreterWorker.addEventListener('message', event => {
+      if (event.data.type === 'output') {
+        Messager.log(event.data.payload);
+      } else if (event.data.type === 'environment') {
+        stopInterpreting();
+        postInterpret(event.data.payload, successCallback);
+      } else if (event.data.type === 'error') {
+        stopInterpreting();
+      }
+    });
+
     interpreterWorker.postMessage({
       command: 'interpret',
       source: editor.getValue(),
@@ -262,7 +265,7 @@ function startInterpreting() {
     const scene = interpret(editor.getValue(), Messager.log);
     stopInterpreting();
     if (scene) {
-      postInterpret(scene.toPod());
+      postInterpret(scene.toPod(), successCallback);
     }
   }
 }
@@ -466,14 +469,13 @@ function initialize() {
     left.style.width = '300px';
     messagerContainer.style.height = '50px';
     editor.resize();
-  }
 
-  if (source0) {
     if (runZeroMode) {
-      startInterpreting();
-      if (runZeroMode == 'loop') {
-        play(true);
-      }
+      startInterpreting(() => {
+        if (runZeroMode == 'loop') {
+          play(true);
+        }
+      });
     }
   }
 
