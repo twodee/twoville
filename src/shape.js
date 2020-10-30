@@ -381,18 +381,21 @@ export class Shape extends TimelinedEnvironment {
 
   setColor(env, t) {
     const opacity = this.valueAt(env, 'opacity', t).value;
+    if (opacity <= 1e-6) {
+      this.hide();
+      return false;
+    }
+
     this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
-    if (opacity > 0) {
-      if (this.owns('color')) {
-        let color = this.valueAt(env, 'color', t);
-        this.element.setAttributeNS(null, 'fill', color.toColor());
-      } else {
-        throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose color property is not defined.`);
-      }
+    if (this.owns('color')) {
+      let color = this.valueAt(env, 'color', t);
+      this.element.setAttributeNS(null, 'fill', color.toColor());
     } else {
-      this.element.setAttributeNS(null, 'fill', 'none');
+      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose color property is not defined.`);
     }
+
+    return true;
   }
 }
 
@@ -554,13 +557,17 @@ export class Rectangle extends Shape {
   }
 
   updateProperties(env, t, bounds, matrix) {
-    matrix = this.transform(env, t, bounds, matrix);
-
     const size = this.valueAt(env, 'size', t);
     if (!size) {
       this.hide();
       return;
     }
+
+    if (!this.setColor(env, t)) {
+      return;
+    }
+
+    matrix = this.transform(env, t, bounds, matrix);
 
     this.widthMark.setExpression(size.get(0));
     this.heightMark.setExpression(size.get(1));
@@ -578,8 +585,6 @@ export class Rectangle extends Shape {
         new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
       ]);
     }
-
-    this.setColor(env, t);
 
     if (!corner || !size) {
       this.hide();
@@ -671,6 +676,10 @@ export class Circle extends Shape {
   }
 
   updateProperties(env, t, bounds, matrix) {
+    if (!this.setColor(env, t)) {
+      return null;
+    }
+
     matrix = this.transform(env, t, bounds, matrix);
 
     const radius = this.valueAt(env, 'radius', t);
@@ -678,10 +687,6 @@ export class Circle extends Shape {
 
     const center = this.valueAt(env, 'center', t);
     this.centerMark.setExpression(center);
-
-    const opacity = this.valueAt(env, 'opacity', t).value;
-
-    this.setColor(env, t);
 
     if (!center || !radius) {
       this.hide();
@@ -871,14 +876,14 @@ export class Polygon extends VertexShape {
   }
 
   updateProperties(env, t, bounds, matrix) {
+    if (!this.setColor(env, t)) {
+      return null;
+    }
+
     matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds, matrix);
     const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
-
-    const opacity = this.valueAt(env, 'opacity', t).value;
-
-    this.setColor(env, t);
 
     if (positions.some(position => !position)) {
       this.hide();
@@ -1106,6 +1111,10 @@ export class Ungon extends VertexShape {
   }
 
   updateProperties(env, t, bounds, matrix) {
+    if (!this.setColor(env, t)) {
+      return null;
+    }
+
     matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds, matrix);
@@ -1116,8 +1125,6 @@ export class Ungon extends VertexShape {
     }
 
     let rounding = this.valueAt(env, 'rounding', t).value;
-
-    this.setColor(env, t);
 
     if (positions.some(position => !position)) {
       this.hide();
@@ -1232,13 +1239,13 @@ export class Path extends NodeShape {
   }
 
   updateProperties(env, t, bounds, matrix) {
+    if (!this.setColor(env, t)) {
+      return null;
+    }
+
     matrix = this.transform(env, t, bounds, matrix);
 
     const pieces = this.traverseNodes(env, t, bounds, matrix);
-
-    const opacity = this.valueAt(env, 'opacity', t).value;
-
-    this.setColor(env, t);
 
     let isClosed = this.untimedProperties.closed.value;
 

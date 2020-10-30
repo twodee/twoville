@@ -1659,14 +1659,25 @@ export class ExpressionWith extends Expression {
 
   evaluate(env, fromTime, toTime) {
     let withEnv = this.scope.evaluate(env, fromTime, toTime);
-    if (!(withEnv instanceof Environment)) {
-      throw new LocatedException(this.scope.where, `I encountered a with expression whose subject isn't an environment.`);
+
+    if (!(withEnv instanceof Environment || withEnv instanceof ExpressionVector)) {
+      throw new LocatedException(this.scope.where, `I encountered a with expression whose subject isn't an environment or a vector.`);
     }
+
     if (withEnv.hasOwnProperty('sourceSpans')) {
       withEnv.sourceSpans.push(this.where);
     }
+
     withEnv.parent = env;
-    this.body.evaluate(withEnv, fromTime, toTime);
+
+    if (withEnv instanceof Environment) {
+      this.body.evaluate(withEnv, fromTime, toTime);
+    } else {
+      withEnv.forEach(elementEnv => {
+        this.body.evaluate(elementEnv, fromTime, toTime);
+      });
+    }
+
     return withEnv;
   }
 
