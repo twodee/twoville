@@ -715,6 +715,26 @@ function initialize() {
 
     animation();
   });
+
+  const docsRoot = document.getElementById('docs-root');
+  const docsToc = document.getElementById('docs-toc');
+  const docsPage = document.getElementById('docs-page');
+
+  const docsLinks = document.querySelectorAll('.docs-link');
+  for (let docsLink of docsLinks) {
+    docsLink.addEventListener('click', () => {
+      console.log("docsLink.dataset.target:", docsLink.dataset.target);
+      const target = docsLink.dataset.target;
+      fetch(`/docs/${target}.html`).
+        then(response => response.text()).
+        then(data => {
+          docsToc.style.display = 'none';
+          docsPage.style.display = 'block';
+          docsPage.innerHTML = data;
+          console.log(data);
+        });
+    });
+  }
 }
 
 // window.addEventListener('DOMContentLoaded', initialize);
