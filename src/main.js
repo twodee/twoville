@@ -716,26 +716,66 @@ function initialize() {
     animation();
   });
 
-  const docsRoot = document.getElementById('docs-root');
-  const docsToc = document.getElementById('docs-toc');
-  const docsPage = document.getElementById('docs-page');
+  initializeDocs();
+}
 
-  const docsLinks = document.querySelectorAll('.docs-link');
-  for (let docsLink of docsLinks) {
-    docsLink.addEventListener('click', () => {
-      console.log("docsLink.dataset.target:", docsLink.dataset.target);
-      const target = docsLink.dataset.target;
-      fetch(`/docs/${target}.html`).
-        then(response => response.text()).
-        then(data => {
-          docsToc.style.display = 'none';
-          docsPage.style.display = 'block';
-          docsPage.innerHTML = data;
-          console.log(data);
-        });
-    });
+function initializeDocs() {
+  const root = document.getElementById('docs-root');
+  const contentPanel = document.getElementById('docs-content-panel');
+  const toolbar = document.getElementById('docs-toolbar');
+  const backButton = document.getElementById('docs-back-button');
+
+  const history = [];
+
+  const docify = html => {
+    contentPanel.innerHTML = html;
+
+    const links = contentPanel.querySelectorAll('.docs-link');
+    for (let link of links) {
+      link.addEventListener('click', () => {
+        load(link.dataset.target);
+      });
+    }
+
+    const sources = contentPanel.querySelectorAll('.docs-source');
+    for (let source of sources) {
+      const code = source.innerText;
+      const editor = ace.edit(source);
+      editor.setTheme('ace/theme/twilight');
+      editor.getSession().setMode('ace/mode/twoville');
+      editor.setValue(code, 1);
+      editor.setOptions({
+        fontSize: '14pt',
+        tabSize: 2,
+        useSoftTabs: true,
+        maxLines: 100,
+        readOnly: true,
+      });
+    }
+  };
+
+  const load = tag => {
+    history.push(tag);
+    fetch(`/docs/${tag}.html`).
+      then(response => response.text()).
+      then(html => {
+        toolbar.style.display = tag === 'index' ? 'none' : 'block';
+        docify(html);
+      });
+  };
+
+  backButton.addEventListener('click', () => {
+    if (history.length <= 1) return;
+    history.pop();
+    load(history.pop());
+  });
+
+  if (window.location.hash) {
+    history.push('index');
+    load(window.location.hash.substring(1));
+  } else {
+    load('index');
   }
 }
 
-// window.addEventListener('DOMContentLoaded', initialize);
 initialize();
