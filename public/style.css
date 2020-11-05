@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
 * {
   box-sizing: border-box;
 }
@@ -14,6 +16,8 @@ body {
   /* To disable overscrolling. */
   height: 100%;
   overflow: auto;
+
+  font-family: 'Roboto', sans-serif;
 }
 
 var {
@@ -23,12 +27,17 @@ var {
   color: yellow;
 }
 
+#docs-root {
+}
+
 #docs-root var {
   background-color: rgb(70, 70, 70);
   white-space: pre-wrap;
-  padding: 2px 4px;
+  padding: 0 2px;
   border: 1px solid #666666;
   border-radius: 3px;
+  line-height: 0;
+  font-size: 0.9em;
 }
 
 .monospace {
@@ -82,7 +91,6 @@ var {
 
 #right {
 
-  font-family: sans-serif;
   background-color: black;
   color: white;
 
@@ -99,7 +107,7 @@ var {
 }
 
 .right-section {
-  margin: 5px;
+  margin: 10px;
   overflow-y: auto;
 }
 
@@ -340,4 +348,12 @@ html.grabbing {
 
 #docs-content-panel {
   font-size: 1.2em;
+}
+
+.button-preview {
+  display: block;
+  width: 100px;
+  background-color: white;
+  margin: 20px auto;
+  padding: 10px;
 }

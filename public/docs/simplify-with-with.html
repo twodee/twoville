@@ -1,0 +1,38 @@
+<div>
+<h2>Simplify With With</h2>
+</div>
+
+<p>That's no typo. Twoville has a <var>with</var> command that can make creating shapes a little simpler. Recall the code that you used to make your world:</p>
+
+<pre class="docs-source">world = circle()
+world.center = [50, 50]
+world.radius = 40
+world.color = :cornflower</pre>
+
+<p>We reached inside <var>world</var> three different times to assign its three properties: <var>center</var>, <var>radius</var>, and <var>color</var>. Using <var>with</var>, we can shorten these assignments:
+
+<pre class="docs-source">world = circle()
+with world
+  center = [50, 50]
+  radius = 40
+  color = :cornflower</pre>
+
+<p>The <var>with</var> command makes <var>world</var> the subject of the three assignment statements. Do you think that's easier to read and write? You don't have to think so. The benefits of <var>with</var> become more apparent as we assign more and more properties.</p>
+
+<p>Notice how the three assignments have been indented. This indentation is required to show that the assignments belong to the <var>with</var> command.</p>
+
+<p>If our shape is used only in the <var>with</var> command, as is the case for <var>world</var>, we don't even need to assign it to a variable. You can directly make an unnamed circle the subject:</p>
+
+<pre class="docs-source">with circle()
+  center = [50, 50]
+  radius = 40
+  color = :cornflower</pre>
+
+<p>If you still want to name your world, you can use <var>with</var> in an assignment statement:</p>
+
+<pre class="docs-source">world = with circle()
+  center = [50, 50]
+  radius = 40
+  color = :cornflower</pre>
+
+<p>Meaningful names make our code easier to understand.</p>
