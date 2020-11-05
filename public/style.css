@@ -31,7 +31,7 @@ var {
 }
 
 #docs-root var {
-  color: orange;
+  color: skyblue;
   background: none;
 }
 
@@ -102,7 +102,7 @@ var {
 }
 
 .right-section {
-  margin: 10px;
+  padding: 10px;
   overflow-y: auto;
 }
 
@@ -338,7 +338,13 @@ html.grabbing {
 }
 
 #docs-toolbar {
+  text-align: right;
   display: none;
+  position: sticky;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 10000;
 }
 
 #docs-content-panel {

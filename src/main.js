@@ -25,6 +25,7 @@ import Interpreter from './interpreter.worker.js';
 const hasWorker = true;
 
 let editor;
+let docEditors = [];
 let Range;
 let left;
 let right;
@@ -303,6 +304,7 @@ function initialize() {
   editor = ace.edit('editor');
   editor.setTheme('ace/theme/twilight');
   editor.setOptions({
+    fontFamily: 'Roboto Mono',
     fontSize: source0 ? '10pt' : '14pt',
     tabSize: 2,
     useSoftTabs: true
@@ -573,6 +575,9 @@ function initialize() {
       }
       // resizeWindow();
       editor.resize();
+      for (let docEditor of docEditors) {
+        docEditor.resize();
+      }
   
       const newWidth = bounds.right - e.clientX + 4;
       parentPanel.children[i + 1].style['width'] = `${newWidth}px`;
@@ -729,6 +734,8 @@ function initializeDocs() {
 
   const docify = html => {
     contentPanel.innerHTML = html;
+    docEditors.splice(0, docEditors.length);
+    console.log("docEditors:", docEditors.length);
 
     const links = contentPanel.querySelectorAll('.docs-link');
     for (let link of links) {
@@ -745,12 +752,15 @@ function initializeDocs() {
       editor.getSession().setMode('ace/mode/twoville');
       editor.setValue(code, 1);
       editor.setOptions({
+        fontFamily: 'Roboto Mono',
         fontSize: '14pt',
         tabSize: 2,
         useSoftTabs: true,
         maxLines: 100,
         readOnly: true,
       });
+
+      docEditors.push(editor);
     }
   };
 
