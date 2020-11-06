@@ -342,12 +342,40 @@ html.grabbing {
   position: sticky;
   left: 0;
   right: 0;
-  top: 0;
   z-index: 10000;
+  /* background-color: black; */
+  /* box-shadow: 0 0 20px black; */
+
+  /* These are magic. Sticky positioning appears to stick the element to the
+     content box, but we want to obliterate the padding too. */
+  padding: 10px;
+  margin: -10px -10px 0 -10px;
+  top: -10px;
+  margin-top: -10px;
 }
 
 #docs-content-panel {
   font-size: 1.2em;
+  /* background-color: green; */
+}
+
+#docs-content-panel > h2 {
+  margin-top: 0;
+}
+
+.docs-source {
+  margin-bottom: 0;
+}
+
+.copy-button {
+  display: block;
+  text-align: right;
+  font-size: 0.8em;
+  text-decoration: none;
+}
+
+.copy-button:active {
+  color: white;
 }
 
 .button-preview {

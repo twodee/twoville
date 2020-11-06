@@ -724,6 +724,13 @@ function initialize() {
   initializeDocs();
 }
 
+function copyToClipboard(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text)
+      .catch(e => console.error(e)); 
+  }
+}
+
 function initializeDocs() {
   const root = document.getElementById('docs-root');
   const contentPanel = document.getElementById('docs-content-panel');
@@ -735,7 +742,6 @@ function initializeDocs() {
   const docify = html => {
     contentPanel.innerHTML = html;
     docEditors.splice(0, docEditors.length);
-    console.log("docEditors:", docEditors.length);
 
     const links = contentPanel.querySelectorAll('.docs-link');
     for (let link of links) {
@@ -759,6 +765,16 @@ function initializeDocs() {
         maxLines: 100,
         readOnly: true,
       });
+
+      const copyAnchor = document.createElement('a');
+      copyAnchor.href = '#';
+      copyAnchor.innerText = 'copy';
+      copyAnchor.classList.add('copy-button');
+      copyAnchor.addEventListener('click', () => {
+        copyToClipboard(code);
+      });
+
+      source.parentNode.insertBefore(copyAnchor, source.nextSibling);
 
       docEditors.push(editor);
     }
