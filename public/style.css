@@ -30,8 +30,10 @@ var {
 #docs-root code {
   font-family: 'Roboto Mono', monospace;
   font-weight: 500;
-  color: khaki;
+  color: skyblue;
   background: none;
+  font-size: 0.95em;
+  line-height: 0;
 }
 
 .monospace {
