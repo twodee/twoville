@@ -745,8 +745,12 @@ function initializeDocs() {
 
     const links = contentPanel.querySelectorAll('.docs-link');
     for (let link of links) {
-      link.addEventListener('click', () => {
-        load(link.dataset.target);
+      link.addEventListener('click', e => {
+        load(link.hash);
+
+        // If I don't prevent default, then the anchor clicking sets the hash
+        // to #. I want to customize the hash.
+        e.preventDefault();
       });
     }
 
@@ -781,8 +785,9 @@ function initializeDocs() {
   };
 
   const load = tag => {
+    window.history.replaceState(undefined, undefined, tag);
     history.push(tag);
-    fetch(`/docs/${tag}.html`).
+    fetch(`/docs/${tag.substring(1)}.html`).
       then(response => response.text()).
       then(html => {
         toolbar.style.display = tag === 'index' ? 'none' : 'block';
@@ -797,10 +802,10 @@ function initializeDocs() {
   });
 
   if (window.location.hash) {
-    history.push('index');
-    load(window.location.hash.substring(1));
+    history.push('#index');
+    load(window.location.hash);
   } else {
-    load('index');
+    load('#index');
   }
 }
 
