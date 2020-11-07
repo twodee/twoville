@@ -2,18 +2,18 @@
 
 <p>That's no typo. Twoville has a <code>with</code> command that can make creating shapes a little simpler. Recall the code that you used to make your world:</p>
 
-<pre class="docs-source">world = circle()
+<div class="docs-source">world = circle()
 world.center = [50, 50]
 world.radius = 40
-world.color = :cornflower</pre>
+world.color = :cornflower</div>
 
 <p>We reached inside <code>world</code> three different times to assign its three properties: <code>center</code>, <code>radius</code>, and <code>color</code>. Using <code>with</code>, we can shorten these assignments:
 
-<pre class="docs-source">world = circle()
+<div class="docs-source">world = circle()
 with world
   center = [50, 50]
   radius = 40
-  color = :cornflower</pre>
+  color = :cornflower</div>
 
 <p>The <code>with</code> command makes <code>world</code> the subject of the three assignment statements. Do you think that's easier to read and write? You don't have to think so. The benefits of <code>with</code> may become more apparent as we assign more and more properties.</p>
 
@@ -21,16 +21,16 @@ with world
 
 <p>If our shape is used only in the <code>with</code> command, as is the case for <code>world</code>, we don't even need to assign it to a variable. You can directly make an unnamed circle the subject:</p>
 
-<pre class="docs-source">with circle()
+<div class="docs-source">with circle()
   center = [50, 50]
   radius = 40
-  color = :cornflower</pre>
+  color = :cornflower</div>
 
 <p>That said, meaningful names make our code easier to understand. If you still want to name your world, either for its meaningfulness or to reference it later, you can use <code>with</code> in an assignment statement:</p>
 
-<pre class="docs-source">world = with circle()
+<div class="docs-source">world = with circle()
   center = [50, 50]
   radius = 40
-  color = :cornflower</pre>
+  color = :cornflower</div>
 
 <p>Hello, unnamed circle. Hello, <code>world</code>. Either way.</p>

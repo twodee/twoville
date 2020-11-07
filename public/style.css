@@ -367,6 +367,7 @@ html.grabbing {
 
 .docs-source {
   margin-bottom: 0;
+  white-space: pre-wrap;
 }
 
 .copy-button {
