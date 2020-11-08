@@ -388,3 +388,12 @@ html.grabbing {
   margin: 20px auto;
   padding: 10px;
 }
+
+.docs-image {
+  display: block;
+  box-sizing: border-box;
+  width: 50%;
+  max-width: 300px;
+  margin: 20px auto;
+  padding: 10px;
+}

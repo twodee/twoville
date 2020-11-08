@@ -1,0 +1,42 @@
+<h2>Flower Solution</h2>
+
+<p>Here is one way to create the flower-ish pattern.</p>
+
+<div class="docs-source">n = with circle()
+  center = [50, 75]
+  radius = 25
+  color = :orange
+
+e = with circle()
+  center = [75, 50]
+  radius = 25
+  color = :orange
+
+s = with circle()
+  center = [50, 25]
+  radius = 25
+  color = :orange
+
+w = with circle()
+  center = [25, 50]
+  radius = 25
+  color = :orange</div>
+
+<p>Notice how there's a lot of repetition? All four circles have the same <code>radius</code> and <code>color</code>. Only the <code>center</code> property changes.</p>
+
+<p>If you name all the circles with assignment statements, you can use another form of the <code>with</code> command to set the shared properties on all four circles at the same time. For the subject of the <code>with</code>, provide a list of all the circles, like so:</p>
+
+<div class="docs-source">n = with circle()
+  center = [50, 75]
+e = with circle()
+  center = [75, 50]
+s = with circle()
+  center = [50, 25]
+w = with circle()
+  center = [25, 50]
+
+with [n, e, s, w]
+  radius = 25
+  color = :orange</div>
+
+<p>This compact solution makes it much easier to change the radius or the color. You only have to make changes in one spot, not four.</p>
