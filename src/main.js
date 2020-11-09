@@ -45,6 +45,7 @@ let spinner;
 let scrubber;
 let timeSpinner;
 let interpreterWorker;
+let includeCopyAnchors = false;
 
 let scene;
 let isSaved = true;
@@ -741,6 +742,7 @@ function initializeDocs() {
 
   const docify = html => {
     contentPanel.innerHTML = html;
+    root.scrollTop = 0;
     docEditors.splice(0, docEditors.length);
 
     const links = contentPanel.querySelectorAll('.docs-link');
@@ -770,15 +772,17 @@ function initializeDocs() {
         readOnly: true,
       });
 
-      const copyAnchor = document.createElement('a');
-      copyAnchor.href = '#';
-      copyAnchor.innerText = 'copy';
-      copyAnchor.classList.add('copy-button');
-      copyAnchor.addEventListener('click', () => {
-        copyToClipboard(code);
-      });
+      if (includeCopyAnchors) {
+        const copyAnchor = document.createElement('a');
+        copyAnchor.href = '#';
+        copyAnchor.innerText = 'copy';
+        copyAnchor.classList.add('copy-button');
+        copyAnchor.addEventListener('click', () => {
+          copyToClipboard(code);
+        });
 
-      source.parentNode.insertBefore(copyAnchor, source.nextSibling);
+        source.parentNode.insertBefore(copyAnchor, source.nextSibling);
+      }
 
       docEditors.push(editor);
     }
