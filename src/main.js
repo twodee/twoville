@@ -790,7 +790,7 @@ function initializeDocs() {
     fetch(`/docs/${tag.substring(1)}.html`).
       then(response => response.text()).
       then(html => {
-        toolbar.style.display = tag === 'index' ? 'none' : 'block';
+        toolbar.style.display = tag === '#index' ? 'none' : 'block';
         docify(html);
       });
   };
