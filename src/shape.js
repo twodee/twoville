@@ -976,11 +976,6 @@ export class Polyline extends VertexShape {
 
       this.show();
 
-      const join = this.valueAt(env, 'join', t).value;
-      if (join) {
-        this.element.setAttributeNS(null, 'stroke-linejoin', join);
-      }
-
       this.applyStroke(env, t, this.element);
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
       this.element.setAttributeNS(null, 'points', coordinates);

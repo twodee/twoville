@@ -777,8 +777,9 @@ function initializeDocs() {
         copyAnchor.href = '#';
         copyAnchor.innerText = 'copy';
         copyAnchor.classList.add('copy-button');
-        copyAnchor.addEventListener('click', () => {
+        copyAnchor.addEventListener('click', e => {
           copyToClipboard(code);
+          e.preventDefault();
         });
 
         source.parentNode.insertBefore(copyAnchor, source.nextSibling);
