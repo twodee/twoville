@@ -45,7 +45,7 @@ let spinner;
 let scrubber;
 let timeSpinner;
 let interpreterWorker;
-let includeCopyAnchors = false;
+let includeCopyAnchors = true;
 
 let scene;
 let isSaved = true;

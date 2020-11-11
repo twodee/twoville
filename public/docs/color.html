@@ -1,0 +1,18 @@
+<h2>Color</h2>
+
+<p>You've made a circle that was colored cornflower and a rectangle that was colored crimson. Did you try using other colors?</p>
+
+<p>Many colors are named: <code>:red</code>, <code>:yellow</code>, <code>:magenta</code>, <code>:blue</code>, and so on. Not all of them are named, however. You can get at these unnamed colors using a color list.</p>
+
+<p>Color lists are mixtures of three primary colors: red, green, and blue. They are lists of three intensities, having the form <code>[red, green, blue]</code>, where <code>red</code>, <code>green</code>, and <code>blue</code> are numbers between 0 and 1. An intensity of 0 means that the corresponding primary color is fully absent from the mixed color. An intensity of 1 means the primary is fully present.</p>
+
+<p>The symbol <code>:red</code> is shorthand for <code>[1, 0, 0]</code>. The symbol <code>:green</code> is shorthand for <code>[0, 1, 0]</code>. The symbol <code>:blue</code> is shorthand for <code>[0, 0, 1]</code>.</p>
+
+<p>To mix together a lot of red, some green, and no blue, we'd write <code>[1, 0.5, 0]</code>. What color is the circle that uses this list?</p>
+
+<div class="docs-source">with circle()
+  radius = 40
+  center = [50, 50]
+  color = [1, 0.5, 0]</div>
+
+<p>Color lists are something that you should experiment with. Try setting the three intensities in various ways to see what you can you make. What color list is <code>:black</code> short for? What color list is <code>:white</code> short for? How about <code>:yellow</code>? How can you make a light gray? A dark gray?</p>

@@ -1,0 +1,17 @@
+<h2>Line</h2>
+
+<p>You've made circles. You've made rectangles. These shapes are predictable, having just a few properties. From here on out, however, we'll make much wilder shapes by connecting corners or <i>vertices</i>. The first of these that we'll discuss is <code>line</code>.</p>
+
+<p>To draw a line, you call its <code>vertex</code> function twice and set each vertex's <code>position</code> property. You also set its <code>size</code> property to control its thickness and its <code>color</code> property. For example, this code plots a diagonal line across the viewport.</p>
+
+<div class="docs-source">with line()
+  size = 5
+  color = :blue
+  vertex().position = [0, 0]
+  vertex().position = [100, 100]</div>
+
+<p>What happens if you try to add more vertices?</p>
+
+<p>Here's a challenge for you. Make a circle with a slash through it.</p>
+
+<img src="/docs/images/anti_circle.svg" class="docs-image">

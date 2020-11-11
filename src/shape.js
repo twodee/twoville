@@ -74,6 +74,7 @@ export class Shape extends TimelinedEnvironment {
     this.transforms = [];
 
     this.bind('opacity', new ExpressionReal(1));
+    this.bind('enabled', new ExpressionBoolean(true));
     this.bindFunction('translate', new FunctionDefinition('translate', [], new ExpressionTranslate(this)));
     this.bindFunction('scale', new FunctionDefinition('scale', [], new ExpressionScale(this)));
     this.bindFunction('rotate', new FunctionDefinition('rotate', [], new ExpressionRotate(this)));
@@ -380,19 +381,20 @@ export class Shape extends TimelinedEnvironment {
   }
 
   setColor(env, t) {
-    const opacity = this.valueAt(env, 'opacity', t).value;
-    if (opacity <= 1e-6) {
+    const isEnabled = this.valueAt(env, 'enabled', t).value;
+    if (!isEnabled) {
       this.hide();
       return false;
     }
 
+    const opacity = this.valueAt(env, 'opacity', t).value;
     this.element.setAttributeNS(null, 'fill-opacity', opacity);
 
     if (this.owns('color')) {
       let color = this.valueAt(env, 'color', t);
       this.element.setAttributeNS(null, 'fill', color.toColor());
-    } else {
-      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose color property is not defined.`);
+    } else if (opacity > 0) {
+      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose color property is not defined but whose opacity is greater than 0.`);
     }
 
     return true;
@@ -404,7 +406,7 @@ export class Shape extends TimelinedEnvironment {
 export class Text extends Shape {
   static type = 'text';
   static article = 'a';
-  static timedIds = ['position', 'message', 'size', 'color', 'opacity', 'anchor', 'baseline'];
+  static timedIds = ['position', 'message', 'size', 'color', 'opacity', 'anchor', 'baseline', 'enabled'];
 
   static create(parentEnvironment, where) {
     const shape = new Text();
@@ -513,7 +515,7 @@ export class Text extends Shape {
 export class Rectangle extends Shape {
   static type = 'rectangle';
   static article = 'a';
-  static timedIds = ['corner', 'center', 'size', 'color', 'opacity', 'rounding'];
+  static timedIds = ['corner', 'center', 'size', 'color', 'opacity', 'rounding', 'enabled'];
 
   static create(parentEnvironment, where) {
     const shape = new Rectangle();
@@ -642,7 +644,7 @@ export class Rectangle extends Shape {
 export class Circle extends Shape {
   static type = 'circle';
   static article = 'a';
-  static timedIds = ['center', 'radius', 'color', 'opacity'];
+  static timedIds = ['center', 'radius', 'color', 'opacity', 'enabled'];
 
   static create(parentEnvironment, where) {
     const shape = new Circle();
@@ -840,7 +842,7 @@ export class VertexShape extends NodeShape {
 export class Polygon extends VertexShape {
   static type = 'polygon';
   static article = 'a';
-  static timedIds = ['color', 'opacity'];
+  static timedIds = ['color', 'opacity', 'enabled'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -917,7 +919,7 @@ export class Polygon extends VertexShape {
 export class Polyline extends VertexShape {
   static type = 'polyline';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes', 'join'];
+  static timedIds = ['size', 'color', 'opacity', 'dashes', 'join', 'enabled'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -973,6 +975,12 @@ export class Polyline extends VertexShape {
       }
 
       this.show();
+
+      const join = this.valueAt(env, 'join', t).value;
+      if (join) {
+        this.element.setAttributeNS(null, 'stroke-linejoin', join);
+      }
+
       this.applyStroke(env, t, this.element);
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
       this.element.setAttributeNS(null, 'points', coordinates);
@@ -991,7 +999,7 @@ export class Polyline extends VertexShape {
 export class Line extends VertexShape {
   static type = 'line';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes'];
+  static timedIds = ['size', 'color', 'opacity', 'dashes', 'enabled'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -1070,7 +1078,7 @@ export class Line extends VertexShape {
 export class Ungon extends VertexShape {
   static type = 'ungon';
   static article = 'an';
-  static timedIds = ['rounding', 'color', 'opacity'];
+  static timedIds = ['rounding', 'color', 'opacity', 'enabled'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -1184,7 +1192,7 @@ export class Ungon extends VertexShape {
 export class Path extends NodeShape {
   static type = 'path';
   static article = 'a';
-  static timedIds = ['color', 'opacity'];
+  static timedIds = ['color', 'opacity', 'enabled'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -1302,7 +1310,7 @@ export class Path extends NodeShape {
 export class Group extends Shape {
   static type = 'group';
   static article = 'a';
-  static timedIds = [];
+  static timedIds = ['enabled']; // TODO does enabled work on group
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -1427,7 +1435,7 @@ export class Cutout extends Mask {
 export class Tip extends Group {
   static type = 'tip';
   static article = 'a';
-  static timedIds = ['size', 'anchor', 'corner', 'center'];
+  static timedIds = ['size', 'anchor', 'corner', 'center', 'enabled'];
 
   static create(parentEnvironment, where) {
     const shape = new Tip();
