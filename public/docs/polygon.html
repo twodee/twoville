@@ -1,0 +1,22 @@
+<h2>Polygon</h2>
+
+<p>Just as a polyline is a line with many segments, a polygon is a shape with many sides. The two are constructed nearly identically. The only differences are that you use <code>polygon</code> command and you can only control <code>join</code> on the polygon's stroke.</p>
+
+<p>This program draws an orange, pentagonal house-like shape with a rounded black stroke:</p>
+
+<div class="docs-source">with polygon()
+  size = 10
+  color = :orange
+  vertex().position = [10, 10]
+  vertex().position = [90, 10]
+  vertex().position = [90, 60]
+  vertex().position = [50, 90]
+  vertex().position = [10, 60]
+  with stroke
+    color = :black
+    size = 5
+    join = :round</div>
+
+<p>Here's a challenge for you. Write a program that uses one <code>polygon</code> command and generates these these two mountains on the horizon:</p>
+
+<img src="/docs/images/mountains.svg" class="docs-image">
