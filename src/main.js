@@ -45,7 +45,12 @@ let spinner;
 let scrubber;
 let timeSpinner;
 let interpreterWorker;
-let includeCopyAnchors = true;
+
+let defaultSettings = {
+  showCopyLinks: true,
+  backgroundColor: '#FF0000',
+};
+const settings = {...defaultSettings};
 
 let scene;
 let isSaved = true;
@@ -328,7 +333,42 @@ function initialize() {
   spinner = document.getElementById('spinner');
   scrubber = document.getElementById('scrubber');
   timeSpinner = document.getElementById('time-spinner');
+  const svg = document.getElementById('svg');
   new Messager(document.getElementById('messager'), document, highlight);
+
+  let savedSettings = {};
+
+  if (!isEmbedded) {
+    const json = localStorage.getItem('twoville-settings');
+    if (json) {
+      const savedSettings = JSON.parse(json);
+      Object.assign(settings, savedSettings);
+    }
+  }
+
+  const saveSettings = () => {
+    if (!isEmbedded) {
+      localStorage.setItem('twoville-settings', JSON.stringify(savedSettings));
+    }
+  };
+
+  // Handle show copy links toggling.
+  const showCopyLinksToggle = document.getElementById('show-copy-links-toggle');
+  showCopyLinksToggle.checked = settings.showCopyLinks;
+  showCopyLinksToggle.addEventListener('click', () => {
+    settings.showCopyLinks = savedSettings.showCopyLinks = showCopyLinksToggle.checked;
+    saveSettings();
+  });
+
+  // Handle background color picking.
+  const backgroundColorPicker = document.getElementById('background-color-picker');
+  backgroundColorPicker.value = settings.backgroundColor;
+  svg.style.backgroundColor = settings.backgroundColor; 
+  backgroundColorPicker.addEventListener('input', () => {
+    settings.backgroundColor = savedSettings.backgroundColor = backgroundColorPicker.value;
+    svg.style.backgroundColor = settings.backgroundColor; 
+    saveSettings();
+  });
 
   if (source0) {
     editor.setValue(source0, 1);
@@ -772,7 +812,7 @@ function initializeDocs() {
         readOnly: true,
       });
 
-      if (includeCopyAnchors) {
+      if (settings.showCopyLinks) {
         const copyAnchor = document.createElement('a');
         copyAnchor.href = '#';
         copyAnchor.innerText = 'copy';

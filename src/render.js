@@ -142,13 +142,6 @@ export class RenderEnvironment extends Environment {
 
     let size = this.get('viewport').get('size');
 
-    if (this.get('viewport').owns('color')) {
-      let color = this.get('viewport').get('color');
-      svg.setAttributeNS(null, 'style', `background-color: ${color.toColor()}`);
-    } else {
-      svg.setAttributeNS(null, 'style', `initial`);
-    }
-
     let corner;
     if (this.get('viewport').owns('corner')) {
       corner = this.get('viewport').get('corner');
