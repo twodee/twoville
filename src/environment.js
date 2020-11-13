@@ -323,6 +323,10 @@ export class TimelinedEnvironment extends Environment {
         const type = this.valueAt(env, 'join', t).value;
         element.setAttributeNS(null, 'stroke-linejoin', type);
       }
+
+      return size.value;
+    } else {
+      return 0;
     }
   }
 }

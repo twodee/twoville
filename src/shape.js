@@ -1,4 +1,5 @@
 import { 
+  BoundingBox,
   FunctionDefinition,
   LocatedException,
   SourceLocation,
@@ -600,9 +601,16 @@ export class Rectangle extends Shape {
         this.element.setAttributeNS(null, 'ry', rounding.value);
       }
 
+      const box = new BoundingBox(); 
+      box.include(corner.toPrimitiveArray());
+      box.include(corner.add(size).toPrimitiveArray());
+
       if (this.owns('stroke')) {
-        this.untimedProperties.stroke.applyStroke(env, t, this.element);
+        const strokeWidth = this.untimedProperties.stroke.applyStroke(env, t, this.element);
+        box.thicken(strokeWidth);
       }
+
+      env.root.include(box);
 
       this.element.setAttributeNS(null, 'x', corner.get(0).value);
       this.element.setAttributeNS(null, 'y', bounds.span - size.get(1).value - corner.get(1).value);
@@ -892,8 +900,9 @@ export class Polygon extends VertexShape {
     } else {
       this.show();
 
+      let strokeWidth = 0;
       if (this.owns('stroke')) {
-        this.untimedProperties.stroke.applyStroke(env, t, this.element);
+        strokeWidth = this.untimedProperties.stroke.applyStroke(env, t, this.element);
       }
 
       if (this.mirrors.length > 0) {
@@ -901,6 +910,12 @@ export class Polygon extends VertexShape {
       }
 
       const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+
+      if (positions.length > 0) {
+        const box = positions.reduce((acc, p) => acc.include(p.toPrimitiveArray()), new BoundingBox());
+        box.thicken(strokeWidth);
+        env.root.include(box);
+      }
 
       this.element.setAttributeNS(null, 'points', coordinates);
 

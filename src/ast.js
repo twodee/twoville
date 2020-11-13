@@ -2326,6 +2326,10 @@ export class ExpressionVector extends ExpressionData {
     return this.normalize().multiply(length);
   }
 
+  toPrimitiveArray() {
+    return this.value.map(element => element.value);
+  }
+
   distance(that) {
     return new ExpressionReal(that.subtract(this).magnitude);
   }

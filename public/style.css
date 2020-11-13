@@ -397,3 +397,9 @@ html.grabbing {
   margin: 20px auto;
   padding: 10px;
 }
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 150px auto;
+  grid-row-gap: 5px;
+}

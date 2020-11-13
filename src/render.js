@@ -1,4 +1,5 @@
 import {
+  BoundingBox,
   SourceLocation,
   Token,
   clearChildren,
@@ -289,12 +290,21 @@ export class RenderEnvironment extends Environment {
     this.svg.removeEventListener('mouseup', this.onMouseUp);
   }
 
+  include(box) {
+    this.box.include(box.min);
+    this.box.include(box.max);
+  }
+
   scrub(t) {
+    this.box = new BoundingBox();
+
     // Don't target shapes. Non-drawable shapes should get scrubbed by their parents.
     for (let drawable of this.drawables) {
       drawable.scrub(this, t, this.bounds);
     }
     this.unscaleMarks();
+
+    console.log("this.box:", this.box.toString());
   }
 
   hideMarks() {

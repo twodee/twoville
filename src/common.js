@@ -198,8 +198,8 @@ export function removeClassMembers(root, className) {
 
 // --------------------------------------------------------------------------- 
 
-Number.prototype.toShortFloat = function() {
-  return parseFloat(this.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 3}));
+Number.prototype.toShortFloat = function(ndigits = 3) {
+  return parseFloat(this.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: ndigits}));
 }
 
 // --------------------------------------------------------------------------- 
@@ -241,6 +241,45 @@ export function sentenceCase(s) {
     return s.charAt(0).toUpperCase() + s.substring(1);
   } else {
     return s;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class BoundingBox {
+  constructor() {
+    this.isEmpty = true;
+    this.min = [Number.MAX_VALUE, Number.MAX_VALUE];
+    this.max = [Number.MIN_VALUE, Number.MIN_VALUE];
+  }
+
+  include(p) {
+    this.isEmpty = false;
+
+    if (p[0] < this.min[0]) {
+      this.min[0] = p[0];
+    } else if (p[0] > this.max[0]) {
+      this.max[0] = p[0];
+    }
+
+    if (p[1] < this.min[1]) {
+      this.min[1] = p[1];
+    } else if (p[1] > this.max[1]) {
+      this.max[1] = p[1];
+    }
+
+    return this;
+  }
+
+  thicken(width) {
+    this.min[0] -= width;
+    this.min[1] -= width;
+    this.max[0] += width;
+    this.max[1] += width;
+  }
+
+  toString() {
+    return this.min.toString() + ' | ' + this.max.toString();
   }
 }
 

@@ -45,6 +45,8 @@ let spinner;
 let scrubber;
 let timeSpinner;
 let interpreterWorker;
+let contentCornerBox;
+let contentSizeBox;
 
 let defaultSettings = {
   showCopyLinks: true,
@@ -105,6 +107,9 @@ function scrubTo(tick) {
   timeSpinner.value = t;
   scrubber.value = tick;
   scene.scrub(t);
+
+  contentCornerBox.innerText = `[${scene.box.min[0].toShortFloat(2)}, ${scene.box.min[1].toShortFloat(2)}]`;
+  contentSizeBox.innerText = `[${(scene.box.max[0] - scene.box.min[0]).toShortFloat(2)}, ${(scene.box.max[1] - scene.box.min[1]).toShortFloat(2)}]`;
 }
 
 let lastMillis = null;
@@ -333,6 +338,8 @@ function initialize() {
   spinner = document.getElementById('spinner');
   scrubber = document.getElementById('scrubber');
   timeSpinner = document.getElementById('time-spinner');
+  contentCornerBox = document.getElementById('content-corner-box');
+  contentSizeBox = document.getElementById('content-size-box');
   const svg = document.getElementById('svg');
   new Messager(document.getElementById('messager'), document, highlight);
 
@@ -341,7 +348,7 @@ function initialize() {
   if (!isEmbedded) {
     const json = localStorage.getItem('twoville-settings');
     if (json) {
-      const savedSettings = JSON.parse(json);
+      savedSettings = JSON.parse(json);
       Object.assign(settings, savedSettings);
     }
   }
