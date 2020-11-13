@@ -1,0 +1,16 @@
+<h2>Ungon</h2>
+
+<p>Corners are alright. But what if you don't like them? Well, you might try an <code>ungon</code>. Ungons are like polygons, but their vertices are rounded off. This means they are "not polygons."</p>
+
+<p>Here's the pentagonal house again, but this time it uses the <code>ungon</code> command:</p>
+
+<div class="docs-source">with ungon()
+  rounding = 0
+  color = :orange
+  vertex().position = [10, 10]
+  vertex().position = [90, 10]
+  vertex().position = [90, 60]
+  vertex().position = [50, 90]
+  vertex().position = [10, 60]</div>
+
+<p>Ungons have one additional over polygons: <code>rounding</code>. When <code>rounding</code> is 0, the corners are only slightly rounded. When <code>rounding</code> is 1, the corners are really rounded. If you use a number outside of [0, 1], be prepared for strange effects.</p>
