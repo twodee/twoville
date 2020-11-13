@@ -10,6 +10,31 @@
 </head>
 <body>
 
+<div id="dialog-overlay">
+  <div id="save-as-dialog" class="dialog">
+    <h2 class="dialog-heading">Save As</h2> 
+    <p>What name do want to give this program?</p>
+    <input id="save-as-file-name-input" type="text">
+    <div class="dialog-buttons">
+      <button id="save-as-cancel-button" class="dialog-button" type="text">cancel</button>
+      <button id="save-as-okay-button" class="dialog-button" type="text">save</button>
+    </div>
+  </div>
+
+  <div id="open-dialog" class="dialog">
+    <h2 class="dialog-heading">Open</h2> 
+    <p>What program do you want to open?</p>
+    <ul>
+      <li>a</li>
+      <li>a</li>
+      <li>a</li>
+    </ul>
+    <div class="dialog-buttons">
+      <button id="open-cancel-button" class="dialog-button" type="text">cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="root">
   <div id="left">
     <div id="editor" draggable="false"></div>
@@ -96,7 +121,8 @@
       <div class="panel-section">
         <h3>File</h3>
         <div id="file-root">
-          <!-- <input type="button" id="save-button" value="Save"> -->
+          <input type="button" id="save-as-button" value="Save As">
+          <input type="button" id="open-button" value="Open">
           <input type="button" id="export-button" value="Export SVG">
           <input type="button" id="record-button" value="Record Animated GIF">
         </div>

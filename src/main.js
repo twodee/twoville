@@ -377,6 +377,38 @@ function initialize() {
     saveSettings();
   });
 
+  const dialogOverlay = document.getElementById('dialog-overlay');
+
+  // Handle open dialog.
+  const openButton = document.getElementById('open-button');
+  const openCancelButton = document.getElementById('open-cancel-button');
+  const openDialog = document.getElementById('open-dialog');
+
+  openButton.addEventListener('click', () => {
+    dialogOverlay.style.display = 'flex';
+    openDialog.style.display = 'flex';
+  });
+
+  openCancelButton.addEventListener('click', () => {
+    dialogOverlay.style.display = 'none';
+    openDialog.style.display = 'none';
+  });
+
+  // Handle save as dialog.
+  const saveAsButton = document.getElementById('save-as-button');
+  const saveAsCancelButton = document.getElementById('save-as-cancel-button');
+  const saveAsDialog = document.getElementById('save-as-dialog');
+
+  saveAsButton.addEventListener('click', () => {
+    dialogOverlay.style.display = 'flex';
+    saveAsDialog.style.display = 'flex';
+  });
+
+  saveAsCancelButton.addEventListener('click', () => {
+    dialogOverlay.style.display = 'none';
+    saveAsDialog.style.display = 'none';
+  });
+
   if (source0) {
     editor.setValue(source0, 1);
   } else if (!isEmbedded && localStorage.getItem('src') !== null) {

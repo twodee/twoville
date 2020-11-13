@@ -403,3 +403,42 @@ html.grabbing {
   grid-template-columns: 150px auto;
   grid-row-gap: 5px;
 }
+
+#dialog-overlay {
+  display: none;
+  background-color: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  z-index: 100;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  display: none;
+}
+
+.dialog {
+  min-width: 400px;
+  background-color: black;
+  box-shadow: 0 0 20px white;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  display: none;
+}
+
+.dialog-heading {
+  margin: 0;
+}
+
+.dialog-button {
+  margin: 15px 0 0 15px;
+}
+
+.dialog-buttons {
+  text-align: right;
+}
