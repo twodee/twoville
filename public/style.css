@@ -421,14 +421,19 @@ html.grabbing {
 }
 
 .dialog {
-  min-width: 400px;
+  min-width: 50vw;
+  max-height: 50vh;
   background-color: black;
-  box-shadow: 0 0 20px white;
+  box-shadow: 0 0 20px 0px white;
   color: white;
   padding: 20px;
   display: flex;
   flex-direction: column;
   display: none;
+}
+
+#open-dialog-files-list {
+  overflow: scroll;
 }
 
 .dialog-heading {
@@ -441,4 +446,20 @@ html.grabbing {
 
 .dialog-buttons {
   text-align: right;
+}
+
+.link-button {
+  background: none;
+  color: orange;
+  border: none;
+  font-size: inherit;
+  font-family: inherit;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+  outline: none;
+}
+
+.link-button:active {
+  color: rgb(255, 200, 0);
 }

@@ -5,6 +5,7 @@ import './mode-twoville.js';
 import GIF from 'gif.js';
 
 import {
+  clearChildren,
   MessagedException,
 } from './common.js';
 
@@ -383,31 +384,101 @@ function initialize() {
   const openButton = document.getElementById('open-button');
   const openCancelButton = document.getElementById('open-cancel-button');
   const openDialog = document.getElementById('open-dialog');
+  const openDialogFileList = document.getElementById('open-dialog-files-list');
+
+  function closeOpenDialog() {
+    dialogOverlay.style.display = 'none';
+    openDialog.style.display = 'none';
+    document.removeEventListener('keydown', openEscapeListener);
+  }
+
+  function openEscapeListener(event) {
+    if (event.key === 'Escape') {
+      closeOpenDialog();
+    }
+  }
+
+  function loadFile(event) {
+    const name = event.target.innerText; 
+    const twos = JSON.parse(localStorage.getItem('twos')); 
+    const file = twos[name];
+    editor.setValue(file.source, 1);
+    closeOpenDialog();
+  }
 
   openButton.addEventListener('click', () => {
     dialogOverlay.style.display = 'flex';
     openDialog.style.display = 'flex';
+    clearChildren(openDialogFileList);
+    const twos = JSON.parse(localStorage.getItem('twos')); 
+    if (twos) {
+      for (let name of Object.keys(twos)) {
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        button.classList.add('link-button');
+        button.appendChild(document.createTextNode(name));
+        button.addEventListener('click', loadFile);
+        li.appendChild(button);
+        openDialogFileList.appendChild(li);
+      }
+    }
+    document.addEventListener('keydown', openEscapeListener);
   });
 
-  openCancelButton.addEventListener('click', () => {
-    dialogOverlay.style.display = 'none';
-    openDialog.style.display = 'none';
-  });
+  openCancelButton.addEventListener('click', closeOpenDialog);
 
   // Handle save as dialog.
   const saveAsButton = document.getElementById('save-as-button');
   const saveAsCancelButton = document.getElementById('save-as-cancel-button');
+  const saveAsOkayButton = document.getElementById('save-as-okay-button');
   const saveAsDialog = document.getElementById('save-as-dialog');
+  const saveAsFileNameInput = document.getElementById('save-as-file-name-input');
+
+  function closeSaveAsDialog() {
+    dialogOverlay.style.display = 'none';
+    saveAsDialog.style.display = 'none';
+    document.removeEventListener('keydown', saveAsEscapeListener);
+  }
+
+  function saveAsEscapeListener(event) {
+    if (event.key === 'Escape') {
+      closeSaveAsDialog();
+    }
+  }
 
   saveAsButton.addEventListener('click', () => {
     dialogOverlay.style.display = 'flex';
     saveAsDialog.style.display = 'flex';
+    saveAsFileNameInput.value = ''; // TODO use original name
+    saveAsFileNameInput.focus();
+    document.addEventListener('keydown', saveAsEscapeListener);
   });
 
-  saveAsCancelButton.addEventListener('click', () => {
-    dialogOverlay.style.display = 'none';
-    saveAsDialog.style.display = 'none';
+  saveAsCancelButton.addEventListener('click', closeSaveAsDialog);
+
+  function saveAs() {
+    const name = saveAsFileNameInput.value;
+    if (name.length > 0) {
+      const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
+      const now = new Date().getTime();
+      twos[name] = {
+        createdAt: now,
+        ...twos[name],
+        modifiedAt: now,
+        source: editor.getValue(),
+      };
+      localStorage.setItem('twos', JSON.stringify(twos));
+      closeSaveAsDialog();
+    }
+  }
+
+  saveAsOkayButton.addEventListener('click', saveAs);
+  saveAsFileNameInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      saveAs();
+    }
   });
+
 
   if (source0) {
     editor.setValue(source0, 1);
