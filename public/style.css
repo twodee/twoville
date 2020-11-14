@@ -421,8 +421,8 @@ html.grabbing {
 }
 
 .dialog {
-  min-width: 50vw;
-  max-height: 50vh;
+  min-width: 400px;
+  max-height: 500px;
   background-color: black;
   box-shadow: 0 0 20px 0px white;
   color: white;
@@ -441,7 +441,19 @@ html.grabbing {
 }
 
 .dialog-button {
-  margin: 15px 0 0 15px;
+  margin: 15px 0 0 5px;
+  background-color: #2b549f;
+  padding: 5px 10px; 
+  border: none;
+  font-family: 'Roboto';
+  color: white;
+  outline: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.dialog-button:active {
+  background-color: cornflowerblue;
 }
 
 .dialog-buttons {
@@ -462,4 +474,33 @@ html.grabbing {
 
 .link-button:active {
   color: rgb(255, 200, 0);
+}
+
+.links-list {
+  padding-left: 20px;
+}
+
+#save-as-error-box {
+  white-space: pre;
+  display: none;
+  color: yellow;
+  font-weight: bold;
+}
+
+.from-user {
+  white-space: pre;
+  color: yellow;
+  font-weight: bold;
+}
+
+#background-color-preview {
+  height: 20px;
+  cursor: pointer;
+}
+
+input[type="color"] {
+  /* border: none; */
+  /* padding: 0; */
+  /* margin: 0; */
+  visibility: hidden;
 }

@@ -19,14 +19,32 @@
       <button id="save-as-cancel-button" class="dialog-button" type="text">cancel</button>
       <button id="save-as-okay-button" class="dialog-button" type="text">save</button>
     </div>
+    <p id="save-as-error-box">"" is not a valid name. Please pick something different.</p>
+  </div>
+
+  <div id="overwrite-dialog" class="dialog">
+    <h2 class="dialog-heading">File Exists</h2> 
+    <p>A program named <span id="overwrite-name-field" class="from-user">FOO</span> already exists. Do you want to overwrite it?</p>
+    <div class="dialog-buttons">
+      <button id="overwrite-cancel-button" class="dialog-button" type="text">rename</button>
+      <button id="overwrite-okay-button" class="dialog-button" type="text">overwrite</button>
+    </div>
   </div>
 
   <div id="open-dialog" class="dialog">
     <h2 class="dialog-heading">Open</h2> 
     <p>What program do you want to open?</p>
-    <ul id="open-dialog-files-list"></ul>
+    <ul id="open-dialog-files-list" class="links-list"></ul>
     <div class="dialog-buttons">
       <button id="open-cancel-button" class="dialog-button" type="text">cancel</button>
+    </div>
+  </div>
+
+  <div id="alert-dialog" class="dialog">
+    <h2 id="alert-dialog-heading-field" class="dialog-heading">Alert Heading</h2> 
+    <p id="alert-dialog-message-field">Alert message.</p>
+    <div class="dialog-buttons">
+      <button id="alert-dialog-okay-button" class="dialog-button" type="text">okay</button>
     </div>
   </div>
 </div>
@@ -117,7 +135,7 @@
       <div class="panel-section">
         <h3>File</h3>
         <div id="file-root">
-          <ul>
+          <ul class="links-list">
             <li><input type="button" class="link-button" id="save-as-button" value="Save As"></li>
             <li><input type="button" class="link-button" id="open-button" value="Open"></li>
             <li><input type="button" class="link-button" id="export-button" value="Export SVG"></li>
@@ -130,7 +148,7 @@
         <h3>Display</h3>
         <div class="settings-grid">
           <label for="background-color-picker">Background Color</label>
-          <input id="background-color-picker" type="color">
+          <label id="background-color-preview"><input id="background-color-picker" type="color"></label>
           <span>Content Corner</span>
           <span id="content-corner-box">unknown</span>
           <span>Content Size</span>

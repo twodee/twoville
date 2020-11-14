@@ -370,10 +370,14 @@ function initialize() {
 
   // Handle background color picking.
   const backgroundColorPicker = document.getElementById('background-color-picker');
+  const backgroundColorPreview = document.getElementById('background-color-preview');
+
   backgroundColorPicker.value = settings.backgroundColor;
   svg.style.backgroundColor = settings.backgroundColor; 
+  backgroundColorPreview.style['background-color'] = settings.backgroundColor;
   backgroundColorPicker.addEventListener('input', () => {
     settings.backgroundColor = savedSettings.backgroundColor = backgroundColorPicker.value;
+    backgroundColorPreview.style['background-color'] = settings.backgroundColor;
     svg.style.backgroundColor = settings.backgroundColor; 
     saveSettings();
   });
@@ -406,12 +410,44 @@ function initialize() {
     closeOpenDialog();
   }
 
-  openButton.addEventListener('click', () => {
+  const alertDialog = document.getElementById('alert-dialog');
+  const alertDialogHeadingField = document.getElementById('alert-dialog-heading-field');
+  const alertDialogMessageField = document.getElementById('alert-dialog-message-field');
+  const alertDialogOkayButton = document.getElementById('alert-dialog-okay-button');
+
+  function alertEscapeListener(event) {
+    if (event.key === 'Escape') {
+      closeAlertDialog();
+    }
+  }
+
+  function showAlertDialog(heading, message) {
+    alertDialog.style.display = 'flex';
     dialogOverlay.style.display = 'flex';
-    openDialog.style.display = 'flex';
-    clearChildren(openDialogFileList);
-    const twos = JSON.parse(localStorage.getItem('twos')); 
-    if (twos) {
+    alertDialogHeadingField.innerText = heading;
+    alertDialogMessageField.innerText = message;
+    document.addEventListener('keydown', alertEscapeListener);
+  }
+
+  function closeAlertDialog() {
+    alertDialog.style.display = 'none';
+    dialogOverlay.style.display = 'none';
+    document.removeEventListener('keydown', alertEscapeListener);
+  }
+
+  alertDialogOkayButton.addEventListener('click', closeAlertDialog);
+
+  openButton.addEventListener('click', () => {
+    const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
+    const names = Object.keys(twos);
+
+    if (names.length === 0) {
+      showAlertDialog('No Files', 'There are no programs available to open. Try saving one first.');
+    } else {
+      dialogOverlay.style.display = 'flex';
+      openDialog.style.display = 'flex';
+      clearChildren(openDialogFileList);
+
       for (let name of Object.keys(twos)) {
         const li = document.createElement('li');
         const button = document.createElement('button');
@@ -421,8 +457,9 @@ function initialize() {
         li.appendChild(button);
         openDialogFileList.appendChild(li);
       }
+
+      document.addEventListener('keydown', openEscapeListener);
     }
-    document.addEventListener('keydown', openEscapeListener);
   });
 
   openCancelButton.addEventListener('click', closeOpenDialog);
@@ -433,6 +470,7 @@ function initialize() {
   const saveAsOkayButton = document.getElementById('save-as-okay-button');
   const saveAsDialog = document.getElementById('save-as-dialog');
   const saveAsFileNameInput = document.getElementById('save-as-file-name-input');
+  const saveAsErrorBox = document.getElementById('save-as-error-box');
 
   function closeSaveAsDialog() {
     dialogOverlay.style.display = 'none';
@@ -446,39 +484,87 @@ function initialize() {
     }
   }
 
-  saveAsButton.addEventListener('click', () => {
+  function showSaveAsDialog() {
+    saveAsErrorBox.style.display = 'none';
     dialogOverlay.style.display = 'flex';
     saveAsDialog.style.display = 'flex';
-    saveAsFileNameInput.value = ''; // TODO use original name
     saveAsFileNameInput.focus();
     document.addEventListener('keydown', saveAsEscapeListener);
-  });
+  }
 
+  saveAsButton.addEventListener('click', () => {
+    saveAsFileNameInput.value = ''; // TODO use existing
+    showSaveAsDialog();
+  });
   saveAsCancelButton.addEventListener('click', closeSaveAsDialog);
 
-  function saveAs() {
+  function reallySaveAs() {
     const name = saveAsFileNameInput.value;
-    if (name.length > 0) {
+    const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
+    const now = new Date().getTime();
+    twos[name] = {
+      createdAt: now,
+      ...twos[name],
+      modifiedAt: now,
+      source: editor.getValue(),
+    };
+    localStorage.setItem('twos', JSON.stringify(twos));
+  }
+
+  function trySaveAs() {
+    const name = saveAsFileNameInput.value;
+    if (name.match(/^\s*$/)) {
+      saveAsErrorBox.innerText = `The name "${name}" is not valid. Try something different.`;
+      saveAsErrorBox.style.display = 'block';
+    } else {
       const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
-      const now = new Date().getTime();
-      twos[name] = {
-        createdAt: now,
-        ...twos[name],
-        modifiedAt: now,
-        source: editor.getValue(),
-      };
-      localStorage.setItem('twos', JSON.stringify(twos));
       closeSaveAsDialog();
+      if (twos.hasOwnProperty(name)) {
+        showOverwriteDialog(name);
+      } else {
+        reallySaveAs();
+      }
     }
   }
 
-  saveAsOkayButton.addEventListener('click', saveAs);
+  saveAsOkayButton.addEventListener('click', trySaveAs);
   saveAsFileNameInput.addEventListener('keydown', event => {
     if (event.key === 'Enter') {
-      saveAs();
+      trySaveAs();
     }
   });
 
+  // Handle overwrite dialog.
+  const overwriteDialog = document.getElementById('overwrite-dialog');
+  const overwriteNameField = document.getElementById('overwrite-name-field');
+  const overwriteCancelButton = document.getElementById('overwrite-cancel-button');
+  const overwriteOkayButton = document.getElementById('overwrite-okay-button');
+
+  function showOverwriteDialog(name) {
+    dialogOverlay.style.display = 'flex';
+    overwriteDialog.style.display = 'flex';
+    overwriteNameField.innerText = name;
+    document.addEventListener('keydown', overwriteEscapeListener);
+  }
+
+  function closeOverwriteDialog() {
+    overwriteDialog.style.display = 'none';
+    document.removeEventListener('keydown', overwriteEscapeListener);
+    showSaveAsDialog(); 
+  }
+
+  function overwriteEscapeListener(event) {
+    if (event.key === 'Escape') {
+      closeOverwriteDialog();
+    }
+  }
+
+  overwriteCancelButton.addEventListener('click', closeOverwriteDialog);
+  overwriteOkayButton.addEventListener('click', () => {
+    reallySaveAs();
+    overwriteDialog.style.display = 'none';
+    dialogOverlay.style.display = 'none';
+  });
 
   if (source0) {
     editor.setValue(source0, 1);
