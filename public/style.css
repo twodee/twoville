@@ -470,6 +470,7 @@ html.grabbing {
   text-decoration: underline;
   cursor: pointer;
   outline: none;
+  white-space: pre;
 }
 
 .link-button:active {
