@@ -1,6 +1,9 @@
 // --------------------------------------------------------------------------- 
 
 export let Tokens = Object.freeze({
+  And: 'And',
+  Or: 'Or',
+  Not: 'Not',
   Assign: 'Assign',
   Around: 'Around',
   Asterisk: 'Asterisk',

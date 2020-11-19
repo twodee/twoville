@@ -1364,7 +1364,8 @@ export class Group extends Shape {
 
   updateProperties(env, t, bounds, matrix) {
     matrix = this.transform(env, t, bounds, matrix);
-    const childCentroids = this.children.map(child => child.updateProperties(env, t, bounds, matrix));
+    // TODO how do I handle disabled children
+    const childCentroids = this.children.map(child => child.updateProperties(env, t, bounds, matrix)).filter(centroid => !!centroid);
     const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
     const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
     this.updateCentroid(matrix, centroid, bounds);

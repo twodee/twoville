@@ -706,6 +706,46 @@ export class ExpressionBinaryOperator extends Expression {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionAnd extends ExpressionBinaryOperator {
+  static precedence = Precedence.And;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, 'and', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    // TODO type checks
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    if (evaluatedL.value) {
+      return this.r.evaluate(env, fromTime, toTime);
+    } else {
+      return new ExpressionBoolean(false);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionOr extends ExpressionBinaryOperator {
+  static precedence = Precedence.Or;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, 'or', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    // TODO type checks
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    if (evaluatedL.value) {
+      return new ExpressionBoolean(true);
+    } else {
+      return this.r.evaluate(env, fromTime, toTime);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionSame extends ExpressionBinaryOperator {
   static precedence = Precedence.Equality;
 
@@ -927,6 +967,7 @@ export class ExpressionPower extends ExpressionBinaryOperator {
 
 export class ExpressionNegative extends Expression {
   static precedence = Precedence.Unary;
+  // TODO no unary precedence
 
   constructor(operand, where, unevaluated) {
     super(where, unevaluated);
@@ -937,6 +978,33 @@ export class ExpressionNegative extends Expression {
     let evaluatedL = this.operand.evaluate(env, fromTime, toTime);
 
     let negation = evaluatedL.negative();
+    negation.prevalues = [evaluatedL];
+    negation.unevaluated = this;
+
+    return negation;
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.operand = this.operand.toPod();
+    return pod;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionNot extends Expression {
+  static precedence = Precedence.Not;
+
+  constructor(operand, where, unevaluated) {
+    super(where, unevaluated);
+    this.operand = operand;
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.operand.evaluate(env, fromTime, toTime);
+
+    let negation = new ExpressionBoolean(!evaluatedL.value);
     negation.prevalues = [evaluatedL];
     negation.unevaluated = this;
 
@@ -2429,6 +2497,7 @@ export class ExpressionVector extends ExpressionData {
       }
       return new ExpressionVector(result);
     } else {
+      console.trace("other:", other);
       throw 'bad vector add';
     }
   }

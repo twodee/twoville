@@ -114,6 +114,12 @@ export function lex(source) {
 
     if (tokenSoFar == 't') {
       emit(Tokens.T);
+    } else if (tokenSoFar == 'and') {
+      emit(Tokens.And);
+    } else if (tokenSoFar == 'or') {
+      emit(Tokens.Or);
+    } else if (tokenSoFar == 'not') {
+      emit(Tokens.Not);
     } else if (tokenSoFar == 'repeat') {
       emit(Tokens.Repeat);
     } else if (tokenSoFar == 'true') {

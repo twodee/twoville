@@ -11,6 +11,7 @@ import {
 
 import {
   ExpressionAdd,
+  ExpressionAnd,
   ExpressionAssignment,
   ExpressionBlock,
   ExpressionBoolean,
@@ -32,6 +33,8 @@ import {
   ExpressionMultiply,
   ExpressionNegative,
   ExpressionNotSame,
+  ExpressionNot,
+  ExpressionOr,
   ExpressionPower,
   ExpressionReal,
   ExpressionRemainder,
@@ -259,13 +262,34 @@ export function parse(tokens) {
   }
 
   function expressionAssignment() {
-    let lhs = expressionEquality(); 
+    // TODO array assignment? multi assignment?
+    let lhs = expressionOr();
     if (has(Tokens.Assign)) {
       consume();
       let rhs = expressionAssignment();
       lhs = new ExpressionAssignment(lhs, rhs, SourceLocation.span(lhs.where, rhs.where));
     }
     return lhs;
+  }
+
+  function expressionOr() {
+    let a = expressionAnd();
+    while (has(Tokens.Or)) {
+      consume(); // eat or
+      let b = expressionAnd();
+      a = new ExpressionOr(a, b, SourceLocation.span(a.where, b.where));
+    }
+    return a;
+  }
+
+  function expressionAnd() {
+    let a = expressionEquality();
+    while (has(Tokens.And)) {
+      consume(); // eat and
+      let b = expressionEquality();
+      a = new ExpressionAnd(a, b, SourceLocation.span(a.where, b.where));
+    }
+    return a;
   }
 
   function expressionEquality() {
@@ -329,9 +353,13 @@ export function parse(tokens) {
   function expressionUnary() {
     let a;
     if (has(Tokens.Minus)) {
-      consume(); // eat operator
+      consume(); // eat -
       a = expressionUnary();
       a = new ExpressionNegative(a, a.where);
+    } else if (has(Tokens.Not)) {
+      consume(); // eat !
+      a = expressionUnary();
+      a = new ExpressionNot(a, a.where);
     } else {
       a = expressionPower();
     }

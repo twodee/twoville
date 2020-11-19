@@ -1,7 +1,7 @@
 import ace from 'ace-builds/src-min-noconflict/ace';
 import 'ace-builds/src-min-noconflict/theme-twilight';
 import './mode-twoville.js';
-
+import JSZip from 'jszip';
 import GIF from 'gif.js';
 
 import {
@@ -32,7 +32,8 @@ let left;
 let right;
 let messagerContainer;
 let evaluateButton;
-let recordButton;
+let recordGifButton;
+let recordFramesButton;
 let exportButton;
 let fitButton;
 let stopButton;
@@ -79,6 +80,19 @@ function downloadBlob(name, blob) {
   let link = document.createElement('a');
   link.download = name;
   link.href = URL.createObjectURL(blob);
+  // Firefox needs the element to be live for some reason.
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(link.href);
+    document.body.removeChild(link);
+  });
+}
+
+function downloadDataUrl(name, url) {
+  let link = document.createElement('a');
+  link.download = name;
+  link.href = url;
   // Firefox needs the element to be live for some reason.
   document.body.appendChild(link);
   link.click();
@@ -227,7 +241,8 @@ function postInterpret(pod, successCallback) {
       scene.rebound(oldScene.bounds);
     }
 
-    recordButton.disabled = false;
+    recordGifButton.disabled = false;
+    recordFramesButton.disabled = false;
     if (successCallback) {
       successCallback();
     }
@@ -328,7 +343,8 @@ function initialize() {
   right = document.getElementById('right');
   messagerContainer = document.getElementById('messager-container');
   evaluateButton = document.getElementById('evaluate-button');
-  recordButton = document.getElementById('record-button');
+  recordGifButton = document.getElementById('record-gif-button');
+  recordFramesButton = document.getElementById('record-frames-button');
   exportButton = document.getElementById('export-button');
   fitButton = document.getElementById('fit-button');
   stopButton = document.getElementById('stop-button');
@@ -581,7 +597,7 @@ function initialize() {
     }
   });
 
-  recordButton.addEventListener('click', () => {
+  recordGifButton.addEventListener('click', () => {
     startSpinning();
     let box = scene.svg.getBoundingClientRect();
 
@@ -644,6 +660,69 @@ function initialize() {
           img.src = url;
 
           // settingsRoot.appendChild(img);
+        }
+      } catch (e) {
+        stopSpinning();
+        throw e;
+      }
+    }
+
+    tick(parseInt(scrubber.min));
+  });
+
+  recordFramesButton.addEventListener('click', () => {
+    startSpinning();
+    let box = scene.svg.getBoundingClientRect();
+
+    scene.hideMarks();
+
+    let size = scene.get('gif').get('size');
+    let name = scene.get('gif').get('name');
+
+    const time = scene.get('time');
+    let delay = time.get('delay').value * 1000;
+    delay = Math.max(20, delay);
+
+    // I don't know why I need to set the viewport explicitly. Setting the size
+    // of the image isn't sufficient.
+    scene.svg.setAttribute('width', size.get(0).value);
+    scene.svg.setAttribute('height', size.get(1).value);
+
+    // gif.on('finished', (blob) => {
+      // downloadBlob(name.value, blob);
+      // stopSpinning();
+    // });
+
+    const pngUrls = [];
+    const zip = new JSZip();
+
+    function tick(i) {
+      try {
+        if (i >= scrubber.max) {
+          zip.generateAsync({type: 'blob'})
+            .then(blob => downloadBlob(`${name.value}.zip`, blob));
+        } else {
+          scene.scrub(i);
+
+          let data = new XMLSerializer().serializeToString(scene.cloneSvgWithoutMarks());
+          let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+          let url = URL.createObjectURL(svgBlob);
+
+          let img = new Image(size.get(0).value, size.get(1).value);
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size.get(0).value;
+            canvas.height = size.get(1).value;
+            const context = canvas.getContext('2d');
+            context.drawImage(img, 0, 0);
+            canvas.toBlob(blob => {
+              zip.file(`${name.value}-${('' + i).padStart(3, '0')}.png`, blob);
+              URL.revokeObjectURL(url);
+              tick(i + 1);
+            }, 'image/png');
+          };
+
+          img.src = url;
         }
       } catch (e) {
         stopSpinning();
