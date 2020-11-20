@@ -2287,6 +2287,18 @@ export class ExpressionCutout extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionDitto extends Expression {
+  constructor(where) {
+    super(where);
+  }
+
+  evaluate(env, fromTime, toTime, previousElement) {
+    return previousElement;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionVector extends ExpressionData {
   constructor(elements, where, unevaluated, prevalues) {
     super(elements, where, unevaluated, prevalues);
@@ -2328,9 +2340,11 @@ export class ExpressionVector extends ExpressionData {
   }
 
   evaluate(env, fromTime, toTime) {
-    let values = this.value.map(element => {
-      return element.evaluate(env, fromTime, toTime);
-    });
+    let values = new Array(this.value.length);
+    for (let i = 0; i < values.length; ++i) {
+      // Pass along predecessor element to dittos.
+      values[i] = this.value[i].evaluate(env, fromTime, toTime, values[i - 1]);
+    }
     return new ExpressionVector(values, this.where.clone());
   }
 

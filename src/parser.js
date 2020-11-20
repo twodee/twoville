@@ -16,6 +16,7 @@ import {
   ExpressionBlock,
   ExpressionBoolean,
   ExpressionCharacter,
+  ExpressionDitto,
   ExpressionDivide,
   ExpressionDistributedIdentifier,
   ExpressionFor,
@@ -703,7 +704,7 @@ export function parse(tokens) {
           if (elements.length == 0) {
             throw new LocatedException(tildeToken.where, 'I found ~ at index 0 of this vector. Operator ~ repeats the previous element and can only appear after index 0.');
           }
-          e = elements[elements.length - 1];
+          e = new ExpressionDitto();
         } else {
           e = expression();
         }
