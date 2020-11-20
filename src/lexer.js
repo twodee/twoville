@@ -250,7 +250,7 @@ export function lex(source) {
     consume();
     if (has('=')) {
       consume();
-      emit(Tokens.Same);
+      emit(Tokens.NotSame);
     }
   }
 

@@ -181,6 +181,8 @@ export class Expression {
       return new ExpressionFunctionCall(Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionMemberFunctionCall') {
       return new ExpressionMemberFunctionCall(omniReify(env, pod.host), Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
+    } else if (pod.type === 'ExpressionSubscript') {
+      return new ExpressionSubscript(omniReify(env, pod.base), omniReify(env, pod.index), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionNegative') {
       return new ExpressionNegative(omniReify(env, pod.operand), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionUnit') {
@@ -239,8 +241,12 @@ export class ExpressionBoolean extends ExpressionData {
     return this;
   }
 
+  negate() {
+    return new ExpressionBoolean(this.value ? 0 : 1);
+  }
+
   toInteger() {
-    return new ExpressionInteger(this.value ? 1 : 0);
+    return this.value ? 1 : 0;
   }
    
   toPretty() {
@@ -300,6 +306,10 @@ export class ExpressionInteger extends ExpressionData {
 
   toBoolean() {
     return new ExpressionBoolean(this.value !== 0);
+  }
+
+  toInteger() {
+    return this.value;
   }
 
   toPretty() {
@@ -392,7 +402,7 @@ export class ExpressionInteger extends ExpressionData {
 
   isSame(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      return new ExpressionBoolean(this.value == other.value);
+      return new ExpressionBoolean(this.value === other.value);
     } else {
       throw new MessagedException('I can only compare integers to other numbers.');
     }
@@ -634,7 +644,7 @@ export class ExpressionReal extends ExpressionData {
 
   isSame(other) {
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
-      return new ExpressionBoolean(this.value == other.value);
+      return new ExpressionBoolean(this.value === other.value);
     } else {
       throw new MessagedException('I can only compare reals to other numbers.');
     }
@@ -833,7 +843,7 @@ export class ExpressionNotSame extends ExpressionBinaryOperator {
   evaluate(env, fromTime, toTime) {
     let evaluatedL = this.l.evaluate(env, fromTime, toTime);
     let evaluatedR = this.r.evaluate(env, fromTime, toTime);
-    return !evaluatedL.isSame(evaluatedR);
+    return evaluatedL.isSame(evaluatedR).negate();
   }
 }
 
@@ -1442,12 +1452,12 @@ export class ExpressionSubscript extends Expression {
     }
 
     let indexValue = this.index.evaluate(env, fromTime, toTime); 
-    if (!(indexValue instanceof ExpressionInteger)) {
+    if (!indexValue.toInteger) {
       throw new LocatedException(this.index.where, `I'm sorry, but the index must be an integer.`);
     }
 
     try {
-      let element = baseValue.get(indexValue.value);
+      let element = baseValue.get(indexValue.toInteger());
       return element;
     } catch (e) {
       throw new LocatedException(this.index.where, e.message);
@@ -1468,6 +1478,13 @@ export class ExpressionSubscript extends Expression {
     let rhsValue = rhs.evaluate(env, fromTime, toTime); 
     baseValue.set(indexValue.value, rhsValue);
     return rhsValue;
+  }
+
+  toPod() {
+    const pod = super.toPod();
+    pod.base = this.base.toPod();
+    pod.index = this.index.toPod();
+    return pod;
   }
 }
 

@@ -297,7 +297,7 @@ export function parse(tokens) {
     while (has(Tokens.Same) || has(Tokens.NotSame)) {
       let operator = consume();
       let b = expressionRelational();
-      if (operator.type == Tokens.Same) {
+      if (operator.type === Tokens.Same) {
         a = new ExpressionSame(a, b, SourceLocation.span(a.where, b.where));
       } else {
         a = new ExpressionNotSame(a, b, SourceLocation.span(a.where, b.where));
