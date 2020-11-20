@@ -53,6 +53,7 @@ export let Tokens = Object.freeze({
   To: 'To',
   UpAssign: 'UpAssign',
   With: 'With',
+  Xor: 'Xor',
 });
 
 // --------------------------------------------------------------------------- 
@@ -163,7 +164,8 @@ export const Precedence = Object.freeze({
   Additive: 70,
   Shift: 65,
   And: 60,
-  Or: 59,
+  Xor: 59,
+  Or: 58,
   Relational: 50,
   Equality: 45,
   Assignment: 15,

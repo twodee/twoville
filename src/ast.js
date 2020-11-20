@@ -238,6 +238,10 @@ export class ExpressionBoolean extends ExpressionData {
   evaluate(env, fromTime, toTime) {
     return this;
   }
+
+  toInteger() {
+    return new ExpressionInteger(this.value ? 1 : 0);
+  }
    
   toPretty() {
     return '' + this.value;
@@ -292,6 +296,10 @@ export class ExpressionInteger extends ExpressionData {
 
   evaluate(env, fromTime, toTime) {
     return this;
+  }
+
+  toBoolean() {
+    return new ExpressionBoolean(this.value !== 0);
   }
 
   toPretty() {
@@ -714,12 +722,27 @@ export class ExpressionAnd extends ExpressionBinaryOperator {
   }
 
   evaluate(env, fromTime, toTime) {
-    // TODO type checks
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    if (evaluatedL.value) {
-      return this.r.evaluate(env, fromTime, toTime);
+    const evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    if (evaluatedL instanceof ExpressionInteger) {
+      const evaluatedR = this.r.evaluate(env, fromTime, toTime);
+      if (evaluatedR instanceof ExpressionInteger) {
+        return new ExpressionInteger(evaluatedL.value & evaluatedR.value);
+      } else {
+        throw new LocatedException(this.where, `I found an and operation, but its operands didn't have the right types. Both operands must be integers, or both must be booleans.`);
+      }
+    } else if (evaluatedL instanceof ExpressionBoolean) {
+      if (!evaluatedL.value) {
+        return new ExpressionBoolean(false);
+      } else {
+        const evaluatedR = this.r.evaluate(env, fromTime, toTime);
+        if (evaluatedR instanceof ExpressionBoolean) {
+          return evaluatedR;
+        } else {
+          throw new LocatedException(this.where, `I found an and operation, but its operands didn't have the right types. Both operands must be integers, or both must be booleans.`);
+        }
+      }
     } else {
-      return new ExpressionBoolean(false);
+      throw new LocatedException(this.where, `I found an and operation, but its operands didn't have the right types. Both operands must be integers, or both must be booleans.`);
     }
   }
 }
@@ -734,12 +757,50 @@ export class ExpressionOr extends ExpressionBinaryOperator {
   }
 
   evaluate(env, fromTime, toTime) {
-    // TODO type checks
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    if (evaluatedL.value) {
-      return new ExpressionBoolean(true);
+    const evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    if (evaluatedL instanceof ExpressionInteger) {
+      const evaluatedR = this.r.evaluate(env, fromTime, toTime);
+      if (evaluatedR instanceof ExpressionInteger) {
+        return new ExpressionInteger(evaluatedL.value | evaluatedR.value);
+      } else {
+        throw new LocatedException(this.where, `I found an or operation, but its operands didn't have the right types. Both operands must be integers, or both must be booleans.`);
+      }
+    } else if (evaluatedL instanceof ExpressionBoolean) {
+      if (evaluatedL.value) {
+        return new ExpressionBoolean(true);
+      } else {
+        const evaluatedR = this.r.evaluate(env, fromTime, toTime);
+        if (evaluatedR instanceof ExpressionBoolean) {
+          return evaluatedR;
+        } else {
+          throw new LocatedException(this.where, `I found an or operation, but its operands didn't have the right types. Both operands must be integers, or both must be booleans.`);
+        }
+      }
     } else {
-      return this.r.evaluate(env, fromTime, toTime);
+      throw new LocatedException(this.where, `I found an or operation, but its operands didn't have the right types. Both operands must be integers, or both must be booleans.`);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionXor extends ExpressionBinaryOperator {
+  static precedence = Precedence.Xor;
+
+  constructor(l, r, where, unevaluated) {
+    super(l, r, 'xor', where, unevaluated);
+  }
+
+  evaluate(env, fromTime, toTime) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+
+    if (evaluatedL instanceof ExpressionInteger && evaluatedR instanceof ExpressionInteger) {
+      return new ExpressionInteger(evaluatedL.value ^ evaluatedR.value);
+    } else if (evaluatedL instanceof ExpressionBoolean && evaluatedR instanceof ExpressionBoolean) {
+      return new ExpressionBoolean(evaluatedL.value !== evaluatedR.value);
+    } else {
+      throw new LocatedException(this.where, `I found an xor operation, but its operands didn't have the right types. Both operands must be integers, or both must be booleans.`);
     }
   }
 }
