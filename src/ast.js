@@ -236,7 +236,7 @@ export class ExpressionBoolean extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionBoolean(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
+    return new ExpressionBoolean(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -299,7 +299,7 @@ export class ExpressionInteger extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionInteger(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
+    return new ExpressionInteger(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -455,7 +455,7 @@ export class ExpressionCharacter extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionCharacter(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
+    return new ExpressionCharacter(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -494,7 +494,7 @@ export class ExpressionString extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionString(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
+    return new ExpressionString(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -585,7 +585,7 @@ export class ExpressionReal extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionReal(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
+    return new ExpressionReal(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
   }
 
   toPretty() {
@@ -2340,7 +2340,7 @@ export class ExpressionVector extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionVector(this.value.map(e => e.clone()), this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
+    return new ExpressionVector(this.value.map(e => e.clone()), this.where?.clone(), this.unevaluated, this.prevalues);
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -2350,7 +2350,7 @@ export class ExpressionVector extends ExpressionData {
       values[i] = this.value[i].evaluate(env, fromTime, toTime, {...context, prior});
       prior = values[i];
     }
-    return new ExpressionVector(values, this.where.clone());
+    return new ExpressionVector(values, this.where?.clone());
   }
 
   insert(item) {

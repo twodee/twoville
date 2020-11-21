@@ -8,13 +8,17 @@ const {InterpreterEnvironment} = require('../src/interpreter');
 const {lex} = require('../src/lexer');
 const {parse} = require('../src/parser');
 const {
+  ExpressionAdd,
   ExpressionAnd,
   ExpressionBoolean,
+  ExpressionDitto,
   ExpressionInteger,
   ExpressionNot,
   ExpressionOr,
   ExpressionReal,
   ExpressionXor,
+  ExpressionVector,
+  ExpressionUnit,
 } = require('../src/ast');
 
 function evaluateOutput(src, lines) {
@@ -48,6 +52,11 @@ function evaluateExpression(src, expected) {
 
   expect(Object.getPrototypeOf(result)).toBe(Object.getPrototypeOf(expected));
   expect(result.x).toBe(expected.x);
+}
+
+function assertSame(expected, actual) {
+  expect(Object.getPrototypeOf(actual)).toBe(Object.getPrototypeOf(expected));
+  expect(actual.x).toBe(expected.x);
 }
 
 // --------------------------------------------------------------------------- 
@@ -127,7 +136,7 @@ test('and of integers', () => {
 test('boolean to integer', () => {
   const caser = (a, expected) => {
     let result = new ExpressionBoolean(a).toInteger();
-    expect(result.value).toBe(expected);
+    expect(result).toBe(expected);
   };
   caser(true, 1);
   caser(false, 0);
@@ -317,6 +326,36 @@ test('binary operator -', () => {
   evaluateExpression('5 - 3', new ExpressionInteger(2));
   evaluateExpression('3 - 5', new ExpressionInteger(-2));
   evaluateExpression('(5 - 3)', new ExpressionInteger(2));
+});
+
+// --------------------------------------------------------------------------- 
+// Dittos
+// --------------------------------------------------------------------------- 
+
+test('top-level ditto', () => {
+  const e = new ExpressionVector([
+    new ExpressionAdd(new ExpressionInteger(6), new ExpressionInteger(3)),
+    new ExpressionDitto(),
+    new ExpressionDitto(),
+  ]).evaluate(null, null, null, {prior: new ExpressionUnit()});
+
+  assertSame(new ExpressionInteger(9), e.get(0));
+  assertSame(new ExpressionInteger(9), e.get(1));
+  assertSame(new ExpressionInteger(9), e.get(2));
+});
+
+// --------------------------------------------------------------------------- 
+
+test('nested ditto', () => {
+  const e = new ExpressionVector([
+    new ExpressionAdd(new ExpressionInteger(6), new ExpressionInteger(3)),
+    new ExpressionAdd(new ExpressionDitto(), new ExpressionInteger(10)),
+    new ExpressionAdd(new ExpressionDitto(), new ExpressionInteger(15)),
+  ]).evaluate(null, null, null, {prior: new ExpressionUnit()});
+
+  assertSame(new ExpressionInteger(9), e.get(0));
+  assertSame(new ExpressionInteger(19), e.get(1));
+  assertSame(new ExpressionInteger(34), e.get(2));
 });
 
 // --------------------------------------------------------------------------- 
