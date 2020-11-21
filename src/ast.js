@@ -161,6 +161,8 @@ export class Expression {
       return new ExpressionString(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionVector') {
       return new ExpressionVector(pod.value.map(element => omniReify(env, element)), SourceLocation.reify(pod.where), unevaluated, prevalues);
+    } else if (pod.type === 'ExpressionDitto') {
+      return new ExpressionDitto(SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionAdd') {
       return new ExpressionAdd(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionMultiply') {
@@ -237,7 +239,7 @@ export class ExpressionBoolean extends ExpressionData {
     return new ExpressionBoolean(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     return this;
   }
 
@@ -300,7 +302,7 @@ export class ExpressionInteger extends ExpressionData {
     return new ExpressionInteger(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     return this;
   }
 
@@ -456,7 +458,7 @@ export class ExpressionCharacter extends ExpressionData {
     return new ExpressionCharacter(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     return this;
   }
 
@@ -495,7 +497,7 @@ export class ExpressionString extends ExpressionData {
     return new ExpressionString(this.value, this.where ? this.where.clone() : undefined, this.unevaluated, this.prevalues);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     return this;
   }
 
@@ -563,7 +565,7 @@ export class ExpressionStringSize extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     return new ExpressionInteger(this.instance.value.length);
   }
 }
@@ -578,7 +580,7 @@ export class ExpressionReal extends ExpressionData {
     super(value, where, unevaluated, prevalues);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     return this;
   }
 
@@ -731,10 +733,10 @@ export class ExpressionAnd extends ExpressionBinaryOperator {
     super(l, r, 'and', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    const evaluatedL = this.l.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    const evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
     if (evaluatedL instanceof ExpressionInteger) {
-      const evaluatedR = this.r.evaluate(env, fromTime, toTime);
+      const evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
       if (evaluatedR instanceof ExpressionInteger) {
         return new ExpressionInteger(evaluatedL.value & evaluatedR.value);
       } else {
@@ -744,7 +746,7 @@ export class ExpressionAnd extends ExpressionBinaryOperator {
       if (!evaluatedL.value) {
         return new ExpressionBoolean(false);
       } else {
-        const evaluatedR = this.r.evaluate(env, fromTime, toTime);
+        const evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
         if (evaluatedR instanceof ExpressionBoolean) {
           return evaluatedR;
         } else {
@@ -766,10 +768,10 @@ export class ExpressionOr extends ExpressionBinaryOperator {
     super(l, r, 'or', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    const evaluatedL = this.l.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    const evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
     if (evaluatedL instanceof ExpressionInteger) {
-      const evaluatedR = this.r.evaluate(env, fromTime, toTime);
+      const evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
       if (evaluatedR instanceof ExpressionInteger) {
         return new ExpressionInteger(evaluatedL.value | evaluatedR.value);
       } else {
@@ -779,7 +781,7 @@ export class ExpressionOr extends ExpressionBinaryOperator {
       if (evaluatedL.value) {
         return new ExpressionBoolean(true);
       } else {
-        const evaluatedR = this.r.evaluate(env, fromTime, toTime);
+        const evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
         if (evaluatedR instanceof ExpressionBoolean) {
           return evaluatedR;
         } else {
@@ -801,9 +803,9 @@ export class ExpressionXor extends ExpressionBinaryOperator {
     super(l, r, 'xor', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     if (evaluatedL instanceof ExpressionInteger && evaluatedR instanceof ExpressionInteger) {
       return new ExpressionInteger(evaluatedL.value ^ evaluatedR.value);
@@ -824,9 +826,9 @@ export class ExpressionSame extends ExpressionBinaryOperator {
     super(l, r, '==', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
     return evaluatedL.isSame(evaluatedR);
   }
 }
@@ -840,9 +842,9 @@ export class ExpressionNotSame extends ExpressionBinaryOperator {
     super(l, r, '!=', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
     return evaluatedL.isSame(evaluatedR).negate();
   }
 }
@@ -856,9 +858,9 @@ export class ExpressionLess extends ExpressionBinaryOperator {
     super(l, r, '<', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
     return evaluatedL.isLess(evaluatedR);
   }
 }
@@ -872,9 +874,9 @@ export class ExpressionLessEqual extends ExpressionBinaryOperator {
     super(l, r, '<=', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
     return evaluatedL.isLess(evaluatedR) || evaluatedL.isSame(evaluatedR);
   }
 }
@@ -888,9 +890,9 @@ export class ExpressionMore extends ExpressionBinaryOperator {
     super(l, r, '>', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
     return evaluatedL.isMore(evaluatedR);
   }
 }
@@ -904,9 +906,9 @@ export class ExpressionMoreEqual extends ExpressionBinaryOperator {
     super(l, r, '>=', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
     return evaluatedL.isMore(evaluatedR) || evaluatedL.isSame(evaluatedR);
   }
 }
@@ -920,9 +922,9 @@ export class ExpressionAdd extends ExpressionBinaryOperator {
     super(l, r, '+', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let sum = evaluatedL.add(evaluatedR);
     sum.unevaluated = this;
@@ -940,9 +942,9 @@ export class ExpressionSubtract extends ExpressionBinaryOperator {
     super(l, r, '-', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let difference = evaluatedL.subtract(evaluatedR);
     difference.unevaluated = this;
@@ -960,9 +962,9 @@ export class ExpressionMultiply extends ExpressionBinaryOperator {
     super(l, r, '*', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let product = evaluatedL.multiply(evaluatedR);
     product.unevaluated = this;
@@ -980,9 +982,9 @@ export class ExpressionDivide extends ExpressionBinaryOperator {
     super(l, r, '/', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let quotient = evaluatedL.divide(evaluatedR);
     quotient.prevalues = [evaluatedL, evaluatedR];
@@ -1001,9 +1003,9 @@ export class ExpressionRemainder extends ExpressionBinaryOperator {
     super(l, r, '%', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let remainder = evaluatedL.remainder(evaluatedR);
     remainder.prevalues = [evaluatedL, evaluatedR];
@@ -1022,9 +1024,9 @@ export class ExpressionPower extends ExpressionBinaryOperator {
     super(l, r, '^', where, unevaluated);
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.l.evaluate(env, fromTime, toTime);
-    let evaluatedR = this.r.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let power = evaluatedL.power(evaluatedR);
     power.prevalues = [evaluatedL, evaluatedR];
@@ -1045,8 +1047,8 @@ export class ExpressionNegative extends Expression {
     this.operand = operand;
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.operand.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.operand.evaluate(env, fromTime, toTime, context);
 
     let negation = evaluatedL.negative();
     negation.prevalues = [evaluatedL];
@@ -1072,8 +1074,8 @@ export class ExpressionNot extends Expression {
     this.operand = operand;
   }
 
-  evaluate(env, fromTime, toTime) {
-    let evaluatedL = this.operand.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let evaluatedL = this.operand.evaluate(env, fromTime, toTime, context);
 
     let negation = new ExpressionBoolean(!evaluatedL.value);
     negation.prevalues = [evaluatedL];
@@ -1101,7 +1103,7 @@ export class ExpressionFunctionDefinition extends Expression {
     this.body = body;
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     env.functions[this.name] = new FunctionDefinition(this.name, this.formals, this.body);
   }
 }
@@ -1116,7 +1118,7 @@ export class ExpressionIdentifier extends Expression {
     this.nameToken = nameToken;
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     let value = env.get(this.nameToken.source);
     if (value) {
       return value;
@@ -1125,23 +1127,24 @@ export class ExpressionIdentifier extends Expression {
     }
   }
 
-  assign(env, fromTime, toTime, rhs, whereAssigned) {
+  // TODO use context
+  assign(env, fromTime, toTime, context) {
     let value;
-    if (rhs.isTimeSensitive(env)) {
-      value = rhs;
+    if (context.rhs.isTimeSensitive(env)) {
+      value = context.rhs;
     } else {
-      value = rhs.evaluate(env, fromTime, toTime);
+      value = context.rhs.evaluate(env, fromTime, toTime, context);
     }
 
     // Favor mapping this chunk of the source code to the value rather
     // than the environment.
     if (value.hasOwnProperty('sourceSpans')) {
-      value.sourceSpans.push(whereAssigned);
+      value.sourceSpans.push(context.whereAssigned);
     } else if (env.hasOwnProperty('sourceSpans')) {
-      env.sourceSpans.push(whereAssigned);
+      env.sourceSpans.push(context.whereAssigned);
     }
 
-    env.bind(this.nameToken.source, value, fromTime, toTime, rhs);
+    env.bind(this.nameToken.source, value, fromTime, toTime, context.rhs);
 
     return value;
   }
@@ -1171,8 +1174,8 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
     this.base = base;
   }
 
-  evaluate(env, fromTime, toTime) {
-    let baseValue = this.base.evaluate(env, fromTime, toTime);
+  evaluate(env, fromTime, toTime, context) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime, context);
     let value = baseValue.get(this.nameToken.source);
     if (value) {
       return value;
@@ -1181,21 +1184,21 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
     }
   }
 
-  assign(env, fromTime, toTime, rhs, whereAssigned) {
-    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+  assign(env, fromTime, toTime, context) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime, context); 
 
     let rhsValue;
-    if (rhs.isTimeSensitive(env)) {
-      rhsValue = rhs;
+    if (context.rhs.isTimeSensitive(env)) {
+      rhsValue = context.rhs;
     } else {
-      rhsValue = rhs.evaluate(env, fromTime, toTime);
+      rhsValue = context.rhs.evaluate(env, fromTime, toTime, context);
     }
 
     if (baseValue.hasOwnProperty('sourceSpans')) {
-      baseValue.sourceSpans.push(whereAssigned);
+      baseValue.sourceSpans.push(context.whereAssigned);
     }
 
-    baseValue.bind(this.nameToken.source, rhsValue, fromTime, toTime, rhs);
+    baseValue.bind(this.nameToken.source, rhsValue, fromTime, toTime, context.rhs);
 
     return rhsValue;
   }
@@ -1225,8 +1228,8 @@ export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
     this.base = base;
   }
 
-  evaluate(env, fromTime, toTime) {
-    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+  evaluate(env, fromTime, toTime, context) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime, context); 
     // assert vector
 
     let elements = baseValue.map(element => element.get(this.nameToken.source));
@@ -1234,14 +1237,14 @@ export class ExpressionDistributedIdentifier extends ExpressionIdentifier {
     return new ExpressionVector(elements);
   }
 
-  assign(env, fromTime, toTime, rhs) {
-    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+  assign(env, fromTime, toTime, context) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime, context); 
     // assert vector
 
-    let rhsValue = rhs.evaluate(env, fromTime, toTime);
+    let rhsValue = context.rhs.evaluate(env, fromTime, toTime, context);
 
     baseValue.forEach(element => {
-      element.bind(this.nameToken.source, rhsValue, fromTime, toTime, rhs);
+      element.bind(this.nameToken.source, rhsValue, fromTime, toTime, context.rhs);
     });
 
     return rhsValue;
@@ -1267,7 +1270,7 @@ export class ExpressionFunctionCall extends Expression {
     return f;
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     let f = this.lookup(env, fromTime, toTime);
 
     if (this.actuals.length != f.formals.length) {
@@ -1276,11 +1279,11 @@ export class ExpressionFunctionCall extends Expression {
 
     let callEnvironment = Environment.create(env);
     for (let [i, actual] of this.actuals.entries()) {
-      let value = actual.evaluate(env, fromTime, toTime);
+      let value = actual.evaluate(env, fromTime, toTime, context);
       callEnvironment.bind(f.formals[i], value);
     }
 
-    let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, this);
+    let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, {...context, callExpression: this});
     return returnValue;
   }
 
@@ -1305,8 +1308,9 @@ export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
     this.host = host;
   }
 
-  lookup(env, fromTime, toTime) {
-    let hostValue = this.host.evaluate(env, fromTime, toTime);
+  // TODO
+  lookup(env, fromTime, toTime, context) {
+    let hostValue = this.host.evaluate(env, fromTime, toTime, context);
 
     if (!hostValue.hasFunction(this.nameToken.source)) {
       throw new LocatedException(this.where, `I've not heard of any method named "${this.nameToken.source}".`);
@@ -1332,10 +1336,10 @@ export class ExpressionBlock extends Expression {
     this.statements = statements;
   }
 
-  evaluate(env, a, toTime) {
+  evaluate(env, a, toTime, context) {
     let result = null; // TODO Unit
     for (let statement of this.statements) {
-      result = statement.evaluate(env, a, toTime);
+      result = statement.evaluate(env, a, toTime, context);
     }
     return result;
   }
@@ -1356,9 +1360,9 @@ export class ExpressionAssignment extends Expression {
     this.r = r;
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     if ('assign' in this.l) {
-      return this.l.assign(env, fromTime, toTime, this.r, this.where);
+      return this.l.assign(env, fromTime, toTime, {...context, rhs: this.r, whereAssigned: this.where});
     } else {
       throw 'unassignable';
     }
@@ -1381,17 +1385,17 @@ export class ExpressionIf extends Expression {
     this.elseBlock = elseBlock;
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
     for (let [i, condition] of this.conditions.entries()) {
-      let conditionValue = condition.evaluate(env, fromTime, toTime).value;
+      let conditionValue = condition.evaluate(env, fromTime, toTime, context).value;
       // TODO assert boolean
       if (conditionValue) {
-        return this.thenBlocks[i].evaluate(env, fromTime, toTime);
+        return this.thenBlocks[i].evaluate(env, fromTime, toTime, context);
       }
     }
 
     if (this.elseBlock) {
-      return this.elseBlock.evaluate(env, fromTime, toTime);
+      return this.elseBlock.evaluate(env, fromTime, toTime, context);
     } else {
       return null; // TODO unit
     }
@@ -1416,14 +1420,14 @@ export class ExpressionFor extends Expression {
     this.body = body;
   }
 
-  evaluate(env, fromTime, toTime) {
-    let start = this.start.evaluate(env, fromTime, toTime).value;
-    let stop = this.stop.evaluate(env, fromTime, toTime).value;
-    let by = this.by.evaluate(env, fromTime, toTime).value;
+  evaluate(env, fromTime, toTime, context) {
+    let start = this.start.evaluate(env, fromTime, toTime, context).value;
+    let stop = this.stop.evaluate(env, fromTime, toTime, context).value;
+    let by = this.by.evaluate(env, fromTime, toTime, context).value;
 
     for (let i = start; i < stop; i += by) {
-      new ExpressionAssignment(this.i, new ExpressionInteger(i), true).evaluate(env, fromTime, toTime);
-      this.body.evaluate(env, fromTime, toTime);
+      new ExpressionAssignment(this.i, new ExpressionInteger(i), true).evaluate(env, fromTime, toTime, context);
+      this.body.evaluate(env, fromTime, toTime, context);
     }
 
     // TODO return?
@@ -1445,13 +1449,13 @@ export class ExpressionSubscript extends Expression {
     this.index = index;
   }
 
-  evaluate(env, fromTime, toTime) {
-    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+  evaluate(env, fromTime, toTime, context) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime, context); 
     if (!(baseValue instanceof ExpressionVector) && !(baseValue instanceof ExpressionString) && !(baseValue instanceof ExpressionInteger)) {
       throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors, strings, and integers. This expression has type ${baseValue.type}.`);
     }
 
-    let indexValue = this.index.evaluate(env, fromTime, toTime); 
+    let indexValue = this.index.evaluate(env, fromTime, toTime, context); 
     if (!indexValue.toInteger) {
       throw new LocatedException(this.index.where, `I'm sorry, but the index must be an integer.`);
     }
@@ -1464,18 +1468,18 @@ export class ExpressionSubscript extends Expression {
     }
   }
 
-  assign(env, fromTime, toTime, rhs) {
-    let baseValue = this.base.evaluate(env, fromTime, toTime); 
+  assign(env, fromTime, toTime, context) {
+    let baseValue = this.base.evaluate(env, fromTime, toTime, context); 
     if (!(baseValue instanceof ExpressionVector) && !(baseValue instanceof ExpressionString)) {
       throw new LocatedException(this.base.where, `I'm sorry, but I can only apply [] to vectors and strings. This expression has type ${baseValue.type}.`);
     }
 
-    let indexValue = this.index.evaluate(env, fromTime, toTime); 
+    let indexValue = this.index.evaluate(env, fromTime, toTime, context); 
     if (!(indexValue instanceof ExpressionInteger)) {
       throw new LocatedException(this.index.where, `I'm sorry, but the index must be an integer.`);
     }
 
-    let rhsValue = rhs.evaluate(env, fromTime, toTime); 
+    let rhsValue = context.rhs.evaluate(env, fromTime, toTime, context); 
     baseValue.set(indexValue.value, rhsValue);
     return rhsValue;
   }
@@ -1498,7 +1502,7 @@ export class ExpressionVectorAdd extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let item = env.get('item');
     return this.instance.insert(item);
   }
@@ -1514,7 +1518,7 @@ export class ExpressionVectorSize extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     return new ExpressionInteger(this.instance.value.length);
   }
 }
@@ -1529,7 +1533,7 @@ export class ExpressionVectorToCartesian extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     return this.instance.toCartesian();
   }
 }
@@ -1544,7 +1548,7 @@ export class ExpressionVectorMagnitude extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     return new ExpressionReal(this.instance.magnitude);
   }
 }
@@ -1559,7 +1563,7 @@ export class ExpressionVectorNormalize extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     return this.instance.normalize();
   }
 }
@@ -1574,7 +1578,7 @@ export class ExpressionVectorRotate extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let degrees = env.get('degrees');
     return this.instance.rotate(degrees);
   }
@@ -1590,7 +1594,7 @@ export class ExpressionVectorRotateAround extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let pivot = env.get('pivot');
     let degrees = env.get('degrees');
     return this.instance.rotateAround(pivot, degrees);
@@ -1607,7 +1611,7 @@ export class ExpressionVectorRotate90 extends Expression {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     return this.instance.rotate90();
   }
 }
@@ -1849,16 +1853,16 @@ export class ExpressionFunction extends Expression {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionCircle extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Circle.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Circle.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRectangle extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Rectangle.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Rectangle.create(env, context.callExpression.where);
   }
 }
  
@@ -1870,8 +1874,8 @@ export class ExpressionVertexNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return VertexNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return VertexNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1883,8 +1887,8 @@ export class ExpressionTurtleNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return TurtleNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return TurtleNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1896,8 +1900,8 @@ export class ExpressionTurnNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return TurnNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return TurnNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1909,8 +1913,8 @@ export class ExpressionMoveNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return MoveNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return MoveNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1922,8 +1926,8 @@ export class ExpressionArcNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new ArcNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new ArcNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1935,8 +1939,8 @@ export class ExpressionJumpNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new JumpNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new JumpNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1948,8 +1952,8 @@ export class ExpressionLineNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new LineNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new LineNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1961,8 +1965,8 @@ export class ExpressionCubicNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new CubicNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new CubicNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1974,8 +1978,8 @@ export class ExpressionQuadraticNode extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new QuadraticNode.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new QuadraticNode.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -1987,8 +1991,8 @@ export class ExpressionTranslate extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new Translate.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new Translate.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -2000,8 +2004,8 @@ export class ExpressionScale extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Scale.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Scale.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -2013,8 +2017,8 @@ export class ExpressionRotate extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Rotate.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Rotate.create(this.instance, context.callExpression.where);
   }
 }
 
@@ -2026,63 +2030,63 @@ export class ExpressionShear extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Shear.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Shear.create(this.instance, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionLine extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new Line.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new Line.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPolygon extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Polygon.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Polygon.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionUngon extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Ungon.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Ungon.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPolyline extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new Polyline.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new Polyline.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPath extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Path.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Path.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionText extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return new Text.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return new Text.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionPrint extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let message = env.get('message').toPretty();
     env.root.log(message);
     return null;
@@ -2092,7 +2096,7 @@ export class ExpressionPrint extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionDebug extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     const where = callExpression.actuals[0].where;
 
     const lines = env.root.source.split('\n');
@@ -2113,7 +2117,7 @@ export class ExpressionDebug extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSeed extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let seed = env.get('value').value;
     env.root.prng.seed(seed);
   }
@@ -2122,7 +2126,7 @@ export class ExpressionSeed extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRandom extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let min = env.get('min').value;
     let max = env.get('max').value;
 
@@ -2142,7 +2146,7 @@ export class ExpressionRandom extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSine extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let degrees = env.get('degrees').value;
     let x = Math.sin(degrees * Math.PI / 180);
     return new ExpressionReal(x);
@@ -2152,7 +2156,7 @@ export class ExpressionSine extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionCosine extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let degrees = env.get('degrees').value;
     let x = Math.cos(degrees * Math.PI / 180);
     return new ExpressionReal(x);
@@ -2162,7 +2166,7 @@ export class ExpressionCosine extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionTangent extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let degrees = env.get('degrees').value;
     let x = Math.tan(degrees * Math.PI / 180);
     return new ExpressionReal(x);
@@ -2172,7 +2176,7 @@ export class ExpressionTangent extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionArcCosine extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let ratio = env.get('ratio').value;
     let angle = Math.acos(ratio) * 180 / Math.PI;
     return new ExpressionReal(angle);
@@ -2182,7 +2186,7 @@ export class ExpressionArcCosine extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionArcSine extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let ratio = env.get('ratio').value;
     let angle = Math.asin(ratio) * 180 / Math.PI;
     return new ExpressionReal(angle);
@@ -2192,7 +2196,7 @@ export class ExpressionArcSine extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionHypotenuse extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let a = env.get('a').value;
     let b = env.get('b').value;
     let hypotenuse = Math.sqrt(a * a + b * b);
@@ -2203,7 +2207,7 @@ export class ExpressionHypotenuse extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionArcTangent extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let ratio = env.get('ratio').value;
     let angle = Math.atan(ratio) * 180 / Math.PI;
     return new ExpressionReal(angle);
@@ -2213,7 +2217,7 @@ export class ExpressionArcTangent extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionArcTangent2 extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let a = env.get('a').value;
     let b = env.get('b').value;
     let angle = Math.atan2(a, b) * 180 / Math.PI;
@@ -2224,7 +2228,7 @@ export class ExpressionArcTangent2 extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionSquareRoot extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let x = env.get('x').value;
     let root = Math.sqrt(x);
     return new ExpressionReal(root);
@@ -2234,7 +2238,7 @@ export class ExpressionSquareRoot extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionAbsoluteValue extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let x = env.get('x').value;
     let positive = Math.abs(x);
     return new ExpressionInteger(positive);
@@ -2246,7 +2250,7 @@ export class ExpressionAbsoluteValue extends ExpressionFunction {
 
 // The casting function.
 export class ExpressionInt extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
+  evaluate(env, fromTime, toTime, context) {
     let f = env.get('x').value;
     let i = Math.trunc(f);
     return new ExpressionInteger(i);
@@ -2256,32 +2260,32 @@ export class ExpressionInt extends ExpressionFunction {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionGroup extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Group.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Group.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionTip extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Tip.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Tip.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionMask extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Mask.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Mask.create(env, context.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionCutout extends ExpressionFunction {
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Cutout.create(env, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Cutout.create(env, context.callExpression.where);
   }
 }
 
@@ -2292,8 +2296,8 @@ export class ExpressionDitto extends Expression {
     super(where);
   }
 
-  evaluate(env, fromTime, toTime, previousElement) {
-    return previousElement;
+  evaluate(env, fromTime, toTime, context) {
+    return context.prior;
   }
 }
 
@@ -2339,11 +2343,12 @@ export class ExpressionVector extends ExpressionData {
     return new ExpressionVector(this.value.map(e => e.clone()), this.where == null ? null : this.where.clone(), this.unevaluated, this.prevalues);
   }
 
-  evaluate(env, fromTime, toTime) {
+  evaluate(env, fromTime, toTime, context) {
+    let prior = new ExpressionUnit();
     let values = new Array(this.value.length);
     for (let i = 0; i < values.length; ++i) {
-      // Pass along predecessor element to dittos.
-      values[i] = this.value[i].evaluate(env, fromTime, toTime, values[i - 1]);
+      values[i] = this.value[i].evaluate(env, fromTime, toTime, {...context, prior});
+      prior = values[i];
     }
     return new ExpressionVector(values, this.where.clone());
   }
@@ -2674,8 +2679,8 @@ export class ExpressionMirror extends ExpressionFunction {
     this.instance = instance;
   }
 
-  evaluate(env, fromTime, toTime, callExpression) {
-    return Mirror.create(this.instance, callExpression.where);
+  evaluate(env, fromTime, toTime, context) {
+    return Mirror.create(this.instance, context.callExpression.where);
   }
 }
 

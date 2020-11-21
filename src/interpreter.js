@@ -109,7 +109,7 @@ export function interpret(source, log) {
     let tokens = lex(source);
     let ast = parse(tokens);
     const env = InterpreterEnvironment.create(source, log);
-    ast.evaluate(env);
+    ast.evaluate(env, null, null, {prior: new ExpressionUnit()});
     return env;
   } catch (e) {
     if (e instanceof MessagedException) {

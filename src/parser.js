@@ -462,6 +462,9 @@ export function parse(tokens) {
       } else {
         throw new LocatedException(SourceLocation.span(leftToken.where, a.where), 'I expected a right parenthesis after this expression.');
       }
+    } else if (has(Tokens.Tilde)) {
+      const token = consume(); // eat ~
+      return new ExpressionDitto(token.where);
     } else if (has(Tokens.Symbol)) {
       let token = consume();
       if (Symbol.hasOwnProperty(token.source)) {
@@ -698,16 +701,16 @@ export function parse(tokens) {
       }
 
       while (!has(Tokens.RightSquareBracket)) {
-        let e;
-        if (has(Tokens.Tilde)) {
-          let tildeToken = consume();
-          if (elements.length == 0) {
-            throw new LocatedException(tildeToken.where, 'I found ~ at index 0 of this vector. Operator ~ repeats the previous element and can only appear after index 0.');
-          }
-          e = new ExpressionDitto();
-        } else {
-          e = expression();
-        }
+        const e = expression();
+        // if (has(Tokens.Tilde)) {
+          // let tildeToken = consume();
+          // if (elements.length == 0) {
+            // throw new LocatedException(tildeToken.where, 'I found ~ at index 0 of this vector. Operator ~ repeats the previous element and can only appear after index 0.');
+          // }
+          // e = new ExpressionDitto();
+        // } else {
+          // e = expression();
+        // }
         elements.push(e);
         if (!has(Tokens.RightSquareBracket)) {
           if (has(Tokens.Comma)) {
