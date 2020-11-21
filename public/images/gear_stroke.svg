@@ -1,1 +1,24 @@
-<svg id="svg" xmlns="http://www.w3.org/2000/svg" style="initial" viewBox="-50 -50 100 100"><defs><mask id="element-0"><g class="cursor-selectable tag-0"><rect fill="white" x="-50" y="-50" width="100" height="100"/><circle id="element-1" class="cursor-selectable tag-1" fill-opacity="1" fill="rgb(0, 0, 0)" visibility="visible" cx="0" cy="0" r="10"/></g></mask></defs><g id="main-group"><circle id="element-2" class="cursor-selectable tag-2" fill-opacity="0" fill="none" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" cx="0" cy="0" r="10"/><g mask="url(#element-0)"><path id="element-3" class="cursor-selectable tag-3" transform="rotate(42 0 0)" fill-opacity="0" fill="none" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 31,0 A 31,31 0 0 0 28.319909186920626,-12.608835935349806 L 36.13056520188298,-25.11139697811499 L 28.750506575564636,-33.30778244867729 L 15.500000000000004,-26.846787517317598 A 31.000000000000004,31.000000000000004 0 0 0 3.2403823612972626,-30.830178756416473 L -3.6818251066218743,-43.845685806978196 L -14.47013245649766,-41.55256029044917 L -15.499999999999993,-26.8467875173176 A 30.999999999999996,30.999999999999996 0 0 0 -25.07952682562336,-18.22134282106667 L -39.81239030850486,-18.73428882886319 L -43.22063903206231,-8.244777841771862 L -31,2.3737125933347086e-14 A 31,31 0 0 0 -28.319909186920615,12.608835935349827 L -36.13056520188298,25.111396978114986 L -28.750506575564646,33.30778244867727 L -15.499999999999988,26.846787517317605 A 31,31 0 0 0 -3.240382361297245,30.830178756416473 L 3.681825106621879,43.845685806978196 L 14.470132456497637,41.55256029044917 L 15.500000000000004,26.846787517317598 A 31.000000000000004,31.000000000000004 0 0 0 25.07952682562337,18.221342821066663 L 39.81239030850485,18.73428882886321 L 43.2206390320623,8.244777841771887 L 31,7.59281015471359e-15 Z"/></g></g></svg>
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="svg" style="initial" viewBox="-50 -50 100 100">
+  <defs>
+    <mask id="element-0">
+      <g class="cursor-selectable tag-0">
+        <rect fill="white" x="-50" y="-50" width="100" height="100"/>
+        <circle id="element-1" class="cursor-selectable tag-1" fill-opacity="1" fill="rgb(0, 0, 0)" visibility="visible" cx="0" cy="0" r="10"/>
+      </g>
+    </mask>
+    <filter id="shadow" style="color-interpolation-filters:sRGB;">
+      <feFlood id="feFlood1058" result="flood" flood-color="rgb(255,255,255)" flood-opacity="0.898039" />
+      <feComposite id="feComposite1060" result="composite1" operator="in" in2="SourceGraphic" in="flood" />
+      <feGaussianBlur id="feGaussianBlur1062" result="blur" stdDeviation="4" in="composite1" />
+      <feOffset id="feOffset1064" result="offset" dy="0" dx="0" />
+      <feComposite id="feComposite1066" result="composite2" operator="over" in2="offset" in="SourceGraphic" />
+    </filter>
+  </defs>
+  <g id="main-group" style="filter:url(#shadow)">
+    <circle id="element-2" class="cursor-selectable tag-2" fill-opacity="0" fill="none" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" cx="0" cy="0" r="10"/>
+    <g mask="url(#element-0)">
+      <path id="element-3" class="cursor-selectable tag-3" transform="rotate(42 0 0)" fill-opacity="0" fill="none" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 31,0 A 31,31 0 0 0 28.319909186920626,-12.608835935349806 L 36.13056520188298,-25.11139697811499 L 28.750506575564636,-33.30778244867729 L 15.500000000000004,-26.846787517317598 A 31.000000000000004,31.000000000000004 0 0 0 3.2403823612972626,-30.830178756416473 L -3.6818251066218743,-43.845685806978196 L -14.47013245649766,-41.55256029044917 L -15.499999999999993,-26.8467875173176 A 30.999999999999996,30.999999999999996 0 0 0 -25.07952682562336,-18.22134282106667 L -39.81239030850486,-18.73428882886319 L -43.22063903206231,-8.244777841771862 L -31,2.3737125933347086e-14 A 31,31 0 0 0 -28.319909186920615,12.608835935349827 L -36.13056520188298,25.111396978114986 L -28.750506575564646,33.30778244867727 L -15.499999999999988,26.846787517317605 A 31,31 0 0 0 -3.240382361297245,30.830178756416473 L 3.681825106621879,43.845685806978196 L 14.470132456497637,41.55256029044917 L 15.500000000000004,26.846787517317598 A 31.000000000000004,31.000000000000004 0 0 0 25.07952682562337,18.221342821066663 L 39.81239030850485,18.73428882886321 L 43.2206390320623,8.244777841771887 L 31,7.59281015471359e-15 Z"/>
+    </g>
+  </g>
+</svg>

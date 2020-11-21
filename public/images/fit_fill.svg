@@ -1,1 +1,19 @@
-<svg id="svg" xmlns="http://www.w3.org/2000/svg" style="initial" viewBox="0 0 100 100"><defs/><g id="main-group"><polygon id="element-0" class="cursor-selectable tag-0" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="6,94 6.000000000000002,59 21,59 21,79 41,79 41,94"/><polygon id="element-1" class="cursor-selectable tag-1" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="94,94 59,94 59,79 79,79 79,59 94,59"/><polygon id="element-2" class="cursor-selectable tag-2" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="94,6 94,41 79,41 79,21 59,21 59,6"/><polygon id="element-3" class="cursor-selectable tag-3" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="6,6 41,6 41,21 21,21 21,41 6,41"/><circle id="element-4" class="cursor-selectable tag-4" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" cx="50" cy="50" r="15"/></g></svg>
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="svg" style="initial" viewBox="0 0 100 100">
+  <defs>
+    <filter id="shadow" style="color-interpolation-filters:sRGB;">
+      <feFlood id="feFlood1058" result="flood" flood-color="rgb(255,255,255)" flood-opacity="0.898039" />
+      <feComposite id="feComposite1060" result="composite1" operator="in" in2="SourceGraphic" in="flood" />
+      <feGaussianBlur id="feGaussianBlur1062" result="blur" stdDeviation="4" in="composite1" />
+      <feOffset id="feOffset1064" result="offset" dy="0" dx="0" />
+      <feComposite id="feComposite1066" result="composite2" operator="over" in2="offset" in="SourceGraphic" />
+    </filter>
+  </defs>
+  <g id="main-group" style="filter:url(#shadow)">
+    <polygon id="element-0" class="cursor-selectable tag-0" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="6,94 6.000000000000002,59 21,59 21,79 41,79 41,94"/>
+    <polygon id="element-1" class="cursor-selectable tag-1" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="94,94 59,94 59,79 79,79 79,59 94,59"/>
+    <polygon id="element-2" class="cursor-selectable tag-2" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="94,6 94,41 79,41 79,21 59,21 59,6"/>
+    <polygon id="element-3" class="cursor-selectable tag-3" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="6,6 41,6 41,21 21,21 21,41 6,41"/>
+    <circle id="element-4" class="cursor-selectable tag-4" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" cx="50" cy="50" r="15"/>
+  </g>
+</svg>

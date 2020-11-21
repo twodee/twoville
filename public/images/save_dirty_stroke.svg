@@ -1,1 +1,16 @@
-<svg id="svg" xmlns="http://www.w3.org/2000/svg" style="initial" viewBox="-50 -50 100 100"><defs/><g id="main-group"><path id="element-0" class="cursor-selectable tag-0" fill-opacity="0" fill="none" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 20,-8 A 21.540659228538015,21.540659228538015 0 0 0 -20,-8.000000000000002 L -44,-8 A 44.721359549995796,44.721359549995796 0 0 1 44,-7.999999999999992 Z"/><path id="element-1" class="cursor-selectable tag-1" fill-opacity="0" fill="none" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 20,8 A 21.540659228538015,21.540659228538015 0 0 1 -20,8.000000000000002 L -44,8 A 44.721359549995796,44.721359549995796 0 0 0 44,7.999999999999992 Z"/></g></svg>
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="svg" style="initial" viewBox="-50 -50 100 100">
+  <defs>
+    <filter id="shadow" style="color-interpolation-filters:sRGB;">
+      <feFlood id="feFlood1058" result="flood" flood-color="rgb(255,255,255)" flood-opacity="0.898039" />
+      <feComposite id="feComposite1060" result="composite1" operator="in" in2="SourceGraphic" in="flood" />
+      <feGaussianBlur id="feGaussianBlur1062" result="blur" stdDeviation="4" in="composite1" />
+      <feOffset id="feOffset1064" result="offset" dy="0" dx="0" />
+      <feComposite id="feComposite1066" result="composite2" operator="over" in2="offset" in="SourceGraphic" />
+    </filter>
+  </defs>
+  <g id="main-group" style="filter:url(#shadow)">
+    <path id="element-0" class="cursor-selectable tag-0" fill-opacity="0" fill="none" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 20,-8 A 21.540659228538015,21.540659228538015 0 0 0 -20,-8.000000000000002 L -44,-8 A 44.721359549995796,44.721359549995796 0 0 1 44,-7.999999999999992 Z"/>
+    <path id="element-1" class="cursor-selectable tag-1" fill-opacity="0" fill="none" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 20,8 A 21.540659228538015,21.540659228538015 0 0 1 -20,8.000000000000002 L -44,8 A 44.721359549995796,44.721359549995796 0 0 0 44,7.999999999999992 Z"/>
+  </g>
+</svg>

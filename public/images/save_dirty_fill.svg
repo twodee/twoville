@@ -1,1 +1,16 @@
-<svg id="svg" xmlns="http://www.w3.org/2000/svg" style="initial" viewBox="-50 -50 100 100"><defs/><g id="main-group"><path id="element-0" class="cursor-selectable tag-0" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 20,-9 A 21.93171219946131,21.93171219946131 0 0 0 -20,-9.000000000000002 L -44,-9 A 44.91102314577124,44.91102314577124 0 0 1 44,-8.999999999999993 Z"/><path id="element-1" class="cursor-selectable tag-1" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 20,9 A 21.93171219946131,21.93171219946131 0 0 1 -20,9.000000000000002 L -44,9 A 44.91102314577124,44.91102314577124 0 0 0 44,8.999999999999993 Z"/></g></svg>
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="svg" style="initial" viewBox="-50 -50 100 100">
+  <defs>
+    <filter id="shadow" style="color-interpolation-filters:sRGB;">
+      <feFlood id="feFlood1058" result="flood" flood-color="rgb(255,255,255)" flood-opacity="0.898039" />
+      <feComposite id="feComposite1060" result="composite1" operator="in" in2="SourceGraphic" in="flood" />
+      <feGaussianBlur id="feGaussianBlur1062" result="blur" stdDeviation="4" in="composite1" />
+      <feOffset id="feOffset1064" result="offset" dy="0" dx="0" />
+      <feComposite id="feComposite1066" result="composite2" operator="over" in2="offset" in="SourceGraphic" />
+    </filter>
+  </defs>
+  <g id="main-group" style="filter:url(#shadow)">
+    <path id="element-0" class="cursor-selectable tag-0" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 20,-9 A 21.93171219946131,21.93171219946131 0 0 0 -20,-9.000000000000002 L -44,-9 A 44.91102314577124,44.91102314577124 0 0 1 44,-8.999999999999993 Z"/>
+    <path id="element-1" class="cursor-selectable tag-1" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" d="M 20,9 A 21.93171219946131,21.93171219946131 0 0 1 -20,9.000000000000002 L -44,9 A 44.91102314577124,44.91102314577124 0 0 0 44,8.999999999999993 Z"/>
+  </g>
+</svg>

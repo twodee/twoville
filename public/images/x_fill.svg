@@ -1,1 +1,15 @@
-<svg id="svg" xmlns="http://www.w3.org/2000/svg" style="initial" viewBox="-50 -50 100 100"><defs/><g id="main-group"><polygon id="element-0" class="cursor-selectable tag-0" transform="rotate(-45 0 0)" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="10.5,-10.5 10.500000000000002,-52.5 -10.499999999999998,-52.5 -10.500000000000005,-10.5 -52.50000000000001,-10.500000000000005 -52.500000000000014,10.499999999999995 -10.500000000000014,10.499999999999995 -10.500000000000012,52.49999999999999 10.499999999999988,52.49999999999999 10.49999999999999,10.499999999999993 52.499999999999986,10.499999999999993 52.499999999999986,-10.500000000000007 10.499999999999986,-10.500000000000012"/></g></svg>
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="svg" style="initial" viewBox="-50 -50 100 100">
+  <defs>
+    <filter id="shadow" style="color-interpolation-filters:sRGB;">
+      <feFlood id="feFlood1058" result="flood" flood-color="rgb(255,255,255)" flood-opacity="0.898039" />
+      <feComposite id="feComposite1060" result="composite1" operator="in" in2="SourceGraphic" in="flood" />
+      <feGaussianBlur id="feGaussianBlur1062" result="blur" stdDeviation="4" in="composite1" />
+      <feOffset id="feOffset1064" result="offset" dy="0" dx="0" />
+      <feComposite id="feComposite1066" result="composite2" operator="over" in2="offset" in="SourceGraphic" />
+    </filter>
+  </defs>
+  <g id="main-group" style="filter:url(#shadow)">
+    <polygon id="element-0" class="cursor-selectable tag-0" transform="rotate(-45 0 0)" fill-opacity="1" fill="rgb(127, 127, 127)" visibility="visible" stroke="rgb(0, 0, 0)" stroke-width="6" stroke-opacity="1" points="10.5,-10.5 10.500000000000002,-52.5 -10.499999999999998,-52.5 -10.500000000000005,-10.5 -52.50000000000001,-10.500000000000005 -52.500000000000014,10.499999999999995 -10.500000000000014,10.499999999999995 -10.500000000000012,52.49999999999999 10.499999999999988,52.49999999999999 10.49999999999999,10.499999999999993 52.499999999999986,10.499999999999993 52.499999999999986,-10.500000000000007 10.499999999999986,-10.500000000000012"/>
+  </g>
+</svg>
