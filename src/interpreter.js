@@ -60,25 +60,24 @@ export class InterpreterEnvironment extends Environment {
     this.untimedProperties.time.bind('stop', new ExpressionInteger(100));
     this.untimedProperties.time.bind('delay', new ExpressionInteger(0.2));
 
-    this.untimedProperties.gif = Environment.create(this);
-    this.untimedProperties.gif.bind('size', new ExpressionVector([
+    this.untimedProperties.export = Environment.create(this);
+    this.untimedProperties.export.bind('size', new ExpressionVector([
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));
-    this.untimedProperties.gif.bind('name', new ExpressionString('twoville.gif'));
-    this.untimedProperties.gif.bind('transparency', new ExpressionVector([
+    this.untimedProperties.export.bind('name', new ExpressionString('twoville.gif'));
+    this.untimedProperties.export.bind('transparency', new ExpressionVector([
       new ExpressionReal(0),
       new ExpressionReal(0),
       new ExpressionReal(0),
     ]));
-    this.untimedProperties.gif.bind('background', new ExpressionVector([
+    this.untimedProperties.export.bind('background', new ExpressionVector([
       new ExpressionReal(1),
       new ExpressionReal(1),
       new ExpressionReal(1),
     ]));
-    this.untimedProperties.gif.bind('loop', new ExpressionInteger(0));
-    this.untimedProperties.gif.bind('delay', new ExpressionInteger(10));
-    this.untimedProperties.gif.bind('skip', new ExpressionInteger(1));
+    this.untimedProperties.export.bind('loop', new ExpressionInteger(0));
+    this.untimedProperties.export.bind('delay', new ExpressionInteger(10));
 
     this.untimedProperties.viewport = Environment.create(this);
     this.untimedProperties.viewport.bind('size', new ExpressionVector([

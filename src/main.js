@@ -603,12 +603,11 @@ function initialize() {
 
     scene.hideMarks();
 
-    let size = scene.get('gif').get('size');
-    let transparentColor = scene.get('gif').get('transparency');
-    let name = scene.get('gif').get('name');
-    let loop = scene.get('gif').get('loop');
-    let skip = scene.get('gif').get('skip');
-    let backgroundColor = scene.get('gif').get('background').toHexColor();
+    let size = scene.get('export').get('size');
+    let transparentColor = scene.get('export').get('transparency');
+    let name = scene.get('export').get('name');
+    let loop = scene.get('export').get('loop');
+    let backgroundColor = scene.get('export').get('background').toHexColor();
 
     const time = scene.get('time');
     let delay = time.get('delay').value * 1000;
@@ -654,7 +653,7 @@ function initialize() {
             });
 
             URL.revokeObjectURL(url);
-            tick(i + skip.value);
+            tick(i + 1);
           };
 
           img.src = url;
@@ -676,8 +675,8 @@ function initialize() {
 
     scene.hideMarks();
 
-    let size = scene.get('gif').get('size');
-    let name = scene.get('gif').get('name');
+    let size = scene.get('export').get('size');
+    let name = scene.get('export').get('name');
 
     const time = scene.get('time');
     let delay = time.get('delay').value * 1000;
