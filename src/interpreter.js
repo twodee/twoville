@@ -106,7 +106,7 @@ export class InterpreterEnvironment extends Environment {
 export function interpret(source, log) {
   try {
     let tokens = lex(source);
-    let ast = parse(tokens);
+    let ast = parse(tokens, source);
     const env = InterpreterEnvironment.create(source, log);
     ast.evaluate(env, null, null, {prior: new ExpressionUnit()});
     return env;

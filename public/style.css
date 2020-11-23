@@ -94,10 +94,10 @@ var {
   flex-direction: column;
 
   /* I'd prefer not to set width and just let it default to min-width. But
-   * that's not how it works. If I don't set the width, the sidebar will not
-   * size properly. Using auto for flex-basis means we'll get the minimum
-   * size from the width, which defaults to sizing to fit the content. If
-   * the content is big, the sidebar will be big. */
+     that's not how it works. If I don't set the width, the sidebar will not
+     size properly. Using auto for flex-basis means we'll get the minimum
+     size from the width, which defaults to sizing to fit the content. If
+     the content is big, the sidebar will be big. */
   width: 300px;
   min-width: 300px;
 }
@@ -344,16 +344,17 @@ html.grabbing {
   position: sticky;
   left: 0;
   right: 0;
+  top: 0;
   z-index: 10000;
   /* background-color: black; */
   /* box-shadow: 0 0 20px black; */
 
   /* These are magic. Sticky positioning appears to stick the element to the
      content box, but we want to obliterate the padding too. */
-  padding: 10px;
-  margin: -10px -10px 0 -10px;
-  top: -10px;
-  margin-top: -10px;
+  /* padding: 10px; */
+  /* margin: -10px -10px 0 -10px; */
+  /* top: -10px; */
+  /* margin-top: -10px; */
 }
 
 #docs-content-panel {

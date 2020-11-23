@@ -56,7 +56,7 @@ import {
   StatementThroughStasis,
 } from './ast.js';
 
-export function parse(tokens) {
+export function parse(tokens, source) {
 
   let i = 0;
   let indents = [-1];
@@ -251,8 +251,10 @@ export function parse(tokens) {
           return e;
         } else if (has(Tokens.EOF) || has(Tokens.Indentation)) { // Check for indentation because some expressions end in blocks, which have eaten their linebreak already
           return e;
+        } else if (has(Tokens.Comma)) {
+          throw new LocatedException(tokens[i].where, `I found a comma in a strange place. They only appear in lists, function calls, and function headers, but this code isn't any of those. Either you meant it to be or you have a stray comma.`);
         } else if (!has(Tokens.EOF)) {
-          throw new LocatedException(tokens[i].where, `I expected a line break or the end the program, but I found ${tokens[i].source}.`);
+          throw new LocatedException(tokens[i].where, `I expected a linebreak or the end of the program, but I found <var>${tokens[i].source}</var>.`);
         }
       }
     }
@@ -424,7 +426,7 @@ export function parse(tokens) {
         consume(); // eat [
         let index = expression();
         if (!has(Tokens.RightSquareBracket)) {
-          throw new LocatedException(index.where, `I expected a ] after this subscript.`);
+          throw new LocatedException(SourceLocation.span(base.where, index.where), `I found some code that looked like a subscript expression, and I expected to find a <var>]</var> to close it off. But that's not what I found. Either this code isn't really a subscript or it's missing a <var>]</var>.`);
         }
         let rightBracketToken = consume(); // eat ]
         base = new ExpressionSubscript(base, index, SourceLocation.span(base.where, rightBracketToken.where));
