@@ -107,7 +107,7 @@ export function parse(tokens, source) {
 
     if (indentation.source.length <= indents[indents.length - 1]) {
       if (has(Tokens.Linebreak, 1) || has(Tokens.EOF, 1)) {
-        throw new LocatedException(indentation.where, 'I encountered an empty block, but those are forbidden.');
+        throw new LocatedException(indentation.where, 'I found an empty block, but those are forbidden.');
       } else {
         throw new LocatedException(indentation.where, 'I expected the indentation to increase upon entering a block.');
       }
@@ -141,121 +141,158 @@ export function parse(tokens, source) {
     return new ExpressionBlock(statements, SourceLocation.span(sourceStart, sourceEnd));
   }
 
-  function statement() {
-    if (has(Tokens.T)) {
-      let firstT = tokens[i];
-      consume();
-      if (has(Tokens.RightArrow)) { // t ->
-        consume();
-        let e = expression();
-        if (has(Tokens.Linebreak)) { // t -> 10
-          consume();
-          let b = block();
-          return new StatementTo(e, b, SourceLocation.span(e.where, b.where));
-        } else if (has(Tokens.RightArrow)) { // t -> 10 ->
-          let arrow = tokens[i];
-          consume();
-          if (has(Tokens.T)) {
-            let secondT = tokens[i];
-            consume();
-            if (has(Tokens.Linebreak)) {
-              consume();
-              let b = block();
-              return new StatementThrough(e, b, SourceLocation.span(firstT.where, b.where));
-            } else {
-              throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
-            }
-          } else {
-            let e2 = expression();
-            if (has(Tokens.Linebreak)) {
-              consume();
-              let b = block();
-              return new StatementToStasis(e, e2, b, SourceLocation.span(firstT.where, b.where));
-            } else if (has(Tokens.RightArrow)) {
-              // TODO check for other things
-              consume(); // eat arrow
-              if (has(Tokens.T)) {
-                consume(); // eat t
-                if (has(Tokens.Linebreak)) {
-                  consume(); // eat linebreak
-                  let b = block();
-                  return new StatementThroughStasis(e, e2, b, SourceLocation.span(firstT.where, b.where));
-                }
-              }
-            } else {
-              throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
-            }
-            // throw new LocatedException(SourceLocation.span(firstT.where, arrow.where), 'I expected a second t in this through-interval.');
-          }
-        } else {
-          throw new LocatedException(SourceLocation.span(firstT.where, e.where), 'I expected either a to-interval or a through-interval, but that\'s not what I found.');
-        }
-      } else {
-        throw new LocatedException(firstT.where, 'I expected either a to-interval or a through-interval, but that\'s not what I found.');
-      }
-    }
-    
-    // A statement that doesn't start with T.
-    else {
-      let e = expression();
+  function parseTimeframes() {
+    // Read timeframe headers. There may be 0 or many. Stop reading right
+    // before the following block.
+    const timeframes = [];
+    let hasSameIndentation;
 
-      if (has(Tokens.RightArrow)) {
-        let arrow = tokens[i].where;
-        let from = e;
+    do {
+      if (has(Tokens.T)) {
+        let firstT = tokens[i];
         consume();
-        if (has(Tokens.T)) {
-          let t = tokens[i];
+        if (has(Tokens.RightArrow)) { // t ->
           consume();
-          if (has(Tokens.Linebreak)) { // 10 -> t
+          let e = expression();
+
+          if (has(Tokens.Linebreak)) { // t -> 10
             consume();
-            let b = block();
-            return new StatementFrom(from, b, SourceLocation.span(from.where, b.where));
-          } else if (has(Tokens.RightArrow)) { // 10 -> t -> 20
-            consume();
-            let to = expression();
-            if (has(Tokens.Linebreak)) {
-              consume();
-              let b = block();
-              return new StatementBetween(from, to, b, SourceLocation.span(from.where, b.where));
-            } else {
-              throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a line break after this interval.');
-            }
-          } else {
-            throw new LocatedException(SourceLocation.span(e.where, t.where), 'I expected either a from-interval or a between-interval, but that\'s not what I found.');
+            timeframes.push(b => new StatementTo(e, b, SourceLocation.span(e.where, b.where)));
           }
-        } else if (isFirstOfExpression()) {
-          let to = expression();
-          if (has(Tokens.RightArrow)) { // 10 -> 20 ->
+
+          else if (has(Tokens.RightArrow)) { // t -> 10 ->
+            let arrow = tokens[i];
             consume();
             if (has(Tokens.T)) {
+              let secondT = tokens[i];
               consume();
               if (has(Tokens.Linebreak)) {
                 consume();
-                let b = block();
-                return new StatementFromStasis(from, to, b, SourceLocation.span(from.where, b.where));
+                timeframes.push(b => new StatementThrough(e, b, SourceLocation.span(firstT.where, b.where)));
               } else {
-                throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a line break after this interval.');
+                throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
+              }
+            } else {
+              let e2 = expression();
+              if (has(Tokens.Linebreak)) {
+                consume();
+                timeframes.push(() => new StatementToStasis(e, e2, b, SourceLocation.span(firstT.where, b.where)));
+              } else if (has(Tokens.RightArrow)) {
+                // TODO check for other things
+                consume(); // eat arrow
+                if (has(Tokens.T)) {
+                  consume(); // eat t
+                  if (has(Tokens.Linebreak)) {
+                    consume(); // eat linebreak
+                    timeframes.push(b => new StatementThroughStasis(e, e2, b, SourceLocation.span(firstT.where, b.where)));
+                  }
+                }
+              } else {
+                throw new LocatedException(SourceLocation.span(firstT.where, secondT.where), 'I expected a linebreak after this time interval.');
+              }
+              // throw new LocatedException(SourceLocation.span(firstT.where, arrow.where), 'I expected a second t in this through-interval.');
+            }
+          } else {
+            throw new LocatedException(SourceLocation.span(firstT.where, e.where), 'I expected either a to-interval or a through-interval, but that\'s not what I found.');
+          }
+        } else {
+          throw new LocatedException(firstT.where, 'I expected either a to-interval or a through-interval, but that\'s not what I found.');
+        }
+      } else if (isFirstOfExpression()) {
+        let indexBeforeExpression = i;
+        let e = expression();
+        if (has(Tokens.RightArrow)) {
+          let arrow = tokens[i].where;
+          let from = e;
+          consume();
+          if (has(Tokens.T)) {
+            let t = tokens[i];
+            consume();
+            if (has(Tokens.Linebreak)) { // 10 -> t
+              consume();
+              timeframes.push(b => new StatementFrom(from, b, SourceLocation.span(from.where, b.where)));
+            } else if (has(Tokens.RightArrow)) { // 10 -> t -> 20
+              consume();
+              let to = expression();
+              if (has(Tokens.Linebreak)) {
+                consume();
+                timeframes.push(b => new StatementBetween(from, to, b, SourceLocation.span(from.where, b.where)));
+              } else {
+                throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a linebreak after this interval.');
+              }
+            } else {
+              throw new LocatedException(SourceLocation.span(e.where, t.where), 'I expected either a from-interval or a between-interval, but that\'s not what I found.');
+            }
+          } else if (isFirstOfExpression()) {
+            let to = expression();
+            if (has(Tokens.RightArrow)) { // 10 -> 20 ->
+              consume();
+              if (has(Tokens.T)) {
+                consume();
+                if (has(Tokens.Linebreak)) {
+                  consume();
+                  timeframes.push(b => new StatementFromStasis(from, to, b, SourceLocation.span(from.where, b.where)));
+                } else {
+                  throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a linebreak after this interval.');
+                }
+              } else {
+                throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a from-stasis-interval, but that\'s not what I found.');
               }
             } else {
               throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a from-stasis-interval, but that\'s not what I found.');
             }
           } else {
-            throw new LocatedException(SourceLocation.span(from.where, to.where), 'I expected a from-stasis-interval, but that\'s not what I found.');
+            throw new LocatedException(SourceLocation.span(e.where, arrow.where), 'I expected either a from-interval or a between-interval, but that\'s not what I found.');
           }
+        } else if (timeframes.length > 0) {
+          // This isn't a timeframe header, but it's at the same indentation as a preceding timeframe header.
+          // throw
         } else {
-          throw new LocatedException(SourceLocation.span(e.where, arrow.where), 'I expected either a from-interval or a between-interval, but that\'s not what I found.');
+          // This isn't a time block.
+          i = indexBeforeExpression;
+          break;
         }
+      }
+
+      // If next line has the same indentation as this one, we assume that it
+      // was meant to be another timeframe header.
+      hasSameIndentation = has(Tokens.Indentation) && tokens[i].source.length === indents[indents.length - 1];
+      if (hasSameIndentation) {
+        consume(); // eat indentation
+      }
+    } while (hasSameIndentation);
+
+    return timeframes;
+  }
+
+  function statement() {
+    const timeframes = parseTimeframes();
+    
+    // If there were no timeframes, then the statement must just be a simple
+    // expression.
+    if (timeframes.length === 0) {
+      let e = expression();
+      if (has(Tokens.Linebreak)) {
+        consume();
+        return e;
+      } else if (has(Tokens.EOF) || has(Tokens.Indentation)) { // Check for indentation because some expressions end in blocks, which have eaten their linebreak already
+        return e;
+      } else if (has(Tokens.Comma)) {
+        throw new LocatedException(tokens[i].where, `I found a comma in a strange place. They only appear in lists, function calls, and function headers, but this code isn't any of those. Either you meant it to be or you have a stray comma.`);
+      } else if (!has(Tokens.EOF)) {
+        throw new LocatedException(tokens[i].where, `I expected a linebreak or the end of the program, but I found <var>${tokens[i].source}</var>.`);
+      }
+    }
+
+    // If there were timeframes, we need to turn them into time statements and
+    // attach the succeeding block.
+    else {
+      const b = block();
+      const statements = timeframes.map(timeframe => timeframe(b));
+      if (statements.length === 1) {
+        return statements[0];
       } else {
-        if (has(Tokens.Linebreak)) {
-          consume();
-          return e;
-        } else if (has(Tokens.EOF) || has(Tokens.Indentation)) { // Check for indentation because some expressions end in blocks, which have eaten their linebreak already
-          return e;
-        } else if (has(Tokens.Comma)) {
-          throw new LocatedException(tokens[i].where, `I found a comma in a strange place. They only appear in lists, function calls, and function headers, but this code isn't any of those. Either you meant it to be or you have a stray comma.`);
-        } else if (!has(Tokens.EOF)) {
-          throw new LocatedException(tokens[i].where, `I expected a linebreak or the end of the program, but I found <var>${tokens[i].source}</var>.`);
-        }
+        return new ExpressionBlock(statements, SourceLocation.span(statements[0].where, statements[statements.length - 1].where));
       }
     }
   }

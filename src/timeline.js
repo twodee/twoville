@@ -51,7 +51,7 @@ export class Timeline {
   }
 
   toString() {
-    return '[default: ' + this.defaultValue + ', intervals: ' + this.intervals.map(interval => interval.toString()).join(',') + ']';
+    return '[default: ' + this.defaultValue?.value + ', intervals: ' + this.intervals.map(interval => interval.toString()).join(',') + ']';
   }
 
   getDefault() {
@@ -143,7 +143,7 @@ export class Timeline {
       }
 
       // If to is open, close it.
-      if (!this.intervals[i].hasTo()) {
+      else if (!this.intervals[i].hasTo()) {
         this.intervals[i].setTo(t, value);
       }
       
@@ -154,8 +154,8 @@ export class Timeline {
       
       // Otherwise, split the spanning interval. Open the from-end and splice in a new closed interval predecessor.
       else {
-        this.intervals[i].setFrom();
         this.intervals.splice(i, 0, new Interval(this.intervals[i].fromTime, this.intervals[i].fromValue, t, value));
+        this.intervals[i + 1].setFrom(t, value);
       }
     }
   }

@@ -23,7 +23,7 @@ import {
 
 import Interpreter from './interpreter.worker.js';
 
-const hasWorker = true;
+const hasWorker = false;
 
 let editor;
 let docEditors = [];

@@ -40,7 +40,7 @@ export class Interval {
   }
 
   toString() {
-    return this.fromTime + ':' + this.fromValue + ' .. ' + this.toTime + ':' + this.toValue;
+    return this.fromTime?.value + ':' + this.fromValue?.value + ' .. ' + this.toTime?.value + ':' + this.toValue?.value;
   }
 
   setFrom(fromTime, fromValue) {
