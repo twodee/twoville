@@ -176,7 +176,7 @@ export function parse(tokens, source) {
               let e2 = expression();
               if (has(Tokens.Linebreak)) {
                 consume();
-                timeframes.push(() => new StatementToStasis(e, e2, b, SourceLocation.span(firstT.where, b.where)));
+                timeframes.push(b => new StatementToStasis(e, e2, b, SourceLocation.span(firstT.where, b.where)));
               } else if (has(Tokens.RightArrow)) {
                 // TODO check for other things
                 consume(); // eat arrow

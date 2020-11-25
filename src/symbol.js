@@ -52,7 +52,9 @@ export const Symbol = Object.freeze({
   // Colors
   ':black': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
   ':red': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0), new ExpressionReal(0)]),
-  ':green': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1), new ExpressionReal(0)]),
+  ':lime': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1), new ExpressionReal(0)]),
+  ':green': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0.5), new ExpressionReal(0)]),
+  ':chartreuse': new ExpressionVector([new ExpressionReal(0.5), new ExpressionReal(1), new ExpressionReal(0)]),
   ':blue': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(1)]),
   ':white': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(1), new ExpressionReal(1)]),
   ':yellow': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(1), new ExpressionReal(0)]),

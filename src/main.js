@@ -23,7 +23,7 @@ import {
 
 import Interpreter from './interpreter.worker.js';
 
-const hasWorker = false;
+const hasWorker = true;
 
 let editor;
 let docEditors = [];
@@ -52,7 +52,7 @@ let contentSizeBox;
 
 let defaultSettings = {
   showCopyLinks: true,
-  backgroundColor: '#FF0000',
+  backgroundColor: '#D3D3D3',
 };
 const settings = {...defaultSettings};
 
@@ -130,11 +130,15 @@ function scrubTo(tick) {
 let lastMillis = null;
 
 function animateFrame(i, isLoop, delay) {
+  const before = new Date().getTime();
   scrubTo(i);
+  const after = new Date().getTime();
+  console.log("after - before:", after - before);
 
   const nowMillis = new Date().getTime();
   const elapsedMillis = nowMillis - lastMillis;
   const leftMillis = Math.max(0, delay - elapsedMillis);
+  // console.log("leftMillis:", leftMillis);
   lastMillis = nowMillis;
 
   if (i < parseInt(scrubber.max)) {
@@ -145,6 +149,18 @@ function animateFrame(i, isLoop, delay) {
     animateTask = null;
   }
 }
+
+// function animateFrame(i, isLoop) {
+  // scrubTo(i);
+
+  // if (i < parseInt(scrubber.max)) {
+    // i += 1;
+  // } else if (isLoop) {
+    // i = 0; 
+  // } else {
+    // clearInterval(animateTask);
+  // }
+// }
 
 function stopAnimation() {
   if (animateTask) {
@@ -158,7 +174,7 @@ function play(isLoop) {
   const time = scene.get('time');
   const delay = time.get('delay').value * 1000;
   lastMillis = new Date().getTime();
-  animateFrame(0, isLoop, delay);
+  animateTask = animateFrame(0, isLoop, delay);
 }
 
 function stopInterpreting() {
@@ -376,8 +392,21 @@ function initialize() {
     }
   };
 
-  // Handle show copy links toggling.
   const showCopyLinksToggle = document.getElementById('show-copy-links-toggle');
+  const backgroundColorPicker = document.getElementById('background-color-picker');
+  const backgroundColorPreview = document.getElementById('background-color-preview');
+
+  const uiSynchronizers = {
+    backgroundColor: () => {
+      backgroundColorPreview.style['background-color'] = settings.backgroundColor;
+      svg.style.backgroundColor = settings.backgroundColor; 
+    },
+    showCopyLinks: () => {
+      showCopyLinksToggle.checked = settings.showCopyLinks;
+    },
+  };
+
+  // Handle show copy links toggling.
   showCopyLinksToggle.checked = settings.showCopyLinks;
   showCopyLinksToggle.addEventListener('click', () => {
     settings.showCopyLinks = savedSettings.showCopyLinks = showCopyLinksToggle.checked;
@@ -385,17 +414,31 @@ function initialize() {
   });
 
   // Handle background color picking.
-  const backgroundColorPicker = document.getElementById('background-color-picker');
-  const backgroundColorPreview = document.getElementById('background-color-preview');
-
   backgroundColorPicker.value = settings.backgroundColor;
   svg.style.backgroundColor = settings.backgroundColor; 
   backgroundColorPreview.style['background-color'] = settings.backgroundColor;
   backgroundColorPicker.addEventListener('input', () => {
     settings.backgroundColor = savedSettings.backgroundColor = backgroundColorPicker.value;
-    backgroundColorPreview.style['background-color'] = settings.backgroundColor;
-    svg.style.backgroundColor = settings.backgroundColor; 
+    uiSynchronizers.backgroundColor();
     saveSettings();
+  });
+
+  const resetSettings = () => {
+    savedSettings = {};
+    for (let key of Object.keys(settings)) {
+      delete settings[key];
+    }
+    Object.assign(settings, defaultSettings);
+    saveSettings();
+
+    for (let uiSynchronizer of Object.values(uiSynchronizers)) {
+      uiSynchronizer();
+    }
+  };
+
+  const resetSettingsButton = document.getElementById('reset-settings-button');
+  resetSettingsButton.addEventListener('click', () => {
+    resetSettings();
   });
 
   const dialogOverlay = document.getElementById('dialog-overlay');
@@ -957,6 +1000,9 @@ function initialize() {
     if (rightWidth0) {
       right.style['width'] = rightWidth0;
     }
+
+    // Without this, cursor changes cause jarring scrolling.
+    editor.resize();
   }
 
   openPanelButton.addEventListener('click', () => {

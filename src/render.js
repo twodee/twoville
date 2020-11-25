@@ -303,8 +303,6 @@ export class RenderEnvironment extends Environment {
       drawable.scrub(this, t, this.bounds);
     }
     this.unscaleMarks();
-
-    console.log("this.box:", this.box.toString());
   }
 
   hideMarks() {

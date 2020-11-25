@@ -601,7 +601,7 @@ export class Rectangle extends Shape {
         this.element.setAttributeNS(null, 'ry', rounding.value);
       }
 
-      const box = new BoundingBox(); 
+      const box = new BoundingBox();
       box.include(corner.toPrimitiveArray());
       box.include(corner.add(size).toPrimitiveArray());
 
