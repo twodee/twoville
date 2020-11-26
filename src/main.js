@@ -76,6 +76,11 @@ function stopSpinning() {
   spinner.style.display = 'none';
 }
 
+function ymd() {
+  const now = new Date();
+  return `${now.getFullYear()}_${(now.getMonth() + 1 + '').padStart(2, '0')}_${('' + now.getDate()).padStart(2, '0')}`;
+}
+
 function downloadBlob(name, blob) {
   let link = document.createElement('a');
   link.download = name;
@@ -623,6 +628,14 @@ function initialize() {
     reallySaveAs();
     overwriteDialog.style.display = 'none';
     dialogOverlay.style.display = 'none';
+  });
+
+  const exportLibraryButton = document.getElementById('export-library-button');
+  exportLibraryButton.addEventListener('click', () => {
+    const twos = JSON.parse(localStorage.getItem('twos'));
+    if (twos) {
+      downloadBlob(`twos_${ymd()}.json`, new Blob([JSON.stringify(twos, null, 2)], {type: 'application/json'}));
+    }
   });
 
   if (source0) {
