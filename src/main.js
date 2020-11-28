@@ -451,8 +451,10 @@ function initialize() {
   // Handle open dialog.
   const openButton = document.getElementById('open-button');
   const openCancelButton = document.getElementById('open-cancel-button');
+  const openDeleteButton = document.getElementById('open-delete-button');
   const openDialog = document.getElementById('open-dialog');
   const openDialogFileList = document.getElementById('open-dialog-files-list');
+  const openProgramButton = document.getElementById('open-program-button');
 
   function closeOpenDialog() {
     dialogOverlay.style.display = 'none';
@@ -466,8 +468,7 @@ function initialize() {
     }
   }
 
-  function loadFile(event) {
-    const name = event.target.innerText; 
+  function loadFile(name) {
     const twos = JSON.parse(localStorage.getItem('twos')); 
     const file = twos[name];
     editor.setValue(file.source, 1);
@@ -501,7 +502,8 @@ function initialize() {
 
   alertDialogOkayButton.addEventListener('click', closeAlertDialog);
 
-  openButton.addEventListener('click', () => {
+  function refreshOpen() {
+    clearChildren(openDialogFileList);
     const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
     const names = Object.keys(twos);
 
@@ -513,20 +515,32 @@ function initialize() {
       clearChildren(openDialogFileList);
 
       for (let name of Object.keys(twos)) {
-        const li = document.createElement('li');
-        const button = document.createElement('button');
-        button.classList.add('link-button');
-        button.appendChild(document.createTextNode(name));
-        button.addEventListener('click', loadFile);
-        li.appendChild(button);
-        openDialogFileList.appendChild(li);
+        const option = document.createElement('option');
+        option.value = name;
+        option.appendChild(document.createTextNode(name));
+        openDialogFileList.appendChild(option);
       }
 
       document.addEventListener('keydown', openEscapeListener);
     }
-  });
+  }
 
+  openButton.addEventListener('click', refreshOpen);
+  openProgramButton.addEventListener('click', () => {
+    loadFile(openDialogFileList.value);
+  });
   openCancelButton.addEventListener('click', closeOpenDialog);
+  openDeleteButton.addEventListener('click', deleteProgram);
+
+  function deleteProgram() {
+    const name = openDialogFileList.value;
+    if (confirm(`Delete ${name}?`)) {
+      const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
+      delete twos[name];
+      localStorage.setItem('twos', JSON.stringify(twos));
+      refreshOpen();
+    }
+  }
 
   // Handle save as dialog.
   const saveAsButton = document.getElementById('save-as-button');

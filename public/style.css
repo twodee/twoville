@@ -434,7 +434,7 @@ html.grabbing {
 }
 
 #open-dialog-files-list {
-  overflow: scroll;
+  font-size: 1em;
 }
 
 .dialog-heading {
