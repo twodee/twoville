@@ -49,6 +49,7 @@ let timeSpinner;
 let interpreterWorker;
 let contentCornerBox;
 let contentSizeBox;
+let currentName;
 
 let defaultSettings = {
   showCopyLinks: true,
@@ -331,7 +332,14 @@ function onSourceChanged() {
 }
 
 function syncTitle() {
-  document.title = 'Twoville' + (isSaved ? '' : '*');
+  let title = 'Twoville';
+  if (currentName) {
+    title += ` - ${currentName}`;
+  }
+  if (!isSaved) {
+    title += '*';
+  }
+  document.title = title;
   saveDirtyButton.style.display = isSaved ? 'none' : 'block';
   saveCleanButton.style.display = isSaved ? 'block' : 'none';
 }
@@ -341,9 +349,27 @@ document.getElementById('middle').addEventListener('wheel', e => {
   e.preventDefault();
 }, {passive: false});
 
+function storeTwos(meld) {
+  let twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
+  twos = meld(twos);
+  console.log("twos:", twos);
+  localStorage.setItem('twos', JSON.stringify(twos));
+}
+
 function save() {
   if (isEmbedded) return;
-  localStorage.setItem('src', editor.getValue());
+
+  const now = new Date().getTime();
+  storeTwos(twos => ({
+    ...twos,
+    [currentName]: {
+      createdAt: now,
+      ...twos[currentName],
+      modifiedAt: now,
+      source: editor.getValue(),
+    },
+  }));
+
   isSaved = true;
   syncTitle();
 }
@@ -469,10 +495,14 @@ function initialize() {
   }
 
   function loadFile(name) {
+    currentName = name;
     const twos = JSON.parse(localStorage.getItem('twos')); 
     const file = twos[name];
     editor.setValue(file.source, 1);
     closeOpenDialog();
+
+    isSaved = true;
+    syncTitle();
   }
 
   const alertDialog = document.getElementById('alert-dialog');
@@ -508,7 +538,8 @@ function initialize() {
     const names = Object.keys(twos);
 
     if (names.length === 0) {
-      showAlertDialog('No Files', 'There are no programs available to open. Try saving one first.');
+      closeOpenDialog();
+      showAlertDialog('No Files', 'There are no files available to open.');
     } else {
       dialogOverlay.style.display = 'flex';
       openDialog.style.display = 'flex';
@@ -525,6 +556,10 @@ function initialize() {
     }
   }
 
+  openDialogFileList.addEventListener('dblclick', () => {
+    loadFile(openDialogFileList.value);
+  });
+
   openButton.addEventListener('click', refreshOpen);
   openProgramButton.addEventListener('click', () => {
     loadFile(openDialogFileList.value);
@@ -534,7 +569,7 @@ function initialize() {
 
   function deleteProgram() {
     const name = openDialogFileList.value;
-    if (confirm(`Delete ${name}?`)) {
+    if (name && confirm(`Delete ${name}?`)) {
       const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
       delete twos[name];
       localStorage.setItem('twos', JSON.stringify(twos));
@@ -577,16 +612,8 @@ function initialize() {
   saveAsCancelButton.addEventListener('click', closeSaveAsDialog);
 
   function reallySaveAs() {
-    const name = saveAsFileNameInput.value;
-    const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
-    const now = new Date().getTime();
-    twos[name] = {
-      createdAt: now,
-      ...twos[name],
-      modifiedAt: now,
-      source: editor.getValue(),
-    };
-    localStorage.setItem('twos', JSON.stringify(twos));
+    currentName = saveAsFileNameInput.value;
+    save();
   }
 
   function trySaveAs() {
@@ -652,11 +679,47 @@ function initialize() {
     }
   });
 
+  // Handle import library dialog.
+  const importLibraryButton = document.getElementById('import-library-button');
+  const importLibraryPicker = document.getElementById('import-library-picker');
+  importLibraryButton.addEventListener('click', () => {
+    importLibraryPicker.click();
+  });
+
+  function readLibrary(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        resolve(JSON.parse(reader.result));
+      });
+      reader.addEventListener('error', () => {
+        resolve(reader.error);
+      });
+      reader.readAsText(file);
+    });
+  }
+
+  importLibraryPicker.addEventListener('change', () => {
+    const readPromises = [...importLibraryPicker.files].map(file => readLibrary(file));
+    Promise.all(readPromises)
+      .then(libraries => libraries.reduce((mass, library) => ({...mass, ...library}), {}))
+      .then(mass => storeTwos(twos => ({...twos, ...mass})))
+      .catch(error => console.error(error));
+  });
+
   if (source0) {
     editor.setValue(source0, 1);
   } else if (!isEmbedded && localStorage.getItem('src') !== null) {
     editor.setValue(localStorage.getItem('src'), 1);
   }
+
+  const newButton = document.getElementById('new-button');
+  newButton.addEventListener('click', () => {
+    editor.setValue('', 1);
+    currentName = null;
+    isSaved = true;
+    syncTitle();
+  });
 
   editor.getSession().on('change', onSourceChanged);
   editor.getSession().setMode("ace/mode/twoville");
@@ -802,8 +865,16 @@ function initialize() {
     tick(parseInt(scrubber.min));
   });
 
-  saveDirtyButton.addEventListener('click', save);
-  saveCleanButton.addEventListener('click', save);
+  function saveSomehow() {
+    if (currentName) {
+      save();
+    } else {
+      showSaveAsDialog();
+    }
+  }
+
+  saveDirtyButton.addEventListener('click', saveSomehow);
+  saveCleanButton.addEventListener('click', saveSomehow);
 
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {

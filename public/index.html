@@ -16,8 +16,8 @@
     <p>What name do want to give this program?</p>
     <input id="save-as-file-name-input" type="text" autocomplete="off">
     <div class="dialog-buttons">
-      <button id="save-as-cancel-button" class="dialog-button" type="text">cancel</button>
-      <button id="save-as-okay-button" class="dialog-button" type="text">save</button>
+      <button id="save-as-cancel-button" class="dialog-button">cancel</button>
+      <button id="save-as-okay-button" class="dialog-button">save</button>
     </div>
     <p id="save-as-error-box">"" is not a valid name. Please pick something different.</p>
   </div>
@@ -26,8 +26,8 @@
     <h2 class="dialog-heading">File Exists</h2> 
     <p>A program named <span id="overwrite-name-field" class="from-user">FOO</span> already exists. Do you want to overwrite it?</p>
     <div class="dialog-buttons">
-      <button id="overwrite-cancel-button" class="dialog-button" type="text">rename</button>
-      <button id="overwrite-okay-button" class="dialog-button" type="text">overwrite</button>
+      <button id="overwrite-cancel-button" class="dialog-button">rename</button>
+      <button id="overwrite-okay-button" class="dialog-button">overwrite</button>
     </div>
   </div>
 
@@ -36,9 +36,11 @@
     <p>What program do you want to open?</p>
     <select id="open-dialog-files-list" size="20"></select>
     <div class="dialog-buttons">
-      <button id="open-delete-button" class="dialog-button" type="text">delete</button>
-      <button id="open-cancel-button" class="dialog-button" type="text">cancel</button>
-      <button id="open-program-button" class="dialog-button" type="text">open</button>
+      <div class="separator">
+        <button id="open-delete-button" class="dialog-button">delete</button>
+      </div>
+      <button id="open-cancel-button" class="dialog-button">cancel</button>
+      <button id="open-program-button" class="dialog-button">open</button>
     </div>
   </div>
 
@@ -137,7 +139,9 @@
       <div class="panel-section">
         <h3>File</h3>
         <div id="file-root">
+          <input type="file" id="import-library-picker">
           <ul class="links-list">
+            <li><input type="button" class="link-button" id="new-button" value="New"></li>
             <li><input type="button" class="link-button" id="save-as-button" value="Save As"></li>
             <li><input type="button" class="link-button" id="open-button" value="Open"></li>
             <li><input type="button" class="link-button" id="export-button" value="Export SVG"></li>

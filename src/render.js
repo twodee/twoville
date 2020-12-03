@@ -335,6 +335,7 @@ export class RenderEnvironment extends Environment {
     // we forcibly remove marks from the SVG.
     // https://bugs.launchpad.net/inkscape/+bug/166181
     let clone = this.svg.cloneNode(true);
+    clone.removeAttribute('style');
     clone.setAttributeNS(null, 'viewBox', `${this.fitBounds.x} ${this.fitBounds.y} ${this.fitBounds.width} ${this.fitBounds.height}`);
     removeClassMembers(clone, 'mark-group');
     return clone;
