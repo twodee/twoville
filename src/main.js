@@ -349,10 +349,16 @@ document.getElementById('middle').addEventListener('wheel', e => {
   e.preventDefault();
 }, {passive: false});
 
+window.addEventListener('beforeunload', event => {
+  if (!isSaved) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+});
+
 function storeTwos(meld) {
   let twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
   twos = meld(twos);
-  console.log("twos:", twos);
   localStorage.setItem('twos', JSON.stringify(twos));
 }
 
@@ -505,6 +511,7 @@ function initialize() {
     syncTitle();
   }
 
+  // Alert --------------------------------------------------------------------
   const alertDialog = document.getElementById('alert-dialog');
   const alertDialogHeadingField = document.getElementById('alert-dialog-heading-field');
   const alertDialogMessageField = document.getElementById('alert-dialog-message-field');
@@ -532,6 +539,52 @@ function initialize() {
 
   alertDialogOkayButton.addEventListener('click', closeAlertDialog);
 
+  // Confirm ------------------------------------------------------------------
+  const confirmDialog = document.getElementById('confirm-dialog');
+  const confirmDialogHeadingField = document.getElementById('confirm-dialog-heading-field');
+  const confirmDialogMessageField = document.getElementById('confirm-dialog-message-field');
+  const confirmDialogOkayButton = document.getElementById('confirm-dialog-okay-button');
+  const confirmDialogCancelButton = document.getElementById('confirm-dialog-cancel-button');
+
+  function showConfirmDialog(heading, message, okayLabel, cancelLabel, okayListener, cancelListener) {
+    confirmDialog.style.display = 'flex';
+    dialogOverlay.style.display = 'flex';
+    confirmDialogHeadingField.innerText = heading;
+    confirmDialogMessageField.innerText = message;
+    confirmDialogOkayButton.innerText = okayLabel;
+    confirmDialogCancelButton.innerText = cancelLabel;
+
+    function confirmEscapeListener(event) {
+      if (event.key === 'Escape') {
+        closeConfirmDialog();
+      }
+    }
+
+    function okayCallback() {
+      closeConfirmDialog();
+      okayListener();
+    }
+
+    function cancelCallback() {
+      closeConfirmDialog();
+      cancelListener();
+    }
+
+    function closeConfirmDialog() {
+      confirmDialog.style.display = 'none';
+      dialogOverlay.style.display = 'none';
+
+      document.removeEventListener('keydown', confirmEscapeListener);
+      confirmDialogOkayButton.removeEventListener('click', okayCallback);
+      confirmDialogCancelButton.removeEventListener('click', cancelCallback);
+    }
+
+    document.addEventListener('keydown', confirmEscapeListener);
+    confirmDialogOkayButton.addEventListener('click', okayCallback);
+    confirmDialogCancelButton.addEventListener('click', cancelCallback);
+  }
+
+  // Open ---------------------------------------------------------------------
   function refreshOpen() {
     clearChildren(openDialogFileList);
     const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
@@ -560,7 +613,15 @@ function initialize() {
     loadFile(openDialogFileList.value);
   });
 
-  openButton.addEventListener('click', refreshOpen);
+  openButton.addEventListener('click', () => {
+    if (isSaved) {
+      refreshOpen();
+    } else {
+      showConfirmDialog('Unsaved Changes', 'You have unsaved changes in your current program.', 'Open Anyway', 'Cancel', () => {
+        refreshOpen();
+      }, () => {});
+    }
+  });
   openProgramButton.addEventListener('click', () => {
     loadFile(openDialogFileList.value);
   });
@@ -713,12 +774,22 @@ function initialize() {
     editor.setValue(localStorage.getItem('src'), 1);
   }
 
-  const newButton = document.getElementById('new-button');
-  newButton.addEventListener('click', () => {
+  function loadNewFile() {
     editor.setValue('', 1);
     currentName = null;
     isSaved = true;
     syncTitle();
+  }
+
+  const newButton = document.getElementById('new-button');
+  newButton.addEventListener('click', () => {
+    if (isSaved) {
+      loadNewFile();
+    } else {
+      showConfirmDialog('Unsaved Changes', 'You have unsaved changes in your current program.', 'New File Anyway', 'Cancel', () => {
+        loadNewFile();
+      }, () => {});
+    }
   });
 
   editor.getSession().on('change', onSourceChanged);

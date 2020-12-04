@@ -439,6 +439,7 @@ html.grabbing {
 
 .dialog-heading {
   margin: 0;
+  color: salmon;
 }
 
 .dialog-button {
