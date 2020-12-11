@@ -510,6 +510,7 @@ html.grabbing {
 #background-color-preview {
   height: 20px;
   cursor: pointer;
+  border: 1px solid white;
 }
 
 input[type="color"] {

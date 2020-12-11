@@ -429,7 +429,11 @@ export class RenderEnvironment extends Environment {
       const matrix = this.svg.getScreenCTM().inverse();
       let center = this.mouseAtSvg.matrixTransform(matrix);
 
-      let factor = 1 + e.deltaY / 100;
+      // https://stackoverflow.com/questions/10744645/detect-touchpad-vs-mouse-in-javascript/54861787#54861787
+      const isTouchPad = e.wheelDeltaY ? e.wheelDeltaY === -3 * e.deltaY : e.deltaMode === 0;
+      const delta = e.deltaY * (isTouchPad ? 1 : 0.1);
+
+      let factor = 1 + delta / 100;
       this.bounds.x = (this.bounds.x - center.x) * factor + center.x;
       this.bounds.y = (this.bounds.y - center.y) * factor + center.y;
       this.bounds.width *= factor;

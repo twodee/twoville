@@ -7,7 +7,7 @@ var Range = ace.require('ace/range').Range;
 var TwovilleHighlightRules = require("./twoville_highlight_rules").TwovilleHighlightRules;
 
 var Mode = function() {
-    this.HighlightRules = TwovilleHighlightRules;
+  this.HighlightRules = TwovilleHighlightRules;
 };
 oop.inherits(Mode, TextMode);
 

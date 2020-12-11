@@ -5,7 +5,9 @@ import {
 self.addEventListener('message', event => {
   switch (event.data.command) {
     case 'interpret':
-      const result = interpret(event.data.source, message => self.postMessage({type: 'output', payload: message}));
+      const result = interpret(event.data.source, message => {
+        self.postMessage({type: 'output', payload: message});
+      });
       if (result) {
         self.postMessage({type: 'environment', payload: result.toPod()});
       } else {

@@ -368,6 +368,9 @@ export function lex(source) {
       } else {
         emit(Tokens.ForwardSlash);
       }
+    } else if (has('\r')) {
+      consume();
+      resetToken();
     } else if (has('\n')) {
       consume();
       emit(Tokens.Linebreak);

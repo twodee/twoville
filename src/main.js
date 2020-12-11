@@ -613,6 +613,7 @@ function initialize() {
     loadFile(openDialogFileList.value);
   });
 
+  //asdfasdf asdfas
   openButton.addEventListener('click', () => {
     if (isSaved) {
       refreshOpen();
@@ -1256,8 +1257,7 @@ function initialize() {
 
 function copyToClipboard(text) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text)
-      .catch(e => console.error(e)); 
+    navigator.clipboard.writeText(text).catch(e => console.error(e)); 
   }
 }
 
@@ -1287,12 +1287,19 @@ function initializeDocs() {
 
     const sources = contentPanel.querySelectorAll('.docs-source');
     for (let source of sources) {
-      const code = source.innerText;
-      const editor = ace.edit(source);
-      editor.setTheme('ace/theme/twilight');
-      editor.getSession().setMode('ace/mode/twoville');
-      editor.setValue(code, 1);
-      editor.setOptions({
+
+      // Chrome on Windows was showing the Ace editor as collapsed and without
+      // the text content. I don't know what the issue was. But wrapping the
+      // Ace element inside another div fixes the problem.
+      const wrapper = document.createElement('div');
+      source.parentNode.replaceChild(wrapper, source);
+      wrapper.appendChild(source);
+
+      const docEditor = ace.edit(source);
+      docEditor.setTheme('ace/theme/twilight');
+      docEditor.getSession().setMode('ace/mode/twoville');
+      docEditor.setOptions({
+        autoScrollEditorIntoView: true,
         fontFamily: 'Roboto Mono',
         fontSize: '14pt',
         tabSize: 2,
@@ -1307,14 +1314,14 @@ function initializeDocs() {
         copyAnchor.innerText = 'copy';
         copyAnchor.classList.add('copy-button');
         copyAnchor.addEventListener('click', e => {
-          copyToClipboard(code);
+          copyToClipboard(docEditor.getValue());
           e.preventDefault();
         });
 
-        source.parentNode.insertBefore(copyAnchor, source.nextSibling);
+        wrapper.appendChild(copyAnchor);
       }
 
-      docEditors.push(editor);
+      docEditors.push(docEditor);
     }
   };
 
