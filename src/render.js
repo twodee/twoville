@@ -240,6 +240,10 @@ export class RenderEnvironment extends Environment {
       shape.start();
     }
 
+    // for (let shape of this.shapes) {
+      // shape.configure();
+    // }
+
     this.drawables = this.shapes.filter(shape => shape.isDrawable);
 
     if (this.get('viewport').owns('grid')) {
@@ -293,6 +297,12 @@ export class RenderEnvironment extends Environment {
   include(box) {
     this.box.include(box.min);
     this.box.include(box.max);
+  }
+
+  age(t) {
+    for (let drawable of this.drawables) {
+      drawable.age(this, t, this.bounds);
+    }
   }
 
   scrub(t) {

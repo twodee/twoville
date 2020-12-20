@@ -645,6 +645,125 @@ export class Rectangle extends Shape {
       return centroid;
     }
   }
+
+  configure() {
+    this.animatedProperties = [];
+    this.domUpdaters = [];
+
+    this.configureColor();
+    this.configureOpacity();
+    this.configureSize();
+    this.configureRounding();
+    this.configureCorner();
+  }
+
+  configureSize() {
+    const timeline = this.timedProperties.size;
+
+    if (timeline.defaultValue) {
+      const size = timeline.defaultValue;
+      this.width = size.get(0).value;
+      this.height = size.get(0).value;
+      this.ageSize();
+    }
+
+    if (timeline.isAnimated) {
+      this.animatedProperties.push('size');
+      const animators = this.timeline.intervals.map(interval => interval.toAnimator());
+      const update = () => {
+        // find animator
+        // evaluate animator
+        this.ageSize();
+      };
+      this.domUpdaters.push(update);
+    }
+  }
+
+  configureRounding() {
+    const timeline = this.timedProperties.rounding;
+
+    if (timeline.defaultValue) {
+      const size = timeline.defaultValue;
+      this.rounding = rounding.value;
+      this.ageRounding();
+    }
+  }
+
+  configureColor() {
+    const timeline = this.timedProperties.color;
+
+    if (timeline.defaultValue) {
+      this.color = timeline.defaultValue;  // TODO what type?
+      this.ageColor();
+    }
+
+    if (timeline.isAnimated) {
+      this.animatedProperties.push('color');
+      const animators = this.timeline.intervals.map(interval => interval.toAnimator());
+      const update = () => {
+        // find animator
+        // evaluate animator
+        this.ageSize();
+      };
+      this.domUpdaters.push(update);
+    }
+  }
+
+  configureOpacity() {
+    const timeline = this.timedProperties.opacity;
+
+    if (timeline.defaultValue) {
+      this.color = timeline.defaultValue;  // TODO what type?
+      this.ageOpacity();
+    }
+
+    if (timeline.isAnimated) {
+      this.animatedProperties.push('opacity');
+      const animators = this.timeline.intervals.map(interval => interval.toAnimator());
+      const update = () => {
+        // find animator
+        // evaluate animator
+        this.ageSize();
+      };
+      this.domUpdaters.push(update);
+    }
+  }
+
+  ageOpacity(bounds) {
+    this.element.setAttributeNS(null, 'fill-opacity', this.opacity);
+  }
+
+  ageColor(bounds) {
+    this.element.setAttributeNS(null, 'fill', this.color.toColor());
+  }
+
+  ageRounding(bounds) {
+    this.element.setAttributeNS(null, 'rx', this.rounding);
+    this.element.setAttributeNS(null, 'ry', this.rounding);
+  }
+
+  ageSize(bounds) {
+    this.element.setAttributeNS(null, 'width', this.width);
+    this.element.setAttributeNS(null, 'height', this.height);
+  }
+
+  ageCorner(bounds) {
+    this.element.setAttributeNS(null, 'x', this.corner[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.height - this.corner[1]);
+  }
+
+  ageDomWithoutMark() {
+    for (let property of this.animatedProperties) {
+      property.update(t);
+    }
+    
+    for (let domUpdater of this.domUpdaters) {
+      domUpdater();
+    }
+  }
+
+  ageDomWithMarks() {
+  }
 }
 
 // --------------------------------------------------------------------------- 

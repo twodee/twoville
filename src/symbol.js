@@ -50,6 +50,9 @@ export const Symbol = Object.freeze({
   ':quinticInOut': new ExpressionString('interpolateQuinticInOut'),
 
   // Colors
+  ':soggy': new ExpressionVector([new ExpressionReal(0.663), new ExpressionReal(0.663), new ExpressionReal(0.663)]),
+  ':silver': new ExpressionVector([new ExpressionReal(0.753), new ExpressionReal(0.753), new ExpressionReal(0.753)]),
+  ':gray': new ExpressionVector([new ExpressionReal(0.5), new ExpressionReal(0.5), new ExpressionReal(0.5)]),
   ':black': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
   ':red': new ExpressionVector([new ExpressionReal(1), new ExpressionReal(0), new ExpressionReal(0)]),
   ':purple': new ExpressionVector([new ExpressionReal(0.5), new ExpressionReal(0), new ExpressionReal(0.5)]),

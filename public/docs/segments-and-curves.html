@@ -1,0 +1,81 @@
+<h2>Segments and Curves</h2>
+
+<p>What do you call a monster that's half square and half circle? You don't call it anything, because it doesn't have a name. We expect our shapes to be pure: all straight lines like a rectangle or all curves like a circle. Some shapes are a mix, but they are certainly not monsters.</p>
+
+<p>You can create mixed shapes using the <code>path</code> command. A path is built up out of <i>nodes</i>. Some nodes are straight line segments, and some are curved. Its many possible node types make it the most complex command in all of Twoville, so we'll visit just three of its features in this lesson.</p>
+
+<p>To start tracing out a path, you issue a <code>jump</code> node and set its <code>position</code> property, like this:</p>
+
+<div class="docs-source">with path()
+  jump().position = :zero2</div>
+
+<p>If you run this code, and you'll see errors. Let's add some color and stroke:</p>
+
+<div class="docs-source">with path()
+  color = :soggy
+  stroke.color = :black
+  stroke.size = 2
+  jump().position = :zero2</div>
+
+<p>Run this code, and you'll see no errors and no nothing. We need at least two nodes in a path before we see any stroke. We need at least three before we see any of its fill color. To create a straight edge, issue a <code>line</code> node:</p>
+
+<div class="docs-source">with path()
+  color = :soggy
+  stroke.color = :black
+  stroke.size = 2
+  jump().position = :zero2
+  line().position = [100, 0]</div>
+
+<p>Do you see a line? I hope so. Let's make another line segment:</p>
+
+<div class="docs-source">with path()
+  color = :soggy
+  stroke.color = :black
+  stroke.size = 2
+  jump().position = :zero2
+  line().position = [100, 0]
+  line().position = [100, 50]</div>
+
+<p>Do you see two edges and a filled triangle? If so, let's proceed by adding a semi-circular curve across the top. Issue an <code>arc</code> command preferably using a <code>with</code> command because it has several properties that need to be set. The <code>arc</code> command in this code draws a semi-circle starting from [100, 50] and going 180 degrees around a circle centered at [50, 50]:</p>
+
+<div class="docs-source">with path()
+  color = :soggy
+  stroke.color = :black
+  stroke.size = 2
+  jump().position = :zero2
+  line().position = [100, 0]
+  line().position = [100, 50]
+  with arc()
+    center = [50, 50]
+    degrees = 180</div>
+
+<p>This <code>arc</code> has its center pinned down. There may come a day where you find it easier to think about where you want to curve to end rather than where its center is. You can use the <code>position</code> property on that day, like this:
+
+<div class="docs-source">with path()
+  color = :soggy
+  stroke.color = :black
+  stroke.size = 2
+  jump().position = :zero2
+  line().position = [100, 0]
+  line().position = [100, 50]
+  with arc()
+    position = [0, 50]
+    degrees = 180</div>
+
+<p>The result is the same. Just a heads-up. You can't set both <code>position</code> and <code>center</code>. That would be wrong.</p>
+
+<p>How does the shape look now? There's a piece of stroke missing on the left side, you say? Let's fix that. Set the <code>closed</code> property of the path to <code>true</code> to automatically insert a line segment from the last node to the first:</p>
+
+<div class="docs-source">with path()
+  color = :soggy
+  stroke.color = :black
+  stroke.size = 1
+  closed = true
+  jump().position = :zero2
+  line().position = [100, 0]
+  line().position = [100, 50]
+  with arc()
+    center = [50, 50]
+    degrees = 180</div>
+
+<p>There's our half-square, half-circle. Oh, wait. Maybe it does have a name. I think they call it Gravestone.</p> 
