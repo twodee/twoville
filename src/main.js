@@ -1325,14 +1325,26 @@ function initializeDocs() {
     }
   };
 
+  function checkForErrors(response) {
+    if (!response.ok) {
+      throw Error(response.error);
+    } else {
+      return response;
+    }
+  }
+
   const load = tag => {
     window.history.replaceState(undefined, undefined, tag);
     history.push(tag);
-    fetch(`/docs/${tag.substring(1)}.html`).
-      then(response => response.text()).
-      then(html => {
+    fetch(`/docs/${tag.substring(1)}.html`)
+      .then(checkForErrors)
+      .then(response => response.text())
+      .then(html => {
         toolbar.style.display = tag === '#index' ? 'none' : 'block';
         docify(html);
+      })
+      .catch(e => {
+        toolbar.style.display = 'block';
       });
   };
 

@@ -1,0 +1,28 @@
+<h2>B&eacute;zier Curves</h2>
+
+<p>When you add a <code>line</code> node to a path, you get a straight line segment. When you add an <code>arc</code> node, you get a circular arc. You can make a lot of interesting shapes by mixing these together. But what about something like this?</p>
+
+<img src="/docs/images/pick.svg" class="docs-image">
+
+<p>There aren't any straight lines on that shape, and the curves don't look very circular. In fact, this path was drawn using neither of these node types. This shape is made of quadratic B&eacute;zier curves. (B&eacute;zier is a French name that is pronounced like <i>BEZ yay</i>.)</p>
+
+<p>To plot a quadratic B&eacute;zier curve, you need its two endpoints and a third point that acts like a gravitational force pulling the line connecting the two endpoints toward it. This gravitational point is called a <i>control point</i>.</p>
+
+<p>Consider this code that plots an arch:</p>
+
+<div class="docs-source">with path()
+  stroke.color = :pink
+  stroke.size = 2
+  opacity = 0
+  jump().position = [20, 0]
+  with quadratic()
+    position = [80, 0]
+    control = [50, 110]</div>
+
+<p>We issue a <code>jump</code> node to establish the starting endpoint at the bottom left of the viewport, and then we issue a <code>quadratic</code> curve that ends at the bottom right of the viewport. Instead of a straight line connecting them, the control point [50, 100] drags the curve upward.</p>
+
+<p>Here's a challenge for you. Add a <code>line</code> and another <code>quadratic</code> to make this arch:</p>
+
+<img src="/docs/images/arch.svg" class="docs-image">
+
+<p>Once you have a solution, <a href="#arch-solution" class="docs-link">compare it to ours</a>.</p>
