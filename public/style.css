@@ -20,6 +20,13 @@ body {
   font-family: 'Roboto', sans-serif;
 }
 
+code {
+  font-family: 'Roboto Mono', monospace;
+  font-style: normal;
+  font-weight: bold;
+  color: yellow;
+}
+
 var {
   font-family: 'Roboto Mono', monospace;
   font-style: normal;

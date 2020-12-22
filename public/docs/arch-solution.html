@@ -3,7 +3,9 @@
 <p>Here is one way to create the arch design:</p>
 
 <div class="docs-source">with path()
-  color = :pink
+  stroke.color = :pink
+  stroke.size = 2
+  color = [1, 0.75, 1]
   closed = true
   jump().position = [20, 0]
   with quadratic()
@@ -14,4 +16,4 @@
     position = [0, 0]
     control = [50, 150]</div>
 
-<p>A <code>line</code> extends to the bottom-right corner. Then a quadratic curve jumps all the way to the bottom-left corner. To connect the last node to the first, the <code>closed</code> property is set. Finally, the stroke is removed and the whole thing is filled with pink.</p>
+<p>A <code>line</code> extends to the bottom-right corner. Then a quadratic curve jumps all the way to the bottom-left corner. To connect the last node to the first, the <code>closed</code> property is set. Finally, the <code>opacity</code> is removed and the whole thing is filled with a lighter pink.</p>
