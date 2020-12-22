@@ -235,14 +235,15 @@ export class RenderEnvironment extends Environment {
     this.sceneMarkGroup.appendChild(pageOutline);
     this.backgroundMarkGroup.appendChild(this.sceneMarkGroup);
 
-    for (let shape of this.shapes) {
-      shape.validate();
-      shape.start();
-    }
-
     // for (let shape of this.shapes) {
-      // shape.configure();
+      // shape.validate();
+      // shape.start();
     // }
+
+    console.log("this.bounds:", this.bounds);
+    for (let shape of this.shapes) {
+      shape.configure(this.bounds);
+    }
 
     this.drawables = this.shapes.filter(shape => shape.isDrawable);
 
@@ -306,13 +307,13 @@ export class RenderEnvironment extends Environment {
   }
 
   scrub(t) {
-    this.box = new BoundingBox();
+    // this.box = new BoundingBox();
 
     // Don't target shapes. Non-drawable shapes should get scrubbed by their parents.
-    for (let drawable of this.drawables) {
-      drawable.scrub(this, t, this.bounds);
-    }
-    this.unscaleMarks();
+    // for (let drawable of this.drawables) {
+      // drawable.scrub(this, t, this.bounds);
+    // }
+    // this.unscaleMarks();
   }
 
   hideMarks() {
@@ -321,9 +322,9 @@ export class RenderEnvironment extends Environment {
 
   updateViewBox() {
     svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${this.bounds.y} ${this.bounds.width} ${this.bounds.height}`);
-    if (this.isStarted) {
-      this.unscaleMarks();
-    }
+    // if (this.isStarted) {
+      // this.unscaleMarks();
+    // }
   }
 
   rebound(oldBounds) {
@@ -352,11 +353,11 @@ export class RenderEnvironment extends Environment {
   }
 
   unscaleMarks() {
-    const matrix = this.svg.getScreenCTM();
-    const factor = matrix.a;
-    for (let shape of this.shapes) {
-      shape.unscaleMarks(factor);
-    }
+    // const matrix = this.svg.getScreenCTM();
+    // const factor = matrix.a;
+    // for (let shape of this.shapes) {
+      // shape.unscaleMarks(factor);
+    // }
   }
 
   stale() {
@@ -424,12 +425,12 @@ export class RenderEnvironment extends Environment {
   castCursor(column, row) {
     if (this.isTweaking) return;
 
-    let selectedDrawable;
-    for (let shape of this.shapes) {
-      if (shape.castCursor(column, row)) {
-        break;
-      }
-    }
+    // let selectedDrawable;
+    // for (let shape of this.shapes) {
+      // if (shape.castCursor(column, row)) {
+        // break;
+      // }
+    // }
   }
 
   onWheel = e => {

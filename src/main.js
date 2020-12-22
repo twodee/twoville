@@ -23,7 +23,7 @@ import {
 
 import Interpreter from './interpreter.worker.js';
 
-const hasWorker = true;
+const hasWorker = false;
 
 let editor;
 let docEditors = [];
@@ -129,8 +129,8 @@ function scrubTo(tick) {
   scrubber.value = tick;
   scene.scrub(t);
 
-  contentCornerBox.innerText = `[${scene.box.min[0].toShortFloat(2)}, ${scene.box.min[1].toShortFloat(2)}]`;
-  contentSizeBox.innerText = `[${(scene.box.max[0] - scene.box.min[0]).toShortFloat(2)}, ${(scene.box.max[1] - scene.box.min[1]).toShortFloat(2)}]`;
+  // contentCornerBox.innerText = `[${scene.box.min[0].toShortFloat(2)}, ${scene.box.min[1].toShortFloat(2)}]`;
+  // contentSizeBox.innerText = `[${(scene.box.max[0] - scene.box.min[0]).toShortFloat(2)}, ${(scene.box.max[1] - scene.box.min[1]).toShortFloat(2)}]`;
 }
 
 let lastMillis = null;

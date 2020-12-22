@@ -266,6 +266,8 @@ export class Shape extends TimelinedEnvironment {
   }
 
   initializeMarks() {
+    if (!this.markers) return;
+
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.backgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-background-marks`);
 
@@ -646,15 +648,72 @@ export class Rectangle extends Shape {
     }
   }
 
-  configure() {
+  configure(bounds) {
+    // super.start();
+
+    this.element = document.createElementNS(svgNamespace, 'rect');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'x', 0);
+    this.element.setAttributeNS(null, 'y', 0);
+
     this.animatedProperties = [];
     this.domUpdaters = [];
 
-    this.configureColor();
-    this.configureOpacity();
-    this.configureSize();
-    this.configureRounding();
-    this.configureCorner();
+    this.configureColor(bounds);
+    this.configureOpacity(bounds);
+    this.configureRounding(bounds);
+
+    // Size must be configured before position since y-axis is flipped.
+    this.configureSize(bounds);
+    this.configurePosition(bounds);
+
+    this.connect();
+  }
+
+  configurePosition(bounds) {
+    if (this.timedProperties.hasOwnProperty('corner') &&
+        this.timedProperties.hasOwnProperty('center')) {
+      throw new LocatedException(this.where, 'I found a rectangle whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
+    } else if (this.timedProperties.hasOwnProperty('corner')) {
+      this.configureCorner(bounds);
+    } else if (this.timedProperties.hasOwnProperty('center')) {
+      this.configureCenter(bounds);
+    } else {
+      throw new LocatedException(this.where, "I found a rectangle whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    }
+  }
+
+  configureCenter(bounds) {
+    const timeline = this.timedProperties.center;
+
+    if (timeline.defaultValue) {
+      const center = timeline.defaultValue;
+      this.x = center.get(0).value - this.width * 0.5;
+      this.y = center.get(1).value - this.height * 0.5;
+      this.ageCorner(bounds);
+    }
+  }
+
+  configureCorner(bounds) {
+    const timeline = this.timedProperties.corner;
+
+    if (timeline.defaultValue) {
+      const corner = timeline.defaultValue;
+      this.x = corner.get(0).value;
+      this.y = corner.get(1).value;
+      this.ageCorner(bounds);
+    }
+
+    if (timeline.isAnimated) {
+      this.animatedProperties.push('corner');
+      const animators = this.timeline.intervals.map(interval => interval.toAnimator());
+      const update = () => {
+        // find animator
+        // evaluate animator
+        this.ageSize();
+      };
+      this.domUpdaters.push(update);
+    }
   }
 
   configureSize() {
@@ -663,7 +722,7 @@ export class Rectangle extends Shape {
     if (timeline.defaultValue) {
       const size = timeline.defaultValue;
       this.width = size.get(0).value;
-      this.height = size.get(0).value;
+      this.height = size.get(1).value;
       this.ageSize();
     }
 
@@ -682,7 +741,7 @@ export class Rectangle extends Shape {
   configureRounding() {
     const timeline = this.timedProperties.rounding;
 
-    if (timeline.defaultValue) {
+    if (timeline && timeline.defaultValue) {
       const size = timeline.defaultValue;
       this.rounding = rounding.value;
       this.ageRounding();
@@ -748,8 +807,8 @@ export class Rectangle extends Shape {
   }
 
   ageCorner(bounds) {
-    this.element.setAttributeNS(null, 'x', this.corner[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.height - this.corner[1]);
+    this.element.setAttributeNS(null, 'x', this.x);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.height - this.y);
   }
 
   ageDomWithoutMark() {
