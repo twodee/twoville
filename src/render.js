@@ -240,7 +240,6 @@ export class RenderEnvironment extends Environment {
       // shape.start();
     // }
 
-    console.log("this.bounds:", this.bounds);
     for (let shape of this.shapes) {
       shape.configure(this.bounds);
     }

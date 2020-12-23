@@ -4,6 +4,7 @@ import {
 } from './ast.js';
 
 import {
+  Vector3Animator,
   Vector2Animator,
   NumberAnimator,
 } from './animator.js';
@@ -86,13 +87,11 @@ export class Interval {
     // use interpolator to determine tween
     if (this.fromValue instanceof ExpressionVector &&
         this.toValue instanceof ExpressionVector) {
-      return new Vector2Animator(
-        this.fromTime.value,
-        [this.fromValue.get(0).value, this.fromValue.get(1).value],
-        this.toTime.value,
-        [this.toValue.get(0).value, this.toValue.get(1).value],
-        this.tween
-      );
+      if (this.fromValue.length === 2) {
+        return new Vector2Animator(this.fromTime.value, this.fromValue.toPrimitiveArray(), this.toTime.value, this.toValue.toPrimitiveArray(), this.tween);
+      } else if (this.fromValue.length === 3) {
+        return new Vector3Animator(this.fromTime.value, this.fromValue.toPrimitiveArray(), this.toTime.value, this.toValue.toPrimitiveArray(), this.tween);
+      }
     } else {
       return new NumberAnimator(
         this.fromTime.value,

@@ -2143,6 +2143,10 @@ export class ExpressionVector extends ExpressionData {
     };
   }
 
+  get length() {
+    return this.value.length;
+  }
+
   hasFunction(id) {
     return this.functions.hasOwnProperty(id);
   }

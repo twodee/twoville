@@ -23,12 +23,29 @@ export class NumberAnimator extends Animator {
 export class Vector2Animator extends Animator {
   constructor(fromTime, fromValue, toTime, toValue, tween) {
     super(fromTime, fromValue, toTime, toValue, interpolateLinear);
+    this.currentValue = [null, null];
   }
 
   age(t, dst) {
     const proportion = (t - this.fromTime) / this.duration;
-    dst[0] = this.interpolate(this.fromValue[0], this.toValue[0], proportion);
-    dst[1] = this.interpolate(this.fromValue[1], this.toValue[1], proportion);
+    this.currentValue[0] = this.interpolate(this.fromValue[0], this.toValue[0], proportion);
+    this.currentValue[1] = this.interpolate(this.fromValue[1], this.toValue[1], proportion);
+    return this.currentValue;
+  }
+}
+
+export class Vector3Animator extends Animator {
+  constructor(fromTime, fromValue, toTime, toValue, tween) {
+    super(fromTime, fromValue, toTime, toValue, interpolateLinear);
+    this.currentValue = [null, null, null];
+  }
+
+  age(t, dst) {
+    const proportion = (t - this.fromTime) / this.duration;
+    this.currentValue[0] = this.interpolate(this.fromValue[0], this.toValue[0], proportion);
+    this.currentValue[1] = this.interpolate(this.fromValue[1], this.toValue[1], proportion);
+    this.currentValue[2] = this.interpolate(this.fromValue[2], this.toValue[2], proportion);
+    return this.currentValue;
   }
 }
 

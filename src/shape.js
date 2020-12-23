@@ -656,174 +656,110 @@ export class Rectangle extends Shape {
     this.element.setAttributeNS(null, 'x', 0);
     this.element.setAttributeNS(null, 'y', 0);
 
-    this.domUpdaters = [];
+    this.updateDoms = [];
+    this.agers = [];
 
-    this.configureColor(bounds);
-    this.configureOpacity(bounds);
-    this.configureRounding(bounds);
 
-    // Size must be configured before position since y-axis is flipped.
-    this.configureSize(bounds);
-    this.configurePosition(bounds);
+    this.configureVectorProperty('color', this.updateColorDom, bounds, []);
+    this.configureScalarProperty('opacity', this.updateOpacityDom, bounds, []);
+    this.configureScalarProperty('rounding', this.updateRoundingDom, bounds, []);
+    this.configureVectorProperty('size', this.updateSizeDom, bounds, []);
+
+    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
+      throw new LocatedException(this.where, 'I found a rectangle whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
+    } else if (this.timedProperties.hasOwnProperty('corner')) {
+      this.configureVectorProperty('corner', this.updateCornerDom, bounds, ['size']);
+    } else if (this.timedProperties.hasOwnProperty('center')) {
+      this.configureVectorProperty('center', this.updateCenterDom, bounds, ['size']);
+    } else {
+      throw new LocatedException(this.where, "I found a rectangle whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    }
 
     this.connect();
   }
 
-  configurePosition(bounds) {
-    if (this.timedProperties.hasOwnProperty('corner') &&
-        this.timedProperties.hasOwnProperty('center')) {
-      throw new LocatedException(this.where, 'I found a rectangle whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
-    } else if (this.timedProperties.hasOwnProperty('corner')) {
-      this.configureCorner(bounds);
-    } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureCenter(bounds);
-    } else {
-      throw new LocatedException(this.where, "I found a rectangle whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
-    }
-  }
+  configureProperty(property, updateDom, resolveDefault, bounds, dependencies) {
+    const timeline = this.timedProperties[property];
+    if (!timeline) return;
 
-  configureCenter(bounds) {
-    const timeline = this.timedProperties.center;
     const defaultValue = timeline.defaultValue;
+    let atemporal;
 
     if (defaultValue) {
-      const center = timeline.defaultValue;
-      this.corner = [
-        center.get(0).value - this.size[0] * 0.5,
-        center.get(1).value - this.size[1] * 0.5
-      ];
-      this.ageCorner(bounds);
-    }
-  }
-
-  configureCorner(bounds) {
-    const timeline = this.timedProperties.corner;
-    const defaultValue = timeline.defaultValue;
-
-    if (defaultValue) {
-      this.corner = [
-        defaultValue.get(0).value,
-        defaultValue.get(1).value
-      ];
-      this.ageCorner(bounds);
-    }
-
-    if (timeline.isAnimated) {
-      const animators = this.timeline.intervals.map(interval => interval.toAnimator());
-      const update = () => {
-        // find animator
-        // evaluate animator
-        this.ageCorner();
-      };
-      this.domUpdaters.push(update);
-    }
-  }
-
-  configureSize(bounds) {
-    const timeline = this.timedProperties.size;
-    const defaultValue = timeline.defaultValue;
-    console.log("timeline:", timeline);
-
-    if (defaultValue) {
-      this.defaultSize = [
-        defaultValue.get(0).value,
-        defaultValue.get(1).value
-      ];
-      this.size = [...this.defaultSize];
-      this.ageSize(bounds);
+      atemporal = resolveDefault(defaultValue);
+      this[property] = atemporal;
+      updateDom.call(this, bounds);
     }
 
     if (timeline.intervals.length > 0) {
+      // assert atemporal or definition for all time values
       const animators = timeline.intervals.map(interval => interval.toAnimator());
-      // TODO assert valid definition from start to finish or disabled
-      const update = (bounds, t) => {
+      const ager = (t) => {
         const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
         if (animator) {
-          animator.age(t, this.size);
+          this[property] = animator.age(t);
         } else {
-          this.size[0] = this.defaultSize[0];
-          this.size[1] = this.defaultSize[1];
+          this[property] = atemporal;
         }
-        this.ageSize(bounds);
       };
-      this.domUpdaters.push(update);
+
+      this.agers.push(ager);
+      this.updateDoms.push(updateDom);
+    } else {
+      // If any dependencies are animated, then this property is indirectly animated.
+      if (dependencies.some(dependency => this.timedProperties[dependency].intervals.length > 0)) {
+        this.updateDoms.push(updateDom);
+      }
     }
   }
 
-  configureRounding() {
-    const timeline = this.timedProperties.rounding;
-
-    if (timeline && timeline.defaultValue) {
-      const size = timeline.defaultValue;
-      this.rounding = rounding.value;
-      this.ageRounding();
-    }
+  configureVectorProperty(property, updateDom, bounds, dependencies) {
+    this.configureProperty(property, updateDom, atemporal => atemporal.toPrimitiveArray(), bounds, dependencies);
   }
 
-  configureColor() {
-    const timeline = this.timedProperties.color;
-
-    if (timeline.defaultValue) {
-      this.color = timeline.defaultValue;  // TODO what type?
-      this.ageColor();
-    }
-
-    if (timeline.isAnimated) {
-      const animators = this.timeline.intervals.map(interval => interval.toAnimator());
-      const update = () => {
-        // find animator
-        // evaluate animator
-        this.ageColor();
-      };
-      this.domUpdaters.push(update);
-    }
+  configureScalarProperty(property, updateDom, bounds, dependencies) {
+    this.configureProperty(property, updateDom, atemporal => atemporal.value, bounds, dependencies);
   }
 
-  configureOpacity() {
-    const timeline = this.timedProperties.opacity;
-
-    if (timeline.defaultValue) {
-      this.color = timeline.defaultValue;  // TODO what type?
-      this.ageOpacity();
-    }
-
-    if (timeline.isAnimated) {
-      const animators = this.timeline.intervals.map(interval => interval.toAnimator());
-      const update = () => {
-        // find animator
-        // evaluate animator
-        this.ageOpacity();
-      };
-      this.domUpdaters.push(update);
-    }
-  }
-
-  ageOpacity(bounds) {
+  updateOpacityDom(bounds) {
     this.element.setAttributeNS(null, 'fill-opacity', this.opacity);
   }
 
-  ageColor(bounds) {
-    this.element.setAttributeNS(null, 'fill', this.color.toColor());
+  updateColorDom(bounds) {
+    const r = Math.floor(this.color[0] * 255);
+    const g = Math.floor(this.color[1] * 255);
+    const b = Math.floor(this.color[2] * 255);
+    const rgb = `rgb(${r}, ${g}, ${b})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
   }
 
-  ageRounding(bounds) {
+  updateRoundingDom(bounds) {
     this.element.setAttributeNS(null, 'rx', this.rounding);
     this.element.setAttributeNS(null, 'ry', this.rounding);
   }
 
-  ageSize(bounds) {
+  updateSizeDom(bounds) {
     this.element.setAttributeNS(null, 'width', this.size[0]);
     this.element.setAttributeNS(null, 'height', this.size[1]);
   }
 
-  ageCorner(bounds) {
+  updateCenterDom(bounds) {
+    this.element.setAttributeNS(null, 'x', this.center[0] - this.size[0] * 0.5);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.center[1] - this.size[1] * 0.5);
+  }
+
+  updateCornerDom(bounds) {
     this.element.setAttributeNS(null, 'x', this.corner[0]);
     this.element.setAttributeNS(null, 'y', bounds.span - this.size[1] - this.corner[1]);
   }
 
   ageDomWithoutMark(env, bounds, t) {
-    for (let domUpdater of this.domUpdaters) {
-      domUpdater(bounds, t);
+    for (let ager of this.agers) {
+      ager(t);
+    }
+
+    for (let updateDom of this.updateDoms) {
+      updateDom.call(this, bounds);
     }
   }
 
