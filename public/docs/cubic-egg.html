@@ -20,13 +20,13 @@
   stroke.size = 2
   jump().position = [50, 1]
   with cubic()
-		position = [50, 99]
+    position = [50, 99]
     control1 = [-20, 1]
     control2 = [20, 99]</div>
 
 <p>Run this and you'll see a semi-egg. Place the cursor inside the <code>cubic</code> block to show the handles for the three properties. Drag the control point handles around to see how they change the curvature.</p>
 
-<p>To complete the egg, add a second <code>cubic</code> node that ends where we started. Just as we saw with quadratic curves, we can leave off a control point to make a smooth transition between the two segments. For cubic curves, we can only omit <code>control1</code>. By dropping <code>control1</code> and making <code>control2</code> mirror its partner on the other side of the egg, we get a nice symmetric egg:</p>
+<p>To complete the egg, add a second <code>cubic</code> node that ends where we started. Just as we saw with quadratic curves, we can leave off a control point to make a smooth transition between the two segments. For cubic curves, we can only omit <code>control1</code>. By dropping <code>control1</code> and making <code>control2</code> mirror its partner on the other side, we get a nice symmetric egg:</p>
 
 <div class="docs-source">with path()
   color = [1, 0.9, 0.9]
@@ -34,7 +34,7 @@
   stroke.size = 2
   jump().position = [50, 1]
   with cubic()
-		position = [50, 99]
+    position = [50, 99]
     control1 = [-20, 1]
     control2 = [20, 99]
   with cubic()
