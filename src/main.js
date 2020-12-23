@@ -501,14 +501,21 @@ function initialize() {
   }
 
   function loadFile(name) {
-    currentName = name;
-    const twos = JSON.parse(localStorage.getItem('twos')); 
-    const file = twos[name];
-    editor.setValue(file.source, 1);
-    closeOpenDialog();
+    // Save most recent file so that it can be automatically reopened when the
+    // page is reloaded.
+    localStorage.setItem('most-recent-two', name);
 
-    isSaved = true;
-    syncTitle();
+    const twos = JSON.parse(localStorage.getItem('twos')); 
+
+    if (twos.hasOwnProperty(name)) {
+      currentName = name;
+      const file = twos[name];
+      editor.setValue(file.source, 1);
+      closeOpenDialog();
+
+      isSaved = true;
+      syncTitle();
+    }
   }
 
   // Alert --------------------------------------------------------------------
@@ -771,8 +778,12 @@ function initialize() {
 
   if (source0) {
     editor.setValue(source0, 1);
-  } else if (!isEmbedded && localStorage.getItem('src') !== null) {
-    editor.setValue(localStorage.getItem('src'), 1);
+  } else if (!isEmbedded) {
+    const mostRecentTwo = localStorage.getItem('most-recent-two');
+    if (mostRecentTwo) {
+      loadFile(mostRecentTwo);
+      // editor.setValue(localStorage.getItem('src'), 1);
+    }
   }
 
   function loadNewFile() {
