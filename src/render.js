@@ -302,13 +302,11 @@ export class RenderEnvironment extends Environment {
 
   age(t) {
     for (let drawable of this.drawables) {
-      drawable.age(this, t, this.bounds);
+      drawable.ageDomWithoutMark(this, this.bounds, t);
     }
   }
 
   scrub(t) {
-    // this.box = new BoundingBox();
-
     // Don't target shapes. Non-drawable shapes should get scrubbed by their parents.
     // for (let drawable of this.drawables) {
       // drawable.scrub(this, t, this.bounds);

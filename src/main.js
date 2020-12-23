@@ -127,7 +127,8 @@ function scrubTo(tick) {
   let t = scene.tickToTime(tick);
   timeSpinner.value = t;
   scrubber.value = tick;
-  scene.scrub(t);
+  // scene.scrub(t);
+  scene.age(t);
 
   // contentCornerBox.innerText = `[${scene.box.min[0].toShortFloat(2)}, ${scene.box.min[1].toShortFloat(2)}]`;
   // contentSizeBox.innerText = `[${(scene.box.max[0] - scene.box.min[0]).toShortFloat(2)}, ${(scene.box.max[1] - scene.box.min[1]).toShortFloat(2)}]`;

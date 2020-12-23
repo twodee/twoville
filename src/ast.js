@@ -50,62 +50,6 @@ import {
 } from './node.js';
 
 // --------------------------------------------------------------------------- 
-// INTERPOLANTS
-// --------------------------------------------------------------------------- 
-
-function interpolateQuadraticInOut(a, b, proportion) {
-  let t = proportion * 2;
-  if (t < 1) {
-    return a + (b - a) / 2 * t * t;
-  } else {
-    t -= 1;
-    return a - (b - a) / 2 * (t * (t - 2) - 1);
-  }
-}
-
-function interpolateCubicInOut(a, b, proportion) {
-  let t = proportion * 2;
-  if (t < 1) {
-    return a + (b - a) / 2 * t * t * t;
-  } else {
-    t -= 2;
-    return a + (b - a) / 2 * (t * t * t + 2);
-  }
-}
-
-function interpolateQuarticInOut(a, b, proportion) {
-  let t = proportion * 2;
-  if (t < 1) {
-    return a + (b - a) / 2 * t * t * t * t;
-  } else {
-    t -= 2;
-    return a - (b - a) / 2 * (t * t * t * t - 2);
-  }
-}
-
-function interpolateQuinticInOut(a, b, proportion) {
-  let t = proportion * 2;
-  if (t < 1) {
-    return a + (b - a) / 2 * t * t * t * t * t;
-  } else {
-    t -= 2;
-    return a + (b - a) / 2 * (t * t * t * t * t + 2);
-  }
-}
-
-function interpolateBackInOut(a, b, proportion) {
-  let t = proportion * 2;
-  let s = 1.70158;
-  let u = s * 1.525;
-  if (t < 1) {
-    return a + (b - a) * 0.5 * t * t * ((u + 1) * t - u);
-  } else {
-    t -= 2;
-    return a + (b - a) * 0.5 * (t * t * ((u + 1) * t + u) + 2);
-  }
-}
-
-// --------------------------------------------------------------------------- 
 // PRIMITIVES
 // --------------------------------------------------------------------------- 
 
@@ -254,38 +198,6 @@ export class ExpressionBoolean extends ExpressionData {
   toPretty() {
     return '' + this.value;
   }
-
-  interpolateLinear(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateNearest(other, proportion) {
-    return new ExpressionBoolean(proportion <= 0.5 ? this.value : other.value);
-  }
-
-  interpolateSineInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateBackInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateQuadraticInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateCubicInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateQuarticInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateQuinticInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -410,38 +322,10 @@ export class ExpressionInteger extends ExpressionData {
     }
   }
 
-  interpolateLinear(other, proportion) {
-    return new ExpressionReal(this.value + proportion * (other.value - this.value));
-  }
-
-  interpolateNearest(other, proportion) {
-    return new ExpressionReal(proportion <= 0.5 ? this.value : other.value);
-  }
-
-  interpolateSineInOut(other, proportion) {
-    let diff = other.value - this.value;
-    return new ExpressionReal(this.value + diff * 0.5 * (1 - Math.cos(Math.PI * proportion)));
-  }
-
-  interpolateBackInOut(other, proportion) {
-    return new ExpressionReal(interpolateBackInOut(this.value, other.value, proportion));
-  }
-
-  interpolateQuadraticInOut(other, proportion) {
-    return new ExpressionReal(interpolateQuadraticInOut(this.value, other.value, proportion));
-  }
-
-  interpolateCubicInOut(other, proportion) {
-    return new ExpressionReal(interpolateCubicInOut(this.value, other.value, proportion));
-  }
-
-  interpolateQuarticInOut(other, proportion) {
-    return new ExpressionReal(interpolateQuarticInOut(this.value, other.value, proportion));
-  }
-
-  interpolateQuinticInOut(other, proportion) {
-    return new ExpressionReal(interpolateQuinticInOut(this.value, other.value, proportion));
-  }
+  // interpolateSineInOut(other, proportion) {
+    // let diff = other.value - this.value;
+    // return new ExpressionReal(this.value + diff * 0.5 * (1 - Math.cos(Math.PI * proportion)));
+  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -520,38 +404,6 @@ export class ExpressionString extends ExpressionData {
 
   add(other) {
     return new ExpressionString(this.value + other.toPretty());
-  }
-
-  interpolateLinear(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateNearest(other, proportion) {
-    return new ExpressionString(proportion <= 0.5 ? this.value : other.value);
-  }
-
-  interpolateSineInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateBackInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateQuadraticInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateCubicInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateQuarticInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
-  }
-
-  interpolateQuinticInOut(other, proportion) {
-    return this.interpolateNearest(other, proportion);
   }
 }
 
@@ -660,38 +512,10 @@ export class ExpressionReal extends ExpressionData {
     }
   }
 
-  interpolateLinear(other, proportion) {
-    return new ExpressionReal(this.value + proportion * (other.value - this.value));
-  }
-
-  interpolateNearest(other, proportion) {
-    return new ExpressionReal(proportion <= 0.5 ? this.value : other.value);
-  }
-
-  interpolateSineInOut(other, proportion) {
-    let diff = other.value - this.value;
-    return new ExpressionReal(this.value + diff * 0.5 * (1 - Math.cos(Math.PI * proportion)));
-  }
-
-  interpolateBackInOut(other, proportion) {
-    return new ExpressionReal(interpolateBackInOut(this.value, other.value, proportion));
-  }
-
-  interpolateQuadraticInOut(other, proportion) {
-    return new ExpressionReal(interpolateQuadraticInOut(this.value, other.value, proportion));
-  }
-
-  interpolateCubicInOut(other, proportion) {
-    return new ExpressionReal(interpolateCubicInOut(this.value, other.value, proportion));
-  }
-
-  interpolateQuarticInOut(other, proportion) {
-    return new ExpressionReal(interpolateQuarticInOut(this.value, other.value, proportion));
-  }
-
-  interpolateQuinticInOut(other, proportion) {
-    return new ExpressionReal(interpolateQuinticInOut(this.value, other.value, proportion));
-  }
+  // interpolateSineInOut(other, proportion) {
+    // let diff = other.value - this.value;
+    // return new ExpressionReal(this.value + diff * 0.5 * (1 - Math.cos(Math.PI * proportion)));
+  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -2439,38 +2263,6 @@ export class ExpressionVector extends ExpressionData {
 
   toSpacedString(env) {
     return this.value.map(element => element.toPretty()).join(' ');
-  }
-
-  interpolateLinear(other, proportion) {
-    return new ExpressionVector(this.value.map((element, i) => element.interpolateLinear(other.get(i), proportion)));
-  }
-
-  interpolateNearest(other, proportion) {
-    return new ExpressionVector(this.value.map((element, i) => element.interpolateNearest(other.get(i), proportion)));
-  }
-
-  interpolateSineInOut(other, proportion) {
-    return new ExpressionVector(this.value.map((element, i) => element.interpolateSineInOut(other.get(i), proportion)));
-  }
-
-  interpolateBackInOut(other, proportion) {
-    return new ExpressionVector(this.value.map((element, i) => element.interpolateBackInOut(other.get(i), proportion)));
-  }
-
-  interpolateQuadraticInOut(other, proportion) {
-    return new ExpressionVector(this.value.map((element, i) => element.interpolateQuadraticInOut(other.get(i), proportion)));
-  }
-
-  interpolateCubicInOut(other, proportion) {
-    return new ExpressionVector(this.value.map((element, i) => element.interpolateCubicInOut(other.get(i), proportion)));
-  }
-
-  interpolateQuarticInOut(other, proportion) {
-    return new ExpressionVector(this.value.map((element, i) => element.interpolateQuarticInOut(other.get(i), proportion)));
-  }
-
-  interpolateQuinticInOut(other, proportion) {
-    return new ExpressionVector(this.value.map((element, i) => element.interpolateQuinticInOut(other.get(i), proportion)));
   }
 
   get magnitude() {

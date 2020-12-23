@@ -1,6 +1,12 @@
 import {
-  ExpressionInteger
+  ExpressionInteger,
+  ExpressionVector,
 } from './ast.js';
+
+import {
+  Vector2Animator,
+  NumberAnimator,
+} from './animator.js';
 
 import {
   MessagedException,
@@ -19,7 +25,7 @@ export class Interval {
       fromValue: this.fromValue?.toPod(),
       toTime: this.toTime?.toPod(),
       toValue: this.toValue?.toPod(),
-      interpolator: this.interpolator,
+      tween: this.tween,
     };
   }
 
@@ -29,13 +35,13 @@ export class Interval {
       env.root.omniReify(env, pod.fromValue),
       env.root.omniReify(env, pod.toTime),
       env.root.omniReify(env, pod.toValue),
-      pod.interpolator,
+      pod.tween,
     );
     return interval;
   }
 
   setTween(tween) {
-    this.interpolator = tween;
+    this.tween = tween;
     // throw new MessagedException(`Don't know this ${tweenType}`);
   }
 
@@ -75,24 +81,47 @@ export class Interval {
            (!this.hasFrom() && this.hasTo() && t <= this.toTime.value);
   }
 
-  duration() {
-    return this.toTime.value - this.fromTime.value;
-  }
-
-  interpolate(env, t) {
-    if (!this.hasFrom()) {
-      return this.toValue.evaluate(env);
-    } else if (this.fromValue.isTimeSensitive(env)) {
-      env.bind('t', new ExpressionInteger(t));
-      return this.fromValue.evaluate(env);
-    } else if (!this.hasTo()) {
-      return this.fromValue.evaluate(env);
-    } else if (this.toValue.isTimeSensitive(env)) {
-      env.bind('t', new ExpressionInteger(t));
-      return this.toValue.evaluate(env);
+  toAnimator() {
+    // check from and to values to determine number or vector2
+    // use interpolator to determine tween
+    if (this.fromValue instanceof ExpressionVector &&
+        this.toValue instanceof ExpressionVector) {
+      return new Vector2Animator(
+        this.fromTime.value,
+        [this.fromValue.get(0).value, this.fromValue.get(1).value],
+        this.toTime.value,
+        [this.toValue.get(0).value, this.toValue.get(1).value],
+        this.tween
+      );
     } else {
-      let proportion = (t - this.fromTime.value) / this.duration();
-      return this.fromValue[this.interpolator].bind(this.fromValue)(this.toValue, proportion);
+      return new NumberAnimator(
+        this.fromTime.value,
+        this.fromValue.value,
+        this.toTime.value,
+        this.toValue.value,
+        this.tween
+      );
     }
   }
+
+  // duration() {
+    // return this.toTime.value - this.fromTime.value;
+  // }
+
+  // interpolate(env, t) {
+    // if (!this.hasFrom()) {
+      // return this.toValue.evaluate(env);
+    // } else if (this.fromValue.isTimeSensitive(env)) {
+      // env.bind('t', new ExpressionInteger(t));
+      // return this.fromValue.evaluate(env);
+    // } else if (!this.hasTo()) {
+      // return this.fromValue.evaluate(env);
+    // } else if (this.toValue.isTimeSensitive(env)) {
+      // env.bind('t', new ExpressionInteger(t));
+      // return this.toValue.evaluate(env);
+    // } else {
+      // let proportion = (t - this.fromTime.value) / this.duration();
+      // return this.fromValue[this.interpolator].bind(this.fromValue)(this.toValue, proportion);
+    // }
+  // }
 };

@@ -656,7 +656,6 @@ export class Rectangle extends Shape {
     this.element.setAttributeNS(null, 'x', 0);
     this.element.setAttributeNS(null, 'y', 0);
 
-    this.animatedProperties = [];
     this.domUpdaters = [];
 
     this.configureColor(bounds);
@@ -685,54 +684,67 @@ export class Rectangle extends Shape {
 
   configureCenter(bounds) {
     const timeline = this.timedProperties.center;
+    const defaultValue = timeline.defaultValue;
 
-    if (timeline.defaultValue) {
+    if (defaultValue) {
       const center = timeline.defaultValue;
-      this.x = center.get(0).value - this.width * 0.5;
-      this.y = center.get(1).value - this.height * 0.5;
+      this.corner = [
+        center.get(0).value - this.size[0] * 0.5,
+        center.get(1).value - this.size[1] * 0.5
+      ];
       this.ageCorner(bounds);
     }
   }
 
   configureCorner(bounds) {
     const timeline = this.timedProperties.corner;
+    const defaultValue = timeline.defaultValue;
 
-    if (timeline.defaultValue) {
-      const corner = timeline.defaultValue;
-      this.x = corner.get(0).value;
-      this.y = corner.get(1).value;
+    if (defaultValue) {
+      this.corner = [
+        defaultValue.get(0).value,
+        defaultValue.get(1).value
+      ];
       this.ageCorner(bounds);
     }
 
     if (timeline.isAnimated) {
-      this.animatedProperties.push('corner');
       const animators = this.timeline.intervals.map(interval => interval.toAnimator());
       const update = () => {
         // find animator
         // evaluate animator
-        this.ageSize();
+        this.ageCorner();
       };
       this.domUpdaters.push(update);
     }
   }
 
-  configureSize() {
+  configureSize(bounds) {
     const timeline = this.timedProperties.size;
+    const defaultValue = timeline.defaultValue;
+    console.log("timeline:", timeline);
 
-    if (timeline.defaultValue) {
-      const size = timeline.defaultValue;
-      this.width = size.get(0).value;
-      this.height = size.get(1).value;
-      this.ageSize();
+    if (defaultValue) {
+      this.defaultSize = [
+        defaultValue.get(0).value,
+        defaultValue.get(1).value
+      ];
+      this.size = [...this.defaultSize];
+      this.ageSize(bounds);
     }
 
-    if (timeline.isAnimated) {
-      this.animatedProperties.push('size');
-      const animators = this.timeline.intervals.map(interval => interval.toAnimator());
-      const update = () => {
-        // find animator
-        // evaluate animator
-        this.ageSize();
+    if (timeline.intervals.length > 0) {
+      const animators = timeline.intervals.map(interval => interval.toAnimator());
+      // TODO assert valid definition from start to finish or disabled
+      const update = (bounds, t) => {
+        const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
+        if (animator) {
+          animator.age(t, this.size);
+        } else {
+          this.size[0] = this.defaultSize[0];
+          this.size[1] = this.defaultSize[1];
+        }
+        this.ageSize(bounds);
       };
       this.domUpdaters.push(update);
     }
@@ -757,12 +769,11 @@ export class Rectangle extends Shape {
     }
 
     if (timeline.isAnimated) {
-      this.animatedProperties.push('color');
       const animators = this.timeline.intervals.map(interval => interval.toAnimator());
       const update = () => {
         // find animator
         // evaluate animator
-        this.ageSize();
+        this.ageColor();
       };
       this.domUpdaters.push(update);
     }
@@ -777,12 +788,11 @@ export class Rectangle extends Shape {
     }
 
     if (timeline.isAnimated) {
-      this.animatedProperties.push('opacity');
       const animators = this.timeline.intervals.map(interval => interval.toAnimator());
       const update = () => {
         // find animator
         // evaluate animator
-        this.ageSize();
+        this.ageOpacity();
       };
       this.domUpdaters.push(update);
     }
@@ -802,22 +812,18 @@ export class Rectangle extends Shape {
   }
 
   ageSize(bounds) {
-    this.element.setAttributeNS(null, 'width', this.width);
-    this.element.setAttributeNS(null, 'height', this.height);
+    this.element.setAttributeNS(null, 'width', this.size[0]);
+    this.element.setAttributeNS(null, 'height', this.size[1]);
   }
 
   ageCorner(bounds) {
-    this.element.setAttributeNS(null, 'x', this.x);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.height - this.y);
+    this.element.setAttributeNS(null, 'x', this.corner[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.size[1] - this.corner[1]);
   }
 
-  ageDomWithoutMark() {
-    for (let property of this.animatedProperties) {
-      property.update(t);
-    }
-    
+  ageDomWithoutMark(env, bounds, t) {
     for (let domUpdater of this.domUpdaters) {
-      domUpdater();
+      domUpdater(bounds, t);
     }
   }
 
