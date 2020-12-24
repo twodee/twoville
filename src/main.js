@@ -245,14 +245,14 @@ function postInterpret(pod, successCallback) {
     scene.start();
 
     scrubber.min = 0;
-    scrubber.max = scene.nTicks;
-    timeSpinner.max = scene.nTicks;
+    scrubber.max = scene.bounds.nticks;
+    timeSpinner.max = scene.bounds.nticks;
 
     let t = scene.getTime(parseInt(scrubber.value));
-    if (t < scene.tmin) {
+    if (t < scene.bounds.startTime) {
       scrubTo(0);
-    } else if (t > scene.tmax) {
-      scrubTo((scene.tmax - scene.tmin) * scene.resolution);
+    } else if (t > scene.bounds.stopTime) {
+      scrubTo((scene.bounds.stopTime - scene.bounds.startTime) * scene.resolution);
     } else {
       scrubTo(parseInt(scrubber.value));
     }

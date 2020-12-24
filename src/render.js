@@ -62,7 +62,15 @@ export class RenderEnvironment extends Environment {
       shape.resolveReferences();
     }
 
-    this.bounds = {x: 0, y: 0, width: 0, height: 0};
+    this.bounds = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      startTime: 0,
+      stopTime: 0,
+      nticks: 0
+    };
     this.functions = {};
     this.bindGlobalFunctions();
   }
@@ -201,9 +209,9 @@ export class RenderEnvironment extends Environment {
     pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
     pageOutline.classList.add('mark', 'outline-mark');
 
-    this.tmin = this.get('time').get('start').value;
-    this.tmax = this.get('time').get('stop').value;
-    this.nTicks = this.tmax - this.tmin;
+    this.bounds.startTime = this.get('time').get('start').value;
+    this.bounds.stopTime = this.get('time').get('stop').value;
+    this.bounds.nticks = this.bounds.stopTime - this.bounds.startTime;
 
     this.mainGroup = document.createElementNS(svgNamespace, 'g');
     this.mainGroup.setAttributeNS(null, 'id', 'main-group');
@@ -368,16 +376,16 @@ export class RenderEnvironment extends Environment {
   }
 
   getTime(tick) {
-    return this.tmin + tick / this.resolution;
+    return this.bounds.startTime + tick / this.resolution;
   }
 
   tickToTime(tick) {
-    let proportion = tick / this.nTicks;
-    return Math.round(this.tmin + proportion * (this.tmax - this.tmin));
+    let proportion = tick / this.bounds.nticks;
+    return Math.round(this.bounds.startTime + proportion * (this.bounds.stopTime - this.bounds.startTime));
   }
 
   timeToTick(time) {
-    return Math.round((this.time - this.tmin) / (this.tmax - this.tmin) * this.nTicks);
+    return Math.round((time - this.bounds.startTime) / (this.bounds.stopTime - this.bounds.startTime) * this.bounds.nticks);
   }
 
   contextualizeCursor(element) {

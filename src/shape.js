@@ -659,7 +659,6 @@ export class Rectangle extends Shape {
     this.updateDoms = [];
     this.agers = [];
 
-
     this.configureVectorProperty('color', this.updateColorDom, bounds, []);
     this.configureScalarProperty('opacity', this.updateOpacityDom, bounds, []);
     this.configureScalarProperty('rounding', this.updateRoundingDom, bounds, []);
@@ -688,11 +687,32 @@ export class Rectangle extends Shape {
     if (defaultValue) {
       atemporal = resolveDefault(defaultValue);
       this[property] = atemporal;
-      updateDom.call(this, bounds);
+      if (dependencies.every(dependency => this.timedProperties[dependency].defaultValue)) {
+        updateDom.call(this, bounds);
+      }
     }
 
     if (timeline.intervals.length > 0) {
-      // assert atemporal or definition for all time values
+
+      // If there's no default value, we must assert that the property is
+      // defined for all possible time values.
+      if (!defaultValue) {
+        let t = bounds.startTime;
+        for (let interval of timeline.intervals) {
+          if (!interval.spans(t)) {
+            throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
+          } else if (!interval.hasTo()) {
+            t = null;
+            break;
+          } else {
+            t = interval.toTime.value + 1;
+          }
+        }
+        if (t !== null && t < bounds.stopTime) {
+          throw new LocatedException(this.where, `I found a ${this.article} ${this.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
+        }
+      }
+
       const animators = timeline.intervals.map(interval => interval.toAnimator());
       const ager = (t) => {
         const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
