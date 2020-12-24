@@ -402,6 +402,77 @@ export class Shape extends TimelinedEnvironment {
 
     return true;
   }
+
+  configure(bounds) {
+    this.updateDoms = [];
+    this.agers = [];
+    this.configureState(bounds);
+    this.connect();
+  }
+
+  configureProperty(property, updateDom, resolveDefault, bounds, dependencies) {
+    const timeline = this.timedProperties[property];
+    if (!timeline) return;
+
+    const defaultValue = timeline.defaultValue;
+    let atemporal;
+
+    if (defaultValue) {
+      atemporal = resolveDefault(defaultValue);
+      this[property] = atemporal;
+      if (dependencies.every(dependency => this.timedProperties[dependency].defaultValue)) {
+        updateDom.call(this, bounds);
+      }
+    }
+
+    if (timeline.intervals.length > 0) {
+
+      // If there's no default value, we must assert that the property is
+      // defined for all possible time values.
+      if (!defaultValue) {
+        let t = bounds.startTime;
+        for (let interval of timeline.intervals) {
+          if (!interval.spans(t)) {
+            throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
+          } else if (!interval.hasTo()) {
+            t = null;
+            break;
+          } else {
+            t = interval.toTime.value + 1;
+          }
+        }
+        if (t !== null && t < bounds.stopTime) {
+          throw new LocatedException(this.where, `I found a ${this.article} ${this.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
+        }
+      }
+
+      const animators = timeline.intervals.map(interval => interval.toAnimator());
+      const ager = (t) => {
+        const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
+        if (animator) {
+          this[property] = animator.age(t);
+        } else {
+          this[property] = atemporal;
+        }
+      };
+
+      this.agers.push(ager);
+      this.updateDoms.push(updateDom);
+    } else {
+      // If any dependencies are animated, then this property is indirectly animated.
+      if (dependencies.some(dependency => this.timedProperties[dependency].intervals.length > 0)) {
+        this.updateDoms.push(updateDom);
+      }
+    }
+  }
+
+  configureVectorProperty(property, updateDom, bounds, dependencies) {
+    this.configureProperty(property, updateDom, atemporal => atemporal.toPrimitiveArray(), bounds, dependencies);
+  }
+
+  configureScalarProperty(property, updateDom, bounds, dependencies) {
+    this.configureProperty(property, updateDom, atemporal => atemporal.value, bounds, dependencies);
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -515,7 +586,33 @@ export class Text extends Shape {
 
 // --------------------------------------------------------------------------- 
 
-export class Rectangle extends Shape {
+class FilledShape extends Shape {
+  configureColor(bounds) {
+    this.configureVectorProperty('color', this.updateColorDom, bounds, []);
+    this.configureScalarProperty('opacity', this.updateOpacityDom, bounds, []);
+  }
+
+  updateOpacityDom(bounds) {
+    this.element.setAttributeNS(null, 'fill-opacity', this.opacity);
+  }
+
+  updateColorDom(bounds) {
+    const r = Math.floor(this.color[0] * 255);
+    const g = Math.floor(this.color[1] * 255);
+    const b = Math.floor(this.color[2] * 255);
+    const rgb = `rgb(${r}, ${g}, ${b})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+class StrokedShape extends Shape {
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Rectangle extends FilledShape {
   static type = 'rectangle';
   static article = 'a';
   static timedIds = ['corner', 'center', 'size', 'color', 'opacity', 'rounding', 'enabled'];
@@ -648,19 +745,15 @@ export class Rectangle extends Shape {
     }
   }
 
-  configure(bounds) {
-    // super.start();
+  configureState(bounds) {
+    super.configure(bounds);
 
     this.element = document.createElementNS(svgNamespace, 'rect');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.setAttributeNS(null, 'x', 0);
     this.element.setAttributeNS(null, 'y', 0);
 
-    this.updateDoms = [];
-    this.agers = [];
-
-    this.configureVectorProperty('color', this.updateColorDom, bounds, []);
-    this.configureScalarProperty('opacity', this.updateOpacityDom, bounds, []);
+    super.configureColor(bounds);
     this.configureScalarProperty('rounding', this.updateRoundingDom, bounds, []);
     this.configureVectorProperty('size', this.updateSizeDom, bounds, []);
 
@@ -673,84 +766,6 @@ export class Rectangle extends Shape {
     } else {
       throw new LocatedException(this.where, "I found a rectangle whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
     }
-
-    this.connect();
-  }
-
-  configureProperty(property, updateDom, resolveDefault, bounds, dependencies) {
-    const timeline = this.timedProperties[property];
-    if (!timeline) return;
-
-    const defaultValue = timeline.defaultValue;
-    let atemporal;
-
-    if (defaultValue) {
-      atemporal = resolveDefault(defaultValue);
-      this[property] = atemporal;
-      if (dependencies.every(dependency => this.timedProperties[dependency].defaultValue)) {
-        updateDom.call(this, bounds);
-      }
-    }
-
-    if (timeline.intervals.length > 0) {
-
-      // If there's no default value, we must assert that the property is
-      // defined for all possible time values.
-      if (!defaultValue) {
-        let t = bounds.startTime;
-        for (let interval of timeline.intervals) {
-          if (!interval.spans(t)) {
-            throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
-          } else if (!interval.hasTo()) {
-            t = null;
-            break;
-          } else {
-            t = interval.toTime.value + 1;
-          }
-        }
-        if (t !== null && t < bounds.stopTime) {
-          throw new LocatedException(this.where, `I found a ${this.article} ${this.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
-        }
-      }
-
-      const animators = timeline.intervals.map(interval => interval.toAnimator());
-      const ager = (t) => {
-        const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
-        if (animator) {
-          this[property] = animator.age(t);
-        } else {
-          this[property] = atemporal;
-        }
-      };
-
-      this.agers.push(ager);
-      this.updateDoms.push(updateDom);
-    } else {
-      // If any dependencies are animated, then this property is indirectly animated.
-      if (dependencies.some(dependency => this.timedProperties[dependency].intervals.length > 0)) {
-        this.updateDoms.push(updateDom);
-      }
-    }
-  }
-
-  configureVectorProperty(property, updateDom, bounds, dependencies) {
-    this.configureProperty(property, updateDom, atemporal => atemporal.toPrimitiveArray(), bounds, dependencies);
-  }
-
-  configureScalarProperty(property, updateDom, bounds, dependencies) {
-    this.configureProperty(property, updateDom, atemporal => atemporal.value, bounds, dependencies);
-  }
-
-  updateOpacityDom(bounds) {
-    this.element.setAttributeNS(null, 'fill-opacity', this.opacity);
-  }
-
-  updateColorDom(bounds) {
-    const r = Math.floor(this.color[0] * 255);
-    const g = Math.floor(this.color[1] * 255);
-    const b = Math.floor(this.color[2] * 255);
-    const rgb = `rgb(${r}, ${g}, ${b})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
   }
 
   updateRoundingDom(bounds) {
