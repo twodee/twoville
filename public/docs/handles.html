@@ -1,0 +1,30 @@
+<h2>Handles</h2>
+
+<p>Making shapes through code is indirect. As a programmer, you fiddle with the properties in the text editor, and the results show up far away on the drawing canvas. In contrast, a designer works directly on objects, shaping them via the mouse or pen and working directly on the canvas.</p>
+
+<p>With Twoville you are a <i>programmer-designer</i>. You use code to get a shape started, but you can tweak the shape's spatial properties directly in the drawing canvas. Let's see how. First, run this code:</p>
+
+<div class="docs-source">with circle()
+  color = :yellow
+  center = [0, 50]
+  radius = 50</div>
+
+<p>Hover the mouse over the circle. Do you see the decorations that show up? The two black circles at the center and edge of the circle are <i>handles</i>. Click and drag on these handles. You'll see two things: 1) the circle moves or changes size, and 2) the code is automatically updated.</p>
+
+<p>Hold down the Shift key while dragging on a handle. What is different about the numbers in the code when Shift is pressed? They snap to integers.</p>
+
+<p>Different shapes in Twoville have different kinds of handles. Run this rectangle:</p>
+
+<div class="docs-source">with rectangle()
+  color = :cornflower
+  corner = [20, 20]
+  size = [30, 40]</div>
+
+<p>It has three handles. Drag on them to see what they do. You'll find that one controls the corner, one the width, and one the height. Compare that to this rectangle:</p>
+
+<div class="docs-source">with rectangle()
+  color = :cornflower
+  center = [35, 40]
+  size = [30, 40]</div>
+
+<p>As you learn more shapes, you'll encounter several other different types of handles. Use them to experiment with the numbers behind your designs.</p>
