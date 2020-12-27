@@ -1,4 +1,5 @@
 import {
+  Expression,
   ExpressionInteger,
   ExpressionVector,
 } from './ast.js';
@@ -10,6 +11,8 @@ import {
 } from './animator.js';
 
 import {
+  typesToSeries,
+  LocatedException,
   MessagedException,
 } from "./common.js";
 
@@ -80,6 +83,26 @@ export class Interval {
     return (this.hasFrom() && this.hasTo() && this.fromTime.value <= t && t <= this.toTime.value) ||
            (this.hasFrom() && !this.hasTo() && this.fromTime.value <= t) ||
            (!this.hasFrom() && this.hasTo() && t <= this.toTime.value);
+  }
+
+  assertScalar(types) {
+    if (this.hasFrom()) {
+      Expression.assertScalar(this.fromValue, types);
+    }
+
+    if (this.hasTo()) {
+      Expression.assertScalar(this.toValue, types);
+    }
+  }
+
+  assertList(length, types) {
+    if (this.hasFrom()) {
+      Expression.assertList(this.fromValue, length, types);
+    }
+
+    if (this.hasTo()) {
+      Expression.assertList(this.toValue, length, types);
+    }
   }
 
   toAnimator() {

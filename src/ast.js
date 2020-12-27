@@ -8,6 +8,7 @@ import {
   LocatedException,
   Precedence,
   SourceLocation,
+  typesToSeries,
 } from './common.js';
 
 import {
@@ -136,6 +137,28 @@ export class Expression {
     } else {
       throw new MessagedException(`I don't know ${pod.type}!`);
     }
+  }
+
+  static assertScalar(e, types) {
+    if (!types.some(type => e instanceof type)) {
+      throw new LocatedException(e.where, `It must be ${typesToSeries(types)}.`);
+    }
+  }
+
+  static assertList(e, length, types) {
+    if (!(e instanceof ExpressionVector)) {
+      throw new LocatedException(e.where, `It must be a list.`);
+    }
+
+    if (e.length !== length) {
+      throw new LocatedException(e.where, `It must be a list with ${length} element${length === 1 ? '' : 's'}.`);
+    }
+
+    e.forEach(element => {
+      if (!types.some(type => element instanceof type)) {
+        throw new LocatedException(e.where, `Each element in the list must be ${typesToSeries(types)}.`);
+      }
+    });
   }
 }
 

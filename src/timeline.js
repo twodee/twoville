@@ -1,4 +1,5 @@
 import {
+  Expression,
   ExpressionInteger
 } from './ast.js';
 
@@ -7,6 +8,7 @@ import {
 } from './interval.js';
 
 import { 
+  typesToSeries,
   MessagedException,
   LocatedException,
 } from './common.js';
@@ -32,6 +34,14 @@ export class Timeline {
     timeline.defaultValue = env.root.omniReify(env, pod.defaultValue);
     timeline.intervals = pod.intervals.map(interval => Interval.reify(env, interval));
     return timeline;
+  }
+
+  get hasDefault() {
+    return !!this.defaultValue;
+  }
+
+  get isAnimated() {
+    return this.intervals.length > 0;
   }
 
   bind(id, rhs, from, to) {
@@ -160,6 +170,25 @@ export class Timeline {
     }
   }
 
+  assertScalar(...types) {
+    if (this.defaultValue) {
+      Expression.assertScalar(this.defaultValue, types);
+    }
+
+    for (let interval of this.intervals) {
+      interval.assertScalar(types);
+    }
+  }
+
+  assertList(length, ...types) {
+    if (this.defaultValue) {
+      Expression.assertList(this.defaultValue, length, types);
+    }
+
+    for (let interval of this.intervals) {
+      interval.assertList(length, types);
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 

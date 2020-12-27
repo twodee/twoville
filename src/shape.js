@@ -10,8 +10,12 @@ import {
 
 import {
   TimelinedEnvironment,
-  Stroke,
 } from './environment.js';
+
+import {
+  Stroke,
+  configureStroke,
+} from './stroke.js';
 
 import {
   CircleMark,
@@ -69,8 +73,6 @@ export class Shape extends TimelinedEnvironment {
     super.initialize(parentEnvironment, where);
 
     this.id = this.root.serial;
-    this.untimedProperties.stroke = Stroke.create(this);
-    this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
     this.sourceSpans = [];
     this.transforms = [];
 
@@ -410,68 +412,38 @@ export class Shape extends TimelinedEnvironment {
     this.connect();
   }
 
-  configureProperty(property, updateDom, resolveDefault, bounds, dependencies) {
-    const timeline = this.timedProperties[property];
-    if (!timeline) return;
-
-    const defaultValue = timeline.defaultValue;
-    let atemporal;
-
-    if (defaultValue) {
-      atemporal = resolveDefault(defaultValue);
-      this[property] = atemporal;
-      if (dependencies.every(dependency => this.timedProperties[dependency].defaultValue)) {
-        updateDom.call(this, bounds);
-      }
+  ageDomWithoutMark(env, bounds, t) {
+    for (let ager of this.agers) {
+      ager(t);
     }
 
-    if (timeline.intervals.length > 0) {
-
-      // If there's no default value, we must assert that the property is
-      // defined for all possible time values.
-      if (!defaultValue) {
-        let t = bounds.startTime;
-        for (let interval of timeline.intervals) {
-          if (!interval.spans(t)) {
-            throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
-          } else if (!interval.hasTo()) {
-            t = null;
-            break;
-          } else {
-            t = interval.toTime.value + 1;
-          }
-        }
-        if (t !== null && t < bounds.stopTime) {
-          throw new LocatedException(this.where, `I found a ${this.article} ${this.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
-        }
-      }
-
-      const animators = timeline.intervals.map(interval => interval.toAnimator());
-      const ager = (t) => {
-        const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
-        if (animator) {
-          this[property] = animator.age(t);
-        } else {
-          this[property] = atemporal;
-        }
-      };
-
-      this.agers.push(ager);
-      this.updateDoms.push(updateDom);
-    } else {
-      // If any dependencies are animated, then this property is indirectly animated.
-      if (dependencies.some(dependency => this.timedProperties[dependency].intervals.length > 0)) {
-        this.updateDoms.push(updateDom);
-      }
+    for (let updateDom of this.updateDoms) {
+      updateDom(bounds);
     }
   }
 
-  configureVectorProperty(property, updateDom, bounds, dependencies) {
-    this.configureProperty(property, updateDom, atemporal => atemporal.toPrimitiveArray(), bounds, dependencies);
+  ageDomWithMarks() {
   }
 
-  configureScalarProperty(property, updateDom, bounds, dependencies) {
-    this.configureProperty(property, updateDom, atemporal => atemporal.value, bounds, dependencies);
+  configureStroke(stateHost, bounds) {
+    this.strokeStateHost = stateHost;
+    configureStroke(stateHost, this, bounds);
+  }
+
+  updateStrokeColorDom(bounds) {
+    const r = Math.floor(this.strokeStateHost.color[0] * 255);
+    const g = Math.floor(this.strokeStateHost.color[1] * 255);
+    const b = Math.floor(this.strokeStateHost.color[2] * 255);
+    const rgb = `rgb(${r}, ${g}, ${b})`;
+    this.element.setAttributeNS(null, 'stroke', rgb);
+  }
+
+  updateStrokeSizeDom(bounds) {
+    this.element.setAttributeNS(null, 'stroke-width', this.strokeStateHost.size);
+  }
+
+  updateStrokeOpacityDom(bounds) {
+    this.element.setAttributeNS(null, 'stroke-opacity', this.strokeStateHost.opacity);
   }
 }
 
@@ -586,36 +558,15 @@ export class Text extends Shape {
 
 // --------------------------------------------------------------------------- 
 
-class FilledShape extends Shape {
-  configureColor(bounds) {
-    this.configureVectorProperty('color', this.updateColorDom, bounds, []);
-    this.configureScalarProperty('opacity', this.updateOpacityDom, bounds, []);
-  }
-
-  updateOpacityDom(bounds) {
-    this.element.setAttributeNS(null, 'fill-opacity', this.opacity);
-  }
-
-  updateColorDom(bounds) {
-    const r = Math.floor(this.color[0] * 255);
-    const g = Math.floor(this.color[1] * 255);
-    const b = Math.floor(this.color[2] * 255);
-    const rgb = `rgb(${r}, ${g}, ${b})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-class StrokedShape extends Shape {
-}
-
-// --------------------------------------------------------------------------- 
-
-export class Rectangle extends FilledShape {
+export class Rectangle extends Shape {
   static type = 'rectangle';
   static article = 'a';
   static timedIds = ['corner', 'center', 'size', 'color', 'opacity', 'rounding', 'enabled'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+    this.initializeFill();
+  }
 
   static create(parentEnvironment, where) {
     const shape = new Rectangle();
@@ -629,140 +580,174 @@ export class Rectangle extends FilledShape {
     return shape;
   }
 
-  start() {
-    super.start();
-    this.element = document.createElementNS(svgNamespace, 'rect');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+  // start() {
+    // super.start();
+    // this.element = document.createElementNS(svgNamespace, 'rect');
+    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.outlineMark = new RectangleMark();
-    this.positionMark = new VectorPanMark(this);
-    this.widthMark = new HorizontalPanMark(this, this, this.owns('center') ? 2 : 1);
-    this.heightMark = new VerticalPanMark(this, this, this.owns('center') ? 2 : 1);
+    // this.outlineMark = new RectangleMark();
+    // this.positionMark = new VectorPanMark(this);
+    // this.widthMark = new HorizontalPanMark(this, this, this.owns('center') ? 2 : 1);
+    // this.heightMark = new VerticalPanMark(this, this, this.owns('center') ? 2 : 1);
 
-    this.markers[0].addMarks([this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
+    // this.markers[0].addMarks([this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
 
-    this.connect();
-  }
+    // this.connect();
+  // }
 
-  validate() {
-    super.validate();
+  // validate() {
+    // super.validate();
 
-    if (this.owns('corner') && this.owns('center')) {
-      throw new LocatedException(this.where, 'I found a rectangle whose corner and center properties were both set. Define only one of these.');
-    }
+    // if (this.owns('corner') && this.owns('center')) {
+      // throw new LocatedException(this.where, 'I found a rectangle whose corner and center properties were both set. Define only one of these.');
+    // }
 
-    if (!this.owns('corner') && !this.owns('center')) {
-      throw new LocatedException(this.where, 'I found a rectangle whose location I couldn\'t figure out. Please define its corner or center.');
-    }
+    // if (!this.owns('corner') && !this.owns('center')) {
+      // throw new LocatedException(this.where, 'I found a rectangle whose location I couldn\'t figure out. Please define its corner or center.');
+    // }
     
-    this.assertProperty('size');
-  }
+    // this.assertProperty('size');
+  // }
 
-  updateProperties(env, t, bounds, matrix) {
-    const size = this.valueAt(env, 'size', t);
-    if (!size) {
-      this.hide();
-      return;
-    }
+  // updateProperties(env, t, bounds, matrix) {
+    // const size = this.valueAt(env, 'size', t);
+    // if (!size) {
+      // this.hide();
+      // return;
+    // }
 
-    if (!this.setColor(env, t)) {
-      return;
-    }
+    // if (!this.setColor(env, t)) {
+      // return;
+    // }
 
-    matrix = this.transform(env, t, bounds, matrix);
+    // matrix = this.transform(env, t, bounds, matrix);
 
-    this.widthMark.setExpression(size.get(0));
-    this.heightMark.setExpression(size.get(1));
+    // this.widthMark.setExpression(size.get(0));
+    // this.heightMark.setExpression(size.get(1));
 
-    let corner;
-    let center;
-    if (this.owns('corner')) {
-      corner = this.valueAt(env, 'corner', t);
-      this.positionMark.setExpression(corner);
-    } else {
-      center = this.valueAt(env, 'center', t);
-      this.positionMark.setExpression(center);
-      corner = new ExpressionVector([
-        new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
-        new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
-      ]);
-    }
+    // let corner;
+    // let center;
+    // if (this.owns('corner')) {
+      // corner = this.valueAt(env, 'corner', t);
+      // this.positionMark.setExpression(corner);
+    // } else {
+      // center = this.valueAt(env, 'center', t);
+      // this.positionMark.setExpression(center);
+      // corner = new ExpressionVector([
+        // new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
+        // new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
+      // ]);
+    // }
 
-    if (!corner || !size) {
-      this.hide();
-    } else {
-      this.show();
+    // if (!corner || !size) {
+      // this.hide();
+    // } else {
+      // this.show();
 
-      let rounding;
-      if (this.owns('rounding')) {
-        rounding = this.valueAt(env, 'rounding', t);
-        this.element.setAttributeNS(null, 'rx', rounding.value);
-        this.element.setAttributeNS(null, 'ry', rounding.value);
-      }
+      // let rounding;
+      // if (this.owns('rounding')) {
+        // rounding = this.valueAt(env, 'rounding', t);
+        // this.element.setAttributeNS(null, 'rx', rounding.value);
+        // this.element.setAttributeNS(null, 'ry', rounding.value);
+      // }
 
-      const box = new BoundingBox();
-      box.include(corner.toPrimitiveArray());
-      box.include(corner.add(size).toPrimitiveArray());
+      // const box = new BoundingBox();
+      // box.include(corner.toPrimitiveArray());
+      // box.include(corner.add(size).toPrimitiveArray());
 
-      if (this.owns('stroke')) {
-        const strokeWidth = this.untimedProperties.stroke.applyStroke(env, t, this.element);
-        box.thicken(strokeWidth);
-      }
+      // if (this.owns('stroke')) {
+        // const strokeWidth = this.untimedProperties.stroke.applyStroke(env, t, this.element);
+        // box.thicken(strokeWidth);
+      // }
 
-      env.root.include(box);
+      // env.root.include(box);
 
-      this.element.setAttributeNS(null, 'x', corner.get(0).value);
-      this.element.setAttributeNS(null, 'y', bounds.span - size.get(1).value - corner.get(1).value);
-      this.element.setAttributeNS(null, 'width', size.get(0).value);
-      this.element.setAttributeNS(null, 'height', size.get(1).value);
+      // this.element.setAttributeNS(null, 'x', corner.get(0).value);
+      // this.element.setAttributeNS(null, 'y', bounds.span - size.get(1).value - corner.get(1).value);
+      // this.element.setAttributeNS(null, 'width', size.get(0).value);
+      // this.element.setAttributeNS(null, 'height', size.get(1).value);
 
-      this.outlineMark.updateProperties(corner, size, bounds, rounding, matrix);
-      if (center) {
-        this.positionMark.updateProperties(center, bounds, matrix);
-        this.widthMark.updateProperties(new ExpressionVector([
-          new ExpressionReal(center.get(0).value + size.get(0).value * 0.5),
-          center.get(1)
-        ]), bounds, matrix);
-        this.heightMark.updateProperties(new ExpressionVector([
-          center.get(0),
-          new ExpressionReal(center.get(1).value + size.get(1).value * 0.5)
-        ]), bounds, matrix);
-      } else {
-        this.positionMark.updateProperties(corner, bounds, matrix);
-        this.widthMark.updateProperties(new ExpressionVector([
-          new ExpressionReal(corner.get(0).value + size.get(0).value),
-          corner.get(1)
-        ]), bounds, matrix);
-        this.heightMark.updateProperties(new ExpressionVector([
-          corner.get(0),
-          new ExpressionReal(corner.get(1).value + size.get(1).value)
-        ]), bounds, matrix);
-      }
+      // this.outlineMark.updateProperties(corner, size, bounds, rounding, matrix);
+      // if (center) {
+        // this.positionMark.updateProperties(center, bounds, matrix);
+        // this.widthMark.updateProperties(new ExpressionVector([
+          // new ExpressionReal(center.get(0).value + size.get(0).value * 0.5),
+          // center.get(1)
+        // ]), bounds, matrix);
+        // this.heightMark.updateProperties(new ExpressionVector([
+          // center.get(0),
+          // new ExpressionReal(center.get(1).value + size.get(1).value * 0.5)
+        // ]), bounds, matrix);
+      // } else {
+        // this.positionMark.updateProperties(corner, bounds, matrix);
+        // this.widthMark.updateProperties(new ExpressionVector([
+          // new ExpressionReal(corner.get(0).value + size.get(0).value),
+          // corner.get(1)
+        // ]), bounds, matrix);
+        // this.heightMark.updateProperties(new ExpressionVector([
+          // corner.get(0),
+          // new ExpressionReal(corner.get(1).value + size.get(1).value)
+        // ]), bounds, matrix);
+      // }
 
-      const centroid = corner.add(size.multiply(new ExpressionReal(0.5)));
-      this.updateCentroid(matrix, centroid, bounds);
-      return centroid;
-    }
-  }
+      // const centroid = corner.add(size.multiply(new ExpressionReal(0.5)));
+      // this.updateCentroid(matrix, centroid, bounds);
+      // return centroid;
+    // }
+  // }
 
   configureState(bounds) {
-    super.configure(bounds);
-
     this.element = document.createElementNS(svgNamespace, 'rect');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.element.setAttributeNS(null, 'x', 0);
-    this.element.setAttributeNS(null, 'y', 0);
 
-    super.configureColor(bounds);
-    this.configureScalarProperty('rounding', this.updateRoundingDom, bounds, []);
-    this.configureVectorProperty('size', this.updateSizeDom, bounds, []);
+    this.configureFill(bounds);
+
+    this.configureScalarProperty('rounding', this, this, this.updateRoundingDom.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        return false;
+      }
+
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>rounding</code>. ${e.message}`);
+      }
+    });
+
+    this.configureVectorProperty('size', this, this, this.updateSizeDom.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a rectangle whose <code>size</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
+      }
+    });
 
     if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
       throw new LocatedException(this.where, 'I found a rectangle whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
     } else if (this.timedProperties.hasOwnProperty('corner')) {
-      this.configureVectorProperty('corner', this.updateCornerDom, bounds, ['size']);
+      this.configureVectorProperty('corner', this, this, this.updateCornerDom.bind(this), bounds, ['size'], timeline => {
+        try {
+          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
+        }
+      });
     } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureVectorProperty('center', this.updateCenterDom, bounds, ['size']);
+      this.configureVectorProperty('center', this, this, this.updateCenterDom.bind(this), bounds, ['size'], timeline => {
+        try {
+          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
+        }
+      });
     } else {
       throw new LocatedException(this.where, "I found a rectangle whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
     }
@@ -787,19 +772,6 @@ export class Rectangle extends FilledShape {
     this.element.setAttributeNS(null, 'x', this.corner[0]);
     this.element.setAttributeNS(null, 'y', bounds.span - this.size[1] - this.corner[1]);
   }
-
-  ageDomWithoutMark(env, bounds, t) {
-    for (let ager of this.agers) {
-      ager(t);
-    }
-
-    for (let updateDom of this.updateDoms) {
-      updateDom.call(this, bounds);
-    }
-  }
-
-  ageDomWithMarks() {
-  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -808,6 +780,11 @@ export class Circle extends Shape {
   static type = 'circle';
   static article = 'a';
   static timedIds = ['center', 'radius', 'color', 'opacity', 'enabled'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+    this.initializeFill();
+  }
 
   static create(parentEnvironment, where) {
     const shape = new Circle();
@@ -821,61 +798,103 @@ export class Circle extends Shape {
     return shape;
   }
 
-  start() {
-    super.start();
+  // start() {
+    // super.start();
+    // this.element = document.createElementNS(svgNamespace, 'circle');
+    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    // this.outlineMark = new CircleMark();
+    // this.centerMark = new VectorPanMark(this);
+    // this.radiusMark = new HorizontalPanMark(this);
+
+    // this.markers[0].addMarks([this.centerMark, this.radiusMark], [this.outlineMark]);
+    // this.connect();
+  // }
+
+  // validate() {
+    // super.validate();
+    // this.assertProperty('center');
+    // this.assertProperty('radius');
+  // }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // if (!this.setColor(env, t)) {
+      // return null;
+    // }
+
+    // matrix = this.transform(env, t, bounds, matrix);
+
+    // const radius = this.valueAt(env, 'radius', t);
+    // this.radiusMark.setExpression(radius);
+
+    // const center = this.valueAt(env, 'center', t);
+    // this.centerMark.setExpression(center);
+
+    // if (!center || !radius) {
+      // this.hide();
+    // } else {
+      // this.show();
+
+      // if (this.owns('stroke')) {
+        // this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      // }
+
+      // this.element.setAttributeNS(null, 'cx', center.get(0).value);
+      // this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
+      // this.element.setAttributeNS(null, 'r', radius.value);
+
+      // this.outlineMark.updateProperties(center, radius, bounds, matrix);
+      // this.centerMark.updateProperties(center, bounds, matrix);
+      // this.radiusMark.updateProperties(new ExpressionVector([
+        // new ExpressionReal(center.get(0).value + radius.value),
+        // center.get(1)
+      // ]), bounds, matrix);
+
+      // this.updateCentroid(matrix, center, bounds);
+      // return center;
+    // }
+  // }
+
+  configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'circle');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.outlineMark = new CircleMark();
-    this.centerMark = new VectorPanMark(this);
-    this.radiusMark = new HorizontalPanMark(this);
+    this.configureFill(bounds);
 
-    this.markers[0].addMarks([this.centerMark, this.radiusMark], [this.outlineMark]);
-    this.connect();
-  }
-
-  validate() {
-    super.validate();
-    this.assertProperty('center');
-    this.assertProperty('radius');
-  }
-
-  updateProperties(env, t, bounds, matrix) {
-    if (!this.setColor(env, t)) {
-      return null;
-    }
-
-    matrix = this.transform(env, t, bounds, matrix);
-
-    const radius = this.valueAt(env, 'radius', t);
-    this.radiusMark.setExpression(radius);
-
-    const center = this.valueAt(env, 'center', t);
-    this.centerMark.setExpression(center);
-
-    if (!center || !radius) {
-      this.hide();
-    } else {
-      this.show();
-
-      if (this.owns('stroke')) {
-        this.untimedProperties.stroke.applyStroke(env, t, this.element);
+    this.configureScalarProperty('radius', this, this, this.updateRadiusDom.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>circle</code> whose <code>radius</code> was not set.');
       }
 
-      this.element.setAttributeNS(null, 'cx', center.get(0).value);
-      this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
-      this.element.setAttributeNS(null, 'r', radius.value);
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>radius</code>. ${e.message}`);
+      }
+    });
 
-      this.outlineMark.updateProperties(center, radius, bounds, matrix);
-      this.centerMark.updateProperties(center, bounds, matrix);
-      this.radiusMark.updateProperties(new ExpressionVector([
-        new ExpressionReal(center.get(0).value + radius.value),
-        center.get(1)
-      ]), bounds, matrix);
+    this.configureVectorProperty('center', this, this, this.updateCenterDom.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>circle</code> whose <code>center</code> was not set.');
+      }
 
-      this.updateCentroid(matrix, center, bounds);
-      return center;
-    }
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
+      }
+    });
+  }
+
+  updateRadiusDom(bounds) {
+    this.element.setAttributeNS(null, 'r', this.radius);
+  }
+
+  updateCenterDom(bounds) {
+    this.element.setAttributeNS(null, 'cx', this.center[0]);
+    this.element.setAttributeNS(null, 'cy', bounds.span - this.center[1]);
   }
 }
 
@@ -901,38 +920,52 @@ export class NodeShape extends Shape {
     this.mirrors = pod.mirrors.map(subpod => this.root.omniReify(this, subpod));
   }
 
-  validate() {
-    super.validate();
-    for (let node of this.nodes) {
-      node.validate();
+  // validate() {
+    // super.validate();
+    // for (let node of this.nodes) {
+      // node.validate();
+    // }
+    // for (let mirror of this.mirrors) {
+      // mirror.validate();
+    // }
+  // }
+
+  // start() {
+    // super.start();
+    // for (let node of this.nodes) {
+      // node.start();
+    // }
+    // for (let mirror of this.mirrors) {
+      // mirror.start();
+    // }
+  // }
+
+  configureNodes(bounds) {
+    for (let [i, node] of this.nodes.entries()) {
+      node.configure(i > 0 ? this.nodes[i - 1].turtle : null, bounds);
     }
-    for (let mirror of this.mirrors) {
-      mirror.validate();
+
+    if (this.nodes.some(node => node.isAnimated)) {
+      this.updateDoms.push(this.updateNodeDom.bind(this));
+    }
+
+    if (this.nodes.every(node => node.hasAllDefaults)) {
+      this.updateNodeDom(bounds);
     }
   }
 
-  start() {
-    super.start();
-    for (let node of this.nodes) {
-      node.start();
-    }
-    for (let mirror of this.mirrors) {
-      mirror.start();
-    }
-  }
-
-  traverseNodes(env, t, bounds, matrix) {
-    let currentTurtle = new Turtle(null, null);
-    let previousSegment = undefined;
-    const pieces = [];
-    for (let node of this.nodes) {
-      const piece = node.updateProperties(env, t, bounds, currentTurtle, matrix, previousSegment);
-      pieces.push(piece);
-      currentTurtle = piece.turtle;
-      previousSegment = piece.segment;
-    }
-    return pieces;
-  }
+  // traverseNodes(env, t, bounds, matrix) {
+    // let currentTurtle = new Turtle(null, null);
+    // let previousSegment = undefined;
+    // const pieces = [];
+    // for (let node of this.nodes) {
+      // const piece = node.updateProperties(env, t, bounds, currentTurtle, matrix, previousSegment);
+      // pieces.push(piece);
+      // currentTurtle = piece.turtle;
+      // previousSegment = piece.segment;
+    // }
+    // return pieces;
+  // }
 
   mirrorPositions(positions, env, t, bounds, matrix) {
     for (let mirror of this.mirrors) {
@@ -986,6 +1019,16 @@ export class NodeShape extends Shape {
   addMirror(mirror) {
     this.mirrors.push(mirror);
   }
+
+  ageDomWithoutMark(env, bounds, t) {
+    for (let ager of this.agers) {
+      ager(t);
+    }
+
+    for (let updateDom of this.updateDoms) {
+      updateDom(bounds);
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -1009,6 +1052,7 @@ export class Polygon extends VertexShape {
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
+    this.initializeFill();
 
     this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
@@ -1029,58 +1073,76 @@ export class Polygon extends VertexShape {
     return shape;
   }
 
-  start() {
-    super.start();
+  // start() {
+    // super.start();
 
+    // this.element = document.createElementNS(svgNamespace, 'polygon');
+    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    // this.outlineMark = new PolygonMark();
+    // this.markers[0].addMarks([], [this.outlineMark]);
+    // this.connect();
+  // }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // if (!this.setColor(env, t)) {
+      // return null;
+    // }
+
+    // matrix = this.transform(env, t, bounds, matrix);
+
+    // const pieces = this.traverseNodes(env, t, bounds, matrix);
+    // const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
+
+    // if (positions.some(position => !position)) {
+      // this.hide();
+    // } else {
+      // this.show();
+
+      // let strokeWidth = 0;
+      // if (this.owns('stroke')) {
+        // strokeWidth = this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      // }
+
+      // if (this.mirrors.length > 0) {
+        // this.mirrorPositions(positions, env, t, bounds, matrix);
+      // }
+
+      // const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+
+      // if (positions.length > 0) {
+        // const box = positions.reduce((acc, p) => acc.include(p.toPrimitiveArray()), new BoundingBox());
+        // box.thicken(strokeWidth);
+        // env.root.include(box);
+      // }
+
+      // this.element.setAttributeNS(null, 'points', coordinates);
+
+      // this.outlineMark.updateProperties(coordinates, matrix);
+
+      // const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+      // const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      // this.updateCentroid(matrix, centroid, bounds);
+      // return centroid;
+    // }
+  // }
+
+  configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'polygon');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.outlineMark = new PolygonMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
-    this.connect();
+    this.domNodes = this.nodes.filter(node => node.isDom);
+    if (this.domNodes.length < 3) {
+      throw new LocatedException(this.where, `I found a <code>polygon</code> that had ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
+    }
+
+    this.configureNodes(bounds);
+    this.configureFill(bounds);
   }
 
-  updateProperties(env, t, bounds, matrix) {
-    if (!this.setColor(env, t)) {
-      return null;
-    }
-
-    matrix = this.transform(env, t, bounds, matrix);
-
-    const pieces = this.traverseNodes(env, t, bounds, matrix);
-    const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
-
-    if (positions.some(position => !position)) {
-      this.hide();
-    } else {
-      this.show();
-
-      let strokeWidth = 0;
-      if (this.owns('stroke')) {
-        strokeWidth = this.untimedProperties.stroke.applyStroke(env, t, this.element);
-      }
-
-      if (this.mirrors.length > 0) {
-        this.mirrorPositions(positions, env, t, bounds, matrix);
-      }
-
-      const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
-
-      if (positions.length > 0) {
-        const box = positions.reduce((acc, p) => acc.include(p.toPrimitiveArray()), new BoundingBox());
-        box.thicken(strokeWidth);
-        env.root.include(box);
-      }
-
-      this.element.setAttributeNS(null, 'points', coordinates);
-
-      this.outlineMark.updateProperties(coordinates, matrix);
-
-      const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
-      this.updateCentroid(matrix, centroid, bounds);
-      return centroid;
-    }
+  updateNodeDom(bounds) {
+    const coordinates = this.domNodes.map(({position}) => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    this.element.setAttributeNS(null, 'points', coordinates);
   }
 }
 
@@ -1113,49 +1175,63 @@ export class Polyline extends VertexShape {
     return shape;
   }
 
-  validate() {
-    super.validate();
-    this.assertProperty('size');
-    this.assertProperty('color');
-  }
+  // validate() {
+    // super.validate();
+    // this.assertProperty('size');
+    // this.assertProperty('color');
+  // }
 
-  start() {
-    super.start();
+  // start() {
+    // super.start();
 
+    // this.element = document.createElementNS(svgNamespace, 'polyline');
+    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    // this.element.setAttributeNS(null, 'fill', 'none');
+
+    // this.outlineMark = new PolylineMark();
+    // this.markers[0].addMarks([], [this.outlineMark]);
+    // this.connect();
+  // }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // matrix = this.transform(env, t, bounds, matrix);
+
+    // const pieces = this.traverseNodes(env, t, bounds, matrix);
+    // const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
+
+    // if (positions.some(position => !position)) {
+      // this.hide();
+    // } else {
+      // if (this.mirrors.length > 0) {
+        // this.mirrorPositions(positions, env, t, bounds, matrix);
+      // }
+
+      // this.show();
+
+      // this.applyStroke(env, t, this.element);
+      // const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+      // this.element.setAttributeNS(null, 'points', coordinates);
+      // this.outlineMark.updateProperties(coordinates, matrix);
+
+      // const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+      // const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      // this.updateCentroid(matrix, centroid, bounds);
+      // return centroid;
+    // }
+  // }
+
+  configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'polyline');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.setAttributeNS(null, 'fill', 'none');
-
-    this.outlineMark = new PolylineMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
-    this.connect();
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.domNodes = this.nodes.filter(node => node.isDom);
+    this.configureNodes(bounds);
+    this.configureStroke(this, bounds);
   }
 
-  updateProperties(env, t, bounds, matrix) {
-    matrix = this.transform(env, t, bounds, matrix);
-
-    const pieces = this.traverseNodes(env, t, bounds, matrix);
-    const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
-
-    if (positions.some(position => !position)) {
-      this.hide();
-    } else {
-      if (this.mirrors.length > 0) {
-        this.mirrorPositions(positions, env, t, bounds, matrix);
-      }
-
-      this.show();
-
-      this.applyStroke(env, t, this.element);
-      const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
-      this.element.setAttributeNS(null, 'points', coordinates);
-      this.outlineMark.updateProperties(coordinates, matrix);
-
-      const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
-      this.updateCentroid(matrix, centroid, bounds);
-      return centroid;
-    }
+  updateNodeDom(bounds) {
+    const coordinates = this.domNodes.map(({position}) => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    this.element.setAttributeNS(null, 'points', coordinates);
   }
 }
 
@@ -1187,54 +1263,74 @@ export class Line extends VertexShape {
     return shape;
   }
 
-  validate() {
-    super.validate();
-    this.assertProperty('size');
-    this.assertProperty('color');
-    this.assertProperty('opacity');
-  }
+  // validate() {
+    // super.validate();
+    // this.assertProperty('size');
+    // this.assertProperty('color');
+    // this.assertProperty('opacity');
+  // }
 
-  start() {
-    super.start();
+  // start() {
+    // super.start();
 
+    // this.element = document.createElementNS(svgNamespace, 'line');
+    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    // this.outlineMark = new LineMark();
+    // this.markers[0].addMarks([], [this.outlineMark]);
+    // this.connect();
+  // }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // matrix = this.transform(env, t, bounds, matrix);
+
+    // const pieces = this.traverseNodes(env, t, bounds, matrix);
+    // const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
+
+    // if (positions.length != 2) {
+      // throw new LocatedException(this.where, `I tried to draw a line that had ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
+    // }
+
+    // if (positions.some(position => !position)) {
+      // this.hide();
+    // } else {
+      // this.show();
+      // this.applyStroke(env, t, this.element);
+
+      // const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
+
+      // this.element.setAttributeNS(null, 'x1', positions[0].get(0).value);
+      // this.element.setAttributeNS(null, 'y1', bounds.span - positions[0].get(1).value);
+      // this.element.setAttributeNS(null, 'x2', positions[1].get(0).value);
+      // this.element.setAttributeNS(null, 'y2', bounds.span - positions[1].get(1).value);
+
+      // this.outlineMark.updateProperties(positions[0], positions[1], bounds);
+
+      // const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+      // const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
+      // this.updateCentroid(matrix, centroid, bounds);
+      // return centroid;
+    // }
+  // }
+
+  configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'line');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.outlineMark = new LineMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
-    this.connect();
+    this.domNodes = this.nodes.filter(node => node.isDom);
+    if (this.domNodes.length != 2) {
+      throw new LocatedException(this.where, `I found a line that had ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
+    }
+
+    this.configureNodes(bounds);
+    this.configureStroke(this, bounds);
   }
 
-  updateProperties(env, t, bounds, matrix) {
-    matrix = this.transform(env, t, bounds, matrix);
-
-    const pieces = this.traverseNodes(env, t, bounds, matrix);
-    const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
-
-    if (positions.length != 2) {
-      throw new LocatedException(this.where, `I tried to draw a line that had ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
-    }
-
-    if (positions.some(position => !position)) {
-      this.hide();
-    } else {
-      this.show();
-      this.applyStroke(env, t, this.element);
-
-      const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
-
-      this.element.setAttributeNS(null, 'x1', positions[0].get(0).value);
-      this.element.setAttributeNS(null, 'y1', bounds.span - positions[0].get(1).value);
-      this.element.setAttributeNS(null, 'x2', positions[1].get(0).value);
-      this.element.setAttributeNS(null, 'y2', bounds.span - positions[1].get(1).value);
-
-      this.outlineMark.updateProperties(positions[0], positions[1], bounds);
-
-      const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
-      this.updateCentroid(matrix, centroid, bounds);
-      return centroid;
-    }
+  updateNodeDom(bounds) {
+    this.element.setAttributeNS(null, 'x1', this.domNodes[0].turtle.position[0]);
+    this.element.setAttributeNS(null, 'y1', bounds.span - this.domNodes[0].turtle.position[1]);
+    this.element.setAttributeNS(null, 'x2', this.domNodes[1].turtle.position[0]);
+    this.element.setAttributeNS(null, 'y2', bounds.span - this.domNodes[1].turtle.position[1]);
   }
 }
 
@@ -1247,6 +1343,7 @@ export class Ungon extends VertexShape {
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
+    this.initializeFill();
 
     this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
@@ -1361,6 +1458,7 @@ export class Path extends NodeShape {
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
+    this.initializeFill();
 
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
@@ -1394,79 +1492,91 @@ export class Path extends NodeShape {
     }
   }
 
-  start() {
-    super.start();
+  // start() {
+    // super.start();
 
+    // this.element = document.createElementNS(svgNamespace, 'path');
+    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    // this.outlineMark = new PathMark();
+
+    // this.markers[0].addMarks([], [this.outlineMark]);
+    // this.connect();
+  // }
+
+  // validate() {
+    // super.validate();
+    // this.assertProperty('closed');
+  // }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // if (!this.setColor(env, t)) {
+      // return null;
+    // }
+
+    // matrix = this.transform(env, t, bounds, matrix);
+
+    // const pieces = this.traverseNodes(env, t, bounds, matrix);
+
+    // let isClosed = this.untimedProperties.closed.value;
+
+    // if (pieces.some(piece => !piece)) {
+      // this.hide();
+    // } else {
+      // this.show();
+
+      // if (this.owns('stroke')) {
+        // this.untimedProperties.stroke.applyStroke(env, t, this.element);
+      // }
+
+      // const pathCommands = pieces.map(piece => piece.pathCommand);
+
+      // if (this.mirrors.length > 0) {
+        // let segments = pieces.map(piece => piece.segment).slice(1).filter(segment => !!segment);
+
+        // for (let mirror of this.mirrors) {
+          // const {position, axis} = mirror.updateProperties(env, t, bounds, matrix);
+
+          // const mirroredSegments = segments.slice();
+          // mirroredSegments.reverse();
+
+          // if (mirroredSegments[0].to.distanceToLine(position, axis) > 1e-6) {
+            // mirroredSegments.unshift(mirroredSegments[0].mirrorBridge(position, axis));
+          // }
+
+          // mirroredSegments = mirroredSegments.map((segment, i) => segment.mirror(position, axis, i > 0));
+
+          // for (let segment of mirroredSegments) {
+            // pathCommands.push(segment.toCommandString(env, bounds));
+          // }
+
+          // segments.push(...mirroredSegments);
+        // }
+      // }
+
+      // let commandString = pathCommands.join(' ');
+      // if (isClosed) {
+        // commandString += ' Z';
+      // }
+
+      // this.element.setAttributeNS(null, 'd', commandString);
+
+      // this.outlineMark.updateProperties(commandString, matrix);
+
+      // return null;
+    // }
+  // }
+
+  configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-
-    this.outlineMark = new PathMark();
-
-    this.markers[0].addMarks([], [this.outlineMark]);
-    this.connect();
+    this.domNodes = this.nodes.filter(node => node.isDom);
+    this.configureNodes(bounds);
+    this.configureFill(bounds);
   }
 
-  validate() {
-    super.validate();
-    this.assertProperty('closed');
-  }
-
-  updateProperties(env, t, bounds, matrix) {
-    if (!this.setColor(env, t)) {
-      return null;
-    }
-
-    matrix = this.transform(env, t, bounds, matrix);
-
-    const pieces = this.traverseNodes(env, t, bounds, matrix);
-
-    let isClosed = this.untimedProperties.closed.value;
-
-    if (pieces.some(piece => !piece)) {
-      this.hide();
-    } else {
-      this.show();
-
-      if (this.owns('stroke')) {
-        this.untimedProperties.stroke.applyStroke(env, t, this.element);
-      }
-
-      const pathCommands = pieces.map(piece => piece.pathCommand);
-
-      if (this.mirrors.length > 0) {
-        let segments = pieces.map(piece => piece.segment).slice(1).filter(segment => !!segment);
-
-        for (let mirror of this.mirrors) {
-          const {position, axis} = mirror.updateProperties(env, t, bounds, matrix);
-
-          const mirroredSegments = segments.slice();
-          mirroredSegments.reverse();
-
-          if (mirroredSegments[0].to.distanceToLine(position, axis) > 1e-6) {
-            mirroredSegments.unshift(mirroredSegments[0].mirrorBridge(position, axis));
-          }
-
-          mirroredSegments = mirroredSegments.map((segment, i) => segment.mirror(position, axis, i > 0));
-
-          for (let segment of mirroredSegments) {
-            pathCommands.push(segment.toCommandString(env, bounds));
-          }
-
-          segments.push(...mirroredSegments);
-        }
-      }
-
-      let commandString = pathCommands.join(' ');
-      if (isClosed) {
-        commandString += ' Z';
-      }
-
-      this.element.setAttributeNS(null, 'd', commandString);
-
-      this.outlineMark.updateProperties(commandString, matrix);
-
-      return null;
-    }
+  updateNodeDom(bounds) {
+    this.element.setAttributeNS(null, 'd', this.domNodes.map(node => node.pathCommand).join(' '));
   }
 }
 
@@ -1682,6 +1792,75 @@ export class Tip extends Group {
     return centroid;
   }
 }
+
+// --------------------------------------------------------------------------- 
+
+const FillMixin = {
+  initializeFill: function() {
+    this.untimedProperties.stroke = Stroke.create(this);
+    this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
+  },
+
+  configureFill: function(bounds) {
+    this.configureColor(bounds);
+    this.configureStroke(this.untimedProperties.stroke, bounds);
+  },
+
+  configureColor: function(bounds) {
+    this.configureScalarProperty('opacity', this, this, this.updateOpacityDom.bind(this), bounds, [], timeline => {
+      if (timeline) {
+        try {
+          timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>opacity</code>. ${e.message}`);
+        }
+      }
+      return true;
+    });
+
+    this.configureVectorProperty('color', this, this, this.updateColorDom.bind(this), bounds, [], timeline => {
+      if (timeline) {
+        try {
+          timeline.assertList(3, ExpressionInteger, ExpressionReal);
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>color</code>. ${e.message}`);
+        }
+      }
+
+      // If the opacity is non-zero anywhen, then color is a required property.
+      const opacityTimeline = this.timedProperties.opacity;
+      const needsColor =
+        (opacityTimeline.defaultValue && opacityTimeline.defaultValue.value > 0) ||
+        opacityTimeline.intervals.some(interval => (interval.hasFrom() && interval.fromValue.value > 0 || interval.hasTo() && interval.toValue.value > 0));
+
+      if (!needsColor) {
+        return false;
+      } else if (!timeline) {
+        throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>color</code> isn't set.`);
+      } else {
+        return true;
+      }
+    });
+  },
+
+  updateOpacityDom: function(bounds) {
+    this.element.setAttributeNS(null, 'fill-opacity', this.opacity);
+  },
+
+  updateColorDom: function(bounds) {
+    const r = Math.floor(this.color[0] * 255);
+    const g = Math.floor(this.color[1] * 255);
+    const b = Math.floor(this.color[2] * 255);
+    const rgb = `rgb(${r}, ${g}, ${b})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
+  },
+};
+
+Object.assign(Rectangle.prototype, FillMixin);
+Object.assign(Circle.prototype, FillMixin);
+Object.assign(Ungon.prototype, FillMixin);
+Object.assign(Polygon.prototype, FillMixin);
+Object.assign(Path.prototype, FillMixin);
 
 // --------------------------------------------------------------------------- 
 

@@ -17,8 +17,11 @@ import {
 
 import {
   Environment,
-  Stroke,
 } from './environment.js';
+
+import {
+  Stroke,
+} from './stroke.js';
 
 import {
   Shape,

@@ -8,6 +8,7 @@ import {
 
 import {
   ExpressionBoolean,
+  ExpressionInteger,
   ExpressionReal,
   ExpressionVector,
 } from './ast.js';
@@ -54,10 +55,10 @@ export class Node extends TimelinedEnvironment {
     this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
   }
 
-  start() {
-    this.marker = new Marker(this.parentEnvironment);
-    this.parentEnvironment.addMarker(this.marker);
-  }
+  // start() {
+    // this.marker = new Marker(this.parentEnvironment);
+    // this.parentEnvironment.addMarker(this.marker);
+  // }
 
   castCursor(column, row) {
     const isHit = this.sourceSpans.some(span => span.contains(column, row));
@@ -66,6 +67,12 @@ export class Node extends TimelinedEnvironment {
       this.parentEnvironment.selectMarker(this.marker.id);
     }
     return isHit;
+  }
+
+  configure(previousTurtle, bounds) {
+    this.previousTurtle = previousTurtle;
+    this.turtle = new Turtle([0, 0], 0);
+    this.configureState(bounds);
   }
 }
 
@@ -88,30 +95,55 @@ export class VertexNode extends Node {
     return node;
   }
 
-  validate() {
-    this.assertProperty('position');
+  get isDom() {
+    return true;
   }
 
-  start() {
-    super.start();
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks([this.positionMark], []);
+  configureState(bounds) {
+    this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>vertex</code> whose <code>position</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>vertex</code> with an illegal value for <code>position</code>. ${e.message}`);
+      }
+    });
   }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
-    const position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.position[0];
+    this.turtle.position[1] = this.position[1];
+    this.turtle.heading = 0;
+  }
+
+  // validate() {
+    // this.assertProperty('position');
+  // }
+
+  // start() {
+    // super.start();
+    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.marker.addMarks([this.positionMark], []);
+  // }
+
+  // updateProperties(env, t, bounds, fromTurtle, matrix) {
+    // const position = this.valueAt(env, 'position', t);
+    // this.positionMark.setExpression(position);
     
-    if (position) {
-      this.positionMark.updateProperties(position, bounds, matrix);
-      return {
-        pathCommand: null,
-        turtle: new Turtle(position, fromTurtle.heading),
-      };
-    } else {
-      return null;
-    }
-  }
+    // if (position) {
+      // this.positionMark.updateProperties(position, bounds, matrix);
+      // return {
+        // pathCommand: null,
+        // turtle: new Turtle(position, fromTurtle.heading),
+      // };
+    // } else {
+      // return null;
+    // }
+  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -133,61 +165,110 @@ export class TurtleNode extends Node {
     return node;
   }
 
-  validate() {
-    this.assertProperty('position');
-    this.assertProperty('heading');
+  get isDom() {
+    return true;
   }
 
-  start() {
-    super.start();
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    this.headingMark = new RotationMark(this.parentEnvironment, this);
-    this.wedgeMark = new PathMark();
-    this.marker.addMarks([this.positionMark, this.headingMark], [this.wedgeMark]);
-  }
+  configureState(bounds) {
+    this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>turtle</code> whose <code>position</code> was not set.');
+      }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
-    const position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>turtle</code> with an illegal value for <code>position</code>. ${e.message}`);
+      }
+    });
 
-    const heading = this.valueAt(env, 'heading', t);
-    this.headingMark.setExpression(heading, new ExpressionReal(0), position);
-    
-    if (position) {
-      const pivot = position;
-      const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
-      const rotater = Matrix.rotate(heading.value);
-      const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
-      const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-      const applied = matrix.multiplyMatrix(composite);
+    this.configureScalarProperty('heading', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>turtle</code> whose <code>heading</code> was not set.');
+      }
 
-      this.positionMark.updateProperties(position, bounds, applied);
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>turtle</code> with an illegal value for <code>heading</code>. ${e.message}`);
+      }
+    });
 
-      const offset = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]);
-      const towardVector = offset.rotate(heading.value);
-      const towardPosition = towardVector.add(position);
-      this.headingMark.updateProperties(towardPosition, bounds, matrix);
+    const positionTimeline = this.timedProperties.position;
+    const headingTimeline = this.timedProperties.heading;
 
-      const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
+    if (positionTimeline.isAnimated || headingTimeline.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
+    }
 
-      const {isLarge, isClockwise} = classifyArc(standardizeDegrees(heading.value));
-      const commands = [
-        `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
-        `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
-        `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
-      ];
-
-      this.wedgeMark.updateProperties(commands.join(' '));
-
-      return {
-        pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
-        turtle: new Turtle(position, heading),
-        segment: new GapSegment(fromTurtle?.position, position),
-      };
-    } else {
-      return null;
+    if (positionTimeline.hasDefault && headingTimeline.hasDefault) {
+      this.updateTurtle(bounds);
     }
   }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.position[0];
+    this.turtle.position[1] = this.position[1];
+    this.turtle.heading = this.heading;
+  }
+
+  // validate() {
+    // this.assertProperty('position');
+    // this.assertProperty('heading');
+  // }
+
+  // start() {
+    // super.start();
+    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.headingMark = new RotationMark(this.parentEnvironment, this);
+    // this.wedgeMark = new PathMark();
+    // this.marker.addMarks([this.positionMark, this.headingMark], [this.wedgeMark]);
+  // }
+
+  // updateProperties(env, t, bounds, fromTurtle, matrix) {
+    // const position = this.valueAt(env, 'position', t);
+    // this.positionMark.setExpression(position);
+
+    // const heading = this.valueAt(env, 'heading', t);
+    // this.headingMark.setExpression(heading, new ExpressionReal(0), position);
+    
+    // if (position) {
+      // const pivot = position;
+      // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
+      // const rotater = Matrix.rotate(heading.value);
+      // const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
+      // const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
+      // const applied = matrix.multiplyMatrix(composite);
+
+      // this.positionMark.updateProperties(position, bounds, applied);
+
+      // const offset = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]);
+      // const towardVector = offset.rotate(heading.value);
+      // const towardPosition = towardVector.add(position);
+      // this.headingMark.updateProperties(towardPosition, bounds, matrix);
+
+      // const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
+
+      // const {isLarge, isClockwise} = classifyArc(standardizeDegrees(heading.value));
+      // const commands = [
+        // `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
+        // `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
+        // `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
+      // ];
+
+      // this.wedgeMark.updateProperties(commands.join(' '));
+
+      // return {
+        // pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
+        // turtle: new Turtle(position, heading),
+        // segment: new GapSegment(fromTurtle?.position, position),
+      // };
+    // } else {
+      // return null;
+    // }
+  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -209,41 +290,66 @@ export class MoveNode extends Node {
     return node;
   }
 
-  validate() {
-    this.assertProperty('distance');
+  get isDom() {
+    return true;
   }
 
-  start() {
-    super.start();
-    this.distanceMark = new DistanceMark(this.parentEnvironment, this);
-    this.marker.addMarks([this.distanceMark], []);
-  }
+  // validate() {
+    // this.assertProperty('distance');
+  // }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
-    const distance = this.valueAt(env, 'distance', t);
-    this.distanceMark.setExpression(distance, fromTurtle.position, fromTurtle.heading);
+  // start() {
+    // super.start();
+    // this.distanceMark = new DistanceMark(this.parentEnvironment, this);
+    // this.marker.addMarks([this.distanceMark], []);
+  // }
+
+  // updateProperties(env, t, bounds, fromTurtle, matrix) {
+    // const distance = this.valueAt(env, 'distance', t);
+    // this.distanceMark.setExpression(distance, fromTurtle.position, fromTurtle.heading);
     
-    if (distance) {
-      let delta = new ExpressionVector([distance, fromTurtle.heading]).toCartesian();
-      let position = fromTurtle.position.add(delta);
+    // if (distance) {
+      // let delta = new ExpressionVector([distance, fromTurtle.heading]).toCartesian();
+      // let position = fromTurtle.position.add(delta);
 
-      const pivot = position;
-      const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
-      const rotater = Matrix.rotate(fromTurtle.heading.value);
-      const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
-      const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-      const applied = matrix.multiplyMatrix(composite);
+      // const pivot = position;
+      // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
+      // const rotater = Matrix.rotate(fromTurtle.heading.value);
+      // const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
+      // const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
+      // const applied = matrix.multiplyMatrix(composite);
 
-      this.distanceMark.updateProperties(position, bounds, applied);
+      // this.distanceMark.updateProperties(position, bounds, applied);
 
-      return {
-        pathCommand: `L${position.get(0).value},${bounds.span - position.get(1).value}`,
-        turtle: new Turtle(position, fromTurtle.heading),
-        segment: new LineSegment(fromTurtle.position, position),
-      };
-    } else {
-      return null;
-    }
+      // return {
+        // pathCommand: `L${position.get(0).value},${bounds.span - position.get(1).value}`,
+        // turtle: new Turtle(position, fromTurtle.heading),
+        // segment: new LineSegment(fromTurtle.position, position),
+      // };
+    // } else {
+      // return null;
+    // }
+  // }
+
+  configureState(bounds) {
+    this.configureScalarProperty('distance', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>move</code> node whose <code>distance</code> was not set.');
+      }
+
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>move</code> node with an illegal value for <code>distance</code>. ${e.message}`);
+      }
+    });
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.previousTurtle.position[0] + this.distance * Math.cos(this.previousTurtle.heading * Math.PI / 180);
+    this.turtle.position[1] = this.previousTurtle.position[1] + this.distance * Math.sin(this.previousTurtle.heading * Math.PI / 180);
+    this.turtle.heading = this.previousTurtle.heading;
   }
 }
 
@@ -266,47 +372,72 @@ export class TurnNode extends Node {
     return node;
   }
 
-  validate() {
-    this.assertProperty('degrees');
+  get isDom() {
+    return false;
   }
 
-  start() {
-    super.start();
-    this.rotationMark = new RotationMark(this.parentEnvironment, this);
-    this.wedgeMark = new PathMark();
-    this.marker.addMarks([this.rotationMark], [this.wedgeMark]);
-  }
+  // validate() {
+    // this.assertProperty('degrees');
+  // }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
-    const degrees = this.valueAt(env, 'degrees', t);
-    this.rotationMark.setExpression(degrees, fromTurtle.heading, fromTurtle.position);
+  // start() {
+    // super.start();
+    // this.rotationMark = new RotationMark(this.parentEnvironment, this);
+    // this.wedgeMark = new PathMark();
+    // this.marker.addMarks([this.rotationMark], [this.wedgeMark]);
+  // }
+
+  // updateProperties(env, t, bounds, fromTurtle, matrix) {
+    // const degrees = this.valueAt(env, 'degrees', t);
+    // this.rotationMark.setExpression(degrees, fromTurtle.heading, fromTurtle.position);
     
-    if (degrees) {
-      let newHeading = standardizeDegrees(fromTurtle.heading.add(degrees).value);
-      let towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(newHeading).add(fromTurtle.position);
-      this.rotationMark.updateProperties(towardPosition, bounds, matrix);
+    // if (degrees) {
+      // let newHeading = standardizeDegrees(fromTurtle.heading.add(degrees).value);
+      // let towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(newHeading).add(fromTurtle.position);
+      // this.rotationMark.updateProperties(towardPosition, bounds, matrix);
 
-      const pivot = fromTurtle.position;
-      const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(fromTurtle.heading.value).add(pivot);
+      // const pivot = fromTurtle.position;
+      // const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(fromTurtle.heading.value).add(pivot);
 
-      const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
-      const commands = [
-        `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
-        `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
-        `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
-      ];
+      // const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
+      // const commands = [
+        // `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
+        // `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
+        // `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
+      // ];
 
-      this.wedgeMark.updateProperties(commands.join(' '));
+      // this.wedgeMark.updateProperties(commands.join(' '));
 
-      return {
-        pathCommand: null,
-        turtle: new Turtle(fromTurtle.position, new ExpressionReal(newHeading)),
-        segment: undefined,
-        isVirtualMove: true,
-      };
-    } else {
-      return null;
-    }
+      // return {
+        // pathCommand: null,
+        // turtle: new Turtle(fromTurtle.position, new ExpressionReal(newHeading)),
+        // segment: undefined,
+        // isVirtualMove: true,
+      // };
+    // } else {
+      // return null;
+    // }
+  // }
+
+  configureState(bounds) {
+    this.configureScalarProperty('degrees', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>turn</code> node whose <code>degrees</code> was not set.');
+      }
+
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>turn</code> node with an illegal value for <code>degrees</code>. ${e.message}`);
+      }
+    });
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.previousTurtle.position[0];
+    this.turtle.position[1] = this.previousTurtle.position[1];
+    this.turtle.heading = this.previousTurtle.heading + this.degrees;
   }
 }
 
@@ -329,46 +460,72 @@ export class JumpNode extends Node {
     return node;
   }
 
-  validate() {
-    this.assertProperty('position');
+  get isDom() {
+    return true;
   }
 
-  start() {
-    super.start();
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks([this.positionMark], []);
-  }
+  // validate() {
+    // this.assertProperty('position');
+  // }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
-    const position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
+  // start() {
+    // super.start();
+    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.marker.addMarks([this.positionMark], []);
+  // }
 
-    let absolutePosition;
-    let isDelta = this.owns('delta') && this.get('delta').value;
-    if (isDelta) {
-      absolutePosition = fromTurtle.position.add(position);
-    } else {
-      absolutePosition = position;
-    }
+  // updateProperties(env, t, bounds, fromTurtle, matrix) {
+    // const position = this.valueAt(env, 'position', t);
+    // this.positionMark.setExpression(position);
+
+    // let absolutePosition;
+    // let isDelta = this.owns('delta') && this.get('delta').value;
+    // if (isDelta) {
+      // absolutePosition = fromTurtle.position.add(position);
+    // } else {
+      // absolutePosition = position;
+    // }
     
-    if (position) {
-      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
+    // if (position) {
+      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
 
-      let pathCommand;
-      if (isDelta) {
-        pathCommand = `m ${position.get(0).value},${-position.get(1).value}`;
-      } else {
-        pathCommand = `M ${position.get(0).value},${bounds.span - position.get(1).value}`;
+      // let pathCommand;
+      // if (isDelta) {
+        // pathCommand = `m ${position.get(0).value},${-position.get(1).value}`;
+      // } else {
+        // pathCommand = `M ${position.get(0).value},${bounds.span - position.get(1).value}`;
+      // }
+
+      // return {
+        // pathCommand,
+        // turtle: new Turtle(absolutePosition, fromTurtle.heading),
+        // segment: new GapSegment(fromTurtle?.position, absolutePosition),
+      // };
+    // } else {
+      // return null;
+    // }
+  // }
+
+  configureState(bounds) {
+    this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>jump</code> node whose <code>position</code> was not set.');
       }
 
-      return {
-        pathCommand,
-        turtle: new Turtle(absolutePosition, fromTurtle.heading),
-        segment: new GapSegment(fromTurtle?.position, absolutePosition),
-      };
-    } else {
-      return null;
-    }
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>jump</code> node with an illegal value for <code>position</code>. ${e.message}`);
+      }
+    });
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.position[0];
+    this.turtle.position[1] = this.position[1];
+    this.turtle.heading = 0;
+    this.pathCommand = `M ${this.position[0]},${bounds.span - this.position[1]}`;
   }
 }
 
@@ -391,46 +548,72 @@ export class LineNode extends Node {
     return node;
   }
 
-  validate() {
-    this.assertProperty('position');
+  get isDom() {
+    return true;
   }
 
-  start() {
-    super.start();
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks([this.positionMark], []);
-  }
+  // validate() {
+    // this.assertProperty('position');
+  // }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
-    const position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
+  // start() {
+    // super.start();
+    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.marker.addMarks([this.positionMark], []);
+  // }
 
-    let absolutePosition;
-    let isDelta = this.owns('delta') && this.get('delta').value;
-    if (isDelta) {
-      absolutePosition = fromTurtle.position.add(position);
-    } else {
-      absolutePosition = position;
-    }
+  // updateProperties(env, t, bounds, fromTurtle, matrix) {
+    // const position = this.valueAt(env, 'position', t);
+    // this.positionMark.setExpression(position);
+
+    // let absolutePosition;
+    // let isDelta = this.owns('delta') && this.get('delta').value;
+    // if (isDelta) {
+      // absolutePosition = fromTurtle.position.add(position);
+    // } else {
+      // absolutePosition = position;
+    // }
     
-    if (position) {
-      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
+    // if (position) {
+      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
 
-      let pathCommand;
-      if (isDelta) {
-        pathCommand = `l ${position.get(0).value},${-position.get(1).value}`;
-      } else {
-        pathCommand = `L ${position.get(0).value},${bounds.span - position.get(1).value}`;
+      // let pathCommand;
+      // if (isDelta) {
+        // pathCommand = `l ${position.get(0).value},${-position.get(1).value}`;
+      // } else {
+        // pathCommand = `L ${position.get(0).value},${bounds.span - position.get(1).value}`;
+      // }
+
+      // return {
+        // pathCommand,
+        // turtle: new Turtle(absolutePosition, fromTurtle.heading),
+        // segment: new LineSegment(fromTurtle.position, absolutePosition),
+      // };
+    // } else {
+      // return null;
+    // }
+  // }
+
+  configureState(bounds) {
+    this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>line</code> node whose <code>position</code> was not set.');
       }
 
-      return {
-        pathCommand,
-        turtle: new Turtle(absolutePosition, fromTurtle.heading),
-        segment: new LineSegment(fromTurtle.position, absolutePosition),
-      };
-    } else {
-      return null;
-    }
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>line</code> node with an illegal value for <code>position</code>. ${e.message}`);
+      }
+    });
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.position[0];
+    this.turtle.position[1] = this.position[1];
+    this.turtle.heading = this.previousTurtle.heading;
+    this.pathCommand = `L ${this.position[0]},${bounds.span - this.position[1]}`;
   }
 }
 
@@ -453,87 +636,141 @@ export class QuadraticNode extends Node {
     return node;
   }
 
-  validate() {
-    this.assertProperty('position');
+  get isDom() {
+    return true;
   }
 
-  start() {
-    super.start();
-    this.lineMarks = [
-      new LineMark(),
-      new LineMark(),
-    ];
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+  // validate() {
+    // this.assertProperty('position');
+  // }
 
-    const foregroundMarks = [this.positionMark];
-    if (this.owns('control')) {
-      this.controlMark = new VectorPanMark(this.parentEnvironment, this);
-      foregroundMarks.push(this.controlMark);
-    }
+  // start() {
+    // super.start();
+    // this.lineMarks = [
+      // new LineMark(),
+      // new LineMark(),
+    // ];
+    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
 
-    this.marker.addMarks(foregroundMarks, this.lineMarks);
-  }
+    // const foregroundMarks = [this.positionMark];
+    // if (this.owns('control')) {
+      // this.controlMark = new VectorPanMark(this.parentEnvironment, this);
+      // foregroundMarks.push(this.controlMark);
+    // }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix, fromSegment) {
-    const position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
+    // this.marker.addMarks(foregroundMarks, this.lineMarks);
+  // }
 
-    let control;
-    if (this.owns('control')) {
-      control = this.valueAt(env, 'control', t);
-      this.controlMark.setExpression(control);
-    }
+  // updateProperties(env, t, bounds, fromTurtle, matrix, fromSegment) {
+    // const position = this.valueAt(env, 'position', t);
+    // this.positionMark.setExpression(position);
 
-    let isDelta = this.owns('delta') && this.get('delta').value;
+    // let control;
+    // if (this.owns('control')) {
+      // control = this.valueAt(env, 'control', t);
+      // this.controlMark.setExpression(control);
+    // }
 
-    let absolutePosition;
-    if (isDelta) {
-      absolutePosition = fromTurtle.position.add(position);
-    } else {
-      absolutePosition = position;
-    }
+    // let isDelta = this.owns('delta') && this.get('delta').value;
 
-    let absoluteControl;
-    if (control) {
-      if (isDelta) {
-        absoluteControl = fromTurtle.position.add(control);
-      } else {
-        absoluteControl = control;
-      }
-    }
+    // let absolutePosition;
+    // if (isDelta) {
+      // absolutePosition = fromTurtle.position.add(position);
+    // } else {
+      // absolutePosition = position;
+    // }
+
+    // let absoluteControl;
+    // if (control) {
+      // if (isDelta) {
+        // absoluteControl = fromTurtle.position.add(control);
+      // } else {
+        // absoluteControl = control;
+      // }
+    // }
     
-    if (position) {
-      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
+    // if (position) {
+      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
 
-      let pathCommand;
-      if (control) {
-        this.controlMark.updateProperties(absoluteControl, bounds, matrix);
-        this.lineMarks[0].updateProperties(fromTurtle.position, absoluteControl, bounds, matrix);
-        this.lineMarks[1].updateProperties(absoluteControl, absolutePosition, bounds, matrix);
-        if (isDelta) {
-          pathCommand = `q ${control.get(0).value},${-control.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
-        } else {
-          pathCommand = `Q ${control.get(0).value},${bounds.span - control.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
-        }
-      } else {
-        if (isDelta) {
-          pathCommand = `t ${position.get(0).value},${-position.get(1).value}`;
-        } else {
-          pathCommand = `T ${position.get(0).value},${bounds.span - position.get(1).value}`;
-        }
+      // let pathCommand;
+      // if (control) {
+        // this.controlMark.updateProperties(absoluteControl, bounds, matrix);
+        // this.lineMarks[0].updateProperties(fromTurtle.position, absoluteControl, bounds, matrix);
+        // this.lineMarks[1].updateProperties(absoluteControl, absolutePosition, bounds, matrix);
+        // if (isDelta) {
+          // pathCommand = `q ${control.get(0).value},${-control.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
+        // } else {
+          // pathCommand = `Q ${control.get(0).value},${bounds.span - control.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        // }
+      // } else {
+        // if (isDelta) {
+          // pathCommand = `t ${position.get(0).value},${-position.get(1).value}`;
+        // } else {
+          // pathCommand = `T ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        // }
+      // }
+
+      // return {
+        // pathCommand,
+        // turtle: new Turtle(position, fromTurtle.heading),
+        // segment: (
+          // control
+            // ? new QuadraticSegment(fromTurtle.position, position, control, false)
+            // : new QuadraticSegment(fromTurtle.position, position, fromTurtle.position.add(fromTurtle.position.subtract(fromSegment.control)), true)
+        // ),
+      // };
+    // } else {
+      // return null;
+    // }
+  // }
+
+  configureState(bounds) {
+    this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>quadratic</code> node whose <code>position</code> was not set.');
       }
 
-      return {
-        pathCommand,
-        turtle: new Turtle(position, fromTurtle.heading),
-        segment: (
-          control
-            ? new QuadraticSegment(fromTurtle.position, position, control, false)
-            : new QuadraticSegment(fromTurtle.position, position, fromTurtle.position.add(fromTurtle.position.subtract(fromSegment.control)), true)
-        ),
-      };
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>quadratic</code> node with an illegal value for <code>position</code>. ${e.message}`);
+      }
+    });
+
+    this.configureVectorProperty('control', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (timeline) {
+        try {
+          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found a <code>quadratic</code> node with an illegal value for <code>control</code>. ${e.message}`);
+        }
+      } else if (!this.previousTurtle) { // TODO only allow implicit after previous quadratic
+        throw new LocatedException(this.where, 'I found a <code>quadratic</code> node whose <code>control</code> was not set. Omitting <code>control</code> is legal only when the previous node was also <code>quadratic</code>.');
+      }
+    });
+
+    const positionTimeline = this.timedProperties.position;
+    const controlTimeline = this.timedProperties.control;
+
+    if (positionTimeline.isAnimated || controlTimeline?.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
+    }
+
+    if (positionTimeline.hasDefault && (!controlTimeline || controlTimeline.hasDefault)) {
+      this.updateTurtle(bounds);
+    }
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.position[0];
+    this.turtle.position[1] = this.position[1];
+    this.turtle.heading = this.previousTurtle.heading;
+    if (this.control) {
+      this.pathCommand = `Q ${this.control[0]},${bounds.span - this.control[1]} ${this.position[0]},${bounds.span - this.position[1]}`;
     } else {
-      return null;
+      this.pathCommand = `T ${this.position[0]},${bounds.span - this.position[1]}`;
     }
   }
 }
@@ -557,129 +794,179 @@ export class ArcNode extends Node {
     return node;
   }
 
-  validate() {
-    if (this.owns('position') && this.owns('center')) {
-      throw new LocatedException(this.where, 'I found an arc whose position and center properties are both set. Define only one of these.');
-    }
-
-    if (!this.owns('position') && !this.owns('center')) {
-      throw new LocatedException(this.where, 'I found an arc whose curvature I couldn\'t figure out. Please define its center or position.');
-    }
-
-    this.assertProperty('degrees');
+  get isDom() {
+    return true;
   }
 
-  start() {
-    super.start();
+  // validate() {
+    // if (this.owns('position') && this.owns('center')) {
+      // throw new LocatedException(this.where, 'I found an arc whose position and center properties are both set. Define only one of these.');
+    // }
 
-    this.isWedge = this.owns('center');
-    if (this.isWedge) {
-      this.centerMark = new VectorPanMark(this.parentEnvironment, this);
-      this.positionMark = new WedgeDegreesMark(this.parentEnvironment, this);
-    } else {
-      this.centerMark = new BumpDegreesMark(this.parentEnvironment, this);
-      this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    }
+    // if (!this.owns('position') && !this.owns('center')) {
+      // throw new LocatedException(this.where, 'I found an arc whose curvature I couldn\'t figure out. Please define its center or position.');
+    // }
 
-    this.lineMarks = [
-      new LineMark(),
-      new LineMark(),
-    ];
+    // this.assertProperty('degrees');
+  // }
 
-    this.marker.addMarks([this.centerMark, this.positionMark], this.lineMarks);
-  }
+  // start() {
+    // super.start();
 
-  updateProperties(env, t, bounds, fromTurtle, matrix) {
-    let degrees = this.valueAt(env, 'degrees', t);
-    let radians = degrees.value * Math.PI / 180;
+    // this.isWedge = this.owns('center');
+    // if (this.isWedge) {
+      // this.centerMark = new VectorPanMark(this.parentEnvironment, this);
+      // this.positionMark = new WedgeDegreesMark(this.parentEnvironment, this);
+    // } else {
+      // this.centerMark = new BumpDegreesMark(this.parentEnvironment, this);
+      // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    // }
 
-    let absolutePosition;
-    let isDelta = this.owns('delta') && this.get('delta').value;
+    // this.lineMarks = [
+      // new LineMark(),
+      // new LineMark(),
+    // ];
 
-    let center;
-    let absoluteCenter;
-    if (this.isWedge) {
-      center = this.valueAt(env, 'center', t);
+    // this.marker.addMarks([this.centerMark, this.positionMark], this.lineMarks);
+  // }
 
-      if (isDelta) {
-        absoluteCenter = fromTurtle.position.add(center);
-      } else {
-        absoluteCenter = center;
-      }
+  // updateProperties(env, t, bounds, fromTurtle, matrix) {
+    // let degrees = this.valueAt(env, 'degrees', t);
+    // let radians = degrees.value * Math.PI / 180;
 
-      this.centerMark.setExpression(center);
-      this.positionMark.setExpression(degrees, fromTurtle.position, absoluteCenter);
-    } else {
-      let position = this.valueAt(env, 'position', t);
+    // let absolutePosition;
+    // let isDelta = this.owns('delta') && this.get('delta').value;
 
-      let absolutePosition;
-      if (isDelta) {
-        absolutePosition = fromTurtle.position.add(position);
-      } else {
-        absolutePosition = position;
-      }
+    // let center;
+    // let absoluteCenter;
+    // if (this.isWedge) {
+      // center = this.valueAt(env, 'center', t);
 
-      this.positionMark.setExpression(position);
-      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
+      // if (isDelta) {
+        // absoluteCenter = fromTurtle.position.add(center);
+      // } else {
+        // absoluteCenter = center;
+      // }
 
-      let diff = absolutePosition.subtract(fromTurtle.position);
-      let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
-      let halfway = fromTurtle.position.add(absolutePosition).multiply(new ExpressionReal(0.5));
-      let normal = diff.rotate90().normalize();
-      absoluteCenter = halfway.add(normal.multiply(new ExpressionReal(-distance)));
+      // this.centerMark.setExpression(center);
+      // this.positionMark.setExpression(degrees, fromTurtle.position, absoluteCenter);
+    // } else {
+      // let position = this.valueAt(env, 'position', t);
 
-      const movementAngle = Math.atan2(normal.get(1).value, normal.get(0).value) * 180 / Math.PI;
-      const pivotToOrigin = Matrix.translate(-absoluteCenter.get(0).value, -absoluteCenter.get(1).value);
-      const rotater = Matrix.rotate(movementAngle);
-      const originToPivot = Matrix.translate(absoluteCenter.get(0).value, absoluteCenter.get(1).value);
-      const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-      const applied = matrix.multiplyMatrix(composite);
+      // let absolutePosition;
+      // if (isDelta) {
+        // absolutePosition = fromTurtle.position.add(position);
+      // } else {
+        // absolutePosition = position;
+      // }
 
-      this.centerMark.updateProperties(absoluteCenter, bounds, applied);
-    }
+      // this.positionMark.setExpression(position);
+      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
 
-    let toFrom = fromTurtle.position.subtract(absoluteCenter);
-    let toTo = new ExpressionVector([
-      new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
-      new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
-    ]);
-    let to = absoluteCenter.add(toTo);
+      // let diff = absolutePosition.subtract(fromTurtle.position);
+      // let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
+      // let halfway = fromTurtle.position.add(absolutePosition).multiply(new ExpressionReal(0.5));
+      // let normal = diff.rotate90().normalize();
+      // absoluteCenter = halfway.add(normal.multiply(new ExpressionReal(-distance)));
 
-    let radius = toFrom.magnitude;
-    let isLarge;
-    let isClockwise;
+      // const movementAngle = Math.atan2(normal.get(1).value, normal.get(0).value) * 180 / Math.PI;
+      // const pivotToOrigin = Matrix.translate(-absoluteCenter.get(0).value, -absoluteCenter.get(1).value);
+      // const rotater = Matrix.rotate(movementAngle);
+      // const originToPivot = Matrix.translate(absoluteCenter.get(0).value, absoluteCenter.get(1).value);
+      // const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
+      // const applied = matrix.multiplyMatrix(composite);
 
-    if (degrees.value >= 0) {
-      isLarge = degrees.value >= 180 ? 1 : 0;
-      isClockwise = 0;
-    } else {
-      isLarge = degrees.value <= -180 ? 1 : 0;
-      isClockwise = 1;
-    }
+      // this.centerMark.updateProperties(absoluteCenter, bounds, applied);
+    // }
 
-    let pathCommand;
-    if (isDelta) {
-      pathCommand = `a ${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value - fromTurtle.position.get(0).value},${-(to.get(1).value - fromTurtle.position.get(1).value)}`;
-    } else {
-      pathCommand = `A ${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value},${bounds.span - to.get(1).value}`;
-    }
+    // let toFrom = fromTurtle.position.subtract(absoluteCenter);
+    // let toTo = new ExpressionVector([
+      // new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
+      // new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
+    // ]);
+    // let to = absoluteCenter.add(toTo);
 
-    if (this.isWedge) {
-      this.centerMark.updateProperties(absoluteCenter, bounds, matrix);
-      this.positionMark.updateProperties(to, bounds, matrix);
-    } else {
-      this.centerMark.setExpression(degrees, fromTurtle.position, absoluteCenter, to);
-    }
+    // let radius = toFrom.magnitude;
+    // let isLarge;
+    // let isClockwise;
 
-    this.lineMarks[0].updateProperties(absoluteCenter, fromTurtle.position, bounds, matrix);
-    this.lineMarks[1].updateProperties(absoluteCenter, to, bounds, matrix);
+    // if (degrees.value >= 0) {
+      // isLarge = degrees.value >= 180 ? 1 : 0;
+      // isClockwise = 0;
+    // } else {
+      // isLarge = degrees.value <= -180 ? 1 : 0;
+      // isClockwise = 1;
+    // }
+
+    // let pathCommand;
+    // if (isDelta) {
+      // pathCommand = `a ${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value - fromTurtle.position.get(0).value},${-(to.get(1).value - fromTurtle.position.get(1).value)}`;
+    // } else {
+      // pathCommand = `A ${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value},${bounds.span - to.get(1).value}`;
+    // }
+
+    // if (this.isWedge) {
+      // this.centerMark.updateProperties(absoluteCenter, bounds, matrix);
+      // this.positionMark.updateProperties(to, bounds, matrix);
+    // } else {
+      // this.centerMark.setExpression(degrees, fromTurtle.position, absoluteCenter, to);
+    // }
+
+    // this.lineMarks[0].updateProperties(absoluteCenter, fromTurtle.position, bounds, matrix);
+    // this.lineMarks[1].updateProperties(absoluteCenter, to, bounds, matrix);
 
     // TODO is Turtle.position = to always the right thing here?
-    return {
-      pathCommand,
-      turtle: new Turtle(to, fromTurtle.heading),
-      segment: new ArcSegment(fromTurtle.position, to, radius, isLarge, isClockwise),
-    };
+    // return {
+      // pathCommand,
+      // turtle: new Turtle(to, fromTurtle.heading),
+      // segment: new ArcSegment(fromTurtle.position, to, radius, isLarge, isClockwise),
+    // };
+  // }
+
+  configureState(bounds) {
+    this.configureVectorProperty('degrees', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found an <code>arc</code> node whose <code>degrees</code> was not set.');
+      }
+
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an <code>arc</code> node with an illegal value for <code>degrees</code>. ${e.message}`);
+      }
+    });
+
+    if (this.timedProperties.hasOwnProperty('position') && this.timedProperties.hasOwnProperty('center')) {
+      throw new LocatedException(this.where, 'I found an <code>arc</code> node whose <code>position</code> and <code>center</code> were both set. Define only one of these.');
+    } else if (this.timedProperties.hasOwnProperty('position')) {
+      this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+        try {
+          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>position</code>. ${e.message}`);
+        }
+      });
+    } else if (this.timedProperties.hasOwnProperty('center')) {
+      this.configureVectorProperty('center', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+        try {
+          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
+        }
+      });
+    } else {
+      throw new LocatedException(this.where, "I found an <code>arc</code> node whose position I couldn't figure out. Define either its <code>position</code> or <code>center</code>.");
+    }
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.position[0];
+    this.turtle.position[1] = this.position[1];
+    this.turtle.heading = this.previousTurtle.heading;
+    this.pathCommand = `A ${this.radius},${this.radius} 0 ${this.isLarge} ${this.isClockwise} ${this.position[0]},${bounds.span - this.position[1]}`;
   }
 }
 
@@ -702,99 +989,167 @@ export class CubicNode extends Node {
     return node;
   }
 
-  validate() {
-    this.assertProperty('position');
-    this.assertProperty('control2');
+  get isDom() {
+    return true;
   }
 
-  start() {
-    super.start();
+  // validate() {
+    // this.assertProperty('position');
+    // this.assertProperty('control2');
+  // }
 
-    this.line2Mark = new LineMark();
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    this.control2Mark = new VectorPanMark(this.parentEnvironment, this);
+  // start() {
+    // super.start();
 
-    const foregroundMarks = [this.positionMark, this.control2Mark];
-    const backgroundMarks = [this.line2Mark];
+    // this.line2Mark = new LineMark();
+    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.control2Mark = new VectorPanMark(this.parentEnvironment, this);
 
-    if (this.owns('control1')) {
-      this.line1Mark = new LineMark();
-      this.control1Mark = new VectorPanMark(this.parentEnvironment, this);
-      foregroundMarks.push(this.control1Mark);
-      backgroundMarks.push(this.line1Mark);
-    }
+    // const foregroundMarks = [this.positionMark, this.control2Mark];
+    // const backgroundMarks = [this.line2Mark];
 
-    this.marker.addMarks(foregroundMarks, backgroundMarks);
-  }
+    // if (this.owns('control1')) {
+      // this.line1Mark = new LineMark();
+      // this.control1Mark = new VectorPanMark(this.parentEnvironment, this);
+      // foregroundMarks.push(this.control1Mark);
+      // backgroundMarks.push(this.line1Mark);
+    // }
 
-  updateProperties(env, t, bounds, fromTurtle, matrix, fromSegment) {
-    const position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
+    // this.marker.addMarks(foregroundMarks, backgroundMarks);
+  // }
 
-    let isDelta = this.owns('delta') && this.get('delta').value;
+  // updateProperties(env, t, bounds, fromTurtle, matrix, fromSegment) {
+    // const position = this.valueAt(env, 'position', t);
+    // this.positionMark.setExpression(position);
 
-    let absolutePosition;
-    if (isDelta) {
-      absolutePosition = fromTurtle.position.add(position);
-    } else {
-      absolutePosition = position;
-    }
+    // let isDelta = this.owns('delta') && this.get('delta').value;
 
-    let control1;
-    let absoluteControl1;
-    if (this.owns('control1')) {
-      control1 = this.valueAt(env, 'control1', t);
-      this.control1Mark.setExpression(control1);
-      if (isDelta) {
-        absoluteControl1 = fromTurtle.position.add(control1);
-      } else {
-        absoluteControl1 = control1;
-      }
-    }
+    // let absolutePosition;
+    // if (isDelta) {
+      // absolutePosition = fromTurtle.position.add(position);
+    // } else {
+      // absolutePosition = position;
+    // }
 
-    let control2 = this.valueAt(env, 'control2', t);
-    this.control2Mark.setExpression(control2);
+    // let control1;
+    // let absoluteControl1;
+    // if (this.owns('control1')) {
+      // control1 = this.valueAt(env, 'control1', t);
+      // this.control1Mark.setExpression(control1);
+      // if (isDelta) {
+        // absoluteControl1 = fromTurtle.position.add(control1);
+      // } else {
+        // absoluteControl1 = control1;
+      // }
+    // }
 
-    let absoluteControl2;
-    if (isDelta) {
-      absoluteControl2 = fromTurtle.position.add(control2);
-    } else {
-      absoluteControl2 = control2;
-    }
+    // let control2 = this.valueAt(env, 'control2', t);
+    // this.control2Mark.setExpression(control2);
+
+    // let absoluteControl2;
+    // if (isDelta) {
+      // absoluteControl2 = fromTurtle.position.add(control2);
+    // } else {
+      // absoluteControl2 = control2;
+    // }
     
-    if (position && control2) {
-      this.positionMark.updateProperties(absolutePosition, bounds, matrix);
-      this.control2Mark.updateProperties(absoluteControl2, bounds, matrix);
-      this.line2Mark.updateProperties(absoluteControl2, absolutePosition, bounds, matrix);
+    // if (position && control2) {
+      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
+      // this.control2Mark.updateProperties(absoluteControl2, bounds, matrix);
+      // this.line2Mark.updateProperties(absoluteControl2, absolutePosition, bounds, matrix);
 
-      let pathCommand;
-      if (control1) {
-        this.control1Mark.updateProperties(absoluteControl1, bounds, matrix);
-        this.line1Mark.updateProperties(fromTurtle.position, absoluteControl1, bounds, matrix);
-        if (isDelta) {
-          pathCommand = `c ${control1.get(0).value},${-control1.get(1).value} ${control2.get(0).value},${-control2.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
-        } else {
-          pathCommand = `C ${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
-        }
-      } else {
-        if (isDelta) {
-          pathCommand = `s ${control2.get(0).value},${-control2.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
-        } else {
-          pathCommand = `S ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
-        }
+      // let pathCommand;
+      // if (control1) {
+        // this.control1Mark.updateProperties(absoluteControl1, bounds, matrix);
+        // this.line1Mark.updateProperties(fromTurtle.position, absoluteControl1, bounds, matrix);
+        // if (isDelta) {
+          // pathCommand = `c ${control1.get(0).value},${-control1.get(1).value} ${control2.get(0).value},${-control2.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
+        // } else {
+          // pathCommand = `C ${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        // }
+      // } else {
+        // if (isDelta) {
+          // pathCommand = `s ${control2.get(0).value},${-control2.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
+        // } else {
+          // pathCommand = `S ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
+        // }
+      // }
+
+      // return {
+        // pathCommand,
+        // turtle: new Turtle(position, fromTurtle.heading),
+        // segment: (
+          // control1
+            // ? new CubicSegment(fromTurtle.position, position, control1, control2, false)
+            // : new CubicSegment(fromTurtle.position, position, fromTurtle.position.add(fromTurtle.position.subtract(fromSegment.control2)), control2, true)
+        // ),
+      // };
+    // } else {
+      // return null;
+    // }
+  // }
+
+  configureState(bounds) {
+    this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>cubic</code> node whose <code>position</code> was not set.');
       }
 
-      return {
-        pathCommand,
-        turtle: new Turtle(position, fromTurtle.heading),
-        segment: (
-          control1
-            ? new CubicSegment(fromTurtle.position, position, control1, control2, false)
-            : new CubicSegment(fromTurtle.position, position, fromTurtle.position.add(fromTurtle.position.subtract(fromSegment.control2)), control2, true)
-        ),
-      };
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>position</code>. ${e.message}`);
+      }
+    });
+
+    this.configureVectorProperty('control1', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (timeline) {
+        try {
+          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>control1</code>. ${e.message}`);
+        }
+      } else if (!this.previousTurtle) { // TODO only allow implicit after previous quadratic
+        throw new LocatedException(this.where, 'I found a <code>cubic</code> node whose <code>control1</code> was not set. Omitting <code>control1</code> is legal only when the previous node was also <code>cubic</code>.');
+      }
+    });
+
+    this.configureVectorProperty('control2', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>cubic</code> node whose <code>control2</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>control2</code>. ${e.message}`);
+      }
+    });
+
+    const positionTimeline = this.timedProperties.position;
+    const control1Timeline = this.timedProperties.control1;
+    const control2Timeline = this.timedProperties.control2;
+
+    if (positionTimeline.isAnimated || control1Timeline?.isAnimated || control2Timeline.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
+    }
+
+    if (positionTimeline.hasDefault && (!control1Timeline || control1Timeline.hasDefault) && control2Timeline.hasDefault) {
+      this.updateTurtle(bounds);
+    }
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.position[0];
+    this.turtle.position[1] = this.position[1];
+    this.turtle.heading = this.previousTurtle.heading;
+    if (this.control1) {
+      this.pathCommand = `C ${this.control1[0]},${bounds.span - this.control1[1]} ${this.control2[0]},${bounds.span - this.control2[1]} ${this.position[0]},${bounds.span - this.position[1]}`;
     } else {
-      return null;
+      this.pathCommand = `S ${this.control2[0]},${bounds.span - this.control2[1]} ${this.position[0]},${bounds.span - this.position[1]}`;
     }
   }
 }

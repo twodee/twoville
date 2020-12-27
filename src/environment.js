@@ -304,50 +304,108 @@ export class TimelinedEnvironment extends Environment {
     return this.constructor.timedIds.includes(id);
   }
 
-  applyStroke(env, t, element) {
-    if (this.owns('size') && this.owns('color') && this.owns('opacity')) {
-      const size = this.valueAt(env, 'size', t);
-      const color = this.valueAt(env, 'color', t);
-      const opacity = this.valueAt(env, 'opacity', t);
+  // applyStroke(env, t, element) {
+    // if (this.owns('size') && this.owns('color') && this.owns('opacity')) {
+      // const size = this.valueAt(env, 'size', t);
+      // const color = this.valueAt(env, 'color', t);
+      // const opacity = this.valueAt(env, 'opacity', t);
 
-      element.setAttributeNS(null, 'stroke', color.toColor());
-      element.setAttributeNS(null, 'stroke-width', size.value);
-      element.setAttributeNS(null, 'stroke-opacity', opacity.value);
+      // element.setAttributeNS(null, 'stroke', color.toColor());
+      // element.setAttributeNS(null, 'stroke-width', size.value);
+      // element.setAttributeNS(null, 'stroke-opacity', opacity.value);
 
-      if (this.owns('dashes')) {
-        const dashes = this.valueAt(env, 'dashes', t).toSpacedString();
-        element.setAttributeNS(null, 'stroke-dasharray', dashes);
+      // if (this.owns('dashes')) {
+        // const dashes = this.valueAt(env, 'dashes', t).toSpacedString();
+        // element.setAttributeNS(null, 'stroke-dasharray', dashes);
+      // }
+
+      // if (this.owns('join')) {
+        // const type = this.valueAt(env, 'join', t).value;
+        // element.setAttributeNS(null, 'stroke-linejoin', type);
+      // }
+
+      // return size.value;
+    // } else {
+      // return 0;
+    // }
+  // }
+
+  configureProperty(property, propertyHost, domHost, updateDom, resolveDefault, bounds, dependencies, checker) {
+    const timeline = propertyHost.timedProperties[property];
+    if (!checker(timeline)) {
+      return;
+    }
+
+    const defaultValue = timeline.defaultValue;
+    let atemporal;
+
+    if (defaultValue) {
+      atemporal = resolveDefault(defaultValue);
+      propertyHost[property] = atemporal;
+      if (updateDom && dependencies.every(dependency => this.timedProperties[dependency].defaultValue)) {
+        updateDom(bounds);
+      }
+    }
+
+    if (timeline.intervals.length > 0) {
+
+      // If there's no default value, we must assert that the property is
+      // defined for all possible time values.
+      if (!defaultValue) {
+        let t = bounds.startTime;
+        for (let interval of timeline.intervals) {
+          if (!interval.spans(t)) {
+            throw new LocatedException(this.where, `I found ${propertyHost.article} ${propertyHost.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
+          } else if (!interval.hasTo()) {
+            t = null;
+            break;
+          } else {
+            t = interval.toTime.value + 1;
+          }
+        }
+        if (t !== null && t < bounds.stopTime) {
+          throw new LocatedException(this.where, `I found ${propertyHost.article} ${propertyHost.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
+        }
       }
 
-      if (this.owns('join')) {
-        const type = this.valueAt(env, 'join', t).value;
-        element.setAttributeNS(null, 'stroke-linejoin', type);
-      }
+      const animators = timeline.intervals.map(interval => interval.toAnimator());
+      const ager = (t) => {
+        const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
+        if (animator) {
+          propertyHost[property] = animator.age(t);
+        } else {
+          propertyHost[property] = atemporal;
+        }
+      };
 
-      return size.value;
+      domHost.agers.push(ager);
+      if (updateDom) {
+        domHost.updateDoms.push(updateDom);
+      }
     } else {
-      return 0;
+      // If any dependencies are animated, then this property is indirectly animated.
+      if (dependencies.some(dependency => this.timedProperties[dependency].intervals.length > 0)) {
+        if (updateDom) {
+          domHost.updateDoms.push(updateDom);
+        }
+      }
     }
   }
-}
 
-// --------------------------------------------------------------------------- 
-
-export class Stroke extends TimelinedEnvironment {
-  static type = 'stroke';
-  static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes', 'join'];
-
-  static create(parentEnvironment, where) {
-    const stroke = new Stroke();
-    stroke.initialize(parentEnvironment, where);
-    return stroke;
+  configureVectorProperty(property, propertyHost, domHost, updateDom, bounds, dependencies, checker) {
+    this.configureProperty(property, propertyHost, domHost, updateDom, atemporal => atemporal.toPrimitiveArray(), bounds, dependencies, checker);
   }
 
-  static reify(parentEnvironment, pod) {
-    const stroke = new Stroke();
-    stroke.embody(parentEnvironment, pod);
-    return stroke;
+  configureScalarProperty(property, propertyHost, domHost, updateDom, bounds, dependencies, checker) {
+    this.configureProperty(property, propertyHost, domHost, updateDom, atemporal => atemporal.value, bounds, dependencies, checker);
+  }
+
+  get isAnimated() {
+    return Object.values(this.timedProperties).some(property => property.isAnimated);
+  }
+
+  get hasAllDefaults() {
+    return Object.values(this.timedProperties).every(property => property.hasDefault);
   }
 }
 

@@ -129,6 +129,7 @@ export class LocatedException extends MessagedException {
   }
 
   get userMessage() {
+    console.log("this:", this);
     return `${this.where.debugPrefix()}${this.message}`;
   }
 }
@@ -285,6 +286,20 @@ export class BoundingBox {
 
   toString() {
     return this.min.toString() + ' | ' + this.max.toString();
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export function typesToSeries(types) {
+  const withArticles = types.map(type => `${type.article} ${type.type}`);
+  if (withArticles.length > 1) {
+    withArticles[withArticles.length - 1] = `or ${withArticles[withArticles.length - 1]}`;
+  }
+  if (withArticles.length > 2) {
+    return withArticles.join(', ');
+  } else {
+    return withArticles.join(' ');
   }
 }
 
