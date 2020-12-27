@@ -924,7 +924,7 @@ export class ArcNode extends Node {
   // }
 
   configureState(bounds) {
-    this.configureVectorProperty('degrees', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+    this.configureScalarProperty('degrees', this, this.parentEnvironment, this.updateDegrees.bind(this), bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, 'I found an <code>arc</code> node whose <code>degrees</code> was not set.');
       }
@@ -937,10 +937,12 @@ export class ArcNode extends Node {
       }
     });
 
+    let locationTimeline;
     if (this.timedProperties.hasOwnProperty('position') && this.timedProperties.hasOwnProperty('center')) {
       throw new LocatedException(this.where, 'I found an <code>arc</code> node whose <code>position</code> and <code>center</code> were both set. Define only one of these.');
     } else if (this.timedProperties.hasOwnProperty('position')) {
-      this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      locationTimeline = this.timedProperties.position;
+      this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
         try {
           timeline.assertList(2, ExpressionInteger, ExpressionReal);
           return true;
@@ -949,7 +951,8 @@ export class ArcNode extends Node {
         }
       });
     } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureVectorProperty('center', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      locationTimeline = this.timedProperties.center;
+      this.configureVectorProperty('center', this, this.parentEnvironment, null, bounds, [], timeline => {
         try {
           timeline.assertList(2, ExpressionInteger, ExpressionReal);
           return true;
@@ -960,13 +963,76 @@ export class ArcNode extends Node {
     } else {
       throw new LocatedException(this.where, "I found an <code>arc</code> node whose position I couldn't figure out. Define either its <code>position</code> or <code>center</code>.");
     }
+
+    const degreesTimeline = this.timedProperties.degrees;
+
+    if (degreesTimeline.isAnimated || locationTimeline.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
+    }
+
+    if (degreesTimeline.hasDefault && locationTimeline.hasDefault) {
+      this.updateTurtle(bounds);
+    }
+  }
+
+  updateDegrees(bounds) {
+    if (this.degrees >= 0) {
+      this.isLarge = this.degrees >= 180 ? 1 : 0;
+      this.isClockwise = 0;
+    } else {
+      this.isLarge = this.degrees <= -180 ? 1 : 0;
+      this.isClockwise = 1;
+    }
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.position[0];
-    this.turtle.position[1] = this.position[1];
+    let radians = this.degrees * Math.PI / 180;
+
+    let center;
+    let position;
+
+    if (this.center) {
+      center = this.center;
+    } else {
+      position = this.position;
+
+      let diff = [
+        this.position[0] - this.previousTurtle.position[0],
+        this.position[1] - this.previousTurtle.position[1],
+      ];
+      let magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
+      let distance = (0.5 * Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1])) / Math.tan(radians * 0.5);
+      let halfway = [
+        (this.previousTurtle.position[0] + this.position[0]) * 0.5,
+        (this.previousTurtle.position[1] + this.position[1]) * 0.5
+      ];
+      let normal = [
+        diff[1] / magnitude,
+        -diff[0] / magnitude
+      ];
+      center = [
+        halfway[0] + normal[0] * -distance,
+        halfway[1] + normal[1] * -distance
+      ];
+    }
+
+    let radial = [
+      this.previousTurtle.position[0] - center[0],
+      this.previousTurtle.position[1] - center[1],
+    ];
+    let radius = Math.sqrt(radial[0] * radial[0] + radial[1] * radial[1]);
+
+    if (this.center) {
+      position = [
+        center[0] + radial[0] * Math.cos(radians) - radial[1] * Math.sin(radians),
+        center[1] + radial[0] * Math.sin(radians) + radial[1] * Math.cos(radians),
+      ];
+    }
+
+    this.turtle.position[0] = position[0];
+    this.turtle.position[1] = position[1];
     this.turtle.heading = this.previousTurtle.heading;
-    this.pathCommand = `A ${this.radius},${this.radius} 0 ${this.isLarge} ${this.isClockwise} ${this.position[0]},${bounds.span - this.position[1]}`;
+    this.pathCommand = `A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${position[0]},${bounds.span - position[1]}`;
   }
 }
 
