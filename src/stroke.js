@@ -33,7 +33,7 @@ export class Stroke extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
-export function configureStroke(stateHost, domHost, bounds) {
+export function configureStroke(stateHost, domHost, bounds, isRequired) {
   // TODO allow not required
 
   // Stroke color.
@@ -45,7 +45,7 @@ export function configureStroke(stateHost, domHost, bounds) {
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>color</code>. ${e.message}`);
       }
-    } else {
+    } else if (isRequired) {
       throw new LocatedException(stateHost.where, `I found ${domHost.article} ${domHost.type} whose stroke <code>color</code> isn't set.`);
     }
   });
@@ -60,7 +60,7 @@ export function configureStroke(stateHost, domHost, bounds) {
         throw new LocatedException(e.where, `I found an illegal value for <code>opacity</code>. ${e.message}`);
       }
     }
-    return true;
+    return isRequired;
   });
 
   // Stroke size.
@@ -73,7 +73,7 @@ export function configureStroke(stateHost, domHost, bounds) {
         throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
       }
     }
-    return true;
+    return isRequired;
   });
 
   // if (stateHost.owns('dashes')) {

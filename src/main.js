@@ -51,6 +51,10 @@ let contentCornerBox;
 let contentSizeBox;
 let currentName;
 
+let frameIndex = 0;
+let delay;
+let isLoop;
+
 let defaultSettings = {
   showCopyLinks: true,
   backgroundColor: '#D3D3D3',
@@ -60,7 +64,6 @@ const settings = {...defaultSettings};
 let scene;
 let isSaved = true;
 let animateTask = null;
-let delay;
 
 function highlight(lineStart, lineEnd, columnStart, columnEnd) {
   editor.getSelection().setSelectionRange(new Range(lineStart, columnStart, lineEnd, columnEnd + 1));
@@ -134,40 +137,24 @@ function scrubTo(tick) {
   // contentSizeBox.innerText = `[${(scene.box.max[0] - scene.box.min[0]).toShortFloat(2)}, ${(scene.box.max[1] - scene.box.min[1]).toShortFloat(2)}]`;
 }
 
-let lastMillis = null;
+function animateFrame() {
+  const beforeMillis = new Date().getTime();
+  scrubTo(frameIndex);
+  const afterMillis = new Date().getTime();
 
-function animateFrame(i, isLoop, delay) {
-  const before = new Date().getTime();
-  scrubTo(i);
-  const after = new Date().getTime();
-  console.log("after - before:", after - before);
-
-  const nowMillis = new Date().getTime();
-  const elapsedMillis = nowMillis - lastMillis;
+  const elapsedMillis = afterMillis - beforeMillis;
   const leftMillis = Math.max(0, delay - elapsedMillis);
-  // console.log("leftMillis:", leftMillis);
-  lastMillis = nowMillis;
 
-  if (i < parseInt(scrubber.max)) {
-    animateTask = setTimeout(() => animateFrame(i + 1, isLoop, delay), leftMillis);
+  if (frameIndex < parseInt(scrubber.max)) {
+    frameIndex += 1;
+    animateTask = setTimeout(animateFrame, leftMillis);
   } else if (isLoop) {
-    animateTask = setTimeout(() => animateFrame(parseInt(scrubber.min), isLoop, delay), leftMillis);
+    frameIndex = 0;
+    animateTask = setTimeout(animateFrame, leftMillis);
   } else {
     animateTask = null;
   }
 }
-
-// function animateFrame(i, isLoop) {
-  // scrubTo(i);
-
-  // if (i < parseInt(scrubber.max)) {
-    // i += 1;
-  // } else if (isLoop) {
-    // i = 0; 
-  // } else {
-    // clearInterval(animateTask);
-  // }
-// }
 
 function stopAnimation() {
   if (animateTask) {
@@ -179,9 +166,9 @@ function stopAnimation() {
 function play(isLoop) {
   stopAnimation();
   const time = scene.get('time');
-  const delay = time.get('delay').value * 1000;
-  lastMillis = new Date().getTime();
-  animateTask = animateFrame(0, isLoop, delay);
+  delay = time.get('delay').value * 1000;
+  // frameIndex = 0;
+  animateFrame();
 }
 
 function stopInterpreting() {
@@ -988,14 +975,16 @@ function initialize() {
   });
 
   playOnceButton.addEventListener('click', (e) => {
-    play(false);
+    isLoop = false;
+    play();
   });
 
   playLoopButton.addEventListener('click', e => {
     if (animateTask) {
       stopAnimation();
     } else {
-      play(true);
+      isLoop = true;
+      play();
     }
   });
 
@@ -1015,7 +1004,8 @@ function initialize() {
     if (runZeroMode) {
       startInterpreting(() => {
         if (runZeroMode == 'loop') {
-          play(true);
+          isLoop = true;
+          play();
         }
       });
     }

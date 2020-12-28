@@ -11,7 +11,7 @@ export class Animator {
 
 export class NumberAnimator extends Animator {
   constructor(fromTime, fromValue, toTime, toValue, tween) {
-    super(fromTime, fromValue, toTime, toValue, interpolateLinear);
+    super(fromTime, fromValue, toTime, toValue, interpolaters[tween]);
   }
 
   age(t) {
@@ -22,7 +22,7 @@ export class NumberAnimator extends Animator {
 
 export class Vector2Animator extends Animator {
   constructor(fromTime, fromValue, toTime, toValue, tween) {
-    super(fromTime, fromValue, toTime, toValue, interpolateLinear);
+    super(fromTime, fromValue, toTime, toValue, interpolaters[tween]);
     this.currentValue = [null, null];
   }
 
@@ -104,3 +104,12 @@ export function interpolateBackInOut(a, b, proportion) {
     return a + (b - a) * 0.5 * (t * t * ((u + 1) * t + u) + 2);
   }
 }
+
+const interpolaters = Object.freeze({
+  interpolateLinear,
+  interpolateQuadraticInOut,
+  interpolateCubicInOut,
+  interpolateQuarticInOut,
+  interpolateQuinticInOut,
+  interpolateBackInOut,
+});

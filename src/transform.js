@@ -212,63 +212,106 @@ export class Rotate extends Transform {
     return node;
   }
 
-  validate() {
-    this.assertProperty('degrees');
-    this.assertProperty('pivot');
-  }
+  // validate() {
+    // this.assertProperty('degrees');
+    // this.assertProperty('pivot');
+  // }
 
-  start() {
-    super.start();
-    this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
-    this.degreesMark = new RotationMark(this.parentEnvironment, this);
-    this.wedgeMark = new PathMark();
-    this.marker.addMarks([this.pivotMark, this.degreesMark], [], [], [this.wedgeMark]);
-  }
+  // start() {
+    // super.start();
+    // this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.degreesMark = new RotationMark(this.parentEnvironment, this);
+    // this.wedgeMark = new PathMark();
+    // this.marker.addMarks([this.pivotMark, this.degreesMark], [], [], [this.wedgeMark]);
+  // }
 
-  updateProperties(env, t, bounds, matrix) {
-    let pivot = this.valueAt(env, 'pivot', t);
-    if (!pivot) {
-      throw new LocatedException(this.where, `I found a rotate transform that didn't have a pivot defined for time ${t}.`);
-    }
+  // updateProperties(env, t, bounds, matrix) {
+    // let pivot = this.valueAt(env, 'pivot', t);
+    // if (!pivot) {
+      // throw new LocatedException(this.where, `I found a rotate transform that didn't have a pivot defined for time ${t}.`);
+    // }
     // TODO check all valueAt calls ugh
 
-    const degrees = this.valueAt(env, 'degrees', t);
-    if (!degrees) {
-      throw new LocatedException(this.where, `I found a rotate transform that didn't have a degrees defined for time ${t}.`);
-    }
+    // const degrees = this.valueAt(env, 'degrees', t);
+    // if (!degrees) {
+      // throw new LocatedException(this.where, `I found a rotate transform that didn't have a degrees defined for time ${t}.`);
+    // }
 
-    this.pivotMark.setExpression(pivot);
-    this.degreesMark.setExpression(degrees, new ExpressionReal(0), pivot);
+    // this.pivotMark.setExpression(pivot);
+    // this.degreesMark.setExpression(degrees, new ExpressionReal(0), pivot);
 
-    const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
-    const rotater = Matrix.rotate(degrees.value);
-    const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
+    // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
+    // const rotater = Matrix.rotate(degrees.value);
+    // const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
 
-    const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-    const applied = matrix.multiplyMatrix(composite);
+    // const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
+    // const applied = matrix.multiplyMatrix(composite);
 
-    this.pivotMark.updateProperties(pivot, bounds, applied);
-    const towardPosition = rotater.multiplyVector(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)])).add(pivot);
-    this.degreesMark.updateProperties(towardPosition, bounds, matrix);
+    // this.pivotMark.updateProperties(pivot, bounds, applied);
+    // const towardPosition = rotater.multiplyVector(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)])).add(pivot);
+    // this.degreesMark.updateProperties(towardPosition, bounds, matrix);
 
-    this.wedgeMark.setTransform(matrix, bounds);
+    // this.wedgeMark.setTransform(matrix, bounds);
     // this.wedgeMark.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${matrix.elements[5]})`);
 
-    const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
+    // const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
 
-    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
-    const commands = [
-      `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
-      `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
-      `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
-      'z',
-    ];
-    this.wedgeMark.updateProperties(commands.join(' '));
+    // const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
+    // const commands = [
+      // `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
+      // `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
+      // `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
+      // 'z',
+    // ];
+    // this.wedgeMark.updateProperties(commands.join(' '));
     
-    return {
-      matrix: applied,
-      commands: [`rotate(${-degrees.value} ${pivot.get(0).value} ${bounds.span - pivot.get(1).value})`],
-    };
+    // return {
+      // matrix: applied,
+      // commands: [`rotate(${-degrees.value} ${pivot.get(0).value} ${bounds.span - pivot.get(1).value})`],
+    // };
+  // }
+
+  configureState(bounds) {
+    this.configureScalarProperty('degrees', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>rotate</code> node whose <code>degrees</code> was not set.');
+      }
+
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>rotate</code> node with an illegal value for <code>degrees</code>. ${e.message}`);
+      }
+    });
+
+    this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>pivot</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
+      }
+    });
+
+    const degreesTimeline = this.timedProperties.degrees;
+    const pivotTimeline = this.timedProperties.pivot;
+
+    if (degreesTimeline.isAnimated || pivotTimeline.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateCommand.bind(this));
+    }
+
+    if (degreesTimeline.hasDefault && pivotTimeline.hasDefault) {
+      this.updateCommand(bounds);
+    }
+  }
+
+  updateCommand(bounds) {
+    this.command = `rotate(${-this.degrees} ${this.pivot[0]} ${bounds.span - this.pivot[1]})`;
   }
 }
 
@@ -291,45 +334,88 @@ export class Shear extends Transform {
     return node;
   }
 
-  validate() {
-    this.assertProperty('factors');
-    this.assertProperty('pivot');
+  // validate() {
+    // this.assertProperty('factors');
+    // this.assertProperty('pivot');
+  // }
+
+  // start() {
+    // super.start();
+    // this.factorMarks = [
+      // new HorizontalPanMark(this.parentEnvironment, this),
+      // new VerticalPanMark(this.parentEnvironment, this),
+    // ];
+    // this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.marker.addMarks(this.factorMarks, []);
+  // }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // const pivot = this.valueAt(env, 'pivot', t);
+    // this.pivotMark.setExpression(pivot);
+
+    // const factors = this.valueAt(env, 'factors', t);
+    // this.factorMarks[0].setExpression(factors.get(0));
+    // this.factorMarks[1].setExpression(factors.get(1));
+
+    // this.factorMarks[0].updateProperties(pivot.add(new ExpressionVector([
+      // new ExpressionReal(1),
+      // new ExpressionReal(0),
+    // ])), bounds, matrix);
+
+    // this.factorMarks[1].updateProperties(pivot.add(new ExpressionVector([
+      // new ExpressionReal(0),
+      // new ExpressionReal(1),
+    // ])), bounds, matrix);
+
+    // let shearMatrix = `matrix(1 ${factors.get(1).value} ${factors.get(0).value} 1 0 0)`;
+    // return [
+      // `translate(${-pivot.get(0).value} ${(bounds.span - pivot.get(1).value)})`,
+      // shearMatrix,
+      // `translate(${pivot.get(0).value} ${-(bounds.span - pivot.get(1).value)})`,
+    // ];
+  // }
+
+  configureState(bounds) {
+    this.configureVectorProperty('factors', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>factors</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>factors</code>. ${e.message}`);
+      }
+    });
+
+    this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>pivot</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
+      }
+    });
+
+    const factorsTimeline = this.timedProperties.factors;
+    const pivotTimeline = this.timedProperties.pivot;
+
+    if (factorsTimeline.isAnimated || pivotTimeline.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateCommand.bind(this));
+    }
+
+    if (factorsTimeline.hasDefault && pivotTimeline.hasDefault) {
+      this.updateCommand(bounds);
+    }
   }
 
-  start() {
-    super.start();
-    this.factorMarks = [
-      new HorizontalPanMark(this.parentEnvironment, this),
-      new VerticalPanMark(this.parentEnvironment, this),
-    ];
-    this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks(this.factorMarks, []);
-  }
-
-  updateProperties(env, t, bounds, matrix) {
-    const pivot = this.valueAt(env, 'pivot', t);
-    this.pivotMark.setExpression(pivot);
-
-    const factors = this.valueAt(env, 'factors', t);
-    this.factorMarks[0].setExpression(factors.get(0));
-    this.factorMarks[1].setExpression(factors.get(1));
-
-    this.factorMarks[0].updateProperties(pivot.add(new ExpressionVector([
-      new ExpressionReal(1),
-      new ExpressionReal(0),
-    ])), bounds, matrix);
-
-    this.factorMarks[1].updateProperties(pivot.add(new ExpressionVector([
-      new ExpressionReal(0),
-      new ExpressionReal(1),
-    ])), bounds, matrix);
-
-    let shearMatrix = `matrix(1 ${factors.get(1).value} ${factors.get(0).value} 1 0 0)`;
-    return [
-      `translate(${-pivot.get(0).value} ${(bounds.span - pivot.get(1).value)})`,
-      shearMatrix,
-      `translate(${pivot.get(0).value} ${-(bounds.span - pivot.get(1).value)})`,
-    ];
+  updateCommand(bounds) {
+    this.command = `translate(${-this.pivot[0]} ${bounds.span - this.pivot[1]}) matrix(1 ${this.factors[1]} ${this.factors[0]} 1 0 0) translate(${this.pivot[0]} ${-(bounds.span - this.pivot[1])})`;
   }
 }
 

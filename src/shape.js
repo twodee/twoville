@@ -445,9 +445,9 @@ export class Shape extends TimelinedEnvironment {
   ageDomWithMarks() {
   }
 
-  configureStroke(stateHost, bounds) {
+  configureStroke(stateHost, bounds, isRequired) {
     this.strokeStateHost = stateHost;
-    configureStroke(stateHost, this, bounds);
+    configureStroke(stateHost, this, bounds, isRequired);
   }
 
   updateStrokeColorDom(bounds) {
@@ -1246,7 +1246,7 @@ export class Polyline extends VertexShape {
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.domNodes = this.nodes.filter(node => node.isDom);
     this.configureNodes(bounds);
-    this.configureStroke(this, bounds);
+    this.configureStroke(this, bounds, true);
   }
 
   updateNodeDom(bounds) {
@@ -1343,7 +1343,7 @@ export class Line extends VertexShape {
     }
 
     this.configureNodes(bounds);
-    this.configureStroke(this, bounds);
+    this.configureStroke(this, bounds, true);
   }
 
   updateNodeDom(bounds) {
@@ -1823,7 +1823,7 @@ const FillMixin = {
 
   configureFill: function(bounds) {
     this.configureColor(bounds);
-    this.configureStroke(this.untimedProperties.stroke, bounds);
+    this.configureStroke(this.untimedProperties.stroke, bounds, false);
   },
 
   configureColor: function(bounds) {
