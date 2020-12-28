@@ -6,6 +6,7 @@ import {
 } from './common.js';
 
 import {
+  ExpressionInteger,
   ExpressionReal,
   ExpressionVector,
 } from './ast.js';
@@ -113,10 +114,10 @@ export class Transform extends TimelinedEnvironment {
     this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
   }
 
-  start() {
-    this.marker = new Marker(this.parentEnvironment);
-    this.parentEnvironment.addMarker(this.marker);
-  }
+  // start() {
+    // this.marker = new Marker(this.parentEnvironment);
+    // this.parentEnvironment.addMarker(this.marker);
+  // }
 
   castCursor(column, row) {
     const isHit = this.sourceSpans.some(span => span.contains(column, row));
@@ -126,6 +127,10 @@ export class Transform extends TimelinedEnvironment {
     }
     return isHit;
   }
+
+  configure(bounds) {
+    this.configureState(bounds);
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -133,7 +138,7 @@ export class Transform extends TimelinedEnvironment {
 export class Translate extends Transform {
   static type = 'translate';
   static article = 'a';
-  static timedIds = ['offset'];
+  static timedIds = ['offsets'];
 
   static create(parentEnvironment, where) {
     const node = new Translate();
@@ -147,25 +152,44 @@ export class Translate extends Transform {
     return node;
   }
 
-  validate() {
-    this.assertProperty('offset');
-  }
+  // validate() {
+    // this.assertProperty('offset');
+  // }
 
-  start() {
-    super.start();
-    this.offsetMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks([], [], [this.offsetMark]);
-  }
+  // start() {
+    // super.start();
+    // this.offsetMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.marker.addMarks([], [], [this.offsetMark]);
+  // }
 
-  updateProperties(env, t, bounds, matrix) {
-    const offset = this.valueAt(env, 'offset', t);
-    this.offsetMark.setExpression(offset);
-    this.offsetMark.updateProperties(new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]), bounds, matrix);
+  // updateProperties(env, t, bounds, matrix) {
+    // const offset = this.valueAt(env, 'offset', t);
+    // this.offsetMark.setExpression(offset);
+    // this.offsetMark.updateProperties(new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]), bounds, matrix);
     
-    return {
-      matrix: matrix.multiplyMatrix(Matrix.translate(offset.get(0).value, offset.get(1).value)),
-      commands: [`translate(${offset.get(0).value} ${-offset.get(1).value})`],
-    };
+    // return {
+      // matrix: matrix.multiplyMatrix(Matrix.translate(offset.get(0).value, offset.get(1).value)),
+      // commands: [`translate(${offset.get(0).value} ${-offset.get(1).value})`],
+    // };
+  // }
+
+  configureState(bounds) {
+    this.configureVectorProperty('offsets', this, this.parentEnvironment, this.updateCommand.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>translate</code> node whose <code>offsets</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>translate</code> node with an illegal value for <code>offsets</code>. ${e.message}`);
+      }
+    });
+  }
+
+  updateCommand(bounds) {
+    this.command = `translate(${this.offsets[0]} ${-this.offsets[1]})`;
   }
 }
 
@@ -328,73 +352,116 @@ export class Scale extends Transform {
     return node;
   }
 
-  validate() {
-    this.assertProperty('factors');
-    this.assertProperty('pivot');
+  // validate() {
+    // this.assertProperty('factors');
+    // this.assertProperty('pivot');
+  // }
+
+  // start() {
+    // super.start();
+
+    // this.factorMarks = [
+      // new HorizontalPanMark(this.parentEnvironment, this),
+      // new VerticalPanMark(this.parentEnvironment, this),
+    // ];
+
+    // this.lineMarks = [
+      // new LineMark(),
+      // new LineMark(),
+    // ];
+
+    // this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.marker.addMarks([...this.factorMarks, this.pivotMark], [], [], this.lineMarks);
+  // }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // let pivot = this.valueAt(env, 'pivot', t);
+    // this.pivotMark.setExpression(pivot);
+
+    // const factors = this.valueAt(env, 'factors', t);
+    // this.factorMarks[0].setExpression(factors.get(0));
+    // this.factorMarks[1].setExpression(factors.get(1));
+
+    // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
+    // const scaler = Matrix.scale(factors.get(0).value, factors.get(1).value);
+    // const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
+
+    // const composite = originToPivot.multiplyMatrix(scaler.multiplyMatrix(pivotToOrigin));
+    // const applied = matrix.multiplyMatrix(composite);
+
+    // const positionX = new ExpressionVector([
+      // new ExpressionReal(1),
+      // new ExpressionReal(0),
+    // ]).add(pivot);
+
+    // const positionY = new ExpressionVector([
+      // new ExpressionReal(0),
+      // new ExpressionReal(1),
+    // ]).add(pivot);
+
+    // this.factorMarks[0].updateProperties(positionX, bounds, applied);
+    // this.factorMarks[1].updateProperties(positionY, bounds, applied);
+
+    // const transformedPivot = applied.multiplyVector(pivot);
+    // const transformedPositionX = applied.multiplyVector(positionX);
+    // const transformedPositionY = applied.multiplyVector(positionY);
+
+    // this.lineMarks[0].updateProperties(transformedPivot, transformedPositionX, bounds, matrix);
+    // this.lineMarks[1].updateProperties(transformedPivot, transformedPositionY, bounds, matrix);
+
+    // this.pivotMark.updateProperties(pivot, bounds, applied);
+
+    // return {
+      // matrix: applied,
+      // commands: [
+        // `translate(${pivot.get(0).value} ${(bounds.span - pivot.get(1).value)})`,
+        // `scale(${factors.get(0).value} ${factors.get(1).value})`,
+        // `translate(${-pivot.get(0).value} ${-(bounds.span - pivot.get(1).value)})`,
+      // ],
+    // };
+  // }
+
+  configureState(bounds) {
+    this.configureVectorProperty('factors', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>factors</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>factors</code>. ${e.message}`);
+      }
+    });
+
+    this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>pivot</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
+      }
+    });
+
+    const factorsTimeline = this.timedProperties.factors;
+    const pivotTimeline = this.timedProperties.pivot;
+
+    if (factorsTimeline.isAnimated || pivotTimeline.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateCommand.bind(this));
+    }
+
+    if (factorsTimeline.hasDefault && pivotTimeline.hasDefault) {
+      this.updateCommand(bounds);
+    }
   }
 
-  start() {
-    super.start();
-
-    this.factorMarks = [
-      new HorizontalPanMark(this.parentEnvironment, this),
-      new VerticalPanMark(this.parentEnvironment, this),
-    ];
-
-    this.lineMarks = [
-      new LineMark(),
-      new LineMark(),
-    ];
-
-    this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
-    this.marker.addMarks([...this.factorMarks, this.pivotMark], [], [], this.lineMarks);
-  }
-
-  updateProperties(env, t, bounds, matrix) {
-    let pivot = this.valueAt(env, 'pivot', t);
-    this.pivotMark.setExpression(pivot);
-
-    const factors = this.valueAt(env, 'factors', t);
-    this.factorMarks[0].setExpression(factors.get(0));
-    this.factorMarks[1].setExpression(factors.get(1));
-
-    const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
-    const scaler = Matrix.scale(factors.get(0).value, factors.get(1).value);
-    const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
-
-    const composite = originToPivot.multiplyMatrix(scaler.multiplyMatrix(pivotToOrigin));
-    const applied = matrix.multiplyMatrix(composite);
-
-    const positionX = new ExpressionVector([
-      new ExpressionReal(1),
-      new ExpressionReal(0),
-    ]).add(pivot);
-
-    const positionY = new ExpressionVector([
-      new ExpressionReal(0),
-      new ExpressionReal(1),
-    ]).add(pivot);
-
-    this.factorMarks[0].updateProperties(positionX, bounds, applied);
-    this.factorMarks[1].updateProperties(positionY, bounds, applied);
-
-    const transformedPivot = applied.multiplyVector(pivot);
-    const transformedPositionX = applied.multiplyVector(positionX);
-    const transformedPositionY = applied.multiplyVector(positionY);
-
-    this.lineMarks[0].updateProperties(transformedPivot, transformedPositionX, bounds, matrix);
-    this.lineMarks[1].updateProperties(transformedPivot, transformedPositionY, bounds, matrix);
-
-    this.pivotMark.updateProperties(pivot, bounds, applied);
-
-    return {
-      matrix: applied,
-      commands: [
-        `translate(${pivot.get(0).value} ${(bounds.span - pivot.get(1).value)})`,
-        `scale(${factors.get(0).value} ${factors.get(1).value})`,
-        `translate(${-pivot.get(0).value} ${-(bounds.span - pivot.get(1).value)})`,
-      ],
-    };
+  updateCommand(bounds) {
+    this.command = `translate(${this.pivot[0]} ${bounds.span - this.pivot[1]}) scale(${this.factors[0]} ${this.factors[1]}) translate(${-this.pivot[0]} ${-(bounds.span - this.pivot[1])})`;
   }
 }
 

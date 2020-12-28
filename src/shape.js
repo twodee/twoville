@@ -148,58 +148,58 @@ export class Shape extends TimelinedEnvironment {
     }
   }
 
-  start() {
-    this.markers = [];
-    this.addMarker(new Marker(this));
-    for (let transform of this.transforms) {
-      transform.start();
-    }
-  }
+  // start() {
+    // this.markers = [];
+    // this.addMarker(new Marker(this));
+    // for (let transform of this.transforms) {
+      // transform.start();
+    // }
+  // }
 
   addMarker(marker) {
     marker.id = this.markers.length;
     this.markers.push(marker);
   }
 
-  validate() {
-    for (let transform of this.transforms) {
-      transform.validate();
-    }
-  }
+  // validate() {
+    // for (let transform of this.transforms) {
+      // transform.validate();
+    // }
+  // }
 
   scrub(env, t, bounds) {
     const centroid = this.updateProperties(env, t, bounds, Matrix.identity());
   }
 
-  transform(env, t, bounds, matrix) {
-    if (this.transforms.length > 0) {
-      let commands = [];
-      for (let transform of this.transforms) {
-        const transformation = transform.updateProperties(env, t, bounds, matrix);
-        matrix = transformation.matrix;
-        commands.push(...transformation.commands);
-      }
+  // transform(env, t, bounds, matrix) {
+    // if (this.transforms.length > 0) {
+      // let commands = [];
+      // for (let transform of this.transforms) {
+        // const transformation = transform.updateProperties(env, t, bounds, matrix);
+        // matrix = transformation.matrix;
+        // commands.push(...transformation.commands);
+      // }
 
-      const commandString = commands.join(' ');
-      this.element.setAttributeNS(null, 'transform', commandString);
-      this.backgroundMarkGroup.setAttributeNS(null, 'transform', commandString);
-    }
+      // const commandString = commands.join(' ');
+      // this.element.setAttributeNS(null, 'transform', commandString);
+      // this.backgroundMarkGroup.setAttributeNS(null, 'transform', commandString);
+    // }
 
-    return matrix;
-  }
+    // return matrix;
+  // }
   
-  updateCentroid(matrix, centroid, bounds) {
-    const p = matrix.multiplyVector(centroid);
+  // updateCentroid(matrix, centroid, bounds) {
+    // const p = matrix.multiplyVector(centroid);
     // Have to flip Y because we've already countered the axis.
-    this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${p.get(0).value} ${-p.get(1).value})`);
-  }
+    // this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${p.get(0).value} ${-p.get(1).value})`);
+  // }
 
-  updateProperties(env, t, bounds, matrix) {
-    throw Error('Shape.updateProperties is abstract');
+  // updateProperties(env, t, bounds, matrix) {
+    // throw Error('Shape.updateProperties is abstract');
     // Step 1. Transform.
     // Step 2. Update properties.
     // Step 3. Fix marks that depend on centroid.
-  }
+  // }
 
   connectToParent() {
     if (this.owns('parent')) {
@@ -409,7 +409,27 @@ export class Shape extends TimelinedEnvironment {
     this.updateDoms = [];
     this.agers = [];
     this.configureState(bounds);
+    this.configureTransforms(bounds);
     this.connect();
+  }
+
+  configureTransforms(bounds) {
+    for (let transform of this.transforms) {
+      transform.configure(bounds);
+    }
+
+    if (this.transforms.some(transform => transform.isAnimated)) {
+      this.updateDoms.push(this.updateTransformDom.bind(this));
+    }
+
+    if (this.transforms.every(transform => transform.hasAllDefaults)) {
+      this.updateTransformDom(bounds);
+    }
+  }
+
+  updateTransformDom(bounds) {
+    const commands = this.transforms.map(transform => transform.command).join(' ');
+    this.element.setAttributeNS(null, 'transform', commands);
   }
 
   ageDomWithoutMark(env, bounds, t) {
