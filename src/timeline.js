@@ -84,6 +84,21 @@ export class Timeline {
     return this.intervals.find(interval => interval.toTime == t);
   }
 
+  expressionAt(t) {
+    let interval = this.intervalAt(t);
+    if (interval) {
+      if (interval.hasFrom() && t === interval.fromTime.value) {
+        return interval.fromValue;
+      } else if (interval.hasTo() && t === interval.toTime.value) {
+        return interval.toValue;
+      } else {
+        return null;
+      }
+    } else {
+      return this.defaultValue;
+    }
+  }
+
   valueAt(env, t) {
     let interval = this.intervalAt(t);
     if (interval) {

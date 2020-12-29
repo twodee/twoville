@@ -126,11 +126,15 @@ function serializeThenDownload(root) {
   downloadBlob('download.svg', svgBlob);
 }
 
-function scrubTo(tick) {
-  let t = scene.tickToTime(tick);
+function scrubTo(t) {
+  if (t < scene.bounds.startTime) {
+    t = scene.bounds.startTime;
+  } else if (t > scene.bounds.stopTime) {
+    t = scene.bounds.stopTime;
+  }
+
   timeSpinner.value = t;
-  scrubber.value = tick;
-  // scene.scrub(t);
+  scrubber.value = t;
   scene.age(t);
 
   // contentCornerBox.innerText = `[${scene.box.min[0].toShortFloat(2)}, ${scene.box.min[1].toShortFloat(2)}]`;
@@ -217,8 +221,7 @@ function postInterpret(pod, successCallback) {
     range.setEnd(range.end.row, range.start.column + newText.length);
     editor.getSelection().setSelectionRange(range);
 
-    let t = scene.tickToTime(parseInt(scrubber.value));
-    scene.scrub(t);
+    scene.sync();
   };
 
   scene.stopTweak = () => {
@@ -231,18 +234,11 @@ function postInterpret(pod, successCallback) {
     scene.clear();
     scene.start();
 
-    scrubber.min = 0;
-    scrubber.max = scene.bounds.nticks;
-    timeSpinner.max = scene.bounds.nticks;
+    timeSpinner.min = scrubber.min = scene.bounds.startTime;
+    timeSpinner.max = scrubber.max = scene.bounds.stopTime;
 
-    let t = scene.getTime(parseInt(scrubber.value));
-    if (t < scene.bounds.startTime) {
-      scrubTo(0);
-    } else if (t > scene.bounds.stopTime) {
-      scrubTo((scene.bounds.stopTime - scene.bounds.startTime) * scene.resolution);
-    } else {
-      scrubTo(parseInt(scrubber.value));
-    }
+    let t = parseInt(scrubber.value);
+    scrubTo(t);
 
     if (oldScene) {
       if (oldScene.selectedShape) {
@@ -970,8 +966,9 @@ function initialize() {
 
   timeSpinner.addEventListener('input', () => {
     stopAnimation();
-    let tick = timeToTick(parseFloat(timeSpinner.value));
-    scrubTo(tick);
+    if (timeSpinner.value) {
+      scrubTo(parseInt(timeSpinner.value));
+    }
   });
 
   playOnceButton.addEventListener('click', (e) => {

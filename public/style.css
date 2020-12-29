@@ -168,6 +168,11 @@ var {
   margin: 0;
   width: calc(100% - 20px);
   text-align: center;
+  pointer-events: none;
+}
+
+#time-toolbar > * {
+  pointer-events: auto;
 }
 
 #scrubber {
@@ -229,30 +234,43 @@ html.grabbing {
   cursor: col-resize;
 }
 
-.mark {
+.mark, .mark-piece {
   stroke-width: 3;
   stroke-opacity: 1;
-  stroke: rgb(66, 135, 245);
+  /* stroke: rgb(66, 135, 245); */
+  stroke: darkorange;
   vector-effect: non-scaling-stroke;
   fill: none;
-  stroke-dasharray: 3 3;
+  stroke-dasharray: 6 3;
 }
 
-.hovered > .mark {
-  stroke: rgb(255, 169, 31);
+.hovered > .mark-piece, .hovered > .mark {
+  /* stroke: rebeccapurple; */
+  /* stroke-dasharray: unset; */
+  animation: ants 0.5s linear infinite forwards;
 }
 
-.filled-mark {
-  stroke-width: 2;
+@keyframes ants {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -9;
+  }
+}
+
+.filled-mark-piece {
+  stroke-width: 1;
   stroke-dasharray: none;
   fill: black;
 }
 
-.stale-mark {
+.disabled-mark > .filled-mark-piece {
   fill: gray;
 }
 
-.outline-mark {
+.viewport-outline {
   stroke-width: 1;
   stroke: rgb(180, 180, 180);
   stroke-dasharray: none;
@@ -271,6 +289,10 @@ html.grabbing {
   stroke: white;
   stroke-dasharray: none;
   vector-effect: non-scaling-stroke;
+}
+
+.disabled-mark > .cue {
+  visibility: hidden;
 }
 
 .tool-icon {

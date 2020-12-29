@@ -5,7 +5,7 @@
     "test": "jest test",
     "start": "webpack-dev-server --open --config webpack/webpack.development.js",
     "build": "webpack --config webpack/webpack.production.js",
-    "deploy": "npm run build && ssh twodee \"rm /var/www/twodee/twoville/*\" && scp -r public/* dist twodee:/var/www/twodee/twoville && ssh twodee \"cd /var/www/twodee/twoville && chmod -R g+rX *\""
+    "deploy": "npm run build && ssh twodee \"rm /var/www/twoville/*\" && scp -r public/* dist twodee:/var/www/twoville && ssh twodee \"cd /var/www/twoville && chmod -R g+rX *\""
   },
   "devDependencies": {
     "@babel/plugin-proposal-class-properties": "^7.10.4",

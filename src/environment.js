@@ -287,6 +287,16 @@ export class TimelinedEnvironment extends Environment {
     return this.timedProperties[property].valueAt(env, t);
   }
 
+  expressionAt(property, t) {
+    if (this.timedProperties.hasOwnProperty(property)) {
+      return this.timedProperties[property].expressionAt(t);
+    } else if (this.untimedProperties.hasOwnProperty(property)) {
+      return this.untimedProperties[property];
+    } else {
+      return null;
+    }
+  }
+
   get(id) {
     let env = this;
     while (env) {
@@ -341,7 +351,7 @@ export class TimelinedEnvironment extends Environment {
 
     if (defaultValue) {
       atemporal = resolveDefault(defaultValue);
-      propertyHost[property] = atemporal;
+      propertyHost.state[property] = atemporal;
       if (updateDom && dependencies.every(dependency => this.timedProperties[dependency].defaultValue)) {
         updateDom(bounds);
       }
@@ -372,9 +382,9 @@ export class TimelinedEnvironment extends Environment {
       const ager = (t) => {
         const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
         if (animator) {
-          propertyHost[property] = animator.age(t);
+          propertyHost.state[property] = animator.age(t);
         } else {
-          propertyHost[property] = atemporal;
+          propertyHost.state[property] = atemporal;
         }
       };
 

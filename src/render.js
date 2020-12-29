@@ -72,7 +72,7 @@ export class RenderEnvironment extends Environment {
       height: 0,
       startTime: 0,
       stopTime: 0,
-      nticks: 0
+      // nticks: 0
     };
     this.functions = {};
     this.bindGlobalFunctions();
@@ -210,11 +210,11 @@ export class RenderEnvironment extends Environment {
     pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
     pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
     pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
-    pageOutline.classList.add('mark', 'outline-mark');
+    pageOutline.classList.add('mark', 'viewport-outline');
 
     this.bounds.startTime = this.get('time').get('start').value;
     this.bounds.stopTime = this.get('time').get('stop').value;
-    this.bounds.nticks = this.bounds.stopTime - this.bounds.startTime;
+    // this.bounds.nticks = this.bounds.stopTime - this.bounds.startTime;
 
     this.mainGroup = document.createElementNS(svgNamespace, 'g');
     this.mainGroup.setAttributeNS(null, 'id', 'main-group');
@@ -254,6 +254,7 @@ export class RenderEnvironment extends Environment {
     for (let shape of this.shapes) {
       shape.configure(this.bounds);
     }
+    this.state = {};
 
     this.drawables = this.shapes.filter(shape => shape.isDrawable);
 
@@ -310,19 +311,33 @@ export class RenderEnvironment extends Environment {
     this.box.include(box.max);
   }
 
-  age(t) {
-    for (let drawable of this.drawables) {
-      drawable.ageDomWithoutMark(this, this.bounds, t);
+  sync() {
+    const matrix = this.svg.getScreenCTM();
+    const factor = matrix.a;
+    for (let shape of this.shapes) {
+      shape.sync(this.bounds, factor);
     }
   }
 
-  scrub(t) {
+  age(t) {
+    const matrix = this.svg.getScreenCTM();
+    const factor = matrix.a;
+
+    this.state.t = t;
+    for (let drawable of this.drawables) {
+      // drawable.ageDomWithoutMarks(this.bounds, t);
+      drawable.ageDomWithMarks(this.bounds, t, factor);
+    }
+    // this.updateScale();
+  }
+
+  // scrub(t) {
     // Don't target shapes. Non-drawable shapes should get scrubbed by their parents.
     // for (let drawable of this.drawables) {
       // drawable.scrub(this, t, this.bounds);
     // }
-    // this.unscaleMarks();
-  }
+    // this.updateScale();
+  // }
 
   hideMarks() {
     this.sceneMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
@@ -330,9 +345,9 @@ export class RenderEnvironment extends Environment {
 
   updateViewBox() {
     svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${this.bounds.y} ${this.bounds.width} ${this.bounds.height}`);
-    // if (this.isStarted) {
-      // this.unscaleMarks();
-    // }
+    if (this.isStarted) {
+      this.updateScale();
+    }
   }
 
   rebound(oldBounds) {
@@ -360,36 +375,40 @@ export class RenderEnvironment extends Environment {
     return clone;
   }
 
-  unscaleMarks() {
-    // const matrix = this.svg.getScreenCTM();
-    // const factor = matrix.a;
-    // for (let shape of this.shapes) {
-      // shape.unscaleMarks(factor);
-    // }
+  updateScale() {
+    const matrix = this.svg.getScreenCTM();
+    const factor = matrix.a;
+    for (let shape of this.shapes) {
+      shape.updateScale(factor);
+    }
   }
 
   stale() {
     if (!this.isStale && !this.isTweaking) {
       const circles = this.foregroundMarkGroup.querySelectorAll('.filled-mark');
       for (let circle of circles) {
-        circle.classList.add('stale-mark');
+        circle.classList.add('disabled-mark');
+      }
+      const marks = this.foregroundMarkGroup.querySelectorAll('.mark');
+      for (let mark of marks) {
+        mark.classList.add('disabled-mark');
       }
       this.isStale = true;
     }
   }
 
-  getTime(tick) {
-    return this.bounds.startTime + tick / this.resolution;
-  }
+  // getTime(tick) {
+    // return this.bounds.startTime + tick / this.resolution;
+  // }
 
-  tickToTime(tick) {
-    let proportion = tick / this.bounds.nticks;
-    return Math.round(this.bounds.startTime + proportion * (this.bounds.stopTime - this.bounds.startTime));
-  }
+  // tickToTime(tick) {
+    // let proportion = tick / this.bounds.nticks;
+    // return Math.round(this.bounds.startTime + proportion * (this.bounds.stopTime - this.bounds.startTime));
+  // }
 
-  timeToTick(time) {
-    return Math.round((time - this.bounds.startTime) / (this.bounds.stopTime - this.bounds.startTime) * this.bounds.nticks);
-  }
+  // timeToTick(time) {
+    // return Math.round((time - this.bounds.startTime) / (this.bounds.stopTime - this.bounds.startTime) * this.bounds.nticks);
+  // }
 
   contextualizeCursor(element) {
     document.documentElement.classList.remove('grab', 'grabbing');
@@ -459,7 +478,7 @@ export class RenderEnvironment extends Environment {
       this.bounds.height *= factor;
       this.updateViewBox();
 
-      this.unscaleMarks();
+      this.updateScale();
     }
   };
 

@@ -27,6 +27,7 @@ export class Stroke extends TimelinedEnvironment {
   static reify(parentEnvironment, pod) {
     const stroke = new Stroke();
     stroke.embody(parentEnvironment, pod);
+    stroke.state = {};
     return stroke;
   }
 }
@@ -34,8 +35,6 @@ export class Stroke extends TimelinedEnvironment {
 // --------------------------------------------------------------------------- 
 
 export function configureStroke(stateHost, domHost, bounds, isRequired) {
-  // TODO allow not required
-
   // Stroke color.
   stateHost.configureVectorProperty('color', stateHost, domHost, domHost.updateStrokeColorDom.bind(domHost), bounds, [], timeline => {
     if (timeline) {

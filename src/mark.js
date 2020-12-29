@@ -16,6 +16,8 @@ import {
 
 // --------------------------------------------------------------------------- 
 
+const handleSize = 8;
+
 export class Marker {
   constructor(shape) {
     this.shape = shape;
@@ -109,12 +111,18 @@ export class Marker {
     this.showMarks();
   }
 
-  unscale(factor) {
+  updateScale(factor) {
     for (let mark of this.foregroundMarks) {
-      mark.unscale(factor);
+      mark.updateScale(factor);
     }
     for (let mark of this.centeredForegroundMarks) {
-      mark.unscale(factor);
+      mark.updateScale(factor);
+    }
+  }
+
+  updateManipulability() {
+    for (let mark of this.foregroundMarks) {
+      mark.updateManipulability();
     }
   }
 
@@ -154,14 +162,25 @@ export class RectangleMark {
     this.element = document.createElementNS(svgNamespace, 'rect');
   }
 
-  updateProperties(position, size, bounds, rounding) {
-    this.element.setAttributeNS(null, 'x', position.get(0).value);
-    this.element.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
-    this.element.setAttributeNS(null, 'width', size.get(0).value);
-    this.element.setAttributeNS(null, 'height', size.get(1).value);
-    if (rounding) {
-      this.element.setAttributeNS(null, 'rx', rounding.value);
-      this.element.setAttributeNS(null, 'ry', rounding.value);
+  // updateProperties(position, size, bounds, rounding) {
+    // this.element.setAttributeNS(null, 'x', position.get(0).value);
+    // this.element.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
+    // this.element.setAttributeNS(null, 'width', size.get(0).value);
+    // this.element.setAttributeNS(null, 'height', size.get(1).value);
+    // if (rounding) {
+      // this.element.setAttributeNS(null, 'rx', rounding.value);
+      // this.element.setAttributeNS(null, 'ry', rounding.value);
+    // }
+  // }
+
+  updateDom(bounds, corner, size, rounding) {
+    this.element.setAttributeNS(null, 'x', corner[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - corner[1] - size[1]);
+    this.element.setAttributeNS(null, 'width', size[0]);
+    this.element.setAttributeNS(null, 'height', size[1]);
+    if (rounding !== undefined) {
+      this.element.setAttributeNS(null, 'rx', rounding);
+      this.element.setAttributeNS(null, 'ry', rounding);
     }
   }
 }
@@ -173,10 +192,16 @@ export class CircleMark {
     this.element = document.createElementNS(svgNamespace, 'circle');
   }
 
-  updateProperties(center, radius, bounds) {
-    this.element.setAttributeNS(null, 'cx', center.get(0).value);
-    this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
-    this.element.setAttributeNS(null, 'r', radius.value);
+  // updateProperties(center, radius, bounds) {
+    // this.element.setAttributeNS(null, 'cx', center.get(0).value);
+    // this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
+    // this.element.setAttributeNS(null, 'r', radius.value);
+  // }
+
+  updateDom(bounds, center, radius) {
+    this.element.setAttributeNS(null, 'cx', center[0]);
+    this.element.setAttributeNS(null, 'cy', bounds.span - center[1]);
+    this.element.setAttributeNS(null, 'r', radius);
   }
 }
 
@@ -238,8 +263,10 @@ export class PolylineMark {
 // --------------------------------------------------------------------------- 
 
 export class TweakableMark {
-  constructor(shape, component) {
+  constructor(shape, component, getExpression, updateState) {
     this.shape = shape;
+    this.getExpression = getExpression;
+    this.updateState = updateState;
     this.component = component ?? shape;
     this.mouseDownAt = null;
 
@@ -247,8 +274,8 @@ export class TweakableMark {
     this.element.addEventListener('mousedown', this.onMouseDown);
 
     this.circle = document.createElementNS(svgNamespace, 'circle');
-    this.circle.classList.add('mark');
-    this.circle.classList.add('filled-mark');
+    this.circle.classList.add('mark-piece');
+    this.circle.classList.add('filled-mark-piece');
     this.circle.classList.add(`tag-${this.shape.id}`);
     this.circle.setAttributeNS(null, 'cx', 0);
     this.circle.setAttributeNS(null, 'cy', 0);
@@ -266,14 +293,16 @@ export class TweakableMark {
     return mouseAt;
   }
 
-  setExpression(expression) {
-    this.expression = expression;
+  updateManipulability() {
+    this.expression = this.getExpression();
+    this.element.classList.toggle('disabled-mark', !this.expression);
   }
 
   onMouseDown = event => {
     event.stopPropagation();
+    this.expression = this.getExpression();
 
-    if (!this.shape.root.isStale) {
+    if (this.expression && !this.shape.root.isStale) {
       this.untweakedExpression = this.expression.clone();
       this.mouseDownAt = this.transform(event);
       this.shape.root.select(this.shape);
@@ -307,27 +336,39 @@ export class TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class PanMark extends TweakableMark {
-  constructor(shape, component, isRotated = true) {
-    super(shape, component);
+  constructor(shape, component, isRotated, getExpression, updateState) {
+    super(shape, component, getExpression, updateState);
     this.isRotated = isRotated;
   }
 
-  updateProperties(position, bounds, matrix) {
-    const transformedPosition = matrix.multiplyVector(position);
-		const factors = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
-		const rotation = factors.rotation * 180 / Math.PI;
-
-    this.commandString = `translate(${transformedPosition.get(0).value} ${bounds.span - transformedPosition.get(1).value})`;
-    if (this.isRotated) {
-      this.commandString += ` rotate(${-rotation})`;
-    }
+  updateDom(bounds, position, factor) {
+    this.commandString = `translate(${position[0]} ${bounds.span - position[1]})`;
+    // if (this.isRotated) {
+      // this.commandString += ` rotate(${-rotation})`;
+    // }
+    this.updateScale(factor);
   }
 
-  unscale(factor) {
-    if (this.commandString) {
-      this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${6 / factor})`);
-    }
+  updateScale(factor) {
+    this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${handleSize / factor})`);
   }
+
+  // updateProperties(position, bounds, matrix) {
+    // const transformedPosition = matrix.multiplyVector(position);
+		// const factors = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
+		// const rotation = factors.rotation * 180 / Math.PI;
+
+    // this.commandString = `translate(${transformedPosition.get(0).value} ${bounds.span - transformedPosition.get(1).value})`;
+    // if (this.isRotated) {
+      // this.commandString += ` rotate(${-rotation})`;
+    // }
+  // }
+
+  // unscale(factor) {
+    // if (this.commandString) {
+      // this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${6 / factor})`);
+    // }
+  // }
 
   addHorizontal() {
     this.horizontal = document.createElementNS(svgNamespace, 'line');
@@ -368,8 +409,8 @@ export class PanMark extends TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class VectorPanMark extends PanMark {
-  constructor(shape, component) {
-    super(shape, component);
+  constructor(shape, component, getExpression, updateState) {
+    super(shape, component, false, getExpression, updateState);
     this.addHorizontal();
     this.addVertical();
   }
@@ -385,6 +426,7 @@ export class VectorPanMark extends PanMark {
 
     this.expression.set(0, new ExpressionReal(x));
     this.expression.set(1, new ExpressionReal(y));
+    this.updateState([x, y]);
 
     return '[' + this.expression.get(0).value + ', ' + this.expression.get(1).value + ']';
   }
@@ -393,8 +435,8 @@ export class VectorPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class HorizontalPanMark extends PanMark {
-  constructor(shape, component, multiplier = 1) {
-    super(shape, component);
+  constructor(shape, component, multiplier = 1, getExpression, updateState) {
+    super(shape, component, false, getExpression, updateState);
     this.multiplier = multiplier;
     this.addHorizontal();
   }
@@ -406,9 +448,11 @@ export class HorizontalPanMark extends PanMark {
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
-    const newExpression = new ExpressionReal(newValue);
 
     this.expression.value = newValue;
+    this.updateState(newValue);
+
+    const newExpression = new ExpressionReal(newValue);
     return manipulateSource(this.untweakedExpression, newExpression);
   }
 }
@@ -416,8 +460,8 @@ export class HorizontalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class VerticalPanMark extends PanMark {
-  constructor(shape, component, multiplier = 1) {
-    super(shape, component);
+  constructor(shape, component, multiplier = 1, getExpression, updateState) {
+    super(shape, component, false, getExpression, updateState);
     this.multiplier = multiplier;
     this.addVertical();
   }
@@ -429,9 +473,11 @@ export class VerticalPanMark extends PanMark {
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
-    const newExpression = new ExpressionReal(newValue);
 
     this.expression.value = newValue;
+    this.updateState(newValue);
+
+    const newExpression = new ExpressionReal(newValue);
     return manipulateSource(this.untweakedExpression, newExpression);
   }
 }
