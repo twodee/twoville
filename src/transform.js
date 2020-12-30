@@ -129,6 +129,7 @@ export class Transform extends TimelinedEnvironment {
   }
 
   configure(bounds) {
+    this.state = {};
     this.configureState(bounds);
   }
 }
@@ -189,7 +190,7 @@ export class Translate extends Transform {
   }
 
   updateCommand(bounds) {
-    this.command = `translate(${this.offsets[0]} ${-this.offsets[1]})`;
+    this.command = `translate(${this.state.offsets[0]} ${-this.state.offsets[1]})`;
   }
 }
 
@@ -547,7 +548,7 @@ export class Scale extends Transform {
   }
 
   updateCommand(bounds) {
-    this.command = `translate(${this.pivot[0]} ${bounds.span - this.pivot[1]}) scale(${this.factors[0]} ${this.factors[1]}) translate(${-this.pivot[0]} ${-(bounds.span - this.pivot[1])})`;
+    this.command = `translate(${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]}) scale(${this.state.factors[0]} ${this.state.factors[1]}) translate(${-this.state.pivot[0]} ${-(bounds.span - this.state.pivot[1])})`;
   }
 }
 
