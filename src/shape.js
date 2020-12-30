@@ -153,9 +153,9 @@ export class Shape extends TimelinedEnvironment {
     this.markers.push(marker);
   }
 
-  scrub(env, t, bounds) {
-    const centroid = this.updateProperties(env, t, bounds, Matrix.identity());
-  }
+  // scrub(env, t, bounds) {
+    // const centroid = this.updateProperties(env, t, bounds, Matrix.identity());
+  // }
 
   // transform(env, t, bounds, matrix) {
     // if (this.transforms.length > 0) {
@@ -178,13 +178,6 @@ export class Shape extends TimelinedEnvironment {
     // const p = matrix.multiplyVector(centroid);
     // Have to flip Y because we've already countered the axis.
     // this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${p.get(0).value} ${-p.get(1).value})`);
-  // }
-
-  // updateProperties(env, t, bounds, matrix) {
-    // throw Error('Shape.updateProperties is abstract');
-    // Step 1. Transform.
-    // Step 2. Update properties.
-    // Step 3. Fix marks that depend on centroid.
   // }
 
   connectToParent() {
@@ -253,9 +246,7 @@ export class Shape extends TimelinedEnvironment {
     this.markers[0].deselect();
   }
 
-  initializeMarks() {
-    if (!this.markers) return;
-
+  initializeMarkDom() {
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.backgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-background-marks`);
 
@@ -270,6 +261,10 @@ export class Shape extends TimelinedEnvironment {
 
     this.element.classList.add('cursor-selectable');
     this.element.classList.add(`tag-${this.id}`);
+  }
+
+  initializeMarks() {
+    if (!this.markers) return;
 
     if (this.owns('parent')) {
       this.get('parent').backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
@@ -320,7 +315,9 @@ export class Shape extends TimelinedEnvironment {
       }
     });
 
+    console.log("this.markers:", this.markers);
     for (let marker of this.markers) {
+      console.log("marker:", marker);
       this.backgroundMarkGroup.appendChild(marker.backgroundMarkGroup);
       this.midgroundMarkGroup.appendChild(marker.midgroundMarkGroup);
       this.foregroundMarkGroup.appendChild(marker.foregroundMarkGroup);
@@ -396,6 +393,7 @@ export class Shape extends TimelinedEnvironment {
     this.updateDoms = [];
     this.agers = [];
     this.configureState(bounds);
+    this.initializeMarkDom();
     this.configureTransforms(bounds);
     this.configureMarks();
     this.connect();
@@ -404,6 +402,9 @@ export class Shape extends TimelinedEnvironment {
   configureMarks() {
     this.markers = [];
     this.addMarker(new Marker(this));
+    for (let transform of this.transforms) {
+      transform.configureMarks();
+    }
   }
 
   configureTransforms(bounds) {
@@ -423,6 +424,13 @@ export class Shape extends TimelinedEnvironment {
   updateTransformDom(bounds) {
     const commands = this.transforms.map(transform => transform.command).join(' ');
     this.element.setAttributeNS(null, 'transform', commands);
+    this.backgroundMarkGroup.setAttributeNS(null, 'transform', commands);
+
+    let matrix = Matrix.identity();
+    for (let transform of this.transforms) {
+      matrix = matrix.multiplyMatrix(transform.toMatrix());
+    }
+    this.state.matrix = matrix;
   }
 
   ageDomWithoutMarks(bounds, t) {
@@ -444,14 +452,34 @@ export class Shape extends TimelinedEnvironment {
   }
 
   updateAllDom(bounds) {
-    throw Error('abstract');
+    this.updateTransformDom(bounds);
   }
 
   sync(bounds, factor) {
     // Must update all DOM. updateDoms only holds updaters for animated, but
     // handle interactions may have changed non-animated properties.
+    for (let transform of this.transforms) {
+      transform.updateCommand(bounds);
+    }
     this.updateAllDom(bounds);
     this.updateMarkerDom(bounds, factor);
+  }
+
+  updateMarkerDom(bounds, factor) {
+    this.updateKeyMarkerDom(bounds, factor);
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${this.state.centroid[0]} ${-this.state.centroid[1]})`);
+
+    // transforms[0] is rightmost. It needs no incoming transform.
+    // transforms[1] needs transforms[0]'s matrix applied. Does transforms[i]
+    // needs its own matrix included?
+
+    let matrix = Matrix.identity();
+    for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
+      const transform = this.transforms[i];
+      transform.updateMarkerDom(bounds, factor, matrix);
+      const m = transform.toMatrix();
+      matrix = transform.toMatrix().multiplyMatrix(matrix);
+    }
   }
 
   configureStroke(stateHost, bounds, isRequired) {
@@ -460,9 +488,9 @@ export class Shape extends TimelinedEnvironment {
   }
 
   updateStrokeColorDom(bounds) {
-    const r = Math.floor(this.strokeStateHost.color[0] * 255);
-    const g = Math.floor(this.strokeStateHost.color[1] * 255);
-    const b = Math.floor(this.strokeStateHost.color[2] * 255);
+    const r = Math.floor(this.strokeStateHost.state.color[0] * 255);
+    const g = Math.floor(this.strokeStateHost.state.color[1] * 255);
+    const b = Math.floor(this.strokeStateHost.state.color[2] * 255);
     const rgb = `rgb(${r}, ${g}, ${b})`;
     this.element.setAttributeNS(null, 'stroke', rgb);
   }
@@ -728,6 +756,7 @@ export class Rectangle extends Shape {
   }
 
   updateAllDom(bounds) {
+    super.updateAllDom(bounds);
     if (this.timedProperties.hasOwnProperty('rounding')) {
       this.updateRoundingDom(bounds);
     }
@@ -739,18 +768,20 @@ export class Rectangle extends Shape {
     }
   }
 
-  updateMarkerDom(bounds, factor) {
+  updateKeyMarkerDom(bounds, factor) {
     if (this.state.center) {
       const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
       this.outlineMark.updateDom(bounds, corner, this.state.size, this.rounding, factor);
-      this.positionMark.updateDom(bounds, this.state.center, factor);
-      this.widthMark.updateDom(bounds, [this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], factor);
-      this.heightMark.updateDom(bounds, [this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], factor);
+      this.positionMark.updateDom(bounds, this.state.center, factor, this.state.matrix);
+      this.widthMark.updateDom(bounds, [this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], factor, this.state.matrix);
+      this.heightMark.updateDom(bounds, [this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], factor, this.state.matrix);
+      this.state.centroid = this.state.center;
     } else {
       this.outlineMark.updateDom(bounds, this.state.corner, this.state.size, this.rounding, factor);
-      this.positionMark.updateDom(bounds, this.state.corner, factor);
-      this.widthMark.updateDom(bounds, [this.state.corner[0] + this.state.size[0], this.state.corner[1]], factor);
-      this.heightMark.updateDom(bounds, [this.state.corner[0], this.state.corner[1] + this.state.size[1]], factor);
+      this.positionMark.updateDom(bounds, this.state.corner, factor, this.state.matrix);
+      this.widthMark.updateDom(bounds, [this.state.corner[0] + this.state.size[0], this.state.corner[1]], factor, this.state.matrix);
+      this.heightMark.updateDom(bounds, [this.state.corner[0], this.state.corner[1] + this.state.size[1]], factor, this.state.matrix);
+      this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
     }
   }
 }
@@ -842,16 +873,17 @@ export class Circle extends Shape {
   }
 
   updateAllDom(bounds) {
+    super.updateAllDom(bounds);
     this.updateCenterDom(bounds);
     this.updateRadiusDom(bounds);
   }
 
-  updateMarkerDom(bounds, factor) {
+  updateKeyMarkerDom(bounds, factor) {
+    this.state.centroid = this.state.center;
     this.outlineMark.updateDom(bounds, this.state.center, this.state.radius);
-    this.centerMark.updateDom(bounds, this.state.center, factor);
-
     const radiusPosition = [this.state.center[0] + this.state.radius, this.state.center[1]];
     this.radiusMark.updateDom(bounds, radiusPosition, factor);
+    this.centerMark.updateDom(bounds, this.state.center, factor);
   }
 }
 
@@ -887,16 +919,6 @@ export class NodeShape extends Shape {
     // }
   // }
 
-  // start() {
-    // super.start();
-    // for (let node of this.nodes) {
-      // node.start();
-    // }
-    // for (let mirror of this.mirrors) {
-      // mirror.start();
-    // }
-  // }
-
   configureNodes(bounds) {
     for (let [i, node] of this.nodes.entries()) {
       node.configure(i > 0 ? this.nodes[i - 1].turtle : null, bounds);
@@ -908,6 +930,13 @@ export class NodeShape extends Shape {
 
     if (this.nodes.every(node => node.hasAllDefaults)) {
       this.updateNodeDom(bounds);
+    }
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    for (let node of this.nodes) {
+      node.configureMarks();
     }
   }
 
@@ -985,6 +1014,21 @@ export class NodeShape extends Shape {
     for (let updateDom of this.updateDoms) {
       updateDom(bounds);
     }
+  }
+
+  updateMarkerDom(bounds, factor) {
+    super.updateMarkerDom(bounds, factor);
+
+    let matrix = Matrix.identity();
+    for (let node of this.nodes) {
+      node.updateMarkerDom(bounds, factor, matrix);
+    }
+  }
+
+  updateAllDom(bounds) {
+    super.updateAllDom(bounds);
+    console.log("update all dom");
+    this.updateNodeDom(bounds);
   }
 }
 
@@ -1220,56 +1264,6 @@ export class Line extends VertexShape {
     return shape;
   }
 
-  // validate() {
-    // super.validate();
-    // this.assertProperty('size');
-    // this.assertProperty('color');
-    // this.assertProperty('opacity');
-  // }
-
-  // start() {
-    // super.start();
-
-    // this.element = document.createElementNS(svgNamespace, 'line');
-    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-
-    // this.outlineMark = new LineMark();
-    // this.markers[0].addMarks([], [this.outlineMark]);
-    // this.connect();
-  // }
-
-  // updateProperties(env, t, bounds, matrix) {
-    // matrix = this.transform(env, t, bounds, matrix);
-
-    // const pieces = this.traverseNodes(env, t, bounds, matrix);
-    // const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
-
-    // if (positions.length != 2) {
-      // throw new LocatedException(this.where, `I tried to draw a line that had ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
-    // }
-
-    // if (positions.some(position => !position)) {
-      // this.hide();
-    // } else {
-      // this.show();
-      // this.applyStroke(env, t, this.element);
-
-      // const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
-
-      // this.element.setAttributeNS(null, 'x1', positions[0].get(0).value);
-      // this.element.setAttributeNS(null, 'y1', bounds.span - positions[0].get(1).value);
-      // this.element.setAttributeNS(null, 'x2', positions[1].get(0).value);
-      // this.element.setAttributeNS(null, 'y2', bounds.span - positions[1].get(1).value);
-
-      // this.outlineMark.updateProperties(positions[0], positions[1], bounds);
-
-      // const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      // const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
-      // this.updateCentroid(matrix, centroid, bounds);
-      // return centroid;
-    // }
-  // }
-
   configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'line');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
@@ -1283,11 +1277,25 @@ export class Line extends VertexShape {
     this.configureStroke(this, bounds, true);
   }
 
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new LineMark();
+    this.markers[0].addMarks([], [this.outlineMark]);
+  }
+
   updateNodeDom(bounds) {
     this.element.setAttributeNS(null, 'x1', this.domNodes[0].turtle.position[0]);
     this.element.setAttributeNS(null, 'y1', bounds.span - this.domNodes[0].turtle.position[1]);
     this.element.setAttributeNS(null, 'x2', this.domNodes[1].turtle.position[0]);
     this.element.setAttributeNS(null, 'y2', bounds.span - this.domNodes[1].turtle.position[1]);
+  }
+
+  updateKeyMarkerDom(bounds, factor) {
+    this.state.centroid = [
+      (this.domNodes[0].state.position[0] + this.domNodes[1].state.position[0]) * 0.5,
+      (this.domNodes[0].state.position[1] + this.domNodes[1].state.position[1]) * 0.5
+    ];
+    this.outlineMark.updateDom(bounds, this.domNodes[0].state.position, this.domNodes[1].state.position);
   }
 }
 

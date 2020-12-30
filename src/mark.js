@@ -21,6 +21,10 @@ const handleSize = 8;
 export class Marker {
   constructor(shape) {
     this.shape = shape;
+    // this.foregroundMarks = [];
+    // this.centeredForegroundMarks = [];
+    // this.midgroundMarks = [];
+    // this.backgroundMarks = [];
   }
 
   showMarks() {
@@ -162,17 +166,6 @@ export class RectangleMark {
     this.element = document.createElementNS(svgNamespace, 'rect');
   }
 
-  // updateProperties(position, size, bounds, rounding) {
-    // this.element.setAttributeNS(null, 'x', position.get(0).value);
-    // this.element.setAttributeNS(null, 'y', bounds.span - position.get(1).value - size.get(1).value);
-    // this.element.setAttributeNS(null, 'width', size.get(0).value);
-    // this.element.setAttributeNS(null, 'height', size.get(1).value);
-    // if (rounding) {
-      // this.element.setAttributeNS(null, 'rx', rounding.value);
-      // this.element.setAttributeNS(null, 'ry', rounding.value);
-    // }
-  // }
-
   updateDom(bounds, corner, size, rounding) {
     this.element.setAttributeNS(null, 'x', corner[0]);
     this.element.setAttributeNS(null, 'y', bounds.span - corner[1] - size[1]);
@@ -212,11 +205,11 @@ export class LineMark {
     this.element = document.createElementNS(svgNamespace, 'line');
   }
 
-  updateProperties(a, b, bounds) {
-    this.element.setAttributeNS(null, 'x1', a.get(0).value);
-    this.element.setAttributeNS(null, 'y1', bounds.span - a.get(1).value);
-    this.element.setAttributeNS(null, 'x2', b.get(0).value);
-    this.element.setAttributeNS(null, 'y2', bounds.span - b.get(1).value);
+  updateDom(bounds, a, b) {
+    this.element.setAttributeNS(null, 'x1', a[0]);
+    this.element.setAttributeNS(null, 'y1', bounds.span - a[1]);
+    this.element.setAttributeNS(null, 'x2', b[0]);
+    this.element.setAttributeNS(null, 'y2', bounds.span - b[1]);
   }
 }
 
@@ -239,13 +232,13 @@ export class PathMark {
     this.element = document.createElementNS(svgNamespace, 'path');
   }
 
-  updateProperties(commands) {
+  updateDom(bounds, commands) {
     this.element.setAttributeNS(null, 'd', commands);
   }
 
-  setTransform(matrix, bounds) {
-    this.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${-matrix.elements[5]})`);
-  }
+  // setTransform(matrix, bounds) {
+    // this.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${-matrix.elements[5]})`);
+  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -263,11 +256,11 @@ export class PolylineMark {
 // --------------------------------------------------------------------------- 
 
 export class TweakableMark {
-  constructor(shape, component, getExpression, updateState) {
+  constructor(shape, host, getExpression, updateState) {
     this.shape = shape;
     this.getExpression = getExpression;
     this.updateState = updateState;
-    this.component = component ?? shape;
+    this.host = host ?? shape;
     this.mouseDownAt = null;
 
     this.element = document.createElementNS(svgNamespace, 'g');
@@ -336,16 +329,19 @@ export class TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class PanMark extends TweakableMark {
-  constructor(shape, component, isRotated, getExpression, updateState) {
-    super(shape, component, getExpression, updateState);
+  constructor(shape, host, isRotated, getExpression, updateState) {
+    super(shape, host, getExpression, updateState);
     this.isRotated = isRotated;
   }
 
-  updateDom(bounds, position, factor) {
-    this.commandString = `translate(${position[0]} ${bounds.span - position[1]})`;
-    // if (this.isRotated) {
-      // this.commandString += ` rotate(${-rotation})`;
-    // }
+  updateDom(bounds, position, factor, matrix) {
+    const transformedPosition = matrix.multiplyVector(position);
+		const factors = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
+		const rotation = factors.rotation * 180 / Math.PI;
+    this.commandString = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    if (this.isRotated) {
+      this.commandString += ` rotate(${-rotation})`;
+    }
     this.updateScale(factor);
   }
 
@@ -409,8 +405,8 @@ export class PanMark extends TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class VectorPanMark extends PanMark {
-  constructor(shape, component, getExpression, updateState) {
-    super(shape, component, false, getExpression, updateState);
+  constructor(shape, host, getExpression, updateState) {
+    super(shape, host, false, getExpression, updateState);
     this.addHorizontal();
     this.addVertical();
   }
@@ -435,8 +431,8 @@ export class VectorPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class HorizontalPanMark extends PanMark {
-  constructor(shape, component, multiplier = 1, getExpression, updateState) {
-    super(shape, component, false, getExpression, updateState);
+  constructor(shape, host, multiplier = 1, getExpression, updateState) {
+    super(shape, host, false, getExpression, updateState);
     this.multiplier = multiplier;
     this.addHorizontal();
   }
@@ -460,8 +456,8 @@ export class HorizontalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class VerticalPanMark extends PanMark {
-  constructor(shape, component, multiplier = 1, getExpression, updateState) {
-    super(shape, component, false, getExpression, updateState);
+  constructor(shape, host, multiplier = 1, getExpression, updateState) {
+    super(shape, host, false, getExpression, updateState);
     this.multiplier = multiplier;
     this.addVertical();
   }
@@ -485,38 +481,30 @@ export class VerticalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class RotationMark extends PanMark {
-  constructor(shape, component) {
-    super(shape, component, false);
+  constructor(shape, host, getExpression, updateState) {
+    super(shape, host, false, getExpression, updateState);
     this.addArc();
   }
 
-  setExpression(degreesExpression, headingExpression, pivotExpression) {
-    super.setExpression(degreesExpression);
-    this.headingExpression = headingExpression;
-    this.pivotExpression = pivotExpression;
-  }
-
   getNewSource(delta, isShiftModified, mouseAt) {
-    const pivotToMouse = new ExpressionVector([
-      new ExpressionReal(mouseAt.x),
-      new ExpressionReal(mouseAt.y),
-    ]).subtract(this.pivotExpression);
+    const pivotToMouse = [
+      mouseAt.x - this.host.state.pivot[0],
+      mouseAt.y - this.host.state.pivot[1],
+    ];
 
-    const newRadians = Math.atan2(pivotToMouse.get(0).value, -pivotToMouse.get(1).value);
-    let newDegrees = newRadians * 180 / Math.PI - 90 - this.headingExpression.value;
+    const newRadians = Math.atan2(pivotToMouse[0], -pivotToMouse[1]);
+    let newDegrees = newRadians * 180 / Math.PI - 90 - this.host.state.heading;
 
-    // We were negative and we want to stay that way. 
     if (this.untweakedExpression.value < 0) {
+      // We were negative and we want to stay that way. 
       while (newDegrees > 0) {
         newDegrees -= 360;
       }
       while (newDegrees < -360) {
         newDegrees += 360;
       }
-    }
-
-    // We were positive and we want to stay that way.
-    else {
+    } else {
+      // We were positive and we want to stay that way.
       while (newDegrees < 0) {
         newDegrees += 360;
       }
@@ -531,9 +519,10 @@ export class RotationMark extends PanMark {
       newDegrees = Math.round(newDegrees);
     }
 
-    const newExpression = new ExpressionReal(newDegrees);
-
     this.expression.value = newDegrees;
+    this.updateState(newDegrees);
+
+    const newExpression = new ExpressionReal(newDegrees);
     return manipulateSource(this.untweakedExpression, newExpression);
   }
 }
@@ -541,8 +530,8 @@ export class RotationMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class AxisMark extends PanMark {
-  constructor(shape, component) {
-    super(shape, component, false);
+  constructor(shape, host) {
+    super(shape, host, false);
     this.addArc();
   }
 
@@ -575,8 +564,8 @@ export class AxisMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class DistanceMark extends PanMark {
-  constructor(shape, component) {
-    super(shape, component);
+  constructor(shape, host) {
+    super(shape, host);
     this.addHorizontal();
   }
 
@@ -616,8 +605,8 @@ export class DistanceMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class WedgeDegreesMark extends PanMark {
-  constructor(shape, component) {
-    super(shape, component);
+  constructor(shape, host) {
+    super(shape, host);
     this.addArc();
   }
 
@@ -670,8 +659,8 @@ export class WedgeDegreesMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class BumpDegreesMark extends PanMark {
-  constructor(shape, component) {
-    super(shape, component);
+  constructor(shape, host) {
+    super(shape, host);
     this.addHorizontal();
   }
 

@@ -55,11 +55,6 @@ export class Node extends TimelinedEnvironment {
     this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
   }
 
-  // start() {
-    // this.marker = new Marker(this.parentEnvironment);
-    // this.parentEnvironment.addMarker(this.marker);
-  // }
-
   castCursor(column, row) {
     const isHit = this.sourceSpans.some(span => span.contains(column, row));
     if (isHit) {
@@ -72,7 +67,14 @@ export class Node extends TimelinedEnvironment {
   configure(previousTurtle, bounds) {
     this.previousTurtle = previousTurtle;
     this.turtle = new Turtle([0, 0], 0);
+    this.state = {};
     this.configureState(bounds);
+  }
+
+  configureMarks() {
+    console.log("specific");
+    this.marker = new Marker(this.parentEnvironment);
+    this.parentEnvironment.addMarker(this.marker);
   }
 }
 
@@ -115,35 +117,25 @@ export class VertexNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.position[0];
-    this.turtle.position[1] = this.position[1];
+    this.turtle.position[0] = this.state.position[0];
+    this.turtle.position[1] = this.state.position[1];
     this.turtle.heading = 0;
   }
 
-  // validate() {
-    // this.assertProperty('position');
-  // }
+  configureMarks() {
+    super.configureMarks();
+    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('position', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.turtle.position[0] = this.state.position[0] = x;
+      this.turtle.position[1] = this.state.position[1] = y;
+    });
+    this.marker.addMarks([this.positionMark], [], []);
+  }
 
-  // start() {
-    // super.start();
-    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    // this.marker.addMarks([this.positionMark], []);
-  // }
-
-  // updateProperties(env, t, bounds, fromTurtle, matrix) {
-    // const position = this.valueAt(env, 'position', t);
-    // this.positionMark.setExpression(position);
-    
-    // if (position) {
-      // this.positionMark.updateProperties(position, bounds, matrix);
-      // return {
-        // pathCommand: null,
-        // turtle: new Turtle(position, fromTurtle.heading),
-      // };
-    // } else {
-      // return null;
-    // }
-  // }
+  updateMarkerDom(bounds, factor, matrix) {
+    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
+  }
 }
 
 // --------------------------------------------------------------------------- 

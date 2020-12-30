@@ -33,10 +33,10 @@ export class Matrix {
   }
 
   multiplyVector(v) {
-    return new ExpressionVector([
-      new ExpressionReal(this.elements[0] * v.get(0).value + this.elements[1] * v.get(1).value + this.elements[2]),
-      new ExpressionReal(this.elements[3] * v.get(0).value + this.elements[4] * v.get(1).value + this.elements[5]),
-    ]);
+    return [
+      this.elements[0] * v[0] + this.elements[1] * v[1] + this.elements[2],
+      this.elements[3] * v[0] + this.elements[4] * v[1] + this.elements[5],
+    ];
   }
 
   multiplyMatrix(m) {
@@ -114,10 +114,10 @@ export class Transform extends TimelinedEnvironment {
     this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
   }
 
-  // start() {
-    // this.marker = new Marker(this.parentEnvironment);
-    // this.parentEnvironment.addMarker(this.marker);
-  // }
+  configureMarks() {
+    this.marker = new Marker(this.parentEnvironment);
+    this.parentEnvironment.addMarker(this.marker);
+  }
 
   castCursor(column, row) {
     const isHit = this.sourceSpans.some(span => span.contains(column, row));
@@ -152,28 +152,7 @@ export class Translate extends Transform {
     node.embody(parentEnvironment, pod);
     return node;
   }
-
-  // validate() {
-    // this.assertProperty('offset');
-  // }
-
-  // start() {
-    // super.start();
-    // this.offsetMark = new VectorPanMark(this.parentEnvironment, this);
-    // this.marker.addMarks([], [], [this.offsetMark]);
-  // }
-
-  // updateProperties(env, t, bounds, matrix) {
-    // const offset = this.valueAt(env, 'offset', t);
-    // this.offsetMark.setExpression(offset);
-    // this.offsetMark.updateProperties(new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]), bounds, matrix);
     
-    // return {
-      // matrix: matrix.multiplyMatrix(Matrix.translate(offset.get(0).value, offset.get(1).value)),
-      // commands: [`translate(${offset.get(0).value} ${-offset.get(1).value})`],
-    // };
-  // }
-
   configureState(bounds) {
     this.configureVectorProperty('offsets', this, this.parentEnvironment, this.updateCommand.bind(this), bounds, [], timeline => {
       if (!timeline) {
@@ -189,8 +168,27 @@ export class Translate extends Transform {
     });
   }
 
+  configureMarks() {
+    super.configureMarks();
+    this.offsetMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('offsets', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.state.offsets[0] = x;
+      this.state.offsets[1] = y;
+    });
+    this.marker.addMarks([], [], [this.offsetMark]);
+  }
+
   updateCommand(bounds) {
     this.command = `translate(${this.state.offsets[0]} ${-this.state.offsets[1]})`;
+  }
+
+  toMatrix() {
+    return Matrix.translate(this.state.offsets[0], this.state.offsets[1]);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    this.offsetMark.updateDom(bounds, this.state.offsets, factor, matrix);
   }
 }
 
@@ -212,66 +210,7 @@ export class Rotate extends Transform {
     node.embody(parentEnvironment, pod);
     return node;
   }
-
-  // validate() {
-    // this.assertProperty('degrees');
-    // this.assertProperty('pivot');
-  // }
-
-  // start() {
-    // super.start();
-    // this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
-    // this.degreesMark = new RotationMark(this.parentEnvironment, this);
-    // this.wedgeMark = new PathMark();
-    // this.marker.addMarks([this.pivotMark, this.degreesMark], [], [], [this.wedgeMark]);
-  // }
-
-  // updateProperties(env, t, bounds, matrix) {
-    // let pivot = this.valueAt(env, 'pivot', t);
-    // if (!pivot) {
-      // throw new LocatedException(this.where, `I found a rotate transform that didn't have a pivot defined for time ${t}.`);
-    // }
-    // TODO check all valueAt calls ugh
-
-    // const degrees = this.valueAt(env, 'degrees', t);
-    // if (!degrees) {
-      // throw new LocatedException(this.where, `I found a rotate transform that didn't have a degrees defined for time ${t}.`);
-    // }
-
-    // this.pivotMark.setExpression(pivot);
-    // this.degreesMark.setExpression(degrees, new ExpressionReal(0), pivot);
-
-    // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
-    // const rotater = Matrix.rotate(degrees.value);
-    // const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
-
-    // const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-    // const applied = matrix.multiplyMatrix(composite);
-
-    // this.pivotMark.updateProperties(pivot, bounds, applied);
-    // const towardPosition = rotater.multiplyVector(new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)])).add(pivot);
-    // this.degreesMark.updateProperties(towardPosition, bounds, matrix);
-
-    // this.wedgeMark.setTransform(matrix, bounds);
-    // this.wedgeMark.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${matrix.elements[5]})`);
-
-    // const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
-
-    // const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
-    // const commands = [
-      // `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
-      // `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
-      // `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
-      // 'z',
-    // ];
-    // this.wedgeMark.updateProperties(commands.join(' '));
     
-    // return {
-      // matrix: applied,
-      // commands: [`rotate(${-degrees.value} ${pivot.get(0).value} ${bounds.span - pivot.get(1).value})`],
-    // };
-  // }
-
   configureState(bounds) {
     this.configureScalarProperty('degrees', this, this.parentEnvironment, null, bounds, [], timeline => {
       if (!timeline) {
@@ -312,7 +251,58 @@ export class Rotate extends Transform {
   }
 
   updateCommand(bounds) {
-    this.command = `rotate(${-this.degrees} ${this.pivot[0]} ${bounds.span - this.pivot[1]})`;
+    this.command = `rotate(${-this.state.degrees} ${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]})`;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+
+    this.degreesMark = new RotationMark(this.parentEnvironment, this, t => {
+      return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
+    }, degrees => {
+      this.state.degrees = degrees;
+    });
+
+    this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('pivot', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.state.pivot[0] = x;
+      this.state.pivot[1] = y;
+    });
+
+    this.wedgeMark = new PathMark();
+
+    this.state.heading = 0;
+    this.marker.addMarks([this.pivotMark, this.degreesMark], [], [], [this.wedgeMark]);
+  }
+
+  toMatrix() {
+    const pivotToOrigin = Matrix.translate(-this.state.pivot[0], -this.state.pivot[1]);
+    const rotater = Matrix.rotate(this.state.degrees);
+    const originToPivot = Matrix.translate(this.state.pivot[0], this.state.pivot[1]);
+    return originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    const length = 10;
+
+    this.pivotMark.updateDom(bounds, this.state.pivot, factor, matrix);
+    const rotater = Matrix.rotate(this.state.degrees);
+    const axis = [length, 0];
+    const rotatedAxis = rotater.multiplyVector(axis);
+    const degreesPosition = [
+      this.state.pivot[0] + rotatedAxis[0],
+      this.state.pivot[1] + rotatedAxis[1]
+    ];
+    this.degreesMark.updateDom(bounds, degreesPosition, factor, matrix);
+
+    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.degrees));
+    const commands = 
+      `M${this.state.pivot[0]},${bounds.span - this.state.pivot[1]} ` +
+      `L${this.state.pivot[0] + axis[0]},${bounds.span - (this.state.pivot[1] + axis[1])} ` +
+      `A ${length},${length} 0 ${isLarge} ${isClockwise} ${degreesPosition[0]},${bounds.span - degreesPosition[1]} ` +
+      'z';
+    this.wedgeMark.updateDom(bounds, commands);
   }
 }
 
@@ -439,14 +429,7 @@ export class Scale extends Transform {
     return node;
   }
 
-  // validate() {
-    // this.assertProperty('factors');
-    // this.assertProperty('pivot');
-  // }
-
   // start() {
-    // super.start();
-
     // this.factorMarks = [
       // new HorizontalPanMark(this.parentEnvironment, this),
       // new VerticalPanMark(this.parentEnvironment, this),
@@ -547,8 +530,50 @@ export class Scale extends Transform {
     }
   }
 
+  configureMarks() {
+    super.configureMarks();
+
+    this.widthFactorMark = new HorizontalPanMark(this.parentEnvironment, null, 1, t => {
+      return this.expressionAt('factors', this.parentEnvironment.root.state.t).get(0);
+    }, factor => {
+      this.state.factors[0] = factor;
+    });
+
+    this.heightFactorMark = new VerticalPanMark(this.parentEnvironment, null, 1, t => {
+      const f = this.expressionAt('factors', this.parentEnvironment.root.state.t).get(1);
+      console.log("f:", f);
+      return f;
+    }, factor => {
+      this.state.factors[1] = factor;
+    });
+
+    this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('pivot', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.state.pivot[0] = x;
+      this.state.pivot[1] = y;
+    });
+
+    this.marker.addMarks([this.widthFactorMark, this.heightFactorMark, this.pivotMark], [], [], []);
+
+    // this.lineMarks = [
+      // new LineMark(),
+      // new LineMark(),
+    // ];
+  }
+
   updateCommand(bounds) {
     this.command = `translate(${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]}) scale(${this.state.factors[0]} ${this.state.factors[1]}) translate(${-this.state.pivot[0]} ${-(bounds.span - this.state.pivot[1])})`;
+  }
+
+  toMatrix() {
+    return Matrix.scale(this.state.factors[0], this.state.factors[1]);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    this.pivotMark.updateDom(bounds, this.state.pivot, factor, matrix);
+    this.widthFactorMark.updateDom(bounds, [this.state.pivot[0] + this.state.factors[0] * 50, this.state.pivot[1]], factor, matrix);
+    this.heightFactorMark.updateDom(bounds, [this.state.pivot[0], this.state.pivot[1] + this.state.factors[1] * 50], factor, matrix);
   }
 }
 

@@ -452,12 +452,12 @@ export class RenderEnvironment extends Environment {
   castCursor(column, row) {
     if (this.isTweaking) return;
 
-    // let selectedDrawable;
-    // for (let shape of this.shapes) {
-      // if (shape.castCursor(column, row)) {
-        // break;
-      // }
-    // }
+    let selectedDrawable;
+    for (let shape of this.shapes) {
+      if (shape.castCursor(column, row)) {
+        break;
+      }
+    }
   }
 
   onWheel = e => {
