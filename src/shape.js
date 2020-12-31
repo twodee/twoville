@@ -315,9 +315,7 @@ export class Shape extends TimelinedEnvironment {
       }
     });
 
-    console.log("this.markers:", this.markers);
     for (let marker of this.markers) {
-      console.log("marker:", marker);
       this.backgroundMarkGroup.appendChild(marker.backgroundMarkGroup);
       this.midgroundMarkGroup.appendChild(marker.midgroundMarkGroup);
       this.foregroundMarkGroup.appendChild(marker.foregroundMarkGroup);
@@ -1027,7 +1025,6 @@ export class NodeShape extends Shape {
 
   updateAllDom(bounds) {
     super.updateAllDom(bounds);
-    console.log("update all dom");
     this.updateNodeDom(bounds);
   }
 }
@@ -1074,67 +1071,13 @@ export class Polygon extends VertexShape {
     return shape;
   }
 
-  // start() {
-    // super.start();
-
-    // this.element = document.createElementNS(svgNamespace, 'polygon');
-    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-
-    // this.outlineMark = new PolygonMark();
-    // this.markers[0].addMarks([], [this.outlineMark]);
-    // this.connect();
-  // }
-
-  // updateProperties(env, t, bounds, matrix) {
-    // if (!this.setColor(env, t)) {
-      // return null;
-    // }
-
-    // matrix = this.transform(env, t, bounds, matrix);
-
-    // const pieces = this.traverseNodes(env, t, bounds, matrix);
-    // const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
-
-    // if (positions.some(position => !position)) {
-      // this.hide();
-    // } else {
-      // this.show();
-
-      // let strokeWidth = 0;
-      // if (this.owns('stroke')) {
-        // strokeWidth = this.untimedProperties.stroke.applyStroke(env, t, this.element);
-      // }
-
-      // if (this.mirrors.length > 0) {
-        // this.mirrorPositions(positions, env, t, bounds, matrix);
-      // }
-
-      // const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
-
-      // if (positions.length > 0) {
-        // const box = positions.reduce((acc, p) => acc.include(p.toPrimitiveArray()), new BoundingBox());
-        // box.thicken(strokeWidth);
-        // env.root.include(box);
-      // }
-
-      // this.element.setAttributeNS(null, 'points', coordinates);
-
-      // this.outlineMark.updateProperties(coordinates, matrix);
-
-      // const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      // const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
-      // this.updateCentroid(matrix, centroid, bounds);
-      // return centroid;
-    // }
-  // }
-
   configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'polygon');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
     this.domNodes = this.nodes.filter(node => node.isDom);
     if (this.domNodes.length < 3) {
-      throw new LocatedException(this.where, `I found a <code>polygon</code> that had ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
+      throw new LocatedException(this.where, `I found a <code>polygon</code> with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
     }
 
     this.configureNodes(bounds);
@@ -1142,8 +1085,20 @@ export class Polygon extends VertexShape {
   }
 
   updateNodeDom(bounds) {
-    const coordinates = this.domNodes.map(({position}) => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    const coordinates = this.domNodes.map(node => `${node.state.position[0]},${bounds.span - node.state.position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new PolygonMark();
+    this.markers[0].addMarks([], [this.outlineMark]);
+  }
+
+  updateKeyMarkerDom(bounds, factor) {
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
+    this.outlineMark.updateDom(bounds, this.domNodes.map(node => node.state.position));
   }
 }
 
@@ -1176,50 +1131,10 @@ export class Polyline extends VertexShape {
     return shape;
   }
 
-  // validate() {
-    // super.validate();
-    // this.assertProperty('size');
-    // this.assertProperty('color');
-  // }
-
-  // start() {
-    // super.start();
-
-    // this.element = document.createElementNS(svgNamespace, 'polyline');
-    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    // this.element.setAttributeNS(null, 'fill', 'none');
-
-    // this.outlineMark = new PolylineMark();
-    // this.markers[0].addMarks([], [this.outlineMark]);
-    // this.connect();
-  // }
-
-  // updateProperties(env, t, bounds, matrix) {
-    // matrix = this.transform(env, t, bounds, matrix);
-
-    // const pieces = this.traverseNodes(env, t, bounds, matrix);
-    // const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
-
-    // if (positions.some(position => !position)) {
-      // this.hide();
-    // } else {
-      // if (this.mirrors.length > 0) {
-        // this.mirrorPositions(positions, env, t, bounds, matrix);
-      // }
-
-      // this.show();
-
-      // this.applyStroke(env, t, this.element);
-      // const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
-      // this.element.setAttributeNS(null, 'points', coordinates);
-      // this.outlineMark.updateProperties(coordinates, matrix);
-
       // const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
       // const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
       // this.updateCentroid(matrix, centroid, bounds);
       // return centroid;
-    // }
-  // }
 
   configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'polyline');
@@ -1231,8 +1146,20 @@ export class Polyline extends VertexShape {
   }
 
   updateNodeDom(bounds) {
-    const coordinates = this.domNodes.map(({position}) => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    const coordinates = this.domNodes.map(node => `${node.state.position[0]},${bounds.span - node.state.position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new PolylineMark();
+    this.markers[0].addMarks([], [this.outlineMark]);
+  }
+
+  updateKeyMarkerDom(bounds, factor) {
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
+    this.outlineMark.updateDom(bounds, this.domNodes.map(node => node.state.position));
   }
 }
 
@@ -1270,17 +1197,11 @@ export class Line extends VertexShape {
 
     this.domNodes = this.nodes.filter(node => node.isDom);
     if (this.domNodes.length != 2) {
-      throw new LocatedException(this.where, `I found a line that had ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
+      throw new LocatedException(this.where, `I found a line with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
     }
 
     this.configureNodes(bounds);
     this.configureStroke(this, bounds, true);
-  }
-
-  configureMarks() {
-    super.configureMarks();
-    this.outlineMark = new LineMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
   }
 
   updateNodeDom(bounds) {
@@ -1288,6 +1209,12 @@ export class Line extends VertexShape {
     this.element.setAttributeNS(null, 'y1', bounds.span - this.domNodes[0].turtle.position[1]);
     this.element.setAttributeNS(null, 'x2', this.domNodes[1].turtle.position[0]);
     this.element.setAttributeNS(null, 'y2', bounds.span - this.domNodes[1].turtle.position[1]);
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new LineMark();
+    this.markers[0].addMarks([], [this.outlineMark]);
   }
 
   updateKeyMarkerDom(bounds, factor) {
@@ -1329,88 +1256,94 @@ export class Ungon extends VertexShape {
     return shape;
   }
 
-  validate() {
-    super.validate();
-    this.assertProperty('rounding');
-  }
-
-  start() {
-    super.start();
-
+  configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
-    this.outlineMark = new PolygonMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
-    this.connect();
+    this.domNodes = this.nodes.filter(node => node.isDom);
+    if (this.domNodes.length < 3) {
+      throw new LocatedException(this.where, `I found an <code>ungon</code> with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
+    }
+
+    this.configureNodes(bounds);
+    this.configureFill(bounds);
+
+    this.configureScalarProperty('rounding', this, this, this.updateNodeDom.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, `I found an <code>ungon</code> whose <code>rounding</code> was not set.`);
+      }
+
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>rounding</code>. ${e.message}`);
+      }
+    });
   }
 
-  updateProperties(env, t, bounds, matrix) {
-    if (!this.setColor(env, t)) {
-      return null;
-    }
+  updateNodeDom(bounds) {
+    let rounding = 1 - this.state.rounding;
+    let pathCommands = [];
 
-    matrix = this.transform(env, t, bounds, matrix);
+    let start = [
+      (this.domNodes[0].state.position[0] + this.domNodes[1].state.position[0]) * 0.5,
+      (this.domNodes[0].state.position[1] + this.domNodes[1].state.position[1]) * 0.5
+    ];
+    pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
 
-    const pieces = this.traverseNodes(env, t, bounds, matrix);
-    const positions = pieces.filter(piece => !piece.isVirtualMove).map(piece => piece.turtle.position);
+    let previous = start;
+    for (let i = 1; i < this.domNodes.length; ++i) {
+      const a = this.domNodes[i].state.position;
+      const b = this.domNodes[(i + 1) % this.domNodes.length].state.position;
 
-    if (positions[0].distance(positions[positions.length - 1]) < 1e-3) {
-      positions.pop();
-    }
-
-    let rounding = this.valueAt(env, 'rounding', t).value;
-
-    if (positions.some(position => !position)) {
-      this.hide();
-    } else {
-      this.show();
-
-      if (this.owns('stroke')) {
-        this.untimedProperties.stroke.applyStroke(env, t, this.element);
-      }
-
-      if (this.mirrors.length > 0) {
-        this.mirrorPositions(positions, env, t, bounds, matrix);
-      }
-
-      const coordinates = positions.map(p => `${p.get(0).value},${bounds.span - p.get(1).value}`).join(' ');
-      this.outlineMark.updateProperties(coordinates, matrix);
-
-      rounding = 1 - rounding;
-      let pathCommands = [];
-      let start = positions[0].midpoint(positions[1]);
-      pathCommands.push(`M ${start.get(0).value},${bounds.span - start.get(1).value}`);
-      let previous = start;
-      for (let i = 1; i < positions.length; ++i) {
-        let mid = positions[i].midpoint(positions[(i + 1) % positions.length]);
-
-        if (rounding) {
-          let control1 = previous.interpolateLinear(positions[i], rounding);
-          let control2 = mid.interpolateLinear(positions[i], rounding);
-          pathCommands.push(`C ${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${mid.get(0).value},${bounds.span - mid.get(1).value}`);
-        } else {
-          pathCommands.push(`Q ${positions[i].get(0).value},${bounds.span - positions[i].get(1).value} ${mid.get(0).value},${bounds.span - mid.get(1).value}`);
-        }
-        previous = mid;
-      }
+      let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
 
       if (rounding) {
-        let control1 = previous.interpolateLinear(positions[0], rounding);
-        let control2 = start.interpolateLinear(positions[0], rounding);
-        pathCommands.push(`C ${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${start.get(0).value},${bounds.span - start.get(1).value}`);
+        let control1 = [
+          previous[0] + rounding * (a[0] - previous[0]),
+          previous[1] + rounding * (a[1] - previous[1]),
+        ];
+        let control2 = [
+          mid[0] + rounding * (a[0] - mid[0]),
+          mid[1] + rounding * (a[1] - mid[1]),
+        ];
+        pathCommands.push(`C ${control1[0]},${bounds.span - control1[1]} ${control2[0]},${bounds.span - control2[1]} ${mid[0]},${bounds.span - mid[1]}`);
       } else {
-        pathCommands.push(`Q${positions[0].get(0).value},${bounds.span - positions[0].get(1).value} ${start.get(0).value},${bounds.span - start.get(1).value}`);
+        pathCommands.push(`Q ${a[0]},${bounds.span - a[1]} ${mid[0]},${bounds.span - mid[1]}`);
       }
-      // pathCommands.push('z');
-
-      this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
-
-      const total = positions.reduce((acc, p) => acc.add(p), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-      const centroid = positions.length == 0 ? total : total.divide(new ExpressionReal(positions.length));
-      this.updateCentroid(matrix, centroid, bounds);
-      return centroid;
+      previous = mid;
     }
+
+    const first = this.domNodes[0].state.position;
+    if (rounding) {
+      let control1 = [
+        previous[0] + rounding * (first[0] - previous[0]),
+        previous[1] + rounding * (first[1] - previous[1]),
+      ];
+      let control2 = [
+        start[0] + rounding * (first[0] - start[0]),
+        start[1] + rounding * (first[1] - start[1]),
+      ];
+      pathCommands.push(`C ${control1[0]},${bounds.span - control1[1]} ${control2[0]},${bounds.span - control2[1]} ${start[0]},${bounds.span - start[1]}`);
+    } else {
+      pathCommands.push(`Q${first[0]},${bounds.span - first[1]} ${start[0]},${bounds.span - start[1]}`);
+    }
+
+    pathCommands.push('z');
+    this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new PolygonMark();
+    this.markers[0].addMarks([], [this.outlineMark]);
+  }
+
+  updateKeyMarkerDom(bounds, factor) {
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
+    this.outlineMark.updateDom(bounds, this.domNodes.map(node => node.state.position));
   }
 }
 

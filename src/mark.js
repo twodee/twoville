@@ -220,8 +220,8 @@ export class PolygonMark {
     this.element = document.createElementNS(svgNamespace, 'polygon');
   }
 
-  updateProperties(coordinates) {
-    this.element.setAttributeNS(null, 'points', coordinates);
+  updateDom(bounds, coordinates) {
+    this.element.setAttributeNS(null, 'points', coordinates.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
   }
 }
 
@@ -248,8 +248,8 @@ export class PolylineMark {
     this.element = document.createElementNS(svgNamespace, 'polyline');
   }
 
-  updateProperties(coordinates) {
-    this.element.setAttributeNS(null, 'points', coordinates);
+  updateDom(bounds, coordinates) {
+    this.element.setAttributeNS(null, 'points', coordinates.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
   }
 }
 

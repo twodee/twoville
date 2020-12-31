@@ -72,7 +72,6 @@ export class Node extends TimelinedEnvironment {
   }
 
   configureMarks() {
-    console.log("specific");
     this.marker = new Marker(this.parentEnvironment);
     this.parentEnvironment.addMarker(this.marker);
   }
