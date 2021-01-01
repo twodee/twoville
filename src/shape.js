@@ -500,6 +500,14 @@ export class Shape extends TimelinedEnvironment {
   updateStrokeOpacityDom(bounds) {
     this.element.setAttributeNS(null, 'stroke-opacity', this.strokeStateHost.state.opacity);
   }
+  
+  updateStrokeDashDom(sequence) {
+    this.element.setAttributeNS(null, 'stroke-dasharray', sequence);
+  }
+  
+  updateStrokeJoinDom(type) {
+    this.element.setAttributeNS(null, 'stroke-linejoin', type);
+  }
 }
 
 // --------------------------------------------------------------------------- 

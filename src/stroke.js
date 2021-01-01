@@ -16,7 +16,7 @@ import {
 export class Stroke extends TimelinedEnvironment {
   static type = 'stroke';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes', 'join'];
+  static timedIds = ['size', 'color', 'opacity'];
 
   static create(parentEnvironment, where) {
     const stroke = new Stroke();
@@ -75,17 +75,14 @@ export function configureStroke(stateHost, domHost, bounds, isRequired) {
     return isRequired;
   });
 
-  // if (stateHost.owns('dashes')) {
-    // const dashes = stateHost.valueAt(env, 'dashes', t).toSpacedString();
-    // element.setAttributeNS(null, 'stroke-dasharray', dashes);
-  // }
+  if (stateHost.untimedProperties.hasOwnProperty('dashes')) {
+    domHost.updateStrokeDashDom(stateHost.untimedProperties.dashes.toSpacedString());
+  }
 
-  /*
-
-    if (stateHost.owns('join')) {
-      const type = stateHost.valueAt(env, 'join', t).value;
-      element.setAttributeNS(null, 'stroke-linejoin', type);
-    }
-    */
+  if (stateHost.untimedProperties.hasOwnProperty('join')) {
+    domHost.updateStrokeJoinDom(stateHost.untimedProperties.join.value);
+  }
 }
+
+// --------------------------------------------------------------------------- 
 
