@@ -1025,6 +1025,9 @@ export class NodeShape extends Shape {
 
   updateAllDom(bounds) {
     super.updateAllDom(bounds);
+    for (let node of this.nodes) {
+      node.updateTurtle(bounds);
+    }
     this.updateNodeDom(bounds);
   }
 }
@@ -1390,23 +1393,6 @@ export class Path extends NodeShape {
     }
   }
 
-  // start() {
-    // super.start();
-
-    // this.element = document.createElementNS(svgNamespace, 'path');
-    // this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-
-    // this.outlineMark = new PathMark();
-
-    // this.markers[0].addMarks([], [this.outlineMark]);
-    // this.connect();
-  // }
-
-  // validate() {
-    // super.validate();
-    // this.assertProperty('closed');
-  // }
-
   // updateProperties(env, t, bounds, matrix) {
     // if (!this.setColor(env, t)) {
       // return null;
@@ -1473,8 +1459,21 @@ export class Path extends NodeShape {
     this.configureFill(bounds);
   }
 
+  // TODO is closed
   updateNodeDom(bounds) {
     this.element.setAttributeNS(null, 'd', this.domNodes.map(node => node.pathCommand).join(' '));
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new PathMark();
+    this.markers[0].addMarks([], [this.outlineMark]);
+  }
+
+  updateKeyMarkerDom(bounds, factor) {
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
+    this.outlineMark.updateDom(bounds, this.domNodes.map(node => node.pathCommand).join(' '));
   }
 }
 

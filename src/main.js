@@ -334,7 +334,7 @@ document.getElementById('middle').addEventListener('wheel', e => {
 }, {passive: false});
 
 window.addEventListener('beforeunload', event => {
-  if (!isSaved) {
+  if (settings.warnOnExit && !isSaved) {
     event.preventDefault();
     event.returnValue = '';
   }
@@ -413,6 +413,7 @@ function initialize() {
     }
   };
 
+  const warnOnExitToggle = document.getElementById('warn-on-exit-toggle');
   const showCopyLinksToggle = document.getElementById('show-copy-links-toggle');
   const backgroundColorPicker = document.getElementById('background-color-picker');
   const backgroundColorPreview = document.getElementById('background-color-preview');
@@ -425,12 +426,21 @@ function initialize() {
     showCopyLinks: () => {
       showCopyLinksToggle.checked = settings.showCopyLinks;
     },
+    warnOnExit: () => {
+      warnOnExitToggle.checked = settings.warnOnExit;
+    },
   };
 
   // Handle show copy links toggling.
   showCopyLinksToggle.checked = settings.showCopyLinks;
   showCopyLinksToggle.addEventListener('click', () => {
     settings.showCopyLinks = savedSettings.showCopyLinks = showCopyLinksToggle.checked;
+    saveSettings();
+  });
+
+  warnOnExitToggle.checked = settings.warnOnExit;
+  warnOnExitToggle.addEventListener('click', () => {
+    settings.warnOnExit = savedSettings.warnOnExit = warnOnExitToggle.checked;
     saveSettings();
   });
 

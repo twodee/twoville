@@ -257,7 +257,7 @@ export class Rotate extends Transform {
   configureMarks() {
     super.configureMarks();
 
-    this.degreesMark = new RotationMark(this.parentEnvironment, this, t => {
+    this.degreesMark = new RotationMark(this.parentEnvironment, this, 'pivot', t => {
       return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
     }, degrees => {
       this.state.degrees = degrees;
@@ -284,9 +284,9 @@ export class Rotate extends Transform {
   }
 
   updateMarkerDom(bounds, factor, matrix) {
-    const length = 10;
-
     this.pivotMark.updateDom(bounds, this.state.pivot, factor, matrix);
+
+    const length = 10;
     const rotater = Matrix.rotate(this.state.degrees);
     const axis = [length, 0];
     const rotatedAxis = rotater.multiplyVector(axis);

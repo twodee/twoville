@@ -200,66 +200,54 @@ export class TurtleNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.position[0];
-    this.turtle.position[1] = this.position[1];
-    this.turtle.heading = this.heading;
+    this.turtle.position[0] = this.state.position[0];
+    this.turtle.position[1] = this.state.position[1];
+    this.turtle.heading = this.state.heading;
+    this.pathCommand = `M ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
   }
 
-  // validate() {
-    // this.assertProperty('position');
-    // this.assertProperty('heading');
-  // }
+  configureMarks() {
+    super.configureMarks();
 
-  // start() {
-    // super.start();
-    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    // this.headingMark = new RotationMark(this.parentEnvironment, this);
-    // this.wedgeMark = new PathMark();
-    // this.marker.addMarks([this.positionMark, this.headingMark], [this.wedgeMark]);
-  // }
+    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('position', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.turtle.position[0] = this.state.position[0] = x;
+      this.turtle.position[1] = this.state.position[1] = y;
+    });
 
-  // updateProperties(env, t, bounds, fromTurtle, matrix) {
-    // const position = this.valueAt(env, 'position', t);
-    // this.positionMark.setExpression(position);
+    this.headingMark = new RotationMark(this.parentEnvironment, this, this.state.position, t => {
+      return this.expressionAt('heading', this.parentEnvironment.root.state.t);
+    }, heading => {
+      this.state.heading = heading;
+    });
 
-    // const heading = this.valueAt(env, 'heading', t);
-    // this.headingMark.setExpression(heading, new ExpressionReal(0), position);
-    
-    // if (position) {
-      // const pivot = position;
-      // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
-      // const rotater = Matrix.rotate(heading.value);
-      // const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
-      // const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-      // const applied = matrix.multiplyMatrix(composite);
+    this.wedgeMark = new PathMark();
 
-      // this.positionMark.updateProperties(position, bounds, applied);
+    this.marker.addMarks([this.positionMark, this.headingMark], [this.wedgeMark], []);
+  }
 
-      // const offset = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]);
-      // const towardVector = offset.rotate(heading.value);
-      // const towardPosition = towardVector.add(position);
-      // this.headingMark.updateProperties(towardPosition, bounds, matrix);
+  updateMarkerDom(bounds, factor, matrix) {
+    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
 
-      // const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).add(pivot);
+    const length = 10;
+    const rotater = Matrix.rotate(this.state.heading);
+    const axis = [length, 0];
+    const rotatedAxis = rotater.multiplyVector(axis);
+    const degreesPosition = [
+      this.state.position[0] + rotatedAxis[0],
+      this.state.position[1] + rotatedAxis[1]
+    ];
+    this.headingMark.updateDom(bounds, degreesPosition, factor, matrix);
 
-      // const {isLarge, isClockwise} = classifyArc(standardizeDegrees(heading.value));
-      // const commands = [
-        // `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
-        // `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
-        // `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
-      // ];
-
-      // this.wedgeMark.updateProperties(commands.join(' '));
-
-      // return {
-        // pathCommand: `M${position.get(0).value},${bounds.span - position.get(1).value}`,
-        // turtle: new Turtle(position, heading),
-        // segment: new GapSegment(fromTurtle?.position, position),
-      // };
-    // } else {
-      // return null;
-    // }
-  // }
+    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.heading));
+    const commands = 
+      `M${this.state.position[0]},${bounds.span - this.state.position[1]} ` +
+      `L${this.state.position[0] + axis[0]},${bounds.span - (this.state.position[1] + axis[1])} ` +
+      `A ${length},${length} 0 ${isLarge} ${isClockwise} ${degreesPosition[0]},${bounds.span - degreesPosition[1]} ` +
+      'z';
+    this.wedgeMark.updateDom(bounds, commands);
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -285,43 +273,6 @@ export class MoveNode extends Node {
     return true;
   }
 
-  // validate() {
-    // this.assertProperty('distance');
-  // }
-
-  // start() {
-    // super.start();
-    // this.distanceMark = new DistanceMark(this.parentEnvironment, this);
-    // this.marker.addMarks([this.distanceMark], []);
-  // }
-
-  // updateProperties(env, t, bounds, fromTurtle, matrix) {
-    // const distance = this.valueAt(env, 'distance', t);
-    // this.distanceMark.setExpression(distance, fromTurtle.position, fromTurtle.heading);
-    
-    // if (distance) {
-      // let delta = new ExpressionVector([distance, fromTurtle.heading]).toCartesian();
-      // let position = fromTurtle.position.add(delta);
-
-      // const pivot = position;
-      // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
-      // const rotater = Matrix.rotate(fromTurtle.heading.value);
-      // const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
-      // const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-      // const applied = matrix.multiplyMatrix(composite);
-
-      // this.distanceMark.updateProperties(position, bounds, applied);
-
-      // return {
-        // pathCommand: `L${position.get(0).value},${bounds.span - position.get(1).value}`,
-        // turtle: new Turtle(position, fromTurtle.heading),
-        // segment: new LineSegment(fromTurtle.position, position),
-      // };
-    // } else {
-      // return null;
-    // }
-  // }
-
   configureState(bounds) {
     this.configureScalarProperty('distance', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
       if (!timeline) {
@@ -338,9 +289,30 @@ export class MoveNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.previousTurtle.position[0] + this.distance * Math.cos(this.previousTurtle.heading * Math.PI / 180);
-    this.turtle.position[1] = this.previousTurtle.position[1] + this.distance * Math.sin(this.previousTurtle.heading * Math.PI / 180);
+    this.turtle.position[0] = this.previousTurtle.position[0] + this.state.distance * Math.cos(this.previousTurtle.heading * Math.PI / 180);
+    this.turtle.position[1] = this.previousTurtle.position[1] + this.state.distance * Math.sin(this.previousTurtle.heading * Math.PI / 180);
     this.turtle.heading = this.previousTurtle.heading;
+    this.pathCommand = `L ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+
+    this.distanceMark = new DistanceMark(this.parentEnvironment, this.previousTurtle, t => {
+      return this.expressionAt('distance', this.parentEnvironment.root.state.t);
+    }, distance => {
+      this.state.distance = distance;
+    });
+
+    this.marker.addMarks([this.distanceMark], [], []);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    const to = [
+      this.previousTurtle.position[0] + this.state.distance * Math.cos(this.turtle.heading * Math.PI / 180),
+      this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
+    ];
+    this.distanceMark.updateDom(bounds, to, factor, matrix);
   }
 }
 
@@ -366,10 +338,6 @@ export class TurnNode extends Node {
   get isDom() {
     return false;
   }
-
-  // validate() {
-    // this.assertProperty('degrees');
-  // }
 
   // start() {
     // super.start();
@@ -428,7 +396,42 @@ export class TurnNode extends Node {
   updateTurtle(bounds) {
     this.turtle.position[0] = this.previousTurtle.position[0];
     this.turtle.position[1] = this.previousTurtle.position[1];
-    this.turtle.heading = this.previousTurtle.heading + this.degrees;
+    this.turtle.heading = this.previousTurtle.heading + this.state.degrees;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+
+    this.degreesMark = new RotationMark(this.parentEnvironment, this, this.previousTurtle.position, t => {
+      return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
+    }, degrees => {
+      this.state.degrees = degrees;
+      this.turtle.heading = this.previousTurtle.heading + this.degrees;
+    });
+
+    this.wedgeMark = new PathMark();
+
+    this.marker.addMarks([this.degreesMark], [this.wedgeMark], []);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    const length = 10;
+    const rotater = Matrix.rotate(this.state.degrees);
+    const axis = [length, 0];
+    const rotatedAxis = rotater.multiplyVector(axis);
+    const degreesPosition = [
+      this.previousTurtle.position[0] + rotatedAxis[0],
+      this.previousTurtle.position[1] + rotatedAxis[1]
+    ];
+    this.degreesMark.updateDom(bounds, degreesPosition, factor, matrix);
+
+    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.degrees));
+    const commands = 
+      `M${this.previousTurtle.position[0]},${bounds.span - this.previousTurtle.position[1]} ` +
+      `L${this.previousTurtle.position[0] + axis[0]},${bounds.span - (this.previousTurtle.position[1] + axis[1])} ` +
+      `A ${length},${length} 0 ${isLarge} ${isClockwise} ${degreesPosition[0]},${bounds.span - degreesPosition[1]} ` +
+      'z';
+    this.wedgeMark.updateDom(bounds, commands);
   }
 }
 
@@ -455,48 +458,6 @@ export class JumpNode extends Node {
     return true;
   }
 
-  // validate() {
-    // this.assertProperty('position');
-  // }
-
-  // start() {
-    // super.start();
-    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    // this.marker.addMarks([this.positionMark], []);
-  // }
-
-  // updateProperties(env, t, bounds, fromTurtle, matrix) {
-    // const position = this.valueAt(env, 'position', t);
-    // this.positionMark.setExpression(position);
-
-    // let absolutePosition;
-    // let isDelta = this.owns('delta') && this.get('delta').value;
-    // if (isDelta) {
-      // absolutePosition = fromTurtle.position.add(position);
-    // } else {
-      // absolutePosition = position;
-    // }
-    
-    // if (position) {
-      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
-
-      // let pathCommand;
-      // if (isDelta) {
-        // pathCommand = `m ${position.get(0).value},${-position.get(1).value}`;
-      // } else {
-        // pathCommand = `M ${position.get(0).value},${bounds.span - position.get(1).value}`;
-      // }
-
-      // return {
-        // pathCommand,
-        // turtle: new Turtle(absolutePosition, fromTurtle.heading),
-        // segment: new GapSegment(fromTurtle?.position, absolutePosition),
-      // };
-    // } else {
-      // return null;
-    // }
-  // }
-
   configureState(bounds) {
     this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
       if (!timeline) {
@@ -513,10 +474,25 @@ export class JumpNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.position[0];
-    this.turtle.position[1] = this.position[1];
+    this.turtle.position[0] = this.state.position[0];
+    this.turtle.position[1] = this.state.position[1];
     this.turtle.heading = 0;
-    this.pathCommand = `M ${this.position[0]},${bounds.span - this.position[1]}`;
+    this.pathCommand = `M ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('position', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.turtle.position[0] = this.state.position[0] = x;
+      this.turtle.position[1] = this.state.position[1] = y;
+    });
+    this.marker.addMarks([this.positionMark], [], []);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
   }
 }
 
@@ -543,48 +519,6 @@ export class LineNode extends Node {
     return true;
   }
 
-  // validate() {
-    // this.assertProperty('position');
-  // }
-
-  // start() {
-    // super.start();
-    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    // this.marker.addMarks([this.positionMark], []);
-  // }
-
-  // updateProperties(env, t, bounds, fromTurtle, matrix) {
-    // const position = this.valueAt(env, 'position', t);
-    // this.positionMark.setExpression(position);
-
-    // let absolutePosition;
-    // let isDelta = this.owns('delta') && this.get('delta').value;
-    // if (isDelta) {
-      // absolutePosition = fromTurtle.position.add(position);
-    // } else {
-      // absolutePosition = position;
-    // }
-    
-    // if (position) {
-      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
-
-      // let pathCommand;
-      // if (isDelta) {
-        // pathCommand = `l ${position.get(0).value},${-position.get(1).value}`;
-      // } else {
-        // pathCommand = `L ${position.get(0).value},${bounds.span - position.get(1).value}`;
-      // }
-
-      // return {
-        // pathCommand,
-        // turtle: new Turtle(absolutePosition, fromTurtle.heading),
-        // segment: new LineSegment(fromTurtle.position, absolutePosition),
-      // };
-    // } else {
-      // return null;
-    // }
-  // }
-
   configureState(bounds) {
     this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
       if (!timeline) {
@@ -601,10 +535,25 @@ export class LineNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.position[0];
-    this.turtle.position[1] = this.position[1];
+    this.turtle.position[0] = this.state.position[0];
+    this.turtle.position[1] = this.state.position[1];
     this.turtle.heading = this.previousTurtle.heading;
-    this.pathCommand = `L ${this.position[0]},${bounds.span - this.position[1]}`;
+    this.pathCommand = `L ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('position', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.turtle.position[0] = this.state.position[0] = x;
+      this.turtle.position[1] = this.state.position[1] = y;
+    });
+    this.marker.addMarks([this.positionMark], [], []);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
   }
 }
 
@@ -630,90 +579,6 @@ export class QuadraticNode extends Node {
   get isDom() {
     return true;
   }
-
-  // validate() {
-    // this.assertProperty('position');
-  // }
-
-  // start() {
-    // super.start();
-    // this.lineMarks = [
-      // new LineMark(),
-      // new LineMark(),
-    // ];
-    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-
-    // const foregroundMarks = [this.positionMark];
-    // if (this.owns('control')) {
-      // this.controlMark = new VectorPanMark(this.parentEnvironment, this);
-      // foregroundMarks.push(this.controlMark);
-    // }
-
-    // this.marker.addMarks(foregroundMarks, this.lineMarks);
-  // }
-
-  // updateProperties(env, t, bounds, fromTurtle, matrix, fromSegment) {
-    // const position = this.valueAt(env, 'position', t);
-    // this.positionMark.setExpression(position);
-
-    // let control;
-    // if (this.owns('control')) {
-      // control = this.valueAt(env, 'control', t);
-      // this.controlMark.setExpression(control);
-    // }
-
-    // let isDelta = this.owns('delta') && this.get('delta').value;
-
-    // let absolutePosition;
-    // if (isDelta) {
-      // absolutePosition = fromTurtle.position.add(position);
-    // } else {
-      // absolutePosition = position;
-    // }
-
-    // let absoluteControl;
-    // if (control) {
-      // if (isDelta) {
-        // absoluteControl = fromTurtle.position.add(control);
-      // } else {
-        // absoluteControl = control;
-      // }
-    // }
-    
-    // if (position) {
-      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
-
-      // let pathCommand;
-      // if (control) {
-        // this.controlMark.updateProperties(absoluteControl, bounds, matrix);
-        // this.lineMarks[0].updateProperties(fromTurtle.position, absoluteControl, bounds, matrix);
-        // this.lineMarks[1].updateProperties(absoluteControl, absolutePosition, bounds, matrix);
-        // if (isDelta) {
-          // pathCommand = `q ${control.get(0).value},${-control.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
-        // } else {
-          // pathCommand = `Q ${control.get(0).value},${bounds.span - control.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
-        // }
-      // } else {
-        // if (isDelta) {
-          // pathCommand = `t ${position.get(0).value},${-position.get(1).value}`;
-        // } else {
-          // pathCommand = `T ${position.get(0).value},${bounds.span - position.get(1).value}`;
-        // }
-      // }
-
-      // return {
-        // pathCommand,
-        // turtle: new Turtle(position, fromTurtle.heading),
-        // segment: (
-          // control
-            // ? new QuadraticSegment(fromTurtle.position, position, control, false)
-            // : new QuadraticSegment(fromTurtle.position, position, fromTurtle.position.add(fromTurtle.position.subtract(fromSegment.control)), true)
-        // ),
-      // };
-    // } else {
-      // return null;
-    // }
-  // }
 
   configureState(bounds) {
     this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
@@ -755,13 +620,53 @@ export class QuadraticNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.position[0];
-    this.turtle.position[1] = this.position[1];
+    this.turtle.position[0] = this.state.position[0];
+    this.turtle.position[1] = this.state.position[1];
     this.turtle.heading = this.previousTurtle.heading;
-    if (this.control) {
-      this.pathCommand = `Q ${this.control[0]},${bounds.span - this.control[1]} ${this.position[0]},${bounds.span - this.position[1]}`;
+    if (this.state.control) {
+      this.pathCommand = `Q ${this.state.control[0]},${bounds.span - this.state.control[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
     } else {
-      this.pathCommand = `T ${this.position[0]},${bounds.span - this.position[1]}`;
+      this.pathCommand = `T ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+    }
+  }
+
+  configureMarks() {
+    super.configureMarks();
+
+    // TODO do I need to update turtle here since updateTurtle does that?
+    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('position', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.turtle.position[0] = this.state.position[0] = x;
+      this.turtle.position[1] = this.state.position[1] = y;
+    });
+
+    const foregroundMarks = [this.positionMark];
+
+    if (this.state.control) {
+      this.controlMark = new VectorPanMark(this.parentEnvironment, null, t => {
+        return this.expressionAt('control', this.parentEnvironment.root.state.t);
+      }, ([x, y]) => {
+        this.state.control[0] = x;
+        this.state.control[1] = y;
+      });
+      foregroundMarks.push(this.controlMark);
+
+      this.lineMarks = [
+        new LineMark(),
+        new LineMark(),
+      ]
+    }
+
+    this.marker.addMarks(foregroundMarks, this.lineMarks, []);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
+    if (this.state.control) {
+      this.controlMark.updateDom(bounds, this.state.control, factor, matrix);
+      this.lineMarks[0].updateDom(bounds, this.previousTurtle.position, this.state.control);
+      this.lineMarks[1].updateDom(bounds, this.state.position, this.state.control);
     }
   }
 }
@@ -789,131 +694,6 @@ export class ArcNode extends Node {
     return true;
   }
 
-  // validate() {
-    // if (this.owns('position') && this.owns('center')) {
-      // throw new LocatedException(this.where, 'I found an arc whose position and center properties are both set. Define only one of these.');
-    // }
-
-    // if (!this.owns('position') && !this.owns('center')) {
-      // throw new LocatedException(this.where, 'I found an arc whose curvature I couldn\'t figure out. Please define its center or position.');
-    // }
-
-    // this.assertProperty('degrees');
-  // }
-
-  // start() {
-    // super.start();
-
-    // this.isWedge = this.owns('center');
-    // if (this.isWedge) {
-      // this.centerMark = new VectorPanMark(this.parentEnvironment, this);
-      // this.positionMark = new WedgeDegreesMark(this.parentEnvironment, this);
-    // } else {
-      // this.centerMark = new BumpDegreesMark(this.parentEnvironment, this);
-      // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    // }
-
-    // this.lineMarks = [
-      // new LineMark(),
-      // new LineMark(),
-    // ];
-
-    // this.marker.addMarks([this.centerMark, this.positionMark], this.lineMarks);
-  // }
-
-  // updateProperties(env, t, bounds, fromTurtle, matrix) {
-    // let degrees = this.valueAt(env, 'degrees', t);
-    // let radians = degrees.value * Math.PI / 180;
-
-    // let absolutePosition;
-    // let isDelta = this.owns('delta') && this.get('delta').value;
-
-    // let center;
-    // let absoluteCenter;
-    // if (this.isWedge) {
-      // center = this.valueAt(env, 'center', t);
-
-      // if (isDelta) {
-        // absoluteCenter = fromTurtle.position.add(center);
-      // } else {
-        // absoluteCenter = center;
-      // }
-
-      // this.centerMark.setExpression(center);
-      // this.positionMark.setExpression(degrees, fromTurtle.position, absoluteCenter);
-    // } else {
-      // let position = this.valueAt(env, 'position', t);
-
-      // let absolutePosition;
-      // if (isDelta) {
-        // absolutePosition = fromTurtle.position.add(position);
-      // } else {
-        // absolutePosition = position;
-      // }
-
-      // this.positionMark.setExpression(position);
-      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
-
-      // let diff = absolutePosition.subtract(fromTurtle.position);
-      // let distance = (0.5 * diff.magnitude) / Math.tan(radians * 0.5);
-      // let halfway = fromTurtle.position.add(absolutePosition).multiply(new ExpressionReal(0.5));
-      // let normal = diff.rotate90().normalize();
-      // absoluteCenter = halfway.add(normal.multiply(new ExpressionReal(-distance)));
-
-      // const movementAngle = Math.atan2(normal.get(1).value, normal.get(0).value) * 180 / Math.PI;
-      // const pivotToOrigin = Matrix.translate(-absoluteCenter.get(0).value, -absoluteCenter.get(1).value);
-      // const rotater = Matrix.rotate(movementAngle);
-      // const originToPivot = Matrix.translate(absoluteCenter.get(0).value, absoluteCenter.get(1).value);
-      // const composite = originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-      // const applied = matrix.multiplyMatrix(composite);
-
-      // this.centerMark.updateProperties(absoluteCenter, bounds, applied);
-    // }
-
-    // let toFrom = fromTurtle.position.subtract(absoluteCenter);
-    // let toTo = new ExpressionVector([
-      // new ExpressionReal(toFrom.get(0).value * Math.cos(radians) - toFrom.get(1).value * Math.sin(radians)),
-      // new ExpressionReal(toFrom.get(0).value * Math.sin(radians) + toFrom.get(1).value * Math.cos(radians)),
-    // ]);
-    // let to = absoluteCenter.add(toTo);
-
-    // let radius = toFrom.magnitude;
-    // let isLarge;
-    // let isClockwise;
-
-    // if (degrees.value >= 0) {
-      // isLarge = degrees.value >= 180 ? 1 : 0;
-      // isClockwise = 0;
-    // } else {
-      // isLarge = degrees.value <= -180 ? 1 : 0;
-      // isClockwise = 1;
-    // }
-
-    // let pathCommand;
-    // if (isDelta) {
-      // pathCommand = `a ${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value - fromTurtle.position.get(0).value},${-(to.get(1).value - fromTurtle.position.get(1).value)}`;
-    // } else {
-      // pathCommand = `A ${radius},${radius} 0 ${isLarge} ${isClockwise} ${to.get(0).value},${bounds.span - to.get(1).value}`;
-    // }
-
-    // if (this.isWedge) {
-      // this.centerMark.updateProperties(absoluteCenter, bounds, matrix);
-      // this.positionMark.updateProperties(to, bounds, matrix);
-    // } else {
-      // this.centerMark.setExpression(degrees, fromTurtle.position, absoluteCenter, to);
-    // }
-
-    // this.lineMarks[0].updateProperties(absoluteCenter, fromTurtle.position, bounds, matrix);
-    // this.lineMarks[1].updateProperties(absoluteCenter, to, bounds, matrix);
-
-    // TODO is Turtle.position = to always the right thing here?
-    // return {
-      // pathCommand,
-      // turtle: new Turtle(to, fromTurtle.heading),
-      // segment: new ArcSegment(fromTurtle.position, to, radius, isLarge, isClockwise),
-    // };
-  // }
-
   configureState(bounds) {
     this.configureScalarProperty('degrees', this, this.parentEnvironment, this.updateDegrees.bind(this), bounds, [], timeline => {
       if (!timeline) {
@@ -933,6 +713,7 @@ export class ArcNode extends Node {
       throw new LocatedException(this.where, 'I found an <code>arc</code> node whose <code>position</code> and <code>center</code> were both set. Define only one of these.');
     } else if (this.timedProperties.hasOwnProperty('position')) {
       locationTimeline = this.timedProperties.position;
+      this.isWedge = false;
       this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
         try {
           timeline.assertList(2, ExpressionInteger, ExpressionReal);
@@ -942,6 +723,7 @@ export class ArcNode extends Node {
         }
       });
     } else if (this.timedProperties.hasOwnProperty('center')) {
+      this.isWedge = true;
       locationTimeline = this.timedProperties.center;
       this.configureVectorProperty('center', this, this.parentEnvironment, null, bounds, [], timeline => {
         try {
@@ -967,56 +749,58 @@ export class ArcNode extends Node {
   }
 
   updateDegrees(bounds) {
-    if (this.degrees >= 0) {
-      this.isLarge = this.degrees >= 180 ? 1 : 0;
+    if (this.state.degrees >= 0) {
+      this.isLarge = this.state.degrees >= 180 ? 1 : 0;
       this.isClockwise = 0;
     } else {
-      this.isLarge = this.degrees <= -180 ? 1 : 0;
+      this.isLarge = this.state.degrees <= -180 ? 1 : 0;
       this.isClockwise = 1;
     }
   }
 
   updateTurtle(bounds) {
-    let radians = this.degrees * Math.PI / 180;
+    let radians = this.state.degrees * Math.PI / 180;
 
-    let center;
     let position;
 
-    if (this.center) {
-      center = this.center;
-    } else {
-      position = this.position;
+    if (!this.isWedge) {
+      position = this.state.position;
 
       let diff = [
-        this.position[0] - this.previousTurtle.position[0],
-        this.position[1] - this.previousTurtle.position[1],
+        this.state.position[0] - this.previousTurtle.position[0],
+        this.state.position[1] - this.previousTurtle.position[1],
       ];
       let magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
       let distance = (0.5 * Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1])) / Math.tan(radians * 0.5);
       let halfway = [
-        (this.previousTurtle.position[0] + this.position[0]) * 0.5,
-        (this.previousTurtle.position[1] + this.position[1]) * 0.5
+        (this.previousTurtle.position[0] + this.state.position[0]) * 0.5,
+        (this.previousTurtle.position[1] + this.state.position[1]) * 0.5
       ];
       let normal = [
         diff[1] / magnitude,
         -diff[0] / magnitude
       ];
-      center = [
+      this.state.center = [
         halfway[0] + normal[0] * -distance,
         halfway[1] + normal[1] * -distance
       ];
     }
 
     let radial = [
-      this.previousTurtle.position[0] - center[0],
-      this.previousTurtle.position[1] - center[1],
+      this.previousTurtle.position[0] - this.state.center[0],
+      this.previousTurtle.position[1] - this.state.center[1],
     ];
     let radius = Math.sqrt(radial[0] * radial[0] + radial[1] * radial[1]);
 
-    if (this.center) {
+    if (this.isWedge) {
+      const rotated = [
+        radial[0] * Math.cos(radians) - radial[1] * Math.sin(radians),
+        radial[0] * Math.sin(radians) + radial[1] * Math.cos(radians),
+      ];
+
       position = [
-        center[0] + radial[0] * Math.cos(radians) - radial[1] * Math.sin(radians),
-        center[1] + radial[0] * Math.sin(radians) + radial[1] * Math.cos(radians),
+        this.state.center[0] + radial[0] * Math.cos(radians) - radial[1] * Math.sin(radians),
+        this.state.center[1] + radial[0] * Math.sin(radians) + radial[1] * Math.cos(radians),
       ];
     }
 
@@ -1024,6 +808,61 @@ export class ArcNode extends Node {
     this.turtle.position[1] = position[1];
     this.turtle.heading = this.previousTurtle.heading;
     this.pathCommand = `A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${position[0]},${bounds.span - position[1]}`;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+
+    if (this.isWedge) {
+      this.centerMark = new VectorPanMark(this.parentEnvironment, null, t => {
+        return this.expressionAt('center', this.parentEnvironment.root.state.t);
+      }, ([x, y]) => {
+        this.state.center[0] = x;
+        this.state.center[1] = y;
+      });
+
+      this.positionMark = new WedgeDegreesMark(this.parentEnvironment, this, this.previousTurtle.position, this.state.center, t => {
+        return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
+      }, degrees => {
+        this.state.degrees = degrees;
+        this.updateDegrees(/* TODO */);
+      });
+    } else {
+      this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
+        return this.expressionAt('position', this.parentEnvironment.root.state.t);
+      }, ([x, y]) => {
+        this.turtle.position[0] = this.state.position[0] = x;
+        this.turtle.position[1] = this.state.position[1] = y;
+      });
+
+      this.centerMark = new BumpDegreesMark(this.parentEnvironment, this, this.previousTurtle.position, this.state.position, this.state.center, t => {
+        return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
+      }, degrees => {
+        console.log("degrees:", degrees);
+        this.state.degrees = degrees;
+        this.updateDegrees(/* TODO */);
+      });
+    }
+
+    this.lineMarks = [
+      new LineMark(),
+      new LineMark(),
+    ];
+
+    this.marker.addMarks([this.centerMark, this.positionMark], this.lineMarks, []);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    if (this.isWedge) {
+      this.positionMark.updateDom(bounds, this.turtle.position, factor, matrix);
+      this.centerMark.updateDom(bounds, this.state.center, factor, matrix);
+    } else {
+      this.positionMark.updateDom(bounds, this.turtle.position, factor, matrix);
+      this.centerMark.updateDom(bounds, this.state.center, factor, matrix);
+    }
+
+    this.lineMarks[0].updateDom(bounds, this.state.center, this.turtle.position, factor, matrix);
+    this.lineMarks[1].updateDom(bounds, this.state.center, this.previousTurtle.position, factor, matrix);
   }
 }
 
@@ -1049,102 +888,6 @@ export class CubicNode extends Node {
   get isDom() {
     return true;
   }
-
-  // validate() {
-    // this.assertProperty('position');
-    // this.assertProperty('control2');
-  // }
-
-  // start() {
-    // super.start();
-
-    // this.line2Mark = new LineMark();
-    // this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    // this.control2Mark = new VectorPanMark(this.parentEnvironment, this);
-
-    // const foregroundMarks = [this.positionMark, this.control2Mark];
-    // const backgroundMarks = [this.line2Mark];
-
-    // if (this.owns('control1')) {
-      // this.line1Mark = new LineMark();
-      // this.control1Mark = new VectorPanMark(this.parentEnvironment, this);
-      // foregroundMarks.push(this.control1Mark);
-      // backgroundMarks.push(this.line1Mark);
-    // }
-
-    // this.marker.addMarks(foregroundMarks, backgroundMarks);
-  // }
-
-  // updateProperties(env, t, bounds, fromTurtle, matrix, fromSegment) {
-    // const position = this.valueAt(env, 'position', t);
-    // this.positionMark.setExpression(position);
-
-    // let isDelta = this.owns('delta') && this.get('delta').value;
-
-    // let absolutePosition;
-    // if (isDelta) {
-      // absolutePosition = fromTurtle.position.add(position);
-    // } else {
-      // absolutePosition = position;
-    // }
-
-    // let control1;
-    // let absoluteControl1;
-    // if (this.owns('control1')) {
-      // control1 = this.valueAt(env, 'control1', t);
-      // this.control1Mark.setExpression(control1);
-      // if (isDelta) {
-        // absoluteControl1 = fromTurtle.position.add(control1);
-      // } else {
-        // absoluteControl1 = control1;
-      // }
-    // }
-
-    // let control2 = this.valueAt(env, 'control2', t);
-    // this.control2Mark.setExpression(control2);
-
-    // let absoluteControl2;
-    // if (isDelta) {
-      // absoluteControl2 = fromTurtle.position.add(control2);
-    // } else {
-      // absoluteControl2 = control2;
-    // }
-    
-    // if (position && control2) {
-      // this.positionMark.updateProperties(absolutePosition, bounds, matrix);
-      // this.control2Mark.updateProperties(absoluteControl2, bounds, matrix);
-      // this.line2Mark.updateProperties(absoluteControl2, absolutePosition, bounds, matrix);
-
-      // let pathCommand;
-      // if (control1) {
-        // this.control1Mark.updateProperties(absoluteControl1, bounds, matrix);
-        // this.line1Mark.updateProperties(fromTurtle.position, absoluteControl1, bounds, matrix);
-        // if (isDelta) {
-          // pathCommand = `c ${control1.get(0).value},${-control1.get(1).value} ${control2.get(0).value},${-control2.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
-        // } else {
-          // pathCommand = `C ${control1.get(0).value},${bounds.span - control1.get(1).value} ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
-        // }
-      // } else {
-        // if (isDelta) {
-          // pathCommand = `s ${control2.get(0).value},${-control2.get(1).value} ${position.get(0).value},${-position.get(1).value}`;
-        // } else {
-          // pathCommand = `S ${control2.get(0).value},${bounds.span - control2.get(1).value} ${position.get(0).value},${bounds.span - position.get(1).value}`;
-        // }
-      // }
-
-      // return {
-        // pathCommand,
-        // turtle: new Turtle(position, fromTurtle.heading),
-        // segment: (
-          // control1
-            // ? new CubicSegment(fromTurtle.position, position, control1, control2, false)
-            // : new CubicSegment(fromTurtle.position, position, fromTurtle.position.add(fromTurtle.position.subtract(fromSegment.control2)), control2, true)
-        // ),
-      // };
-    // } else {
-      // return null;
-    // }
-  // }
 
   configureState(bounds) {
     this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
@@ -1200,13 +943,62 @@ export class CubicNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.position[0];
-    this.turtle.position[1] = this.position[1];
+    this.turtle.position[0] = this.state.position[0];
+    this.turtle.position[1] = this.state.position[1];
     this.turtle.heading = this.previousTurtle.heading;
-    if (this.control1) {
-      this.pathCommand = `C ${this.control1[0]},${bounds.span - this.control1[1]} ${this.control2[0]},${bounds.span - this.control2[1]} ${this.position[0]},${bounds.span - this.position[1]}`;
+    if (this.state.control1) {
+      this.pathCommand = `C ${this.state.control1[0]},${bounds.span - this.state.control1[1]} ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
     } else {
-      this.pathCommand = `S ${this.control2[0]},${bounds.span - this.control2[1]} ${this.position[0]},${bounds.span - this.position[1]}`;
+      this.pathCommand = `S ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+    }
+  }
+
+  configureMarks() {
+    super.configureMarks();
+
+    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('position', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.turtle.position[0] = this.state.position[0] = x;
+      this.turtle.position[1] = this.state.position[1] = y;
+    });
+
+    this.control2Mark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('control2', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.state.control2[0] = x;
+      this.state.control2[1] = y;
+    });
+
+    this.lineMarks = [
+      new LineMark(),
+    ]
+
+    const foregroundMarks = [this.positionMark, this.control2Mark];
+
+    if (this.state.control1) {
+      this.control1Mark = new VectorPanMark(this.parentEnvironment, null, t => {
+        return this.expressionAt('control1', this.parentEnvironment.root.state.t);
+      }, ([x, y]) => {
+        this.state.control1[0] = x;
+        this.state.control1[1] = y;
+      });
+
+      foregroundMarks.push(this.control1Mark);
+      this.lineMarks.push(new LineMark());
+    }
+
+    this.marker.addMarks(foregroundMarks, this.lineMarks, []);
+  }
+
+  updateMarkerDom(bounds, factor, matrix) {
+    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
+    this.control2Mark.updateDom(bounds, this.state.control2, factor, matrix);
+    this.lineMarks[0].updateDom(bounds, this.state.position, this.state.control2);
+
+    if (this.state.control1) {
+      this.control1Mark.updateDom(bounds, this.state.control1, factor, matrix);
+      this.lineMarks[1].updateDom(bounds, this.previousTurtle.position, this.state.control1);
     }
   }
 }
