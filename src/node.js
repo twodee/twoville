@@ -759,6 +759,7 @@ export class ArcNode extends Node {
   }
 
   updateTurtle(bounds) {
+    let isCircle = this.state.degrees === 360;
     let radians = this.state.degrees * Math.PI / 180;
 
     let position;
@@ -807,7 +808,16 @@ export class ArcNode extends Node {
     this.turtle.position[0] = position[0];
     this.turtle.position[1] = position[1];
     this.turtle.heading = this.previousTurtle.heading;
-    this.pathCommand = `A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${position[0]},${bounds.span - position[1]}`;
+
+    if (isCircle) {
+      const opposite = [
+        this.state.center[0] + (this.state.center[0] - position[0]),
+        this.state.center[1] + (this.state.center[1] - position[1]),
+      ];
+      this.pathCommand = `A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${opposite[0]},${bounds.span - opposite[1]} A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${position[0]},${bounds.span - position[1]}`;
+    } else {
+      this.pathCommand = `A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${position[0]},${bounds.span - position[1]}`;
+    }
   }
 
   configureMarks() {

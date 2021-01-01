@@ -257,7 +257,7 @@ export class Rotate extends Transform {
   configureMarks() {
     super.configureMarks();
 
-    this.degreesMark = new RotationMark(this.parentEnvironment, this, 'pivot', t => {
+    this.degreesMark = new RotationMark(this.parentEnvironment, this, this.state.pivot, t => {
       return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
     }, degrees => {
       this.state.degrees = degrees;
