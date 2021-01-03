@@ -25,6 +25,7 @@ import {
   RotationMark,
   VectorPanMark,
   WedgeDegreesMark,
+  WedgeMark,
 } from './mark.js';
 
 import {
@@ -33,7 +34,7 @@ import {
 
 import {
   Matrix,
-} from './transform.js';
+} from './matrix.js';
 
 // --------------------------------------------------------------------------- 
 
@@ -74,6 +75,10 @@ export class Node extends TimelinedEnvironment {
   configureMarks() {
     this.marker = new Marker(this.parentEnvironment);
     this.parentEnvironment.addMarker(this.marker);
+  }
+
+  updateState(matrix) {
+    this.state.matrix = matrix;
   }
 }
 
@@ -123,17 +128,19 @@ export class VertexNode extends Node {
 
   configureMarks() {
     super.configureMarks();
+
     this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
       return this.expressionAt('position', this.parentEnvironment.root.state.t);
     }, ([x, y]) => {
       this.turtle.position[0] = this.state.position[0] = x;
       this.turtle.position[1] = this.state.position[1] = y;
     });
+
     this.marker.addMarks([this.positionMark], [], []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
+  updateMarkerState() {
+    this.positionMark.updateState(this.state.position, this.state.matrix);
   }
 }
 
@@ -216,37 +223,21 @@ export class TurtleNode extends Node {
       this.turtle.position[1] = this.state.position[1] = y;
     });
 
-    this.headingMark = new RotationMark(this.parentEnvironment, this, this.state.position, t => {
+    this.headingMark = new RotationMark(this.parentEnvironment, this, t => {
       return this.expressionAt('heading', this.parentEnvironment.root.state.t);
     }, heading => {
       this.state.heading = heading;
     });
 
-    this.wedgeMark = new PathMark();
+    this.wedgeMark = new WedgeMark();
 
     this.marker.addMarks([this.positionMark, this.headingMark], [this.wedgeMark], []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
-
-    const length = 10;
-    const rotater = Matrix.rotate(this.state.heading);
-    const axis = [length, 0];
-    const rotatedAxis = rotater.multiplyVector(axis);
-    const degreesPosition = [
-      this.state.position[0] + rotatedAxis[0],
-      this.state.position[1] + rotatedAxis[1]
-    ];
-    this.headingMark.updateDom(bounds, degreesPosition, factor, matrix);
-
-    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.heading));
-    const commands = 
-      `M${this.state.position[0]},${bounds.span - this.state.position[1]} ` +
-      `L${this.state.position[0] + axis[0]},${bounds.span - (this.state.position[1] + axis[1])} ` +
-      `A ${length},${length} 0 ${isLarge} ${isClockwise} ${degreesPosition[0]},${bounds.span - degreesPosition[1]} ` +
-      'z';
-    this.wedgeMark.updateDom(bounds, commands);
+  updateMarkerState() {
+    this.positionMark.updateState(this.state.position, this.state.matrix);
+    this.headingMark.updateState(this.state.position, this.state.heading, 0, this.state.matrix);
+    this.wedgeMark.updateState(this.state.position, this.state.heading, 0);
   }
 }
 
@@ -307,12 +298,12 @@ export class MoveNode extends Node {
     this.marker.addMarks([this.distanceMark], [], []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
+  updateMarkerState() {
     const to = [
       this.previousTurtle.position[0] + this.state.distance * Math.cos(this.turtle.heading * Math.PI / 180),
       this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
     ];
-    this.distanceMark.updateDom(bounds, to, factor, matrix);
+    this.distanceMark.updateState(to, -this.turtle.heading, this.state.matrix);
   }
 }
 
@@ -339,45 +330,6 @@ export class TurnNode extends Node {
     return false;
   }
 
-  // start() {
-    // super.start();
-    // this.rotationMark = new RotationMark(this.parentEnvironment, this);
-    // this.wedgeMark = new PathMark();
-    // this.marker.addMarks([this.rotationMark], [this.wedgeMark]);
-  // }
-
-  // updateProperties(env, t, bounds, fromTurtle, matrix) {
-    // const degrees = this.valueAt(env, 'degrees', t);
-    // this.rotationMark.setExpression(degrees, fromTurtle.heading, fromTurtle.position);
-    
-    // if (degrees) {
-      // let newHeading = standardizeDegrees(fromTurtle.heading.add(degrees).value);
-      // let towardPosition = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(newHeading).add(fromTurtle.position);
-      // this.rotationMark.updateProperties(towardPosition, bounds, matrix);
-
-      // const pivot = fromTurtle.position;
-      // const extension = new ExpressionVector([new ExpressionReal(2), new ExpressionReal(0)]).rotate(fromTurtle.heading.value).add(pivot);
-
-      // const {isLarge, isClockwise} = classifyArc(standardizeDegrees(degrees.value));
-      // const commands = [
-        // `M${pivot.get(0).value},${bounds.span - pivot.get(1).value}`,
-        // `L${extension.get(0).value},${bounds.span - extension.get(1).value}`,
-        // `A 2,2 0 ${isLarge} ${isClockwise} ${towardPosition.get(0).value},${bounds.span - towardPosition.get(1).value}`,
-      // ];
-
-      // this.wedgeMark.updateProperties(commands.join(' '));
-
-      // return {
-        // pathCommand: null,
-        // turtle: new Turtle(fromTurtle.position, new ExpressionReal(newHeading)),
-        // segment: undefined,
-        // isVirtualMove: true,
-      // };
-    // } else {
-      // return null;
-    // }
-  // }
-
   configureState(bounds) {
     this.configureScalarProperty('degrees', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
       if (!timeline) {
@@ -402,36 +354,21 @@ export class TurnNode extends Node {
   configureMarks() {
     super.configureMarks();
 
-    this.degreesMark = new RotationMark(this.parentEnvironment, this, this.previousTurtle.position, t => {
+    this.degreesMark = new RotationMark(this.parentEnvironment, this, t => {
       return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
     }, degrees => {
       this.state.degrees = degrees;
       this.turtle.heading = this.previousTurtle.heading + this.degrees;
     });
 
-    this.wedgeMark = new PathMark();
+    this.wedgeMark = new WedgeMark();
 
     this.marker.addMarks([this.degreesMark], [this.wedgeMark], []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    const length = 10;
-    const rotater = Matrix.rotate(this.state.degrees);
-    const axis = [length, 0];
-    const rotatedAxis = rotater.multiplyVector(axis);
-    const degreesPosition = [
-      this.previousTurtle.position[0] + rotatedAxis[0],
-      this.previousTurtle.position[1] + rotatedAxis[1]
-    ];
-    this.degreesMark.updateDom(bounds, degreesPosition, factor, matrix);
-
-    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.degrees));
-    const commands = 
-      `M${this.previousTurtle.position[0]},${bounds.span - this.previousTurtle.position[1]} ` +
-      `L${this.previousTurtle.position[0] + axis[0]},${bounds.span - (this.previousTurtle.position[1] + axis[1])} ` +
-      `A ${length},${length} 0 ${isLarge} ${isClockwise} ${degreesPosition[0]},${bounds.span - degreesPosition[1]} ` +
-      'z';
-    this.wedgeMark.updateDom(bounds, commands);
+  updateMarkerState() {
+    this.degreesMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading, this.state.matrix);
+    this.wedgeMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading);
   }
 }
 
@@ -482,17 +419,19 @@ export class JumpNode extends Node {
 
   configureMarks() {
     super.configureMarks();
+
     this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
       return this.expressionAt('position', this.parentEnvironment.root.state.t);
     }, ([x, y]) => {
       this.turtle.position[0] = this.state.position[0] = x;
       this.turtle.position[1] = this.state.position[1] = y;
     });
+
     this.marker.addMarks([this.positionMark], [], []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
+  updateMarkerState() {
+    this.positionMark.updateState(this.state.position, this.state.matrix);
   }
 }
 
@@ -543,17 +482,19 @@ export class LineNode extends Node {
 
   configureMarks() {
     super.configureMarks();
+
     this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
       return this.expressionAt('position', this.parentEnvironment.root.state.t);
     }, ([x, y]) => {
       this.turtle.position[0] = this.state.position[0] = x;
       this.turtle.position[1] = this.state.position[1] = y;
     });
+
     this.marker.addMarks([this.positionMark], [], []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
+  updateMarkerState() {
+    this.positionMark.updateState(this.state.position, this.state.matrix);
   }
 }
 
@@ -661,12 +602,12 @@ export class QuadraticNode extends Node {
     this.marker.addMarks(foregroundMarks, this.lineMarks, []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
+  updateMarkerState() {
+    this.positionMark.updateState(this.state.position, this.state.matrix);
     if (this.state.control) {
-      this.controlMark.updateDom(bounds, this.state.control, factor, matrix);
-      this.lineMarks[0].updateDom(bounds, this.previousTurtle.position, this.state.control);
-      this.lineMarks[1].updateDom(bounds, this.state.position, this.state.control);
+      this.controlMark.updateState(this.state.control, this.state.matrix);
+      this.lineMarks[0].updateState(this.previousTurtle.position, this.state.control);
+      this.lineMarks[1].updateState(this.state.position, this.state.control);
     }
   }
 }
@@ -831,7 +772,7 @@ export class ArcNode extends Node {
         this.state.center[1] = y;
       });
 
-      this.positionMark = new WedgeDegreesMark(this.parentEnvironment, this, this.previousTurtle.position, this.state.center, t => {
+      this.positionMark = new WedgeDegreesMark(this.parentEnvironment, this, t => {
         return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
       }, degrees => {
         this.state.degrees = degrees;
@@ -845,10 +786,9 @@ export class ArcNode extends Node {
         this.turtle.position[1] = this.state.position[1] = y;
       });
 
-      this.centerMark = new BumpDegreesMark(this.parentEnvironment, this, this.previousTurtle.position, this.state.position, this.state.center, t => {
+      this.centerMark = new BumpDegreesMark(this.parentEnvironment, this, t => {
         return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
       }, degrees => {
-        console.log("degrees:", degrees);
         this.state.degrees = degrees;
         this.updateDegrees(/* TODO */);
       });
@@ -862,17 +802,17 @@ export class ArcNode extends Node {
     this.marker.addMarks([this.centerMark, this.positionMark], this.lineMarks, []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
+  updateMarkerState() {
     if (this.isWedge) {
-      this.positionMark.updateDom(bounds, this.turtle.position, factor, matrix);
-      this.centerMark.updateDom(bounds, this.state.center, factor, matrix);
+      this.centerMark.updateState(this.state.center, this.state.matrix);
+      this.positionMark.updateState(this.turtle.position, this.previousTurtle.position, this.state.center, this.state.matrix);
     } else {
-      this.positionMark.updateDom(bounds, this.turtle.position, factor, matrix);
-      this.centerMark.updateDom(bounds, this.state.center, factor, matrix);
+      this.positionMark.updateState(this.turtle.position, this.state.matrix);
+      this.centerMark.updateState(this.turtle.position, this.previousTurtle.position, this.state.center, this.state.degrees, this.state.matrix);
     }
 
-    this.lineMarks[0].updateDom(bounds, this.state.center, this.turtle.position, factor, matrix);
-    this.lineMarks[1].updateDom(bounds, this.state.center, this.previousTurtle.position, factor, matrix);
+    this.lineMarks[0].updateState(this.state.center, this.turtle.position, this.state.matrix);
+    this.lineMarks[1].updateState(this.state.center, this.previousTurtle.position, this.state.matrix);
   }
 }
 
@@ -1001,14 +941,14 @@ export class CubicNode extends Node {
     this.marker.addMarks(foregroundMarks, this.lineMarks, []);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.positionMark.updateDom(bounds, this.state.position, factor, matrix);
-    this.control2Mark.updateDom(bounds, this.state.control2, factor, matrix);
-    this.lineMarks[0].updateDom(bounds, this.state.position, this.state.control2);
+  updateMarkerState() {
+    this.positionMark.updateState(this.state.position, this.state.matrix);
+    this.control2Mark.updateState(this.state.control2, this.state.matrix);
+    this.lineMarks[0].updateState(this.state.position, this.state.control2);
 
     if (this.state.control1) {
-      this.control1Mark.updateDom(bounds, this.state.control1, factor, matrix);
-      this.lineMarks[1].updateDom(bounds, this.previousTurtle.position, this.state.control1);
+      this.control1Mark.updateState(this.state.control1, this.state.matrix);
+      this.lineMarks[1].updateState(this.previousTurtle.position, this.state.control1);
     }
   }
 }

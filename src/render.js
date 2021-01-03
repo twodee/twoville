@@ -328,7 +328,7 @@ export class RenderEnvironment extends Environment {
       // drawable.ageDomWithoutMarks(this.bounds, t);
       drawable.ageDomWithMarks(this.bounds, t, factor);
     }
-    // this.updateScale();
+    this.rescale();
   }
 
   // scrub(t) {
@@ -336,7 +336,7 @@ export class RenderEnvironment extends Environment {
     // for (let drawable of this.drawables) {
       // drawable.scrub(this, t, this.bounds);
     // }
-    // this.updateScale();
+    // this.rescale();
   // }
 
   hideMarks() {
@@ -346,7 +346,7 @@ export class RenderEnvironment extends Environment {
   updateViewBox() {
     svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${this.bounds.y} ${this.bounds.width} ${this.bounds.height}`);
     if (this.isStarted) {
-      this.updateScale();
+      this.rescale();
     }
   }
 
@@ -375,11 +375,11 @@ export class RenderEnvironment extends Environment {
     return clone;
   }
 
-  updateScale() {
+  rescale() {
     const matrix = this.svg.getScreenCTM();
     const factor = matrix.a;
     for (let shape of this.shapes) {
-      shape.updateScale(factor);
+      shape.rescale(this.bounds, factor);
     }
   }
 
@@ -396,19 +396,6 @@ export class RenderEnvironment extends Environment {
       this.isStale = true;
     }
   }
-
-  // getTime(tick) {
-    // return this.bounds.startTime + tick / this.resolution;
-  // }
-
-  // tickToTime(tick) {
-    // let proportion = tick / this.bounds.nticks;
-    // return Math.round(this.bounds.startTime + proportion * (this.bounds.stopTime - this.bounds.startTime));
-  // }
-
-  // timeToTick(time) {
-    // return Math.round((time - this.bounds.startTime) / (this.bounds.stopTime - this.bounds.startTime) * this.bounds.nticks);
-  // }
 
   contextualizeCursor(element) {
     document.documentElement.classList.remove('grab', 'grabbing');
@@ -478,7 +465,7 @@ export class RenderEnvironment extends Environment {
       this.bounds.height *= factor;
       this.updateViewBox();
 
-      this.updateScale();
+      this.rescale();
     }
   };
 

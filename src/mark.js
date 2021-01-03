@@ -1,4 +1,6 @@
 import { 
+  classifyArc,
+  standardizeDegrees,
   svgNamespace,
 } from './common.js';
 
@@ -14,17 +16,16 @@ import {
   ExpressionVector,
 } from './ast.js';
 
+import {Matrix} from './matrix.js';
+
 // --------------------------------------------------------------------------- 
 
-const handleSize = 8;
-
 export class Marker {
+  static HANDLE_SCALE = 8;
+  static RADIAL_MAGNITUDE = 100;
+
   constructor(shape) {
     this.shape = shape;
-    // this.foregroundMarks = [];
-    // this.centeredForegroundMarks = [];
-    // this.midgroundMarks = [];
-    // this.backgroundMarks = [];
   }
 
   showMarks() {
@@ -115,14 +116,38 @@ export class Marker {
     this.showMarks();
   }
 
-  updateScale(factor) {
+  updateState(centroid) {
+    this.centroid = centroid;
+  }
+
+  updateDom(bounds, factor) {
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${this.centroid[0]} ${-this.centroid[1]})`);
+
     for (let mark of this.foregroundMarks) {
-      mark.updateScale(factor);
+      mark.updateDom(bounds, factor);
     }
+
     for (let mark of this.centeredForegroundMarks) {
-      mark.updateScale(factor);
+      mark.updateDom(bounds, factor);
+    }
+
+    for (let mark of this.backgroundMarks) {
+      mark.updateDom(bounds, factor);
+    }
+
+    for (let mark of this.midgroundMarks) {
+      mark.updateDom(bounds, factor);
     }
   }
+
+  // updateScale(bounds, factor) {
+    // for (let mark of this.foregroundMarks) {
+      // mark.updateScale(bounds, factor);
+    // }
+    // for (let mark of this.centeredForegroundMarks) {
+      // mark.updateScale(bounds, factor);
+    // }
+  // }
 
   updateManipulability() {
     for (let mark of this.foregroundMarks) {
@@ -166,14 +191,20 @@ export class RectangleMark {
     this.element = document.createElementNS(svgNamespace, 'rect');
   }
 
-  updateDom(bounds, corner, size, rounding) {
-    this.element.setAttributeNS(null, 'x', corner[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - corner[1] - size[1]);
-    this.element.setAttributeNS(null, 'width', size[0]);
-    this.element.setAttributeNS(null, 'height', size[1]);
-    if (rounding !== undefined) {
-      this.element.setAttributeNS(null, 'rx', rounding);
-      this.element.setAttributeNS(null, 'ry', rounding);
+  updateState(corner, size, rounding) {
+    this.corner = corner;
+    this.size = size;
+    this.rounding = rounding;
+  }
+
+  updateDom(bounds, factor) {
+    this.element.setAttributeNS(null, 'x', this.corner[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.corner[1] - this.size[1]);
+    this.element.setAttributeNS(null, 'width', this.size[0]);
+    this.element.setAttributeNS(null, 'height', this.size[1]);
+    if (this.rounding !== undefined) {
+      this.element.setAttributeNS(null, 'rx', this.rounding);
+      this.element.setAttributeNS(null, 'ry', this.rounding);
     }
   }
 }
@@ -185,16 +216,15 @@ export class CircleMark {
     this.element = document.createElementNS(svgNamespace, 'circle');
   }
 
-  // updateProperties(center, radius, bounds) {
-    // this.element.setAttributeNS(null, 'cx', center.get(0).value);
-    // this.element.setAttributeNS(null, 'cy', bounds.span - center.get(1).value);
-    // this.element.setAttributeNS(null, 'r', radius.value);
-  // }
+  updateState(center, radius) {
+    this.center = center;
+    this.radius = radius;
+  }
 
   updateDom(bounds, center, radius) {
-    this.element.setAttributeNS(null, 'cx', center[0]);
-    this.element.setAttributeNS(null, 'cy', bounds.span - center[1]);
-    this.element.setAttributeNS(null, 'r', radius);
+    this.element.setAttributeNS(null, 'cx', this.center[0]);
+    this.element.setAttributeNS(null, 'cy', bounds.span - this.center[1]);
+    this.element.setAttributeNS(null, 'r', this.radius);
   }
 }
 
@@ -205,11 +235,16 @@ export class LineMark {
     this.element = document.createElementNS(svgNamespace, 'line');
   }
 
-  updateDom(bounds, a, b) {
-    this.element.setAttributeNS(null, 'x1', a[0]);
-    this.element.setAttributeNS(null, 'y1', bounds.span - a[1]);
-    this.element.setAttributeNS(null, 'x2', b[0]);
-    this.element.setAttributeNS(null, 'y2', bounds.span - b[1]);
+  updateState(a, b) {
+    this.a = a;
+    this.b = b;
+  }
+
+  updateDom(bounds, factor) {
+    this.element.setAttributeNS(null, 'x1', this.a[0]);
+    this.element.setAttributeNS(null, 'y1', bounds.span - this.a[1]);
+    this.element.setAttributeNS(null, 'x2', this.b[0]);
+    this.element.setAttributeNS(null, 'y2', bounds.span - this.b[1]);
   }
 }
 
@@ -220,8 +255,12 @@ export class PolygonMark {
     this.element = document.createElementNS(svgNamespace, 'polygon');
   }
 
-  updateDom(bounds, coordinates) {
-    this.element.setAttributeNS(null, 'points', coordinates.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
+  updateState(coordinates) {
+    this.coordinates = coordinates;
+  }
+
+  updateDom(bounds, factor) {
+    this.element.setAttributeNS(null, 'points', this.coordinates.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
   }
 }
 
@@ -232,8 +271,12 @@ export class PathMark {
     this.element = document.createElementNS(svgNamespace, 'path');
   }
 
-  updateDom(bounds, commands) {
-    this.element.setAttributeNS(null, 'd', commands);
+  updateState(commands) {
+    this.commands = commands;
+  }
+
+  updateDom(bounds, factor) {
+    this.element.setAttributeNS(null, 'd', this.commands);
   }
 
   // setTransform(matrix, bounds) {
@@ -243,23 +286,68 @@ export class PathMark {
 
 // --------------------------------------------------------------------------- 
 
+export class WedgeMark {
+  constructor() {
+    this.element = document.createElementNS(svgNamespace, 'path');
+  }
+
+  updateState(pivot, degrees, priorHeading) {
+    this.pivot = pivot;
+    this.degrees = degrees;
+    this.priorHeading = priorHeading;
+  }
+
+  updateDom(bounds, factor) {
+    const length = Marker.RADIAL_MAGNITUDE / factor;
+    const vector = [length, 0];
+
+    const fromRotater = Matrix.rotate(this.priorHeading);
+    const fromVector = fromRotater.multiplyVector(vector);
+    const fromPosition = [
+      this.pivot[0] + fromVector[0],
+      this.pivot[1] + fromVector[1]
+    ];
+
+    const toRotater = Matrix.rotate(this.priorHeading + this.degrees);
+    const toVector = toRotater.multiplyVector(vector);
+    const toPosition = [
+      this.pivot[0] + toVector[0],
+      this.pivot[1] + toVector[1]
+    ];
+
+    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.degrees));
+    const commands =
+      `M${this.pivot[0]},${bounds.span - this.pivot[1]} ` +
+      `L${fromPosition[0]},${bounds.span - fromPosition[1]} ` +
+      `A ${length},${length} 0 ${isLarge} ${isClockwise} ${toPosition[0]},${bounds.span - toPosition[1]} ` +
+      'z';
+    this.element.setAttributeNS(null, 'd', commands);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class PolylineMark {
   constructor() {
     this.element = document.createElementNS(svgNamespace, 'polyline');
   }
 
-  updateDom(bounds, coordinates) {
-    this.element.setAttributeNS(null, 'points', coordinates.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
+  updateState(coordinates) {
+    this.coordinates = coordinates;
+  }
+
+  updateDom(bounds, factor) {
+    this.element.setAttributeNS(null, 'points', this.coordinates.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
   }
 }
 
 // --------------------------------------------------------------------------- 
 
 export class TweakableMark {
-  constructor(shape, host, getExpression, updateState) {
+  constructor(shape, host, getExpression, backfill) {
     this.shape = shape;
     this.getExpression = getExpression;
-    this.updateState = updateState;
+    this.backfill = backfill;
     this.host = host ?? shape;
     this.mouseDownAt = null;
 
@@ -329,42 +417,32 @@ export class TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class PanMark extends TweakableMark {
-  constructor(shape, host, isRotated, getExpression, updateState) {
-    super(shape, host, getExpression, updateState);
-    this.isRotated = isRotated;
+  constructor(shape, host, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
   }
 
-  updateDom(bounds, position, factor, matrix) {
-    const transformedPosition = matrix.multiplyVector(position);
-		const factors = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
-		const rotation = factors.rotation * 180 / Math.PI;
+  updateState(position, matrix) {
+    this.position = position;
+    this.matrix = matrix;
+    this.updateMatrixState();
+  }
+
+  updateMatrixState() {
+    const [a, c, e, b, d, f] = this.matrix.elements;
+		const factors = decompose_2d_matrix([a, b, c, d, e, f]);
+		this.rotation = factors.rotation * 180 / Math.PI;
+  }
+
+  updateDom(bounds, factor) {
+    this.updatePositionDom(bounds, factor, this.position);
+  }
+
+  updatePositionDom(bounds, factor, position) {
+    const transformedPosition = this.matrix.multiplyVector(position);
     this.commandString = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
-    if (this.isRotated) {
-      this.commandString += ` rotate(${-rotation})`;
-    }
-    this.updateScale(factor);
+    this.commandString += ` rotate(${-this.rotation})`;
+    this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${Marker.HANDLE_SCALE / factor})`);
   }
-
-  updateScale(factor) {
-    this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${handleSize / factor})`);
-  }
-
-  // updateProperties(position, bounds, matrix) {
-    // const transformedPosition = matrix.multiplyVector(position);
-		// const factors = decompose_2d_matrix([matrix.elements[0], matrix.elements[3], matrix.elements[1], matrix.elements[4], matrix.elements[2], matrix.elements[5]]);
-		// const rotation = factors.rotation * 180 / Math.PI;
-
-    // this.commandString = `translate(${transformedPosition.get(0).value} ${bounds.span - transformedPosition.get(1).value})`;
-    // if (this.isRotated) {
-      // this.commandString += ` rotate(${-rotation})`;
-    // }
-  // }
-
-  // unscale(factor) {
-    // if (this.commandString) {
-      // this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${6 / factor})`);
-    // }
-  // }
 
   addHorizontal() {
     this.horizontal = document.createElementNS(svgNamespace, 'line');
@@ -405,8 +483,8 @@ export class PanMark extends TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class VectorPanMark extends PanMark {
-  constructor(shape, host, getExpression, updateState) {
-    super(shape, host, false, getExpression, updateState);
+  constructor(shape, host, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
     this.addHorizontal();
     this.addVertical();
   }
@@ -422,7 +500,7 @@ export class VectorPanMark extends PanMark {
 
     this.expression.set(0, new ExpressionReal(x));
     this.expression.set(1, new ExpressionReal(y));
-    this.updateState([x, y]);
+    this.backfill([x, y]);
 
     return '[' + this.expression.get(0).value + ', ' + this.expression.get(1).value + ']';
   }
@@ -431,8 +509,8 @@ export class VectorPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class HorizontalPanMark extends PanMark {
-  constructor(shape, host, multiplier = 1, getExpression, updateState) {
-    super(shape, host, false, getExpression, updateState);
+  constructor(shape, host, multiplier = 1, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
     this.multiplier = multiplier;
     this.addHorizontal();
   }
@@ -446,7 +524,7 @@ export class HorizontalPanMark extends PanMark {
     }
 
     this.expression.value = newValue;
-    this.updateState(newValue);
+    this.backfill(newValue);
 
     const newExpression = new ExpressionReal(newValue);
     return manipulateSource(this.untweakedExpression, newExpression);
@@ -456,8 +534,8 @@ export class HorizontalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class VerticalPanMark extends PanMark {
-  constructor(shape, host, multiplier = 1, getExpression, updateState) {
-    super(shape, host, false, getExpression, updateState);
+  constructor(shape, host, multiplier = 1, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
     this.multiplier = multiplier;
     this.addVertical();
   }
@@ -471,7 +549,7 @@ export class VerticalPanMark extends PanMark {
     }
 
     this.expression.value = newValue;
-    this.updateState(newValue);
+    this.backfill(newValue);
 
     const newExpression = new ExpressionReal(newValue);
     return manipulateSource(this.untweakedExpression, newExpression);
@@ -481,10 +559,29 @@ export class VerticalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class RotationMark extends PanMark {
-  constructor(shape, host, pivot, getExpression, updateState) {
-    super(shape, host, false, getExpression, updateState);
-    this.pivot = pivot;
+  constructor(shape, host, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
     this.addArc();
+  }
+
+  updateState(pivot, degrees, priorHeading, matrix) {
+    this.pivot = pivot;
+    this.degrees = degrees;
+    this.priorHeading = priorHeading;
+    this.matrix = matrix;
+    this.updateMatrixState();
+  }
+
+  updateDom(bounds, factor, matrix) {
+    const length = Marker.RADIAL_MAGNITUDE / factor;
+    const rotater = Matrix.rotate(this.degrees + this.priorHeading);
+    const axis = [length, 0];
+    const rotatedAxis = rotater.multiplyVector(axis);
+    const degreesPosition = [
+      this.pivot[0] + rotatedAxis[0],
+      this.pivot[1] + rotatedAxis[1]
+    ];
+    super.updatePositionDom(bounds, factor, degreesPosition);
   }
 
   getNewSource(delta, isShiftModified, mouseAt) {
@@ -494,7 +591,7 @@ export class RotationMark extends PanMark {
     ];
 
     const newRadians = Math.atan2(pivotToMouse[0], -pivotToMouse[1]);
-    let newDegrees = newRadians * 180 / Math.PI - 90;// TODO - this.host.state.heading;
+    let newDegrees = newRadians * 180 / Math.PI - 90 - this.priorHeading;
 
     if (this.untweakedExpression.value < 0) {
       // We were negative and we want to stay that way. 
@@ -521,7 +618,7 @@ export class RotationMark extends PanMark {
     }
 
     this.expression.value = newDegrees;
-    this.updateState(newDegrees);
+    this.backfill(newDegrees);
 
     const newExpression = new ExpressionReal(newDegrees);
     return manipulateSource(this.untweakedExpression, newExpression);
@@ -532,7 +629,7 @@ export class RotationMark extends PanMark {
 
 export class AxisMark extends PanMark {
   constructor(shape, host) {
-    super(shape, host, false);
+    super(shape, host);
     this.addArc();
   }
 
@@ -565,9 +662,16 @@ export class AxisMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class DistanceMark extends PanMark {
-  constructor(shape, host, getExpression, updateState) {
-    super(shape, host, false, getExpression, updateState);
+  constructor(shape, host, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
     this.addHorizontal();
+  }
+
+  updateState(position, heading, matrix) {
+    this.position = position;
+    this.matrix = matrix;
+    this.updateMatrixState();
+    this.rotation -= heading;
   }
 
   getNewSource(delta, isShiftModified, mouseAt) {
@@ -589,7 +693,7 @@ export class DistanceMark extends PanMark {
     }
 
     this.expression.value = newDistance;
-    this.updateState(newDistance);
+    this.backfill(newDistance);
 
     const newExpression = new ExpressionReal(newDistance);
     return manipulateSource(this.untweakedExpression, newExpression);
@@ -599,26 +703,26 @@ export class DistanceMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class WedgeDegreesMark extends PanMark {
-  constructor(shape, host, root, center, getExpression, updateState) {
-    super(shape, host, false, getExpression, updateState);
-    this.root = root;
-    this.center = center;
+  constructor(shape, host, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
     this.addArc();
   }
 
-  getNewSource(delta, isShiftModified, mouseAt) {
-    console.log("this.center:", this.center);
-    console.log("this.root:", this.root);
+  updateState(position, from, center, matrix) {
+    super.updateState(position, matrix);
+    this.from = from;
+    this.center = center;
+  }
 
+  getNewSource(delta, isShiftModified, mouseAt) {
     // Find vector from center to root position.
-    let centerToRoot = [
-      this.root[0] - this.center[0],
-      this.root[1] - this.center[1]
+    let centerToFrom = [
+      this.from[0] - this.center[0],
+      this.from[1] - this.center[1]
     ];
-    let length = Math.sqrt(centerToRoot[0] * centerToRoot[0] + centerToRoot[1] * centerToRoot[1]);
-    centerToRoot[0] /= length;
-    centerToRoot[1] /= length;
-    console.log("centerToRoot:", centerToRoot);
+    let length = Math.sqrt(centerToFrom[0] * centerToFrom[0] + centerToFrom[1] * centerToFrom[1]);
+    centerToFrom[0] /= length;
+    centerToFrom[1] /= length;
 
     // Find vector from center to mouse.
     let centerToMouse = [
@@ -628,22 +732,21 @@ export class WedgeDegreesMark extends PanMark {
     length = Math.sqrt(centerToMouse[0] * centerToMouse[0] + centerToMouse[1] * centerToMouse[1]);
     centerToMouse[0] /= length;
     centerToMouse[1] /= length;
-    console.log("centerToMouse:", centerToMouse);
 
     // Find angle between the two vectors.
-    const dot = centerToRoot[0] * centerToMouse[0] + centerToRoot[1] * centerToMouse[1];
+    const dot = centerToFrom[0] * centerToMouse[0] + centerToFrom[1] * centerToMouse[1];
     let degrees = Math.acos(dot) * 180 / Math.PI;
 
     // Because dot is ambiguous, find signed area and adjust angle to be > 180.
-    let rootToCenter = [
-      this.center[0] - this.root[0],
-      this.center[1] - this.root[1]
+    let fromToCenter = [
+      this.center[0] - this.from[0],
+      this.center[1] - this.from[1]
     ];
-    let rootToMouse = [
-      mouseAt.x - this.root[0],
-      mouseAt.y - this.root[1],
+    let fromToMouse = [
+      mouseAt.x - this.from[0],
+      mouseAt.y - this.from[1],
     ];
-    const signedArea = rootToCenter[0] * rootToMouse[1] - rootToCenter[1] * rootToMouse[0];
+    const signedArea = fromToCenter[0] * fromToMouse[1] - fromToCenter[1] * fromToMouse[0];
 
     if (signedArea > 0) {
       degrees = 360 - degrees;
@@ -658,10 +761,9 @@ export class WedgeDegreesMark extends PanMark {
     if (isShiftModified) {
       degrees = Math.round(degrees);
     }
-    console.log("degrees:", degrees);
 
     this.expression.value = degrees;
-    this.updateState(degrees);
+    this.backfill(degrees);
 
     const newExpression = new ExpressionReal(degrees);
     return manipulateSource(this.untweakedExpression, newExpression);
@@ -671,22 +773,32 @@ export class WedgeDegreesMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class BumpDegreesMark extends PanMark {
-  constructor(shape, host, from, to, center, getExpression, updateState) {
-    super(shape, host, false, getExpression, updateState);
+  constructor(shape, host, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
     this.addHorizontal();
-    this.from = from;
+  }
+
+  updateState(to, from, center, degrees, matrix) {
+    super.updateState(center, matrix);
+
+    const fromVector = [
+      from[0] - center[0],
+      from[1] - center[1],
+    ];
+    const radians = Math.atan2(fromVector[0], -fromVector[1]);
+    let fromDegrees = radians * 180 / Math.PI - 90;
+
+    this.rotation = fromDegrees + degrees * 0.5;
     this.to = to;
+    this.from = from;
     this.center = center;
   }
 
   getNewSource(delta, isShiftModified, mouseAt) {
-    console.log("this.center:", this.center);
-    console.log("mouseAt:", mouseAt);
     let centerToMouse = [
       mouseAt.x - this.center[0],
       mouseAt.y - this.center[1],
     ];
-    console.log("centerToMouse:", centerToMouse);
 
     // The new center will be on a line perpendicular to the vector from
     // the starting point to ending point.
@@ -764,7 +876,7 @@ export class BumpDegreesMark extends PanMark {
     }
 
     this.expression.value = degrees;
-    this.updateState(degrees);
+    this.backfill(degrees);
 
     const newExpression = new ExpressionReal(degrees);
     return manipulateSource(this.untweakedExpression, newExpression);

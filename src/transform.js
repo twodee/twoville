@@ -19,80 +19,16 @@ import {
   RotationMark,
   VectorPanMark,
   VerticalPanMark,
+  WedgeMark,
 } from './mark.js';
 
 import {
   TimelinedEnvironment,
 } from './environment.js';
 
-// --------------------------------------------------------------------------- 
-
-export class Matrix {
-  constructor(elements) {
-    this.elements = elements;
-  }
-
-  multiplyVector(v) {
-    return [
-      this.elements[0] * v[0] + this.elements[1] * v[1] + this.elements[2],
-      this.elements[3] * v[0] + this.elements[4] * v[1] + this.elements[5],
-    ];
-  }
-
-  multiplyMatrix(m) {
-    return new Matrix([
-      this.elements[0] * m.elements[0] + this.elements[1] * m.elements[3] + this.elements[2] * m.elements[6], // row 0, column 0
-      this.elements[0] * m.elements[1] + this.elements[1] * m.elements[4] + this.elements[2] * m.elements[7], // row 0, column 1
-      this.elements[0] * m.elements[2] + this.elements[1] * m.elements[5] + this.elements[2] * m.elements[8], // row 0, column 1
-
-      this.elements[3] * m.elements[0] + this.elements[4] * m.elements[3] + this.elements[5] * m.elements[6], // row 1, column 0
-      this.elements[3] * m.elements[1] + this.elements[4] * m.elements[4] + this.elements[5] * m.elements[7], // row 1, column 1
-      this.elements[3] * m.elements[2] + this.elements[4] * m.elements[5] + this.elements[5] * m.elements[8], // row 1, column 1
-
-      this.elements[6] * m.elements[0] + this.elements[7] * m.elements[3] + this.elements[8] * m.elements[6], // row 2, column 0
-      this.elements[6] * m.elements[1] + this.elements[7] * m.elements[4] + this.elements[8] * m.elements[7], // row 2, column 1
-      this.elements[6] * m.elements[2] + this.elements[7] * m.elements[5] + this.elements[8] * m.elements[8], // row 2, column 1
-    ]);
-  }
-
-  static identity() {
-    return new Matrix([
-      1, 0, 0,
-      0, 1, 0,
-      0, 0, 1,
-    ]);
-  }
-
-  static rotate(degrees) {
-    const radians = degrees * Math.PI / 180;
-    return new Matrix([
-      Math.cos(radians), -Math.sin(radians), 0,
-      Math.sin(radians), Math.cos(radians), 0,
-      0, 0, 1,
-    ]);
-  }
-
-  static scale(sx, sy) {
-    return new Matrix([
-      sx, 0, 0,
-      0, sy, 0,
-      0, 0, 1,
-    ]);
-  }
-
-  static translate(dx, dy) {
-    return new Matrix([
-      1, 0, dx,
-      0, 1, dy,
-      0, 0, 1,
-    ]);
-  }
-
-  static skew(sx, sy) {
-    return null;
-    // TODO
-  }
-}
+import {
+  Matrix
+} from './matrix.js';
 
 // --------------------------------------------------------------------------- 
 
@@ -132,6 +68,10 @@ export class Transform extends TimelinedEnvironment {
     this.state = {};
     this.configureState(bounds);
   }
+
+  updateState(preTransform) {
+    this.state.preTransform = preTransform;
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -154,7 +94,7 @@ export class Translate extends Transform {
   }
     
   configureState(bounds) {
-    this.configureVectorProperty('offsets', this, this.parentEnvironment, this.updateCommand.bind(this), bounds, [], timeline => {
+    this.configureVectorProperty('offsets', this, this.parentEnvironment, this.updateDomCommand.bind(this), bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, 'I found a <code>translate</code> node whose <code>offsets</code> was not set.');
       }
@@ -170,16 +110,20 @@ export class Translate extends Transform {
 
   configureMarks() {
     super.configureMarks();
+
     this.offsetMark = new VectorPanMark(this.parentEnvironment, null, t => {
       return this.expressionAt('offsets', this.parentEnvironment.root.state.t);
     }, ([x, y]) => {
       this.state.offsets[0] = x;
       this.state.offsets[1] = y;
+      this.updateMarkerState();
     });
+
     this.marker.addMarks([], [], [this.offsetMark]);
+    this.updateMarkerState();
   }
 
-  updateCommand(bounds) {
+  updateDomCommand(bounds) {
     this.command = `translate(${this.state.offsets[0]} ${-this.state.offsets[1]})`;
   }
 
@@ -187,8 +131,8 @@ export class Translate extends Transform {
     return Matrix.translate(this.state.offsets[0], this.state.offsets[1]);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.offsetMark.updateDom(bounds, this.state.offsets, factor, matrix);
+  updateMarkerState() {
+    this.offsetMark.updateState(this.state.offsets, this.state.preTransform);
   }
 }
 
@@ -242,25 +186,26 @@ export class Rotate extends Transform {
     const pivotTimeline = this.timedProperties.pivot;
 
     if (degreesTimeline.isAnimated || pivotTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateCommand.bind(this));
+      this.parentEnvironment.updateDoms.push(this.updateDomCommand.bind(this));
     }
 
     if (degreesTimeline.hasDefault && pivotTimeline.hasDefault) {
-      this.updateCommand(bounds);
+      this.updateDomCommand(bounds);
     }
   }
 
-  updateCommand(bounds) {
+  updateDomCommand(bounds) {
     this.command = `rotate(${-this.state.degrees} ${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]})`;
   }
 
   configureMarks() {
     super.configureMarks();
 
-    this.degreesMark = new RotationMark(this.parentEnvironment, this, this.state.pivot, t => {
+    this.degreesMark = new RotationMark(this.parentEnvironment, this, t => {
       return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
     }, degrees => {
       this.state.degrees = degrees;
+      this.updateMarkerState();
     });
 
     this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
@@ -268,12 +213,13 @@ export class Rotate extends Transform {
     }, ([x, y]) => {
       this.state.pivot[0] = x;
       this.state.pivot[1] = y;
+      this.updateMarkerState();
     });
 
-    this.wedgeMark = new PathMark();
+    this.wedgeMark = new WedgeMark();
 
-    this.state.heading = 0;
     this.marker.addMarks([this.pivotMark, this.degreesMark], [], [], [this.wedgeMark]);
+    this.updateMarkerState();
   }
 
   toMatrix() {
@@ -283,26 +229,10 @@ export class Rotate extends Transform {
     return originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.pivotMark.updateDom(bounds, this.state.pivot, factor, matrix);
-
-    const length = 10;
-    const rotater = Matrix.rotate(this.state.degrees);
-    const axis = [length, 0];
-    const rotatedAxis = rotater.multiplyVector(axis);
-    const degreesPosition = [
-      this.state.pivot[0] + rotatedAxis[0],
-      this.state.pivot[1] + rotatedAxis[1]
-    ];
-    this.degreesMark.updateDom(bounds, degreesPosition, factor, matrix);
-
-    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.degrees));
-    const commands = 
-      `M${this.state.pivot[0]},${bounds.span - this.state.pivot[1]} ` +
-      `L${this.state.pivot[0] + axis[0]},${bounds.span - (this.state.pivot[1] + axis[1])} ` +
-      `A ${length},${length} 0 ${isLarge} ${isClockwise} ${degreesPosition[0]},${bounds.span - degreesPosition[1]} ` +
-      'z';
-    this.wedgeMark.updateDom(bounds, commands);
+  updateMarkerState() {
+    this.pivotMark.updateState(this.state.pivot, this.state.preTransform);
+    this.degreesMark.updateState(this.state.pivot, this.state.degrees, 0, this.state.preTransform);
+    this.wedgeMark.updateState(this.state.pivot, this.state.degrees, 0);
   }
 }
 
@@ -397,15 +327,15 @@ export class Shear extends Transform {
     const pivotTimeline = this.timedProperties.pivot;
 
     if (factorsTimeline.isAnimated || pivotTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateCommand.bind(this));
+      this.parentEnvironment.updateDoms.push(this.updateDomCommand.bind(this));
     }
 
     if (factorsTimeline.hasDefault && pivotTimeline.hasDefault) {
-      this.updateCommand(bounds);
+      this.updateDomCommand(bounds);
     }
   }
 
-  updateCommand(bounds) {
+  updateDomCommand(bounds) {
     this.command = `translate(${-this.pivot[0]} ${bounds.span - this.pivot[1]}) matrix(1 ${this.factors[1]} ${this.factors[0]} 1 0 0) translate(${this.pivot[0]} ${-(bounds.span - this.pivot[1])})`;
   }
 }
@@ -522,11 +452,11 @@ export class Scale extends Transform {
     const pivotTimeline = this.timedProperties.pivot;
 
     if (factorsTimeline.isAnimated || pivotTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateCommand.bind(this));
+      this.parentEnvironment.updateDoms.push(this.updateDomCommand.bind(this));
     }
 
     if (factorsTimeline.hasDefault && pivotTimeline.hasDefault) {
-      this.updateCommand(bounds);
+      this.updateDomCommand(bounds);
     }
   }
 
@@ -562,7 +492,7 @@ export class Scale extends Transform {
     // ];
   }
 
-  updateCommand(bounds) {
+  updateDomCommand(bounds) {
     this.command = `translate(${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]}) scale(${this.state.factors[0]} ${this.state.factors[1]}) translate(${-this.state.pivot[0]} ${-(bounds.span - this.state.pivot[1])})`;
   }
 
@@ -570,10 +500,10 @@ export class Scale extends Transform {
     return Matrix.scale(this.state.factors[0], this.state.factors[1]);
   }
 
-  updateMarkerDom(bounds, factor, matrix) {
-    this.pivotMark.updateDom(bounds, this.state.pivot, factor, matrix);
-    this.widthFactorMark.updateDom(bounds, [this.state.pivot[0] + this.state.factors[0] * 50, this.state.pivot[1]], factor, matrix);
-    this.heightFactorMark.updateDom(bounds, [this.state.pivot[0], this.state.pivot[1] + this.state.factors[1] * 50], factor, matrix);
-  }
+  // updateMarkerDom(bounds, factor, matrix) {
+    // this.pivotMark.updateDom(bounds, this.state.pivot, factor, matrix);
+    // this.widthFactorMark.updateDom(bounds, [this.state.pivot[0] + this.state.factors[0] * 50, this.state.pivot[1]], factor, matrix);
+    // this.heightFactorMark.updateDom(bounds, [this.state.pivot[0], this.state.pivot[1] + this.state.factors[1] * 50], factor, matrix);
+  // }
 }
 
