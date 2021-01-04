@@ -58,6 +58,8 @@ let isLoop;
 let defaultSettings = {
   showCopyLinks: true,
   backgroundColor: '#D3D3D3',
+  warnOnExit: true,
+  showTimeScrubber: false,
 };
 const settings = {...defaultSettings};
 
@@ -221,7 +223,7 @@ function postInterpret(pod, successCallback) {
     range.setEnd(range.end.row, range.start.column + newText.length);
     editor.getSelection().setSelectionRange(range);
 
-    scene.sync();
+    scene.flushManipulation();
   };
 
   scene.stopTweak = () => {
@@ -413,6 +415,7 @@ function initialize() {
     }
   };
 
+  const showTimeScrubberToggle = document.getElementById('show-time-scrubber-toggle');
   const warnOnExitToggle = document.getElementById('warn-on-exit-toggle');
   const showCopyLinksToggle = document.getElementById('show-copy-links-toggle');
   const backgroundColorPicker = document.getElementById('background-color-picker');
@@ -429,6 +432,10 @@ function initialize() {
     warnOnExit: () => {
       warnOnExitToggle.checked = settings.warnOnExit;
     },
+    showTimeScrubber: () => {
+      document.getElementById('time-toolbar').style.display = settings.showTimeScrubber ? 'block' : 'none';
+      showTimeScrubberToggle.checked = settings.showTimeScrubber;
+    },
   };
 
   // Handle show copy links toggling.
@@ -441,6 +448,14 @@ function initialize() {
   warnOnExitToggle.checked = settings.warnOnExit;
   warnOnExitToggle.addEventListener('click', () => {
     settings.warnOnExit = savedSettings.warnOnExit = warnOnExitToggle.checked;
+    saveSettings();
+  });
+
+  showTimeScrubberToggle.checked = settings.warnOnExit;
+  uiSynchronizers.showTimeScrubber();
+  showTimeScrubberToggle.addEventListener('click', () => {
+    settings.showTimeScrubber = savedSettings.showTimeScrubber = showTimeScrubberToggle.checked;
+    uiSynchronizers.showTimeScrubber();
     saveSettings();
   });
 

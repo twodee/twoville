@@ -311,11 +311,11 @@ export class RenderEnvironment extends Environment {
     this.box.include(box.max);
   }
 
-  sync() {
+  flushManipulation() {
     const matrix = this.svg.getScreenCTM();
     const factor = matrix.a;
     for (let shape of this.shapes) {
-      shape.sync(this.bounds, factor);
+      shape.flushManipulation(this.bounds, factor);
     }
   }
 
@@ -379,7 +379,8 @@ export class RenderEnvironment extends Environment {
     const matrix = this.svg.getScreenCTM();
     const factor = matrix.a;
     for (let shape of this.shapes) {
-      shape.rescale(this.bounds, factor);
+      shape.updateContentDom(this.bounds, factor);
+      shape.updateInteractionDom(this.bounds, factor);
     }
   }
 

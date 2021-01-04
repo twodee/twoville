@@ -171,7 +171,7 @@ var {
   pointer-events: none;
 }
 
-#time-toolbar > * {
+#time-toolbar input {
   pointer-events: auto;
 }
 

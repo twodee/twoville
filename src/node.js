@@ -77,7 +77,7 @@ export class Node extends TimelinedEnvironment {
     this.parentEnvironment.addMarker(this.marker);
   }
 
-  updateState(matrix) {
+  updateInteractionState(matrix) {
     this.state.matrix = matrix;
   }
 }
@@ -139,7 +139,8 @@ export class VertexNode extends Node {
     this.marker.addMarks([this.positionMark], [], []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
     this.positionMark.updateState(this.state.position, this.state.matrix);
   }
 }
@@ -234,7 +235,8 @@ export class TurtleNode extends Node {
     this.marker.addMarks([this.positionMark, this.headingMark], [this.wedgeMark], []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
     this.positionMark.updateState(this.state.position, this.state.matrix);
     this.headingMark.updateState(this.state.position, this.state.heading, 0, this.state.matrix);
     this.wedgeMark.updateState(this.state.position, this.state.heading, 0);
@@ -298,7 +300,8 @@ export class MoveNode extends Node {
     this.marker.addMarks([this.distanceMark], [], []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
     const to = [
       this.previousTurtle.position[0] + this.state.distance * Math.cos(this.turtle.heading * Math.PI / 180),
       this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
@@ -366,7 +369,8 @@ export class TurnNode extends Node {
     this.marker.addMarks([this.degreesMark], [this.wedgeMark], []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
     this.degreesMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading, this.state.matrix);
     this.wedgeMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading);
   }
@@ -430,7 +434,8 @@ export class JumpNode extends Node {
     this.marker.addMarks([this.positionMark], [], []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
     this.positionMark.updateState(this.state.position, this.state.matrix);
   }
 }
@@ -493,7 +498,8 @@ export class LineNode extends Node {
     this.marker.addMarks([this.positionMark], [], []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
     this.positionMark.updateState(this.state.position, this.state.matrix);
   }
 }
@@ -602,7 +608,8 @@ export class QuadraticNode extends Node {
     this.marker.addMarks(foregroundMarks, this.lineMarks, []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
     this.positionMark.updateState(this.state.position, this.state.matrix);
     if (this.state.control) {
       this.controlMark.updateState(this.state.control, this.state.matrix);
@@ -802,7 +809,9 @@ export class ArcNode extends Node {
     this.marker.addMarks([this.centerMark, this.positionMark], this.lineMarks, []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
+
     if (this.isWedge) {
       this.centerMark.updateState(this.state.center, this.state.matrix);
       this.positionMark.updateState(this.turtle.position, this.previousTurtle.position, this.state.center, this.state.matrix);
@@ -941,7 +950,9 @@ export class CubicNode extends Node {
     this.marker.addMarks(foregroundMarks, this.lineMarks, []);
   }
 
-  updateMarkerState() {
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
+
     this.positionMark.updateState(this.state.position, this.state.matrix);
     this.control2Mark.updateState(this.state.control2, this.state.matrix);
     this.lineMarks[0].updateState(this.state.position, this.state.control2);

@@ -291,8 +291,9 @@ export class WedgeMark {
     this.element = document.createElementNS(svgNamespace, 'path');
   }
 
-  updateState(pivot, degrees, priorHeading) {
+  updateState(pivot, degrees, priorHeading, matrix) {
     this.pivot = pivot;
+    this.matrix = matrix;
     this.degrees = degrees;
     this.priorHeading = priorHeading;
   }
@@ -301,23 +302,25 @@ export class WedgeMark {
     const length = Marker.RADIAL_MAGNITUDE / factor;
     const vector = [length, 0];
 
+    const transformedPivot = this.matrix.multiplyVector(this.pivot);
+
     const fromRotater = Matrix.rotate(this.priorHeading);
     const fromVector = fromRotater.multiplyVector(vector);
     const fromPosition = [
-      this.pivot[0] + fromVector[0],
-      this.pivot[1] + fromVector[1]
+      transformedPivot[0] + fromVector[0],
+      transformedPivot[1] + fromVector[1]
     ];
 
     const toRotater = Matrix.rotate(this.priorHeading + this.degrees);
     const toVector = toRotater.multiplyVector(vector);
     const toPosition = [
-      this.pivot[0] + toVector[0],
-      this.pivot[1] + toVector[1]
+      transformedPivot[0] + toVector[0],
+      transformedPivot[1] + toVector[1]
     ];
 
     const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.degrees));
     const commands =
-      `M${this.pivot[0]},${bounds.span - this.pivot[1]} ` +
+      `M${transformedPivot[0]},${bounds.span - transformedPivot[1]} ` +
       `L${fromPosition[0]},${bounds.span - fromPosition[1]} ` +
       `A ${length},${length} 0 ${isLarge} ${isClockwise} ${toPosition[0]},${bounds.span - toPosition[1]} ` +
       'z';

@@ -69,8 +69,8 @@ export class Transform extends TimelinedEnvironment {
     this.configureState(bounds);
   }
 
-  updateState(preTransform) {
-    this.state.preTransform = preTransform;
+  updateInteractionState(matrix) {
+    this.state.matrix = matrix;
   }
 }
 
@@ -116,11 +116,9 @@ export class Translate extends Transform {
     }, ([x, y]) => {
       this.state.offsets[0] = x;
       this.state.offsets[1] = y;
-      this.updateMarkerState();
     });
 
     this.marker.addMarks([], [], [this.offsetMark]);
-    this.updateMarkerState();
   }
 
   updateDomCommand(bounds) {
@@ -131,8 +129,9 @@ export class Translate extends Transform {
     return Matrix.translate(this.state.offsets[0], this.state.offsets[1]);
   }
 
-  updateMarkerState() {
-    this.offsetMark.updateState(this.state.offsets, this.state.preTransform);
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
+    this.offsetMark.updateState(this.state.offsets, this.state.matrix);
   }
 }
 
@@ -205,7 +204,6 @@ export class Rotate extends Transform {
       return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
     }, degrees => {
       this.state.degrees = degrees;
-      this.updateMarkerState();
     });
 
     this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
@@ -213,13 +211,11 @@ export class Rotate extends Transform {
     }, ([x, y]) => {
       this.state.pivot[0] = x;
       this.state.pivot[1] = y;
-      this.updateMarkerState();
     });
 
     this.wedgeMark = new WedgeMark();
 
     this.marker.addMarks([this.pivotMark, this.degreesMark], [], [], [this.wedgeMark]);
-    this.updateMarkerState();
   }
 
   toMatrix() {
@@ -229,10 +225,11 @@ export class Rotate extends Transform {
     return originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
   }
 
-  updateMarkerState() {
-    this.pivotMark.updateState(this.state.pivot, this.state.preTransform);
-    this.degreesMark.updateState(this.state.pivot, this.state.degrees, 0, this.state.preTransform);
-    this.wedgeMark.updateState(this.state.pivot, this.state.degrees, 0);
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
+    this.pivotMark.updateState(this.state.pivot, this.state.matrix);
+    this.degreesMark.updateState(this.state.pivot, this.state.degrees, 0, this.state.matrix);
+    this.wedgeMark.updateState(this.state.pivot, this.state.degrees, 0, this.state.matrix);
   }
 }
 
@@ -471,7 +468,6 @@ export class Scale extends Transform {
 
     this.heightFactorMark = new VerticalPanMark(this.parentEnvironment, null, 1, t => {
       const f = this.expressionAt('factors', this.parentEnvironment.root.state.t).get(1);
-      console.log("f:", f);
       return f;
     }, factor => {
       this.state.factors[1] = factor;

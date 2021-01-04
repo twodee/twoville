@@ -360,11 +360,11 @@ export class Shape extends TimelinedEnvironment {
     return false;
   }
 
-  rescale(bounds, factor) {
-    for (let marker of this.markers) {
-      marker.updateDom(bounds, factor);
-    }
-  }
+  // rescale(bounds, factor) {
+    // for (let marker of this.markers) {
+      // marker.updateDom(bounds, factor);
+    // }
+  // }
 
   configure(bounds) {
     this.state = {};
@@ -391,34 +391,12 @@ export class Shape extends TimelinedEnvironment {
     }
 
     if (this.transforms.some(transform => transform.isAnimated)) {
-      this.updateDoms.push(this.updateTransformDom.bind(this));
+      // this.updateDoms.push(this.updateTransformDom.bind(this));
     }
 
     if (this.transforms.every(transform => transform.hasAllDefaults)) {
-      this.updateTransformDom(bounds);
+      // this.updateTransformDom(bounds);
     }
-  }
-
-  updateTransforms() {
-    let matrix = Matrix.identity();
-    for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      const transform = this.transforms[i];
-      transform.updateState(matrix);
-      matrix = transform.toMatrix().multiplyMatrix(matrix);
-    }
-  }
-
-  updateTransformDom(bounds) {
-    const commands = this.transforms.map(transform => transform.command).join(' ');
-    this.element.setAttributeNS(null, 'transform', commands);
-    this.backgroundMarkGroup.setAttributeNS(null, 'transform', commands);
-    this.updateTransforms();
-
-    let matrix = Matrix.identity();
-    for (let transform of this.transforms) {
-      matrix = matrix.multiplyMatrix(transform.toMatrix());
-    }
-    this.state.matrix = matrix;
   }
 
   ageDomWithoutMarks(bounds, t) {
@@ -433,45 +411,68 @@ export class Shape extends TimelinedEnvironment {
 
   ageDomWithMarks(bounds, t, factor) {
     this.ageDomWithoutMarks(bounds, t);
-    this.updateMarkerDom(bounds, factor);
+    this.updateInteractionState();
+    this.updateInteractionDom(bounds, factor);
     for (let marker of this.markers) {
       marker.updateManipulability();
     }
   }
 
-  updateShapeDom(bounds) {
-    this.updateTransformDom(bounds);
-  }
-
-  sync(bounds, factor) {
-    // Must update all DOM. updateDoms only holds updaters for animated, but
-    // handle interactions may have changed non-animated properties.
+  updateContentState(bounds) {
     for (let transform of this.transforms) {
       transform.updateDomCommand(bounds);
     }
-    this.updateMarkerState();
-    this.updateShapeDom(bounds);
-    this.updateMarkerDom(bounds, factor);
   }
 
-  updateMarkerDom(bounds, factor) {
-    // this.markers[0].updateDom(bounds, factor);
+  updateContentDom(bounds, factor) {
+    const commands = this.transforms.map(transform => transform.command).join(' ');
+    this.element.setAttributeNS(null, 'transform', commands);
+  }
+
+  updateInteractionState() {
+    for (let marker of this.markers) {
+      marker.updateState(this.state.centroid);
+    }
+
+    // The transforms need their prior transform for proper interaction.
+    let matrix = Matrix.identity();
+    for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
+      const transform = this.transforms[i];
+      transform.updateInteractionState(matrix);
+      matrix = transform.toMatrix().multiplyMatrix(matrix);
+    }
+    this.state.matrix = matrix;
+  }
+
+  updateInteractionDom(bounds, factor) {
+    const commands = this.transforms.map(transform => transform.command).join(' ');
+    this.backgroundMarkGroup.setAttributeNS(null, 'transform', commands);
+
     for (let marker of this.markers) {
       marker.updateDom(bounds, factor);
     }
-    // this.updateKeyMarkerDom(bounds, factor);
+  }
 
-    // transforms[0] is rightmost. It needs no incoming transform.
-    // transforms[1] needs transforms[0]'s matrix applied. Does transforms[i]
-    // needs its own matrix included?
+  flushManipulation(bounds, factor) {
+    this.updateContentState(bounds);
+    this.updateContentDom(bounds, factor);
 
-    // let matrix = Matrix.identity();
-    // for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      // const transform = this.transforms[i];
-      // transform.updateMarkerDom(bounds, factor, matrix);
-      // const m = transform.toMatrix();
-      // matrix = transform.toMatrix().multiplyMatrix(matrix);
+    this.updateInteractionState(bounds);
+    this.updateInteractionDom(bounds, factor);
+
+    // for (let transform of this.transforms) {
+      // transform.updateContentDom();
     // }
+
+    // First get all the model state in order.
+    // for (let transform of this.transforms) {
+      // transform.updateDomCommand(bounds);
+    // }
+    // this.updateMarkerState();
+
+    // Now update DOM.
+    // this.updateShapeDom(bounds);
+    // this.updateMarkerDom(bounds, factor);
   }
 
   configureStroke(stateHost, bounds, isRequired) {
@@ -501,19 +502,6 @@ export class Shape extends TimelinedEnvironment {
   
   updateStrokeJoinDom(type) {
     this.element.setAttributeNS(null, 'stroke-linejoin', type);
-  }
-
-  updateMarkerState() {
-    for (let transform of this.transforms) {
-      transform.updateMarkerState();
-    }
-  }
-  
-  updateCentroid(centroid) {
-    console.log("centroid:", centroid);
-    for (let marker of this.markers) {
-      marker.updateState(centroid);
-    }
   }
 }
 
@@ -656,7 +644,7 @@ export class Rectangle extends Shape {
 
     this.configureFill(bounds);
 
-    this.configureScalarProperty('rounding', this, this, this.updateRoundingDom.bind(this), bounds, [], timeline => {
+    this.configureScalarProperty('rounding', this, this, this.updateRounding.bind(this), bounds, [], timeline => {
       if (!timeline) {
         return false;
       }
@@ -669,7 +657,7 @@ export class Rectangle extends Shape {
       }
     });
 
-    this.configureVectorProperty('size', this, this, this.updateSizeDom.bind(this), bounds, [], timeline => {
+    this.configureVectorProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, 'I found a rectangle whose <code>size</code> was not set.');
       }
@@ -685,7 +673,7 @@ export class Rectangle extends Shape {
     if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
       throw new LocatedException(this.where, 'I found a rectangle whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
     } else if (this.timedProperties.hasOwnProperty('corner')) {
-      this.configureVectorProperty('corner', this, this, this.updateCornerDom.bind(this), bounds, ['size'], timeline => {
+      this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
         try {
           timeline.assertList(2, ExpressionInteger, ExpressionReal);
           return true;
@@ -694,7 +682,7 @@ export class Rectangle extends Shape {
         }
       });
     } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureVectorProperty('center', this, this, this.updateCenterDom.bind(this), bounds, ['size'], timeline => {
+      this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
         try {
           timeline.assertList(2, ExpressionInteger, ExpressionReal);
           return true;
@@ -704,6 +692,41 @@ export class Rectangle extends Shape {
       });
     } else {
       throw new LocatedException(this.where, "I found a rectangle whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    }
+  }
+
+  updateRounding(bounds) {
+    this.element.setAttributeNS(null, 'rx', this.state.rounding);
+    this.element.setAttributeNS(null, 'ry', this.state.rounding);
+  }
+
+  updateSize(bounds) {
+    this.element.setAttributeNS(null, 'width', this.state.size[0]);
+    this.element.setAttributeNS(null, 'height', this.state.size[1]);
+  }
+
+  updateCenter(bounds) {
+    this.state.centroid = this.state.center;
+    this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
+  }
+
+  updateCorner(bounds) {
+    this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
+    this.element.setAttributeNS(null, 'x', this.state.corner[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
+  }
+
+  updateContentDom(bounds) {
+    super.updateContentDom(bounds);
+    if (this.timedProperties.hasOwnProperty('rounding')) {
+      this.updateRounding(bounds);
+    }
+    this.updateSize(bounds);
+    if (this.timedProperties.hasOwnProperty('center')) {
+      this.updateCenter(bounds);
+    } else {
+      this.updateCorner(bounds);
     }
   }
 
@@ -720,7 +743,6 @@ export class Rectangle extends Shape {
       updatePositionState = ([x, y]) => {
         this.state.center[0] = x;
         this.state.center[1] = y;
-        this.updateMarkerState();
       };
       multiplier = 2;
     } else {
@@ -728,7 +750,6 @@ export class Rectangle extends Shape {
       updatePositionState = ([x, y]) => {
         this.state.corner[0] = x;
         this.state.corner[1] = y;
-        this.updateMarkerState();
       };
       multiplier = 1;
     }
@@ -739,69 +760,30 @@ export class Rectangle extends Shape {
       return this.expressionAt('size', this.root.state.t).get(0);
     }, newValue => {
       this.state.size[0] = newValue;
-      this.updateMarkerState();
     });
 
     this.heightMark = new VerticalPanMark(this, this, multiplier, t => {
       return this.expressionAt('size', this.root.state.t).get(1);
     }, newValue => {
       this.state.size[1] = newValue;
-      this.updateMarkerState();
     });
 
     this.markers[0].addMarks([this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
-    this.updateMarkerState();
-  }
-
-  updateRoundingDom(bounds) {
-    this.element.setAttributeNS(null, 'rx', this.state.rounding);
-    this.element.setAttributeNS(null, 'ry', this.state.rounding);
-  }
-
-  updateSizeDom(bounds) {
-    this.element.setAttributeNS(null, 'width', this.state.size[0]);
-    this.element.setAttributeNS(null, 'height', this.state.size[1]);
-  }
-
-  updateCenterDom(bounds) {
-    this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
-  }
-
-  updateCornerDom(bounds) {
-    this.element.setAttributeNS(null, 'x', this.state.corner[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
-  }
-
-  updateShapeDom(bounds) {
-    super.updateShapeDom(bounds);
-    if (this.timedProperties.hasOwnProperty('rounding')) {
-      this.updateRoundingDom(bounds);
-    }
-    this.updateSizeDom(bounds);
-    if (this.timedProperties.hasOwnProperty('center')) {
-      this.updateCenterDom(bounds);
-    } else {
-      this.updateCornerDom(bounds);
-    }
   }
  
-  updateMarkerState() {
-    super.updateMarkerState();
-
+  updateInteractionState() {
+    super.updateInteractionState();
     if (this.state.center) {
       const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
       this.outlineMark.updateState(corner, this.state.size, this.state.rounding);
       this.positionMark.updateState(this.state.center, this.state.matrix);
       this.widthMark.updateState([this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], this.state.matrix);
       this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], this.state.matrix);
-      this.updateCentroid(this.state.center);
     } else {
       this.outlineMark.updateState(this.state.corner, this.state.size, this.state.rounding);
       this.positionMark.updateState(this.state.corner, this.state.matrix);
       this.widthMark.updateState([this.state.corner[0] + this.state.size[0], this.state.corner[1]], this.state.matrix);
       this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
-      this.updateCentroid([this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]]);
     }
   }
 }
@@ -836,7 +818,7 @@ export class Circle extends Shape {
 
     this.configureFill(bounds);
 
-    this.configureScalarProperty('radius', this, this, this.updateRadiusDom.bind(this), bounds, [], timeline => {
+    this.configureScalarProperty('radius', this, this, this.updateRadius.bind(this), bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, 'I found a <code>circle</code> whose <code>radius</code> was not set.');
       }
@@ -849,7 +831,7 @@ export class Circle extends Shape {
       }
     });
 
-    this.configureVectorProperty('center', this, this, this.updateCenterDom.bind(this), bounds, [], timeline => {
+    this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, 'I found a <code>circle</code> whose <code>center</code> was not set.');
       }
@@ -863,6 +845,22 @@ export class Circle extends Shape {
     });
   }
 
+  updateRadius(bounds) {
+    this.element.setAttributeNS(null, 'r', this.state.radius);
+  }
+
+  updateCenter(bounds) {
+    this.state.centroid = this.state.center;
+    this.element.setAttributeNS(null, 'cx', this.state.center[0]);
+    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
+  }
+
+  updateContentDom(bounds) {
+    super.updateContentDom(bounds);
+    this.updateCenter(bounds);
+    this.updateRadius(bounds);
+  }
+
   configureMarks() {
     super.configureMarks();
     this.outlineMark = new CircleMark();
@@ -872,45 +870,22 @@ export class Circle extends Shape {
     }, ([x, y]) => {
       this.state.center[0] = x;
       this.state.center[1] = y;
-      this.updateMarkerState();
     });
 
     this.radiusMark = new HorizontalPanMark(this, null, 1, t => {
       return this.expressionAt('radius', this.root.state.t);
     }, newValue => {
       this.state.radius = newValue;
-      this.updateMarkerState();
     });
 
     this.markers[0].addMarks([this.centerMark, this.radiusMark], [this.outlineMark]);
-    this.updateMarkerState();
   }
 
-  updateRadiusDom(bounds) {
-    this.element.setAttributeNS(null, 'r', this.state.radius);
-  }
-
-  updateCenterDom(bounds) {
-    this.element.setAttributeNS(null, 'cx', this.state.center[0]);
-    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
-  }
-
-  updateShapeDom(bounds) {
-    super.updateShapeDom(bounds);
-    this.updateCenterDom(bounds);
-    this.updateRadiusDom(bounds);
-  }
-
-  updateMarkerState() {
-    super.updateMarkerState();
-
+  updateInteractionState() {
+    super.updateInteractionState();
     this.outlineMark.updateState(this.state.center, this.state.radius);
     this.centerMark.updateState(this.state.center, this.state.matrix);
     this.radiusMark.updateState([this.state.center[0] + this.state.radius, this.state.center[1]], this.state.matrix);
-
-    for (let marker of this.markers) {
-      marker.updateState(this.state.center);
-    }
   }
 }
 
@@ -942,11 +917,11 @@ export class NodeShape extends Shape {
     }
 
     if (this.nodes.some(node => node.isAnimated)) {
-      this.updateDoms.push(this.updateNodeDom.bind(this));
+      this.updateDoms.push(this.updateContentDom.bind(this));
     }
 
     if (this.nodes.every(node => node.hasAllDefaults)) {
-      this.updateNodeDom(bounds);
+      this.updateContentDom(bounds);
     }
   }
 
@@ -1020,33 +995,18 @@ export class NodeShape extends Shape {
     }
   }
 
-  updateShapeDom(bounds) {
-    super.updateShapeDom(bounds);
+  updateContentState(bounds) {
     for (let node of this.nodes) {
-      node.updateState(this.state.matrix);
-      node.updateMarkerState();
       node.updateTurtle(bounds);
     }
-    console.log("update shape dom");
-    this.updateNodeDom(bounds);
+    super.updateContentState(bounds);
   }
 
-  updateMarkerState() {
-    super.updateMarkerState();
+  updateInteractionState() {
+    super.updateInteractionState();
     for (let node of this.nodes) {
-      node.updateState(this.state.matrix);
-      node.updateMarkerState();
+      node.updateInteractionState(this.state.matrix);
     }
-  }
-
-  updateMarkerDom(bounds, factor) {
-    console.log("update marker dom!!!!");
-    for (let node of this.nodes) {
-      node.updateState(this.state.matrix);
-      node.updateMarkerState();
-    }
-    this.markers[0].updateDom(bounds, factor);
-    super.updateMarkerDom(bounds, factor);
   }
 }
 
@@ -1105,29 +1065,27 @@ export class Polygon extends VertexShape {
     this.configureFill(bounds);
   }
 
-  updateNodeDom(bounds) {
+  updateContentDom(bounds) {
     const coordinates = this.domNodes.map(node => `${node.state.position[0]},${bounds.span - node.state.position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
   configureMarks() {
     super.configureMarks();
     this.outlineMark = new PolygonMark();
     this.markers[0].addMarks([], [this.outlineMark]);
-    this.updateMarkerState();
   }
 
-  updateMarkerState() {
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
     this.outlineMark.updateState(this.domNodes.map(node => node.state.position));
-
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
-    this.updateCentroid(sum.map(value => value / this.domNodes.length));
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-// TODO handle no size
 export class Polyline extends VertexShape {
   static type = 'polyline';
   static article = 'a';
@@ -1164,7 +1122,9 @@ export class Polyline extends VertexShape {
     this.configureStroke(this, bounds, true);
   }
 
-  updateNodeDom(bounds) {
+  updateContentDom(bounds) {
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
     const coordinates = this.domNodes.map(node => `${node.state.position[0]},${bounds.span - node.state.position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
   }
@@ -1173,14 +1133,11 @@ export class Polyline extends VertexShape {
     super.configureMarks();
     this.outlineMark = new PolylineMark();
     this.markers[0].addMarks([], [this.outlineMark]);
-    this.updateMarkerState();
   }
 
-  updateMarkerState() {
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
     this.outlineMark.updateState(this.domNodes.map(node => node.state.position));
-
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
-    this.updateCentroid(sum.map(value => value / this.domNodes.length));
   }
 }
 
@@ -1225,11 +1182,15 @@ export class Line extends VertexShape {
     this.configureStroke(this, bounds, true);
   }
 
-  updateNodeDom(bounds) {
+  updateContentDom(bounds) {
     this.element.setAttributeNS(null, 'x1', this.domNodes[0].turtle.position[0]);
     this.element.setAttributeNS(null, 'y1', bounds.span - this.domNodes[0].turtle.position[1]);
     this.element.setAttributeNS(null, 'x2', this.domNodes[1].turtle.position[0]);
     this.element.setAttributeNS(null, 'y2', bounds.span - this.domNodes[1].turtle.position[1]);
+    this.state.centroid = [
+      (this.domNodes[0].state.position[0] + this.domNodes[1].state.position[0]) * 0.5,
+      (this.domNodes[0].state.position[1] + this.domNodes[1].state.position[1]) * 0.5
+    ];
   }
 
   configureMarks() {
@@ -1238,12 +1199,9 @@ export class Line extends VertexShape {
     this.markers[0].addMarks([], [this.outlineMark]);
   }
 
-  updateKeyMarkerDom(bounds, factor) {
-    this.state.centroid = [
-      (this.domNodes[0].state.position[0] + this.domNodes[1].state.position[0]) * 0.5,
-      (this.domNodes[0].state.position[1] + this.domNodes[1].state.position[1]) * 0.5
-    ];
-    this.outlineMark.updateDom(bounds, this.domNodes[0].state.position, this.domNodes[1].state.position);
+  updateInteractionState() {
+    super.updateInteractionState();
+    this.outlineMark.updateState(this.domNodes[0].state.position, this.domNodes[1].state.position, this.state.matrix);
   }
 }
 
@@ -1289,7 +1247,7 @@ export class Ungon extends VertexShape {
     this.configureNodes(bounds);
     this.configureFill(bounds);
 
-    this.configureScalarProperty('rounding', this, this, this.updateNodeDom.bind(this), bounds, [], timeline => {
+    this.configureScalarProperty('rounding', this, this, this.updateContentDom.bind(this), bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, `I found an <code>ungon</code> whose <code>rounding</code> was not set.`);
       }
@@ -1303,7 +1261,7 @@ export class Ungon extends VertexShape {
     });
   }
 
-  updateNodeDom(bounds) {
+  updateContentDom(bounds) {
     let rounding = 1 - this.state.rounding;
     let pathCommands = [];
 
@@ -1353,18 +1311,19 @@ export class Ungon extends VertexShape {
 
     pathCommands.push('z');
     this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
+
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
   configureMarks() {
     super.configureMarks();
     this.outlineMark = new PolygonMark();
     this.markers[0].addMarks([], [this.outlineMark]);
-    this.updateMarkerState();
   }
 
-  updateMarkerState() {
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
-    this.updateCentroid(sum.map(value => value / this.domNodes.length));
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
     this.outlineMark.updateState(this.domNodes.map(node => node.state.position));
   }
 }
@@ -1421,23 +1380,20 @@ export class Path extends NodeShape {
   }
 
   // TODO is closed
-  updateNodeDom(bounds) {
-    console.log("update node dom");
+  updateContentDom(bounds) {
     this.element.setAttributeNS(null, 'd', this.domNodes.map(node => node.pathCommand).join(' '));
-    console.log("this.domNodes:", this.domNodes);
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
   configureMarks() {
     super.configureMarks();
     this.outlineMark = new PathMark();
     this.markers[0].addMarks([], [this.outlineMark]);
-    this.updateMarkerState();
   }
 
-  updateMarkerState() {
-    console.log("update marker state");
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
-    this.updateCentroid(sum.map(value => value / this.domNodes.length));
+  updateInteractionState() {
+    super.updateInteractionState();
     this.outlineMark.updateState(this.domNodes.map(node => node.pathCommand).join(' '));
   }
 }
