@@ -250,6 +250,33 @@ export class LineMark {
 
 // --------------------------------------------------------------------------- 
 
+export class RayMark {
+  constructor() {
+    this.element = document.createElementNS(svgNamespace, 'line');
+  }
+
+  updateState(axis, pivot) {
+    this.axis = axis;
+    this.pivot = pivot;
+  }
+
+  updateDom(bounds, factor) {
+    const length = Marker.RADIAL_MAGNITUDE / factor;
+
+    this.endpoint = [
+      this.pivot[0] + this.axis[0] * length,
+      this.pivot[1] + this.axis[1] * length
+    ];
+
+    this.element.setAttributeNS(null, 'x1', this.pivot[0]);
+    this.element.setAttributeNS(null, 'y1', bounds.span - this.pivot[1]);
+    this.element.setAttributeNS(null, 'x2', this.endpoint[0]);
+    this.element.setAttributeNS(null, 'y2', bounds.span - this.endpoint[1]);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class PolygonMark {
   constructor() {
     this.element = document.createElementNS(svgNamespace, 'polygon');
@@ -631,32 +658,42 @@ export class RotationMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class AxisMark extends PanMark {
-  constructor(shape, host) {
-    super(shape, host);
+  constructor(shape, host, getExpression, backfill) {
+    super(shape, host, getExpression, backfill);
     this.addArc();
   }
 
-  setExpression(axisExpression, positionExpression) {
-    super.setExpression(axisExpression);
-    this.positionExpression = positionExpression;
+  updateState(axis, pivot, matrix) {
+    this.axis = axis;
+    this.pivot = pivot;
+    this.matrix = matrix;
+    this.updateMatrixState();
+  }
+
+  updateDom(bounds, factor, matrix) {
+    const length = Marker.RADIAL_MAGNITUDE / factor;
+
+    this.axisPosition = [
+      this.pivot[0] + this.axis[0] * length,
+      this.pivot[1] + this.axis[1] * length
+    ];
+
+    super.updatePositionDom(bounds, factor, this.axisPosition);
   }
 
   getNewSource(delta, isShiftModified, mouseAt) {
-    let x = parseFloat((this.untweakedExpression.get(0).value + delta[0]).toShortFloat());
-    let y = parseFloat((this.untweakedExpression.get(1).value + delta[1]).toShortFloat());
+    const diff = [
+      mouseAt.x - this.pivot[0],
+      mouseAt.y - this.pivot[1]
+    ];
 
-    if (isShiftModified) {
-      x = Math.round(x);
-      y = Math.round(y);
-    }
+    const magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
+    diff[0] = (diff[0] / magnitude).toShortFloat();
+    diff[1] = (diff[1] / magnitude).toShortFloat();
 
-    const newAxis = new ExpressionVector([
-      new ExpressionReal(x),
-      new ExpressionReal(y)
-    ]).normalize();
-
-    this.expression.set(0, new ExpressionReal(newAxis.get(0).value.toShortFloat()));
-    this.expression.set(1, new ExpressionReal(newAxis.get(1).value.toShortFloat()));
+    this.expression.set(0, new ExpressionReal(diff[0]));
+    this.expression.set(1, new ExpressionReal(diff[1]));
+    this.backfill(diff);
 
     return '[' + this.expression.get(0).value + ', ' + this.expression.get(1).value + ']';
   }

@@ -22,6 +22,7 @@ import {
   LineMark,
   Marker,
   PathMark,
+  RayMark,
   RotationMark,
   VectorPanMark,
   WedgeDegreesMark,
@@ -1090,7 +1091,7 @@ export class ArcSegment {
 export class Mirror extends TimelinedEnvironment {
   static type = 'mirror';
   static article = 'a';
-  static timedIds = ['position', 'axis'];
+  static timedIds = ['pivot', 'axis'];
 
   static create(parentEnvironment, where) {
     const mirror = new Mirror();
@@ -1121,30 +1122,64 @@ export class Mirror extends TimelinedEnvironment {
     this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
   }
 
-  start() {
+  configureState(bounds) {
+    this.state = {};
+
+    this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>mirror</code> whose <code>pivot</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>mirror</code> with an illegal value for <code>pivot</code>. ${e.message}`);
+      }
+    });
+
+    this.configureVectorProperty('axis', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>mirror</code> whose <code>axis</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>mirror</code> with an illegal value for <code>axis</code>. ${e.message}`);
+      }
+    });
+  }
+
+  configureMarks() {
     this.marker = new Marker(this.parentEnvironment);
     this.parentEnvironment.addMarker(this.marker);
 
-    this.positionMark = new VectorPanMark(this.parentEnvironment, this);
-    this.lineMark = new LineMark();
-    this.axisMark = new AxisMark(this.parentEnvironment, this);
-    this.marker.addMarks([this.positionMark, this.axisMark], [this.lineMark]);
+    this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('pivot', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.state.pivot[0] = x;
+      this.state.pivot[1] = y;
+    });
+
+    this.axisMark = new AxisMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('axis', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.state.axis[0] = x;
+      this.state.axis[1] = y;
+    });
+
+    this.lineMark = new RayMark();
+
+    this.marker.addMarks([this.pivotMark, this.axisMark], [this.lineMark]);
   }
 
-  validate() {
-    this.assertProperty('position');
-    this.assertProperty('axis');
-  }
-
-  updateProperties(env, t, bounds, matrix) {
-    const position = this.valueAt(env, 'position', t);
-    const axis = this.valueAt(env, 'axis', t);
-    this.positionMark.setExpression(position);
-    this.axisMark.setExpression(axis, position);
-    this.positionMark.updateProperties(position, bounds, matrix);
-    this.axisMark.updateProperties(position.add(axis), bounds, matrix);
-    this.lineMark.updateProperties(position, position.add(axis), bounds, matrix);
-    return {position, axis};
+  updateInteractionState(matrix) {
+    this.state.matrix = matrix;
+    this.pivotMark.updateState(this.state.pivot, matrix);
+    this.axisMark.updateState(this.state.axis, this.state.pivot, matrix);
+    this.lineMark.updateState(this.state.axis, this.state.pivot, matrix);
   }
 
   castCursor(column, row) {

@@ -18,6 +18,11 @@ import {
 } from './stroke.js';
 
 import {
+  mirrorPointLine,
+  distancePointLine,
+} from './math.js';
+
+import {
   CircleMark,
   HorizontalPanMark,
   LineMark,
@@ -35,11 +40,8 @@ import {
 } from './matrix.js';
 
 import {
-  CubicSegment,
   JumpNode,
-  LineSegment,
   Mirror,
-  QuadraticSegment,
   TurtleNode,
   VertexNode,
 } from './node.js';
@@ -913,34 +915,31 @@ export class NodeShape extends Shape {
 
   configureNodes(bounds) {
     for (let [i, node] of this.nodes.entries()) {
-      node.configure(i > 0 ? this.nodes[i - 1].turtle : null, bounds);
+      node.configure(bounds);
     }
 
-    if (this.nodes.some(node => node.isAnimated)) {
+    for (let mirror of this.mirrors) {
+      mirror.configureState(bounds);
+    }
+
+    if (this.nodes.some(node => node.isAnimated) || this.mirrors.some(mirror => mirror.isAnimated)) {
       this.updateDoms.push(this.updateContentDom.bind(this));
     }
 
-    if (this.nodes.every(node => node.hasAllDefaults)) {
+    if (this.nodes.every(node => node.hasAllDefaults) && this.mirrors.every(mirror => mirror.hasAllDefaults)) {
       this.updateContentDom(bounds);
     }
   }
 
   configureMarks() {
     super.configureMarks();
+
     for (let node of this.nodes) {
       node.configureMarks();
     }
-  }
 
-  mirrorPositions(positions, env, t, bounds, matrix) {
     for (let mirror of this.mirrors) {
-      const {position, axis} = mirror.updateProperties(env, t, bounds, matrix);
-      const positionCount = positions.length;
-      for (let i = positionCount - 1; i >= 0; --i) {
-        if ((i > 0 && i < positionCount - 1) || positions[i].distanceToLine(position, axis) > 0.000001) {
-          positions.push(positions[i].mirror(position, axis));
-        }
-      }
+      mirror.configureMarks();
     }
   }
 
@@ -999,13 +998,21 @@ export class NodeShape extends Shape {
     for (let node of this.nodes) {
       node.updateTurtle(bounds);
     }
+
+    // TODO: anything with mirrors?
+
     super.updateContentState(bounds);
   }
 
   updateInteractionState() {
     super.updateInteractionState();
+
     for (let node of this.nodes) {
       node.updateInteractionState(this.state.matrix);
+    }
+
+    for (let mirror of this.mirrors) {
+      mirror.updateInteractionState(this.state.matrix);
     }
   }
 }
@@ -1018,6 +1025,19 @@ export class VertexShape extends NodeShape {
       throw new LocatedException(node.where, `I saw ${this.article} ${this.type} whose first step is ${node.type}. ${sentenceCase(this.article)} ${this.type} must begin with vertex or turtle.`);
     } else {
       this.nodes.push(node);
+    }
+  }
+
+  mirrorPositions(positions) {
+    for (let mirror of this.mirrors) {
+      const line = {point: mirror.state.pivot, axis: mirror.state.axis};
+      const npositions = positions.length;
+      for (let i = npositions - 1; i >= 0; --i) {
+        const d = distancePointLine(positions[i], line);
+        if ((i > 0 && i < npositions - 1) || distancePointLine(positions[i], line) > 1e-6) {
+          positions.push(mirrorPointLine(positions[i], line));
+        }
+      }
     }
   }
 }
@@ -1066,7 +1086,9 @@ export class Polygon extends VertexShape {
   }
 
   updateContentDom(bounds) {
-    const coordinates = this.domNodes.map(node => `${node.state.position[0]},${bounds.span - node.state.position[1]}`).join(' ');
+    const positions = this.domNodes.map(node => node.state.position);
+    this.mirrorPositions(positions);
+    const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
     const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
