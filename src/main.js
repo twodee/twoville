@@ -128,6 +128,12 @@ function serializeThenDownload(root) {
   downloadBlob('download.svg', svgBlob);
 }
 
+function animateTo(t) {
+  timeSpinner.value = t;
+  scrubber.value = t;
+  scene.ageContent(t);
+}
+
 function scrubTo(t) {
   if (t < scene.bounds.startTime) {
     t = scene.bounds.startTime;
@@ -137,7 +143,7 @@ function scrubTo(t) {
 
   timeSpinner.value = t;
   scrubber.value = t;
-  scene.age(t);
+  scene.ageContentAndInteraction(t);
 
   // contentCornerBox.innerText = `[${scene.box.min[0].toShortFloat(2)}, ${scene.box.min[1].toShortFloat(2)}]`;
   // contentSizeBox.innerText = `[${(scene.box.max[0] - scene.box.min[0]).toShortFloat(2)}, ${(scene.box.max[1] - scene.box.min[1]).toShortFloat(2)}]`;
@@ -145,7 +151,7 @@ function scrubTo(t) {
 
 function animateFrame() {
   const beforeMillis = new Date().getTime();
-  scrubTo(frameIndex);
+  animateTo(frameIndex);
   const afterMillis = new Date().getTime();
 
   const elapsedMillis = afterMillis - beforeMillis;
@@ -173,7 +179,9 @@ function play(isLoop) {
   stopAnimation();
   const time = scene.get('time');
   delay = time.get('delay').value * 1000;
-  // frameIndex = 0;
+  if (parseInt(scrubber.max) === frameIndex) {
+    frameIndex = 0;
+  }
   animateFrame();
 }
 

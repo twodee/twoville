@@ -319,25 +319,24 @@ export class RenderEnvironment extends Environment {
     }
   }
 
-  age(t) {
+  ageContent(t) {
+    this.state.t = t;
+    for (let drawable of this.drawables) {
+      drawable.ageDomWithoutMarks(this.bounds, t);
+    }
+  }
+
+  ageContentAndInteraction(t) {
     const matrix = this.svg.getScreenCTM();
     const factor = matrix.a;
 
     this.state.t = t;
     for (let drawable of this.drawables) {
-      // drawable.ageDomWithoutMarks(this.bounds, t);
+      drawable.ageDomWithoutMarks(this.bounds, t);
       drawable.ageDomWithMarks(this.bounds, t, factor);
     }
     this.rescale();
   }
-
-  // scrub(t) {
-    // Don't target shapes. Non-drawable shapes should get scrubbed by their parents.
-    // for (let drawable of this.drawables) {
-      // drawable.scrub(this, t, this.bounds);
-    // }
-    // this.rescale();
-  // }
 
   hideMarks() {
     this.sceneMarkGroup.setAttributeNS(null, 'visibility', 'hidden');

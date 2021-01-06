@@ -240,7 +240,7 @@ export class TurtleNode extends Node {
     super.updateInteractionState(matrix);
     this.positionMark.updateState(this.state.position, this.state.matrix);
     this.headingMark.updateState(this.state.position, this.state.heading, 0, this.state.matrix);
-    this.wedgeMark.updateState(this.state.position, this.state.heading, 0);
+    this.wedgeMark.updateState(this.state.position, this.state.heading, 0, this.state.matrix);
   }
 }
 
@@ -373,7 +373,7 @@ export class TurnNode extends Node {
   updateInteractionState(matrix) {
     super.updateInteractionState(matrix);
     this.degreesMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading, this.state.matrix);
-    this.wedgeMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading);
+    this.wedgeMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading, this.state.matrix);
   }
 }
 

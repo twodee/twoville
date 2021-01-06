@@ -915,7 +915,7 @@ export class NodeShape extends Shape {
 
   configureNodes(bounds) {
     for (let [i, node] of this.nodes.entries()) {
-      node.configure(bounds);
+      node.configure(i > 0 ? this.nodes[i - 1].turtle : null, bounds);
     }
 
     for (let mirror of this.mirrors) {
@@ -1086,11 +1086,12 @@ export class Polygon extends VertexShape {
   }
 
   updateContentDom(bounds) {
-    const positions = this.domNodes.map(node => node.state.position);
+    super.updateContentDom(bounds);
+    const positions = this.domNodes.map(node => node.turtle.position);
     this.mirrorPositions(positions);
     const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
@@ -1102,7 +1103,7 @@ export class Polygon extends VertexShape {
 
   updateInteractionState(bounds) {
     super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.domNodes.map(node => node.state.position));
+    this.outlineMark.updateState(this.domNodes.map(node => node.turtle.position));
   }
 }
 
@@ -1145,6 +1146,7 @@ export class Polyline extends VertexShape {
   }
 
   updateContentDom(bounds) {
+    super.updateContentDom(bounds);
     const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
     const coordinates = this.domNodes.map(node => `${node.state.position[0]},${bounds.span - node.state.position[1]}`).join(' ');
@@ -1205,6 +1207,8 @@ export class Line extends VertexShape {
   }
 
   updateContentDom(bounds) {
+    super.updateContentDom(bounds);
+
     this.element.setAttributeNS(null, 'x1', this.domNodes[0].turtle.position[0]);
     this.element.setAttributeNS(null, 'y1', bounds.span - this.domNodes[0].turtle.position[1]);
     this.element.setAttributeNS(null, 'x2', this.domNodes[1].turtle.position[0]);
@@ -1284,6 +1288,8 @@ export class Ungon extends VertexShape {
   }
 
   updateContentDom(bounds) {
+    super.updateContentDom(bounds);
+
     let rounding = 1 - this.state.rounding;
     let pathCommands = [];
 
@@ -1403,6 +1409,7 @@ export class Path extends NodeShape {
 
   // TODO is closed
   updateContentDom(bounds) {
+    super.updateContentDom(bounds);
     this.element.setAttributeNS(null, 'd', this.domNodes.map(node => node.pathCommand).join(' '));
     const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
