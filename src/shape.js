@@ -154,34 +154,7 @@ export class Shape extends TimelinedEnvironment {
     marker.id = this.markers.length;
     this.markers.push(marker);
   }
-
-  // scrub(env, t, bounds) {
-    // const centroid = this.updateProperties(env, t, bounds, Matrix.identity());
-  // }
-
-  // transform(env, t, bounds, matrix) {
-    // if (this.transforms.length > 0) {
-      // let commands = [];
-      // for (let transform of this.transforms) {
-        // const transformation = transform.updateProperties(env, t, bounds, matrix);
-        // matrix = transformation.matrix;
-        // commands.push(...transformation.commands);
-      // }
-
-      // const commandString = commands.join(' ');
-      // this.element.setAttributeNS(null, 'transform', commandString);
-      // this.backgroundMarkGroup.setAttributeNS(null, 'transform', commandString);
-    // }
-
-    // return matrix;
-  // }
   
-  // updateCentroid(matrix, centroid, bounds) {
-    // const p = matrix.multiplyVector(centroid);
-    // Have to flip Y because we've already countered the axis.
-    // this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${p.get(0).value} ${-p.get(1).value})`);
-  // }
-
   connectToParent() {
     if (this.owns('parent')) {
       this.get('parent').children.push(this);
@@ -362,12 +335,6 @@ export class Shape extends TimelinedEnvironment {
     return false;
   }
 
-  // rescale(bounds, factor) {
-    // for (let marker of this.markers) {
-      // marker.updateDom(bounds, factor);
-    // }
-  // }
-
   configure(bounds) {
     this.state = {};
     this.updateDoms = [];
@@ -413,7 +380,7 @@ export class Shape extends TimelinedEnvironment {
 
   ageDomWithMarks(bounds, t, factor) {
     this.ageDomWithoutMarks(bounds, t);
-    this.updateInteractionState();
+    this.updateInteractionState(bounds);
     this.updateInteractionDom(bounds, factor);
     for (let marker of this.markers) {
       marker.updateManipulability();
@@ -431,7 +398,7 @@ export class Shape extends TimelinedEnvironment {
     this.element.setAttributeNS(null, 'transform', commands);
   }
 
-  updateInteractionState() {
+  updateInteractionState(bounds) {
     for (let marker of this.markers) {
       marker.updateState(this.state.centroid);
     }
@@ -512,7 +479,12 @@ export class Shape extends TimelinedEnvironment {
 export class Text extends Shape {
   static type = 'text';
   static article = 'a';
-  static timedIds = ['position', 'message', 'size', 'color', 'opacity', 'anchor', 'baseline', 'enabled'];
+  static timedIds = ['position', 'message', 'size', 'color', 'opacity', 'enabled'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+    this.initializeFill();
+  }
 
   static create(parentEnvironment, where) {
     const shape = new Text();
@@ -526,93 +498,108 @@ export class Text extends Shape {
     return shape;
   }
 
-  start() {
-    super.start();
+  configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'text');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.appendChild(document.createTextNode('...'));
 
-    this.outlineMark = new RectangleMark();
-    this.positionMark = new VectorPanMark(this);
+    this.configureFill(bounds);
 
-    this.markers[0].addMarks([this.positionMark], [this.outlineMark]);
+    this.state.fontSize = 8;
+    this.updateSize(bounds);
 
-    this.connect();
-  }
+    this.configureScalarProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        return false;
+      }
 
-  validate() {
-    super.validate();
-    this.assertProperty('position');
-    this.assertProperty('message');
-    this.assertProperty('color');
-    // TODO others?
-  }
+      try {
+        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
+      }
+    });
 
-  updateProperties(env, t, bounds, matrix) {
-    matrix = this.transform(env, t, bounds, matrix);
+    this.configureVectorProperty('position', this, this, this.updatePosition.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>text</code> whose <code>position</code> was not set.');
+      }
 
-    let position = this.valueAt(env, 'position', t);
-    this.positionMark.setExpression(position);
+      try {
+        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>position</code>. ${e.message}`);
+      }
+    });
 
-    let message = this.valueAt(env, 'message', t);
-    let color = this.valueAt(env, 'color', t);
-
-    let fontSize;
-    if (this.owns('size')) {
-      fontSize = this.valueAt(env, 'size', t);
-    } else {
-      fontSize = new ExpressionInteger(8);
-    }
+    this.element.childNodes[0].nodeValue = this.timedProperties.message.defaultValue.value;
 
     let anchor;
-    if (this.owns('anchor')) {
-      anchor = this.valueAt(env, 'anchor', t);
+    if (this.untimedProperties.hasOwnProperty('anchor')) {
+      anchor = this.untimedProperties.anchor.value;
     } else {
-      anchor = new ExpressionString('middle');
+      anchor = 'middle';
     }
+    this.element.setAttributeNS(null, 'text-anchor', anchor);
 
     let baseline;
-    if (this.owns('baseline')) {
-      baseline = this.valueAt(env, 'baseline', t);
+    if (this.untimedProperties.hasOwnProperty('baseline')) {
+      baseline = this.untimedProperties.baseline.value;
     } else {
-      baseline = new ExpressionString('center');
+      baseline = 'center';
     }
+    this.element.setAttributeNS(null, 'dominant-baseline', baseline);
+  }
 
-    if (!position || !color) {
-      this.hide();
-      return null;
-    } else {
-      this.show();
-      this.element.childNodes[0].nodeValue = message.value;
-      this.element.setAttributeNS(null, 'fill-opacity', this.valueAt(env, 'opacity', t).value);
-      this.element.setAttributeNS(null, 'x', position.get(0).value);
-      this.element.setAttributeNS(null, 'y', bounds.span - position.get(1).value);
-      this.element.setAttributeNS(null, 'fill', color.toColor());
-      this.element.setAttributeNS(null, 'font-size', fontSize.value);
-      this.element.setAttributeNS(null, 'text-anchor', anchor.value);
-      this.element.setAttributeNS(null, 'dominant-baseline', baseline.value);
+  updatePosition(bounds) {
+    this.element.setAttributeNS(null, 'x', this.state.position[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.state.position[1]);
+    this.updateCentroid(bounds);
+  }
 
-      // I have to query the SVG element to determine the bounding box of the
-      // text.
-      const box = this.element.getBBox();
-      this.outlineMark.updateProperties(new ExpressionVector([
-        new ExpressionReal(box.x),
-        new ExpressionReal(bounds.span - box.y - box.height),
-      ]), new ExpressionVector([
-        new ExpressionReal(box.width),
-        new ExpressionReal(box.height),
-      ]), bounds);
+  updateSize(bounds) {
+    this.element.setAttributeNS(null, 'font-size', this.state.size);
+    this.updateCentroid(bounds);
+  }
 
-      this.positionMark.updateProperties(position, bounds, matrix);
+  updateCentroid(bounds) {
+    const box = this.element.getBBox();
+    this.state.centroid = [
+      box.x + box.width * 0.5,
+      box.y + box.height * 0.5,
+    ];
+  }
 
-      const centroid = new ExpressionVector([
-        new ExpressionReal(box.x + box.width * 0.5),
-        new ExpressionReal(box.y + box.height * 0.5),
-      ]);
-      this.updateCentroid(matrix, centroid, bounds);
+  updateContentDom(bounds) {
+    super.updateContentDom(bounds);
+    this.updatePosition(bounds);
+    this.updateSize(bounds);
+  }
 
-      return centroid;
-    }
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new RectangleMark();
+
+    this.positionMark = new VectorPanMark(this, null, t => {
+      return this.expressionAt('position', this.root.state.t);
+    }, ([x, y]) => {
+      this.state.position[0] = x;
+      this.state.position[1] = y;
+    });
+
+    this.markers[0].addMarks([this.positionMark], [this.outlineMark]);
+  }
+ 
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
+
+    // I have to query the SVG element to determine the bounding box of the
+    // text.
+    const box = this.element.getBBox();
+    this.outlineMark.updateState([box.x, bounds.span - box.y - box.height], [box.width, box.height], 0, this.state.matrix);
+    this.positionMark.updateState(this.state.position, this.state.matrix);
   }
 }
 
@@ -773,8 +760,8 @@ export class Rectangle extends Shape {
     this.markers[0].addMarks([this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
   }
  
-  updateInteractionState() {
-    super.updateInteractionState();
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
     if (this.state.center) {
       const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
       this.outlineMark.updateState(corner, this.state.size, this.state.rounding);
@@ -883,8 +870,8 @@ export class Circle extends Shape {
     this.markers[0].addMarks([this.centerMark, this.radiusMark], [this.outlineMark]);
   }
 
-  updateInteractionState() {
-    super.updateInteractionState();
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
     this.outlineMark.updateState(this.state.center, this.state.radius);
     this.centerMark.updateState(this.state.center, this.state.matrix);
     this.radiusMark.updateState([this.state.center[0] + this.state.radius, this.state.center[1]], this.state.matrix);
@@ -1004,8 +991,8 @@ export class NodeShape extends Shape {
     super.updateContentState(bounds);
   }
 
-  updateInteractionState() {
-    super.updateInteractionState();
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
 
     for (let node of this.nodes) {
       node.updateInteractionState(this.state.matrix);
@@ -1225,8 +1212,8 @@ export class Line extends VertexShape {
     this.markers[0].addMarks([], [this.outlineMark]);
   }
 
-  updateInteractionState() {
-    super.updateInteractionState();
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
     this.outlineMark.updateState(this.domNodes[0].state.position, this.domNodes[1].state.position, this.state.matrix);
   }
 }
@@ -1421,8 +1408,8 @@ export class Path extends NodeShape {
     this.markers[0].addMarks([], [this.outlineMark]);
   }
 
-  updateInteractionState() {
-    super.updateInteractionState();
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
     this.outlineMark.updateState(this.domNodes.map(node => node.pathCommand).join(' '));
   }
 }
@@ -1708,6 +1695,7 @@ Object.assign(Circle.prototype, FillMixin);
 Object.assign(Ungon.prototype, FillMixin);
 Object.assign(Polygon.prototype, FillMixin);
 Object.assign(Path.prototype, FillMixin);
+Object.assign(Text.prototype, FillMixin);
 
 // --------------------------------------------------------------------------- 
 
