@@ -183,8 +183,9 @@ export class Shape extends TimelinedEnvironment {
 
   connect() {
     this.connectToParent();
-    if (this.isCutoutChild()) {
-       this.bind('color', new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]));
+
+    if (this.isCutoutChild) {
+      this.bind('color', new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]));
     }
 
     if (this.owns('clippers')) {
@@ -203,8 +204,8 @@ export class Shape extends TimelinedEnvironment {
     this.initializeMarks();
   }
 
-  isCutoutChild() {
-    return this.owns('parent') && (this.get('parent') instanceof Cutout || this.get('parent').isCutoutChild());
+  get isCutoutChild() {
+    return this.owns('parent') && (this.get('parent') instanceof Cutout || this.get('parent').isCutoutChild);
   }
 
   select() {
@@ -1461,15 +1462,42 @@ export class Group extends Shape {
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
   }
 
-  updateProperties(env, t, bounds, matrix) {
-    matrix = this.transform(env, t, bounds, matrix);
-    // TODO how do I handle disabled children
-    const childCentroids = this.children.map(child => child.updateProperties(env, t, bounds, matrix)).filter(centroid => !!centroid);
-    const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-    const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
-    this.updateCentroid(matrix, centroid, bounds);
-    return centroid;
+  configureState(bounds) {
+    this.createHierarchy();
+    this.state.centroid = [0, 0];
+    for (let child of this.children) {
+      child.configureState(bounds);
+    }
   }
+
+  updateContentDom(bounds) {
+    super.updateContentDom(bounds);
+    for (let child of this.children) {
+      child.updateContentDom(bounds);
+    }
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.markers[0].addMarks([], []);
+  }
+
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
+    for (let child of this.children) {
+      child.updateInteractionState(bounds);
+    }
+  }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // matrix = this.transform(env, t, bounds, matrix);
+    // TODO how do I handle disabled children
+    // const childCentroids = this.children.map(child => child.updateProperties(env, t, bounds, matrix)).filter(centroid => !!centroid);
+    // const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+    // const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
+    // this.updateCentroid(matrix, centroid, bounds);
+    // return centroid;
+  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -1524,19 +1552,20 @@ export class Cutout extends Mask {
     return shape;
   }
 
-  start() {
-    super.start();
+  configureState(bounds) {
+    super.configureState(bounds);
     this.rectangle = document.createElementNS(svgNamespace, 'rect');
     this.rectangle.setAttributeNS(null, 'fill', 'white');
     this.element.appendChild(this.rectangle);
+    this.updateContentState(bounds);
   }
 
-  updateProperties(env, t, bounds, matrix) {
-    super.updateProperties(env, t, bounds, matrix);
-    this.rectangle.setAttributeNS(null, 'x', env.root.fitBounds.x);
-    this.rectangle.setAttributeNS(null, 'y', env.root.fitBounds.y);
-    this.rectangle.setAttributeNS(null, 'width', env.root.fitBounds.width);
-    this.rectangle.setAttributeNS(null, 'height', env.root.fitBounds.height);
+  updateContentState(bounds) {
+    super.updateContentState(bounds);
+    this.rectangle.setAttributeNS(null, 'x', bounds.x);
+    this.rectangle.setAttributeNS(null, 'y', bounds.y);
+    this.rectangle.setAttributeNS(null, 'width', bounds.width);
+    this.rectangle.setAttributeNS(null, 'height', bounds.height);
   }
 }
 
@@ -1664,8 +1693,9 @@ const FillMixin = {
       // If the opacity is non-zero anywhen, then color is a required property.
       const opacityTimeline = this.timedProperties.opacity;
       const needsColor =
-        (opacityTimeline.defaultValue && opacityTimeline.defaultValue.value > 0) ||
-        opacityTimeline.intervals.some(interval => (interval.hasFrom() && interval.fromValue.value > 0 || interval.hasTo() && interval.toValue.value > 0));
+        !this.isCutoutChild &&
+        ((opacityTimeline.defaultValue && opacityTimeline.defaultValue.value > 0) ||
+         opacityTimeline.intervals.some(interval => (interval.hasFrom() && interval.fromValue.value > 0 || interval.hasTo() && interval.toValue.value > 0)));
 
       if (!needsColor) {
         return false;
