@@ -1395,14 +1395,20 @@ export class Path extends NodeShape {
     this.configureFill(bounds);
   }
 
-  // TODO is closed
   updateContentDom(bounds) {
     super.updateContentDom(bounds);
 
     const pathCommands = this.domNodes.map(node => node.pathCommand);
 
 	  if (this.mirrors.length > 0) {
-			let segments = this.nodes.map(node => node.segment).slice(1).filter(segment => !!segment);
+      let segments = [];
+      let previousSegment = null;
+      for (let i = 0; i < this.nodes.length; i += 1) {
+        previousSegment = this.nodes[i].segment(previousSegment);
+        if (i > 0 && previousSegment) {
+          segments.push(previousSegment);
+        }
+      }
 
 			for (let mirror of this.mirrors) {
 				let {pivot, axis} = mirror.state;
@@ -1424,7 +1430,7 @@ export class Path extends NodeShape {
 			}
 		}
 
-    if (this.untimedProperties.hasOwnProperty('closed')) {
+    if (this.untimedProperties.hasOwnProperty('closed') && this.untimedProperties.closed.value) {
       pathCommands.push('z');
     }
    

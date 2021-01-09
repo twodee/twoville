@@ -169,7 +169,7 @@ export class TurtleNode extends Node {
     return node;
   }
 
-  get segment() {
+  segment(previousSegment) {
     return new GapSegment(this.previousTurtle?.position, this.turtle.position);
   }
 
@@ -404,12 +404,8 @@ export class JumpNode extends Node {
     return node;
   }
 
-  get segment() {
-    console.log("hi");
-    console.log("this:", this);
-    const s = new GapSegment(this.previousTurtle?.position, this.turtle.position);
-    console.log("bye");
-    return s;
+  segment(previousSegment) {
+    return new GapSegment(this.previousTurtle?.position, this.turtle.position);
   }
 
   get isDom() {
@@ -476,7 +472,7 @@ export class LineNode extends Node {
     return node;
   }
 
-  get segment() {
+  segment(previousSegment) {
     return new LineSegment(this.previousTurtle.position, this.turtle.position);
   }
 
@@ -542,6 +538,17 @@ export class QuadraticNode extends Node {
     const node = new QuadraticNode();
     node.embody(parentEnvironment, pod);
     return node;
+  }
+
+  segment(previousSegment) {
+    if (this.state.control) {
+      return new QuadraticSegment(this.previousTurtle.position, this.turtle.position, this.state.control, false);
+    } else {
+      return new QuadraticSegment(this.previousTurtle.position, this.turtle.position, [
+        this.previousTurtle.position[0] + (this.previousTurtle.position[0] - previousSegment.control[0]),
+        this.previousTurtle.position[1] + (this.previousTurtle.position[1] - previousSegment.control[1])
+      ], true);
+    }
   }
 
   get isDom() {
@@ -659,6 +666,10 @@ export class ArcNode extends Node {
     return node;
   }
 
+  segment(previousSegment) {
+    return new ArcSegment(this.previousTurtle.position, this.turtle.position, this.state.radius, this.state.isLarge, this.state.isClockwise);
+  }
+
   get isDom() {
     return true;
   }
@@ -719,11 +730,11 @@ export class ArcNode extends Node {
 
   updateDegrees(bounds) {
     if (this.state.degrees >= 0) {
-      this.isLarge = this.state.degrees >= 180 ? 1 : 0;
-      this.isClockwise = 0;
+      this.state.isLarge = this.state.degrees >= 180 ? 1 : 0;
+      this.state.isClockwise = 0;
     } else {
-      this.isLarge = this.state.degrees <= -180 ? 1 : 0;
-      this.isClockwise = 1;
+      this.state.isLarge = this.state.degrees <= -180 ? 1 : 0;
+      this.state.isClockwise = 1;
     }
   }
 
@@ -760,7 +771,7 @@ export class ArcNode extends Node {
       this.previousTurtle.position[0] - this.state.center[0],
       this.previousTurtle.position[1] - this.state.center[1],
     ];
-    let radius = Math.sqrt(radial[0] * radial[0] + radial[1] * radial[1]);
+    this.state.radius = Math.sqrt(radial[0] * radial[0] + radial[1] * radial[1]);
 
     if (this.isWedge) {
       const rotated = [
@@ -783,9 +794,9 @@ export class ArcNode extends Node {
         this.state.center[0] + (this.state.center[0] - position[0]),
         this.state.center[1] + (this.state.center[1] - position[1]),
       ];
-      this.pathCommand = `A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${opposite[0]},${bounds.span - opposite[1]} A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${position[0]},${bounds.span - position[1]}`;
+      this.pathCommand = `A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${opposite[0]},${bounds.span - opposite[1]} A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${position[0]},${bounds.span - position[1]}`;
     } else {
-      this.pathCommand = `A ${radius},${radius} 0 ${this.isLarge} ${this.isClockwise} ${position[0]},${bounds.span - position[1]}`;
+      this.pathCommand = `A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${position[0]},${bounds.span - position[1]}`;
     }
   }
 
@@ -863,6 +874,17 @@ export class CubicNode extends Node {
     const node = new CubicNode();
     node.embody(parentEnvironment, pod);
     return node;
+  }
+
+  segment(previousSegment) {
+    if (this.state.control1) {
+      return new CubicSegment(this.previousTurtle.position, this.turtle.position, this.state.control1, this.state.control2, false);
+    } else {
+      return new CubicSegment(this.previousTurtle.position, this.turtle.position, [
+        this.previousTurtle.position[0] + (this.previousTurtle.position[0] - previousSegment.control2[0]),
+        this.previousTurtle.position[1] + (this.previousTurtle.position[1] - previousSegment.control2[1])
+      ], this.state.control2, true);
+    }
   }
 
   get isDom() {
@@ -994,6 +1016,8 @@ class GapSegment {
   }
 
   mirror(line) {
+    console.log("line:", line);
+    console.log("this:", this);
     return new GapSegment(mirrorPointLine(this.to, line), mirrorPointLine(this.from, line));
   }
 
