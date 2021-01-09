@@ -14,6 +14,10 @@ import {
 } from './ast.js';
 
 import {
+  mirrorPointLine,
+} from './math.js';
+
+import {
   AxisMark,
   BumpDegreesMark,
   BumpPositionMark,
@@ -163,6 +167,10 @@ export class TurtleNode extends Node {
     const node = new TurtleNode();
     node.embody(parentEnvironment, pod);
     return node;
+  }
+
+  get segment() {
+    return new GapSegment(this.previousTurtle?.position, this.turtle.position);
   }
 
   get isDom() {
@@ -396,6 +404,14 @@ export class JumpNode extends Node {
     return node;
   }
 
+  get segment() {
+    console.log("hi");
+    console.log("this:", this);
+    const s = new GapSegment(this.previousTurtle?.position, this.turtle.position);
+    console.log("bye");
+    return s;
+  }
+
   get isDom() {
     return true;
   }
@@ -458,6 +474,10 @@ export class LineNode extends Node {
     const node = new LineNode();
     node.embody(parentEnvironment, pod);
     return node;
+  }
+
+  get segment() {
+    return new LineSegment(this.previousTurtle.position, this.turtle.position);
   }
 
   get isDom() {
@@ -973,12 +993,12 @@ class GapSegment {
     this.to = to;
   }
 
-  mirror(position, axis) {
-    return new GapSegment(this.to.mirror(position, axis), this.from.mirror(position, axis));
+  mirror(line) {
+    return new GapSegment(mirrorPointLine(this.to, line), mirrorPointLine(this.from, line));
   }
 
-  toCommandString(env, bounds) {
-    return `M ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+  toCommandString(bounds) {
+    return `M ${this.to[0]},${bounds.span - this.to[1]}`;
   }
 }
 
@@ -990,16 +1010,16 @@ export class LineSegment {
     this.to = to;
   }
 
-  mirror(position, axis) {
-    return new LineSegment(this.to.mirror(position, axis), this.from.mirror(position, axis));
+  mirror(line) {
+    return new LineSegment(mirrorPointLine(this.to, line), mirrorPointLine(this.from, line));
   }
 
-  mirrorBridge(position, axis) {
-    return new LineSegment(this.to, this.to.mirror(position, axis));
+  mirrorBridge(line) {
+    return new LineSegment(this.to, mirrorPointLine(this.to, line));
   }
 
-  toCommandString(env, bounds) {
-    return `L ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+  toCommandString(bounds) {
+    return `L ${this.to[0]},${bounds.span - this.to[1]}`;
   }
 }
 
@@ -1013,21 +1033,27 @@ export class QuadraticSegment {
     this.isImplicit;
   }
 
-  mirror(position, axis) {
-    return new QuadraticSegment(this.to.mirror(position, axis), this.from.mirror(position, axis), this.control.mirror(position, axis));
+  mirror(line) {
+    return new QuadraticSegment(mirrorPointLine(this.to, line), mirrorPointLine(this.from, line), mirrorPointLine(this.control, line));
   }
 
-  mirrorBridge(position, axis) {
-    const diff = this.control.subtract(this.to);
-    const opposite = this.to.subtract(diff);
-    return new CubicSegment(this.to, this.to.mirror(position, axis), opposite, opposite.mirror(position, axis), false);
+  mirrorBridge(line) {
+    const diff = [
+			this.control[0] - this.to[0],
+			this.control[1] - this.to[1]
+		];
+    const opposite = [
+			this.to[0] - diff[0],
+			this.to[1] - diff[1]
+		];
+    return new CubicSegment(this.to, mirrorPointLine(this.to, line), opposite, mirrorPointLine(opposite, line), false);
   }
 
-  toCommandString(env, bounds) {
+  toCommandString(bounds) {
     if (this.isImplicit) {
-      return `T ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+      return `T ${this.to[0]},${bounds.span - this.to[1]}`;
     } else {
-      return `Q ${this.control.get(0).value},${bounds.span - this.control.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+      return `Q ${this.control[0]},${bounds.span - this.control[1]} ${this.to[0]},${bounds.span - this.to[1]}`;
     }
   }
 }
@@ -1043,21 +1069,27 @@ export class CubicSegment {
     this.isImplicit = isImplicit;
   }
 
-  mirror(position, axis, allowImplicit = true) {
-    return new CubicSegment(this.to.mirror(position, axis), this.from.mirror(position, axis), this.control2.mirror(position, axis), this.control1.mirror(position, axis), allowImplicit && this.isImplicit);
+  mirror(line, allowImplicit = true) {
+    return new CubicSegment(mirrorPointLine(this.to, line), mirrorPointLine(this.from, line), mirrorPointLine(this.control2, line), mirrorPointLine(this.control1, line), allowImplicit && this.isImplicit);
   }
 
-  mirrorBridge(position, axis) {
-    const diff = this.control2.subtract(this.to);
-    const opposite = this.to.subtract(diff);
-    return new CubicSegment(this.to, this.to.mirror(position, axis), opposite, opposite.mirror(position, axis), true);
+  mirrorBridge(line) {
+    const diff = [
+			this.control2[0] - this.to[0],
+			this.control2[1] - this.to[1],
+		];
+    const opposite = [
+			this.to[0] - diff[0],
+			this.to[1] - diff[1]
+		];
+    return new CubicSegment(this.to, mirrorPointLine(this.to, line), opposite, mirrorPointLine(opposite, line), true);
   }
 
-  toCommandString(env, bounds) {
+  toCommandString(bounds) {
     if (this.isImplicit) {
-      return `S ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+      return `S ${this.control2[0]},${bounds.span - this.control2[1]} ${this.to[0]},${bounds.span - this.to[1]}`;
     } else {
-      return `C ${this.control1.get(0).value},${bounds.span - this.control1.get(1).value} ${this.control2.get(0).value},${bounds.span - this.control2.get(1).value} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+      return `C ${this.control1[0]},${bounds.span - this.control1[1]} ${this.control2[0]},${bounds.span - this.control2[1]} ${this.to[0]},${bounds.span - this.to[1]}`;
     }
   }
 }
@@ -1073,16 +1105,16 @@ export class ArcSegment {
     this.isClockwise = isClockwise;
   }
 
-  mirror(position, axis) {
-    return new ArcSegment(this.to.mirror(position, axis), this.from.mirror(position, axis), this.radius, this.isLarge, this.isClockwise);
+  mirror(line) {
+    return new ArcSegment(mirrorPointLine(this.to, line), mirrorPointLine(this.from, line), this.radius, this.isLarge, this.isClockwise);
   }
 
-  mirrorBridge(position, axis) {
-    return new LineSegment(this.to, this.to.mirror(position, axis));
+  mirrorBridge(line) {
+    return new LineSegment(this.to, mirrorPointLine(this.to, line));
   }
 
-  toCommandString(env, bounds) {
-    return `A${this.radius},${this.radius} 0 ${this.isLarge} ${this.isClockwise} ${this.to.get(0).value},${bounds.span - this.to.get(1).value}`;
+  toCommandString(bounds) {
+    return `A${this.radius},${this.radius} 0 ${this.isLarge} ${this.isClockwise} ${this.to[0]},${bounds.span - this.to[1]}`;
   }
 }
 

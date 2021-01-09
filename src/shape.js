@@ -1398,7 +1398,38 @@ export class Path extends NodeShape {
   // TODO is closed
   updateContentDom(bounds) {
     super.updateContentDom(bounds);
-    this.element.setAttributeNS(null, 'd', this.domNodes.map(node => node.pathCommand).join(' '));
+
+    const pathCommands = this.domNodes.map(node => node.pathCommand);
+
+	  if (this.mirrors.length > 0) {
+			let segments = this.nodes.map(node => node.segment).slice(1).filter(segment => !!segment);
+
+			for (let mirror of this.mirrors) {
+				let {pivot, axis} = mirror.state;
+				let line = {point: pivot, axis};
+
+				const mirroredSegments = segments.slice().reverse();
+
+				if (distancePointLine(mirroredSegments[0].to, line) > 1e-6) {
+					mirroredSegments.unshift(mirroredSegments[0].mirrorBridge(line));
+				}
+
+				mirroredSegments = mirroredSegments.map((segment, i) => segment.mirror(line, i > 0));
+
+				for (let segment of mirroredSegments) {
+					pathCommands.push(segment.toCommandString(bounds));
+				}
+
+				segments.push(...mirroredSegments);
+			}
+		}
+
+    if (this.untimedProperties.hasOwnProperty('closed')) {
+      pathCommands.push('z');
+    }
+   
+    this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
+
     const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
