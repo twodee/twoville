@@ -19,6 +19,7 @@ import {
 
 import {
   mirrorPointLine,
+  distancePointPoint,
   distancePointLine,
 } from './math.js';
 
@@ -1282,15 +1283,18 @@ export class Ungon extends VertexShape {
     let pathCommands = [];
 
     let start = [
-      (this.domNodes[0].state.position[0] + this.domNodes[1].state.position[0]) * 0.5,
-      (this.domNodes[0].state.position[1] + this.domNodes[1].state.position[1]) * 0.5
+      (this.domNodes[0].turtle.position[0] + this.domNodes[1].turtle.position[0]) * 0.5,
+      (this.domNodes[0].turtle.position[1] + this.domNodes[1].turtle.position[1]) * 0.5
     ];
     pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
 
     let previous = start;
-    for (let i = 1; i < this.domNodes.length; ++i) {
-      const a = this.domNodes[i].state.position;
-      const b = this.domNodes[(i + 1) % this.domNodes.length].state.position;
+    const gap = distancePointPoint(this.domNodes[0].turtle.position, this.domNodes[this.domNodes.length - 1].turtle.position);
+    const hasReturn = gap < 1e-6;
+    let nnodes = hasReturn ? this.domNodes.length - 1 : this.domNodes.length;
+    for (let i = 1; i < nnodes; ++i) {
+      const a = this.domNodes[i].turtle.position;
+      const b = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
 
       let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
 
@@ -1328,7 +1332,7 @@ export class Ungon extends VertexShape {
     pathCommands.push('z');
     this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
 
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
@@ -1340,7 +1344,7 @@ export class Ungon extends VertexShape {
 
   updateInteractionState(bounds) {
     super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.domNodes.map(node => node.state.position));
+    this.outlineMark.updateState(this.domNodes.map(node => node.turtle.position));
   }
 }
 

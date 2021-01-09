@@ -1,5 +1,16 @@
 // --------------------------------------------------------------------------- 
 
+export function distancePointPoint(a, b) {
+  let diff = [
+    a[0] - b[0],
+    a[1] - b[1],
+  ];
+  const magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
+  return magnitude;
+}
+
+// --------------------------------------------------------------------------- 
+
 export function distancePointLine(point, line) {
   let diff = [
     point[0] - line.point[0],
