@@ -314,33 +314,8 @@ export class TimelinedEnvironment extends Environment {
     return this.constructor.timedIds.includes(id);
   }
 
-  // applyStroke(env, t, element) {
-    // if (this.owns('size') && this.owns('color') && this.owns('opacity')) {
-      // const size = this.valueAt(env, 'size', t);
-      // const color = this.valueAt(env, 'color', t);
-      // const opacity = this.valueAt(env, 'opacity', t);
-
-      // element.setAttributeNS(null, 'stroke', color.toColor());
-      // element.setAttributeNS(null, 'stroke-width', size.value);
-      // element.setAttributeNS(null, 'stroke-opacity', opacity.value);
-
-      // if (this.owns('dashes')) {
-        // const dashes = this.valueAt(env, 'dashes', t).toSpacedString();
-        // element.setAttributeNS(null, 'stroke-dasharray', dashes);
-      // }
-
-      // if (this.owns('join')) {
-        // const type = this.valueAt(env, 'join', t).value;
-        // element.setAttributeNS(null, 'stroke-linejoin', type);
-      // }
-
-      // return size.value;
-    // } else {
-      // return 0;
-    // }
-  // }
-
   configureProperty(property, propertyHost, domHost, updateDom, resolveDefault, bounds, dependencies, checker) {
+    const enabledTimeline = propertyHost.timedProperties.enabled;
     const timeline = propertyHost.timedProperties[property];
     if (!checker(timeline)) {
       return;
@@ -364,7 +339,8 @@ export class TimelinedEnvironment extends Environment {
       if (!defaultValue) {
         let t = bounds.startTime;
         for (let interval of timeline.intervals) {
-          if (!interval.spans(t)) {
+          let isEnabled = enabledTimeline ? (enabledTimeline.intervalAt(t)?.fromValue.value ?? enabledTimeline.defaultValue?.value) : true;
+          if (isEnabled && !interval.spans(t)) {
             throw new LocatedException(this.where, `I found ${propertyHost.article} ${propertyHost.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
           } else if (!interval.hasTo()) {
             t = null;
@@ -374,7 +350,10 @@ export class TimelinedEnvironment extends Environment {
           }
         }
         if (t !== null && t < bounds.stopTime) {
-          throw new LocatedException(this.where, `I found ${propertyHost.article} ${propertyHost.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
+          const isEnabled = enabledTimeline.intervalAt(t)?.fromValue.value ?? enabledTimeline.defaultValue?.value;
+          if (isEnabled) {
+            throw new LocatedException(this.where, `I found ${propertyHost.article} ${propertyHost.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
+          }
         }
       }
 

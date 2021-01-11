@@ -340,6 +340,8 @@ export class Shape extends TimelinedEnvironment {
   configure(bounds) {
     this.state = {};
     this.updateDoms = [];
+
+    const enabledTimeline = this.timedProperties.enabled;
     this.agers = [];
     this.configureState(bounds);
     this.initializeMarkDom();
@@ -368,6 +370,13 @@ export class Shape extends TimelinedEnvironment {
     if (this.transforms.every(transform => transform.hasAllDefaults)) {
       // this.updateTransformDom(bounds);
     }
+  }
+
+  activate(t) {
+    const enabledTimeline = this.timedProperties.enabled;
+    this.state.isEnabled = enabledTimeline.intervalAt(t)?.fromValue.value ?? enabledTimeline.defaultValue?.value;
+    this.element.setAttributeNS(null, 'visibility', this.state.isEnabled ? 'visible' : 'hidden');
+    return this.state.isEnabled;
   }
 
   ageDomWithoutMarks(bounds, t) {

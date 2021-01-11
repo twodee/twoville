@@ -322,7 +322,9 @@ export class RenderEnvironment extends Environment {
   ageContent(t) {
     this.state.t = t;
     for (let drawable of this.drawables) {
-      drawable.ageDomWithoutMarks(this.bounds, t);
+      if (drawable.activate(t)) {
+        drawable.ageDomWithoutMarks(this.bounds, t);
+      }
     }
   }
 
@@ -332,9 +334,12 @@ export class RenderEnvironment extends Environment {
 
     this.state.t = t;
     for (let drawable of this.drawables) {
-      drawable.ageDomWithoutMarks(this.bounds, t);
-      drawable.ageDomWithMarks(this.bounds, t, factor);
+      // TODO what about groups
+      if (drawable.activate(t)) {
+        drawable.ageDomWithMarks(this.bounds, t, factor);
+      }
     }
+
     this.rescale();
   }
 
@@ -378,8 +383,10 @@ export class RenderEnvironment extends Environment {
     const matrix = this.svg.getScreenCTM();
     const factor = matrix.a;
     for (let shape of this.shapes) {
-      shape.updateContentDom(this.bounds, factor);
-      shape.updateInteractionDom(this.bounds, factor);
+      if (this.state.isEnabled) {
+        shape.updateContentDom(this.bounds, factor);
+        shape.updateInteractionDom(this.bounds, factor);
+      }
     }
   }
 
