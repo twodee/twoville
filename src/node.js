@@ -631,6 +631,8 @@ export class QuadraticNode extends Node {
         new LineMark(),
         new LineMark(),
       ]
+    } else {
+      this.lineMarks = [];
     }
 
     this.marker.addMarks(foregroundMarks, this.lineMarks, []);

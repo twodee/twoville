@@ -49,6 +49,10 @@ export class Vector3Animator extends Animator {
   }
 }
 
+export function interpolateNearest(a, b, proportion) {
+  return proportion <= 0.5 ? a : b;
+}
+
 export function interpolateLinear(a, b, proportion) {
   return a + proportion * (b - a);
 }
@@ -105,11 +109,17 @@ export function interpolateBackInOut(a, b, proportion) {
   }
 }
 
+export function interpolateSineInOut(a, b, proportion) {
+  return a + (b - a) * 0.5 * (1 - Math.cos(Math.PI * proportion));
+}
+
 const interpolaters = Object.freeze({
+  interpolateNearest,
   interpolateLinear,
   interpolateQuadraticInOut,
   interpolateCubicInOut,
   interpolateQuarticInOut,
   interpolateQuinticInOut,
   interpolateBackInOut,
+  interpolateSineInOut,
 });

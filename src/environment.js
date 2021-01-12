@@ -315,7 +315,7 @@ export class TimelinedEnvironment extends Environment {
   }
 
   configureProperty(property, propertyHost, domHost, updateDom, resolveDefault, bounds, dependencies, checker) {
-    const enabledTimeline = propertyHost.timedProperties.enabled;
+    const enabledTimeline = domHost.timedProperties.enabled;
     const timeline = propertyHost.timedProperties[property];
     if (!checker(timeline)) {
       return;
@@ -350,7 +350,7 @@ export class TimelinedEnvironment extends Environment {
           }
         }
         if (t !== null && t < bounds.stopTime) {
-          const isEnabled = enabledTimeline.intervalAt(t)?.fromValue.value ?? enabledTimeline.defaultValue?.value;
+          const isEnabled = enabledTimeline ? enabledTimeline.intervalAt(t)?.fromValue.value ?? enabledTimeline.defaultValue?.value : true;
           if (isEnabled) {
             throw new LocatedException(this.where, `I found ${propertyHost.article} ${propertyHost.type} whose <code>${property}</code> property wasn't set at all possible times. In particular, it wasn't set at time ${t}.`); 
           }

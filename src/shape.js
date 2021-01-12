@@ -344,8 +344,8 @@ export class Shape extends TimelinedEnvironment {
     const enabledTimeline = this.timedProperties.enabled;
     this.agers = [];
     this.configureState(bounds);
-    this.initializeMarkDom();
     this.configureTransforms(bounds);
+    this.initializeMarkDom();
     this.configureMarks();
     this.connect();
   }
@@ -364,19 +364,26 @@ export class Shape extends TimelinedEnvironment {
     }
 
     if (this.transforms.some(transform => transform.isAnimated)) {
-      // this.updateDoms.push(this.updateTransformDom.bind(this));
+      this.updateDoms.push(this.updateTransformDom.bind(this));
     }
 
     if (this.transforms.every(transform => transform.hasAllDefaults)) {
-      // this.updateTransformDom(bounds);
+      for (let transform of this.transforms) {
+        transform.updateDomCommand(bounds);
+      }
+      this.updateTransformDom(bounds);
     }
   }
 
   activate(t) {
     const enabledTimeline = this.timedProperties.enabled;
-    this.state.isEnabled = enabledTimeline.intervalAt(t)?.fromValue.value ?? enabledTimeline.defaultValue?.value;
-    this.element.setAttributeNS(null, 'visibility', this.state.isEnabled ? 'visible' : 'hidden');
-    return this.state.isEnabled;
+    if (enabledTimeline) {
+      this.state.isEnabled = enabledTimeline.intervalAt(t)?.fromValue.value ?? enabledTimeline.defaultValue?.value;
+      this.element.setAttributeNS(null, 'visibility', this.state.isEnabled ? 'visible' : 'hidden');
+      return this.state.isEnabled;
+    } else {
+      return true;
+    }
   }
 
   ageDomWithoutMarks(bounds, t) {
@@ -398,10 +405,16 @@ export class Shape extends TimelinedEnvironment {
     }
   }
 
+  updateTransformDom(bounds) {
+    // for (let transform of this.transforms) {
+      // transform.updateDomCommand(bounds);
+    // }
+    const commands = this.transforms.map(transform => transform.command).join(' ');
+    this.element.setAttributeNS(null, 'transform', commands);
+  }
+
   updateContentState(bounds) {
-    for (let transform of this.transforms) {
-      transform.updateDomCommand(bounds);
-    }
+    // this.updateTransformDom();
   }
 
   updateContentDom(bounds, factor) {
@@ -1404,8 +1417,8 @@ export class Path extends NodeShape {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.domNodes = this.nodes.filter(node => node.isDom);
-    this.configureNodes(bounds);
     this.configureFill(bounds);
+    this.configureNodes(bounds);
   }
 
   updateContentDom(bounds) {
