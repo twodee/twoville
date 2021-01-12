@@ -682,6 +682,7 @@ function initialize() {
 
   function reallySaveAs() {
     currentName = saveAsFileNameInput.value;
+    localStorage.setItem('most-recent-two', currentName);
     save();
   }
 
@@ -789,6 +790,7 @@ function initialize() {
   function loadNewFile() {
     editor.setValue('', 1);
     currentName = null;
+    localStorage.removeItem('most-recent-two');
     isSaved = true;
     syncTitle();
   }
