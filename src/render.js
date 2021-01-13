@@ -345,6 +345,9 @@ export class RenderEnvironment extends Environment {
 
   hideMarks() {
     this.sceneMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
+    for (let shape of this.shapes) {
+      shape.hideMarks();
+    }
   }
 
   updateViewBox() {

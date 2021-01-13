@@ -141,6 +141,7 @@ function scrubTo(t) {
     t = scene.bounds.stopTime;
   }
 
+  frameIndex = t;
   timeSpinner.value = t;
   scrubber.value = t;
   scene.ageContentAndInteraction(t);
@@ -172,16 +173,23 @@ function stopAnimation() {
   if (animateTask) {
     clearTimeout(animateTask);
     animateTask = null;
+    scene.isStale = false;
+    scrubTo(parseInt(scrubber.value));
   }
 }
 
-function play(isLoop) {
+function play() {
   stopAnimation();
   const time = scene.get('time');
   delay = time.get('delay').value * 1000;
   if (parseInt(scrubber.max) === frameIndex) {
     frameIndex = 0;
   }
+
+  // Disable markers.
+  scene.stale();
+  scene.hideMarks();
+
   animateFrame();
 }
 
@@ -1007,8 +1015,12 @@ function initialize() {
   });
 
   playOnceButton.addEventListener('click', (e) => {
-    isLoop = false;
-    play();
+    if (animateTask) {
+      stopAnimation();
+    } else {
+      isLoop = false;
+      play();
+    }
   });
 
   playLoopButton.addEventListener('click', e => {

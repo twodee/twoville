@@ -146,6 +146,10 @@ export class Shape extends TimelinedEnvironment {
 
   hide() {
     this.element.setAttributeNS(null, 'visibility', 'hidden');
+    this.hideMarks();
+  }
+
+  hideMarks() {
     for (let marker of this.markers) {
       marker.hideMarks();
     }

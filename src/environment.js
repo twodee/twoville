@@ -325,10 +325,23 @@ export class TimelinedEnvironment extends Environment {
     let atemporal;
 
     if (defaultValue) {
-      atemporal = resolveDefault(defaultValue);
-      propertyHost.state[property] = atemporal;
-      if (updateDom && dependencies.every(dependency => this.timedProperties[dependency].defaultValue)) {
-        updateDom(bounds);
+      if (defaultValue.isTimeSensitive()) {
+        const ager = t => {
+          const env = Environment.create(null, null);
+          env.bind('t', new ExpressionInteger(t));
+          const v = defaultValue.evaluate(env);
+          propertyHost.state[property] = v.value;
+        };
+        domHost.agers.push(ager);
+        if (updateDom) {
+          domHost.updateDoms.push(updateDom);
+        }
+      } else {
+        atemporal = resolveDefault(defaultValue);
+        propertyHost.state[property] = atemporal;
+        if (updateDom && dependencies.every(dependency => this.timedProperties[dependency].defaultValue)) {
+          updateDom(bounds);
+        }
       }
     }
 

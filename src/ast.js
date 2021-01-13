@@ -140,12 +140,16 @@ export class Expression {
   }
 
   static assertScalar(e, types) {
-    if (!types.some(type => e instanceof type)) {
+    if (!e.isTimeSensitive() && !types.some(type => e instanceof type)) {
       throw new LocatedException(e.where, `It must be ${typesToSeries(types)}.`);
     }
   }
 
   static assertList(e, length, types) {
+    if (e.isTimeSensitive()) {
+      return true;
+    }
+
     if (!(e instanceof ExpressionVector)) {
       throw new LocatedException(e.where, `It must be a list.`);
     }
