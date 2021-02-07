@@ -65,7 +65,7 @@ export class InterpreterEnvironment extends Environment {
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));
-    this.untimedProperties.export.bind('name', new ExpressionString('twoville.gif'));
+    this.untimedProperties.export.bind('name', new ExpressionString('twoville'));
     this.untimedProperties.export.bind('transparency', new ExpressionVector([
       new ExpressionReal(0),
       new ExpressionReal(0),

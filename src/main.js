@@ -114,18 +114,23 @@ function downloadDataUrl(name, url) {
 }
 
 export function exportSvgWithMarks() {
-  serializeThenDownload(scene.svg);
+  if (scene) {
+    serializeThenDownload(scene.svg);
+  }
 }
 
 export function exportSvgWithoutMarks() {
-  const clone = scene.cloneSvgWithoutMarks();
-  serializeThenDownload(clone);
+  if (scene) {
+    const clone = scene.cloneSvgWithoutMarks();
+    serializeThenDownload(clone);
+  }
 }
 
 function serializeThenDownload(root) {
   let data = new XMLSerializer().serializeToString(root);
   let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
-  downloadBlob('download.svg', svgBlob);
+  let name = scene.get('export').get('name').value;
+  downloadBlob(`${name}.svg`, svgBlob);
 }
 
 function animateTo(t) {

@@ -895,10 +895,13 @@ export function parse(tokens, source) {
       let sourceStart = tokens[i].where;
       consume(); // eat with
       let scope = expression();
-      if (!has(Tokens.Linebreak)) {
-        throw new LocatedException(SourceLocation.span(sourceStart, scope.where), 'I expected a linebreak after this with statement\'s scope expression.');
+      if (has(Tokens.Linebreak)) {
+        consume(); // eat linebreak
+      } else if (has(Tokens.EOF)) {
+        throw new LocatedException(SourceLocation.span(sourceStart, tokens[i].where), `I reached the end of the program, but this <code>with</code> statement was not complete.`);
+      } else if (has(Tokens.EOF)) {
+        throw new LocatedException(tokens[i].where, `I found a stray <code>${tokens[i].source}</code> in this <code>with</code> statement's scope expression, and I don't know what to do with that.`);
       }
-      consume(); // eat linebreak
       let body = block();
       return new ExpressionWith(scope, body, SourceLocation.span(sourceStart, body.where));
     } else {

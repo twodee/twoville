@@ -1224,7 +1224,7 @@ export class ExpressionAssignment extends Expression {
     if ('assign' in this.l) {
       return this.l.assign(env, fromTime, toTime, {...context, rhs: this.r, whereAssigned: this.where});
     } else {
-      throw 'unassignable';
+      throw new LocatedException(this.l.where, "I found an illegal assignment statement. The left-hand side is not something to which I can assign a value.");
     }
   }
 
