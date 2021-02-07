@@ -434,6 +434,7 @@ html.grabbing {
   display: grid;
   grid-template-columns: 150px auto;
   grid-row-gap: 5px;
+  align-items: baseline;
 }
 
 #dialog-overlay {

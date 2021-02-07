@@ -78,11 +78,12 @@ export class RenderEnvironment extends Environment {
     this.bindGlobalFunctions();
   }
 
-  static reify(svg, pod) {
+  static reify(svg, pod, settings) {
     const scene = new RenderEnvironment();
     scene.svg = svg;
     scene.omniReify = RenderEnvironment.omniReify;
     scene.root = scene;
+    scene.settings = settings;
     scene.embody(undefined, pod);
     return scene;
   }

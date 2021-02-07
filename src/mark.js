@@ -520,8 +520,8 @@ export class VectorPanMark extends PanMark {
   }
 
   getNewSource(delta, isShiftModified) {
-    let x = parseFloat((this.untweakedExpression.get(0).value + delta[0]).toShortFloat());
-    let y = parseFloat((this.untweakedExpression.get(1).value + delta[1]).toShortFloat());
+    let x = parseFloat((this.untweakedExpression.get(0).value + delta[0]).toShortFloat(this.shape.root.settings.mousePrecision));
+    let y = parseFloat((this.untweakedExpression.get(1).value + delta[1]).toShortFloat(this.shape.root.settings.mousePrecision));
 
     if (isShiftModified) {
       x = Math.round(x);
@@ -548,7 +548,7 @@ export class HorizontalPanMark extends PanMark {
   getNewSource(delta, isShiftModified) {
     const oldValue = this.untweakedExpression.value;
 
-    let newValue = parseFloat((oldValue + delta[0] * this.multiplier).toShortFloat());
+    let newValue = parseFloat((oldValue + delta[0] * this.multiplier).toShortFloat(this.shape.root.settings.mousePrecision));
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
@@ -573,7 +573,7 @@ export class VerticalPanMark extends PanMark {
   getNewSource(delta, isShiftModified) {
     const oldValue = this.untweakedExpression.value;
 
-    let newValue = parseFloat((oldValue + delta[1] * this.multiplier).toShortFloat());
+    let newValue = parseFloat((oldValue + delta[1] * this.multiplier).toShortFloat(this.shape.root.settings.mousePrecision));
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
@@ -641,7 +641,7 @@ export class RotationMark extends PanMark {
       }
     }
 
-    newDegrees = parseFloat(newDegrees.toShortFloat());
+    newDegrees = parseFloat(newDegrees.toShortFloat(this.shape.root.settings.mousePrecision));
 
     if (isShiftModified) {
       newDegrees = Math.round(newDegrees);
@@ -688,8 +688,8 @@ export class AxisMark extends PanMark {
     ];
 
     const magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
-    diff[0] = (diff[0] / magnitude).toShortFloat();
-    diff[1] = (diff[1] / magnitude).toShortFloat();
+    diff[0] = (diff[0] / magnitude).toShortFloat(this.shape.root.settings.mousePrecision);
+    diff[1] = (diff[1] / magnitude).toShortFloat(this.shape.root.settings.mousePrecision);
 
     this.expression.set(0, new ExpressionReal(diff[0]));
     this.expression.set(1, new ExpressionReal(diff[1]));
@@ -727,7 +727,7 @@ export class DistanceMark extends PanMark {
 
     const dot = headingVector[0] * mouseVector[0] + headingVector[1] * mouseVector[1];
 
-    let newDistance = parseFloat(dot.toShortFloat());
+    let newDistance = parseFloat(dot.toShortFloat(this.shape.root.settings.mousePrecision));
     if (isShiftModified) {
       newDistance = Math.round(newDistance);
     }
@@ -796,7 +796,7 @@ export class WedgeDegreesMark extends PanMark {
       degrees -= 360;
     }
 
-    degrees = parseFloat(degrees.toShortFloat())
+    degrees = parseFloat(degrees.toShortFloat(this.shape.root.settings.mousePrecision))
 
     if (isShiftModified) {
       degrees = Math.round(degrees);
@@ -909,7 +909,7 @@ export class BumpDegreesMark extends PanMark {
       degrees = 360 - degrees;
     }
 
-    degrees = parseFloat(degrees.toShortFloat());
+    degrees = parseFloat(degrees.toShortFloat(this.shape.root.settings.mousePrecision));
 
     if (isShiftModified) {
       degrees = Math.round(degrees);
@@ -936,42 +936,42 @@ function manipulateSource(oldExpression, newExpression) {
              (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
     const right = unevaluated.r.value;
     const left = oldValue - right;
-    return new ExpressionAdd(unevaluated.l, new ExpressionReal((newValue - left).toShortFloat())).toPretty();
+    return new ExpressionAdd(unevaluated.l, new ExpressionReal((newValue - left).toShortFloat(this.shape.root.settings.mousePrecision))).toPretty();
   } else if (unevaluated instanceof ExpressionAdd &&
              (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
     const left = unevaluated.l.value;
     const right = oldValue - left;
-    return new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat()), unevaluated.r).toPretty();
+    return new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat(this.shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
   } else if (unevaluated instanceof ExpressionSubtract &&
              (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
     const right = unevaluated.r.value;
     const left = oldValue + right;
-    return new ExpressionSubtract(unevaluated.l, new ExpressionReal((left - newValue).toShortFloat())).toPretty();
+    return new ExpressionSubtract(unevaluated.l, new ExpressionReal((left - newValue).toShortFloat(this.shape.root.settings.mousePrecision))).toPretty();
   } else if (unevaluated instanceof ExpressionSubtract &&
              (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
     const left = unevaluated.l.value;
     const right = left - oldValue;
-    return new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat()), unevaluated.r).toPretty();
+    return new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat(this.shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
   } else if (unevaluated instanceof ExpressionMultiply &&
              (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
     const right = unevaluated.r.value;
     const left = oldValue / right;
-    return new ExpressionMultiply(unevaluated.l, new ExpressionReal((newValue / left).toShortFloat())).toPretty();
+    return new ExpressionMultiply(unevaluated.l, new ExpressionReal((newValue / left).toShortFloat(this.shape.root.settings.mousePrecision))).toPretty();
   } else if (unevaluated instanceof ExpressionMultiply &&
              (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
     const left = unevaluated.l.value;
     const right = oldValue / left;
-    return new ExpressionMultiply(new ExpressionReal((newValue / right).toShortFloat()), unevaluated.r).toPretty();
+    return new ExpressionMultiply(new ExpressionReal((newValue / right).toShortFloat(this.shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
   } else if (unevaluated instanceof ExpressionDivide &&
              (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
     const right = unevaluated.r.value;
     const left = oldExpression.prevalues[0].value;
-    return new ExpressionDivide(unevaluated.l, new ExpressionReal((left / newValue).toShortFloat())).toPretty();
+    return new ExpressionDivide(unevaluated.l, new ExpressionReal((left / newValue).toShortFloat(this.shape.root.settings.mousePrecision))).toPretty();
   } else if (unevaluated instanceof ExpressionDivide &&
              (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
     const left = unevaluated.l.value;
     const right = left / oldValue;
-    return new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat()), unevaluated.r).toPretty();
+    return new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat(this.shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
   } else if (unevaluated instanceof ExpressionPower &&
              (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
     const right = unevaluated.r.value;
@@ -981,17 +981,17 @@ function manipulateSource(oldExpression, newExpression) {
     // If the left operand is 1, there's no hope of raising it to any value.
     if ((left instanceof ExpressionInteger && left.value === 1) ||
         (left instanceof ExpressionReal && Math.abs(left.value - 1) < 0.001)) {
-      return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat())).toPretty();
+      return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat(this.shape.root.settings.mousePrecision))).toPretty();
     } else {
-      return new ExpressionPower(unevaluated.l, new ExpressionReal((Math.log(newValue) / Math.log(left.value)).toShortFloat())).toPretty();
+      return new ExpressionPower(unevaluated.l, new ExpressionReal((Math.log(newValue) / Math.log(left.value)).toShortFloat(this.shape.root.settings.mousePrecision))).toPretty();
     }
   } else if (unevaluated instanceof ExpressionPower &&
              (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
     const left = unevaluated.l.value;
     const right = Math.log(oldValue) / Math.log(left);
-    return new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat()), unevaluated.r).toPretty();
+    return new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat(this.shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
   } else {
-    return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat())).toPretty();
+    return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat(this.shape.root.settings.mousePrecision))).toPretty();
   }
 }
 

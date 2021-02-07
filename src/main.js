@@ -60,6 +60,7 @@ let defaultSettings = {
   backgroundColor: '#D3D3D3',
   warnOnExit: true,
   showTimeScrubber: false,
+  mousePrecision: 2,
 };
 const settings = {...defaultSettings};
 
@@ -213,7 +214,7 @@ function postInterpret(pod, successCallback) {
   if (oldScene) {
     oldScene.stop();
   }
-  scene = RenderEnvironment.reify(document.getElementById('svg'), pod);
+  scene = RenderEnvironment.reify(document.getElementById('svg'), pod, settings);
 
   let hasTweak;
 
@@ -441,6 +442,7 @@ function initialize() {
   const showCopyLinksToggle = document.getElementById('show-copy-links-toggle');
   const backgroundColorPicker = document.getElementById('background-color-picker');
   const backgroundColorPreview = document.getElementById('background-color-preview');
+  const mousePrecisionSpinner = document.getElementById('mouse-precision-spinner');
 
   const uiSynchronizers = {
     backgroundColor: () => {
@@ -457,12 +459,21 @@ function initialize() {
       document.getElementById('time-toolbar').style.display = settings.showTimeScrubber ? 'block' : 'none';
       showTimeScrubberToggle.checked = settings.showTimeScrubber;
     },
+    mousePrecision: () => {
+      mousePrecisionSpinner.value = settings.mousePrecision;
+    },
   };
 
   // Handle show copy links toggling.
   showCopyLinksToggle.checked = settings.showCopyLinks;
   showCopyLinksToggle.addEventListener('click', () => {
     settings.showCopyLinks = savedSettings.showCopyLinks = showCopyLinksToggle.checked;
+    saveSettings();
+  });
+
+  mousePrecisionSpinner.value = settings.mousePrecision;
+  mousePrecisionSpinner.addEventListener('input', () => {
+    settings.mousePrecision = savedSettings.mousePrecision = parseInt(mousePrecisionSpinner.value);
     saveSettings();
   });
 
