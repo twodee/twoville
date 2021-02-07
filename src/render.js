@@ -473,6 +473,7 @@ export class RenderEnvironment extends Environment {
       const delta = e.deltaY * (isTouchPad ? 1 : 0.1);
 
       let factor = clamp(1 + delta / 150, 0.9, 1.1);
+      // let factor = 1 + delta / 150;
       let zoomRatio = this.fitBounds.width / this.bounds.width;
 
       // factor > 1 means zooming out
