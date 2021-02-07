@@ -349,7 +349,6 @@ export class Shape extends TimelinedEnvironment {
     this.agers = [];
     this.configureState(bounds);
     this.configureTransforms(bounds);
-    console.log("configure transforms");
     this.initializeMarkDom();
     this.configureMarks();
     this.connect();
@@ -1508,7 +1507,6 @@ export class Group extends Shape {
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
-    console.log("init");
     this.children = [];
   }
 
@@ -1556,7 +1554,6 @@ export class Group extends Shape {
   }
 
   configureTransforms(bounds) {
-    console.log("group transforms");
     super.configureTransforms(bounds);
     for (let child of this.children) {
       child.configureTransforms(bounds);
