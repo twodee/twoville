@@ -1,6 +1,7 @@
 import {
   Expression,
-  ExpressionInteger
+  ExpressionData,
+  ExpressionInteger,
 } from './ast.js';
 
 import {
@@ -37,11 +38,11 @@ export class Timeline {
   }
 
   get hasDefault() {
-    return !!this.defaultValue;
+    return !!this.defaultValue && this.defaultValue.isPrimitive;
   }
 
   get isAnimated() {
-    return this.intervals.length > 0;
+    return !this.defaultValue?.isPrimitive || this.intervals.length > 0;
   }
 
   bind(id, rhs, from, to) {
@@ -185,23 +186,23 @@ export class Timeline {
     }
   }
 
-  assertScalar(...types) {
+  assertScalar(env, ...types) {
     if (this.defaultValue) {
-      Expression.assertScalar(this.defaultValue, types);
+      Expression.assertScalar(env, this.defaultValue, types);
     }
 
     for (let interval of this.intervals) {
-      interval.assertScalar(types);
+      interval.assertScalar(env, types);
     }
   }
 
-  assertList(length, ...types) {
+  assertList(env, length, ...types) {
     if (this.defaultValue) {
-      Expression.assertList(this.defaultValue, length, types);
+      Expression.assertList(env, this.defaultValue, length, types);
     }
 
     for (let interval of this.intervals) {
-      interval.assertList(length, types);
+      interval.assertList(env, length, types);
     }
   }
 }

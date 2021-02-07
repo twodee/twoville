@@ -79,6 +79,7 @@ export class Environment {
 
   embody(parentEnvironment, pod) {
     this.parentEnvironment = parentEnvironment;
+    this.functions = {};
     if (parentEnvironment) {
       this.root = parentEnvironment.root;
     }
@@ -325,12 +326,13 @@ export class TimelinedEnvironment extends Environment {
     let atemporal;
 
     if (defaultValue) {
-      if (defaultValue.isTimeSensitive()) {
-        const ager = t => {
-          const env = Environment.create(null, null);
-          env.bind('t', new ExpressionInteger(t));
-          const v = defaultValue.evaluate(env);
-          propertyHost.state[property] = v.value;
+      // If the default value is time sensitive, then it must be updated every frame.
+      if (defaultValue.isTimeSensitive(domHost)) {
+        const ager = (env, t) => {
+          const subenv = Environment.create(env, null);
+          subenv.bind('t', new ExpressionInteger(t));
+          const v = defaultValue.evaluate(subenv);
+          propertyHost.state[property] = resolveDefault(v);
         };
         domHost.agers.push(ager);
         if (updateDom) {
@@ -371,7 +373,7 @@ export class TimelinedEnvironment extends Environment {
       }
 
       const animators = timeline.intervals.map(interval => interval.toAnimator());
-      const ager = (t) => {
+      const ager = (env, t) => {
         const animator = animators.find(animator => animator.fromTime <= t && t <= animator.toTime);
         if (animator) {
           propertyHost.state[property] = animator.age(t);

@@ -100,7 +100,7 @@ export class Translate extends Transform {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>translate</code> node with an illegal value for <code>offsets</code>. ${e.message}`);
@@ -161,7 +161,7 @@ export class Rotate extends Transform {
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>rotate</code> node with an illegal value for <code>degrees</code>. ${e.message}`);
@@ -174,7 +174,7 @@ export class Rotate extends Transform {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
@@ -300,7 +300,7 @@ export class Shear extends Transform {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>factors</code>. ${e.message}`);
@@ -313,7 +313,7 @@ export class Shear extends Transform {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
@@ -425,7 +425,7 @@ export class Scale extends Transform {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>factors</code>. ${e.message}`);
@@ -438,7 +438,7 @@ export class Scale extends Transform {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);

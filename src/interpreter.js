@@ -58,7 +58,7 @@ export class InterpreterEnvironment extends Environment {
     this.untimedProperties.time = Environment.create(this);
     this.untimedProperties.time.bind('start', new ExpressionInteger(0));
     this.untimedProperties.time.bind('stop', new ExpressionInteger(100));
-    this.untimedProperties.time.bind('delay', new ExpressionInteger(0.1));
+    this.untimedProperties.time.bind('delay', new ExpressionInteger(0.02));
 
     this.untimedProperties.export = Environment.create(this);
     this.untimedProperties.export.bind('size', new ExpressionVector([

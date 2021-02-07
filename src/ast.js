@@ -64,6 +64,10 @@ export class Expression {
     return false;
   }
 
+  get isPrimitive() {
+    return false;
+  }
+
   get precedence() {
     return this.constructor.precedence;
   }
@@ -139,14 +143,15 @@ export class Expression {
     }
   }
 
-  static assertScalar(e, types) {
-    if (!e.isTimeSensitive() && !types.some(type => e instanceof type)) {
+  static assertScalar(env, e, types) {
+    if (!e.isTimeSensitive(env) && !types.some(type => e instanceof type)) {
       throw new LocatedException(e.where, `It must be ${typesToSeries(types)}.`);
     }
   }
 
-  static assertList(e, length, types) {
-    if (e.isTimeSensitive()) {
+  static assertList(env, e, length, types) {
+    // TODO need environment
+    if (e.isTimeSensitive(env)) {
       return true;
     }
 
@@ -175,6 +180,10 @@ export class ExpressionData extends Expression {
     super(where, unevaluated);
     this.value = value;
     this.prevalues = prevalues;
+  }
+
+  get isPrimitive() {
+    return true;
   }
 
   bind(env, id, fromTime, toTime) {
@@ -2168,6 +2177,10 @@ export class ExpressionVector extends ExpressionData {
       rotate: new FunctionDefinition('rotate', ['degrees'], new ExpressionVectorRotate(this)),
       rotate90: new FunctionDefinition('rotate90', [], new ExpressionVectorRotate90(this)),
     };
+  }
+
+  get isPrimitive() {
+    return this.value.every(element => element.isPrimitive);
   }
 
   get length() {

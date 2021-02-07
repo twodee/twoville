@@ -334,7 +334,6 @@ export class RenderEnvironment extends Environment {
 
     this.state.t = t;
     for (let drawable of this.drawables) {
-      // TODO what about groups
       if (drawable.activate(t)) {
         drawable.ageDomWithMarks(this.bounds, t, factor);
       }

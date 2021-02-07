@@ -39,7 +39,7 @@ export function configureStroke(stateHost, domHost, bounds, isRequired) {
   stateHost.configureVectorProperty('color', stateHost, domHost, domHost.updateStrokeColorDom.bind(domHost), bounds, [], timeline => {
     if (timeline) {
       try {
-        timeline.assertList(3, ExpressionInteger, ExpressionReal);
+        timeline.assertList(domHost, 3, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>color</code>. ${e.message}`);
@@ -53,7 +53,7 @@ export function configureStroke(stateHost, domHost, bounds, isRequired) {
   stateHost.configureScalarProperty('opacity', stateHost, domHost, domHost.updateStrokeOpacityDom.bind(domHost), bounds, [], timeline => {
     if (timeline) {
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(domHost, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>opacity</code>. ${e.message}`);
@@ -66,7 +66,7 @@ export function configureStroke(stateHost, domHost, bounds, isRequired) {
   stateHost.configureScalarProperty('size', stateHost, domHost, domHost.updateStrokeSizeDom.bind(domHost), bounds, [], timeline => {
     if (timeline) {
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(domHost, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);

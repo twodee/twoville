@@ -85,23 +85,23 @@ export class Interval {
            (!this.hasFrom() && this.hasTo() && t <= this.toTime.value);
   }
 
-  assertScalar(types) {
+  assertScalar(env, types) {
     if (this.hasFrom()) {
-      Expression.assertScalar(this.fromValue, types);
+      Expression.assertScalar(env, this.fromValue, types);
     }
 
     if (this.hasTo()) {
-      Expression.assertScalar(this.toValue, types);
+      Expression.assertScalar(env, this.toValue, types);
     }
   }
 
-  assertList(length, types) {
+  assertList(env, length, types) {
     if (this.hasFrom()) {
-      Expression.assertList(this.fromValue, length, types);
+      Expression.assertList(env, this.fromValue, length, types);
     }
 
     if (this.hasTo()) {
-      Expression.assertList(this.toValue, length, types);
+      Expression.assertList(env, this.toValue, length, types);
     }
   }
 

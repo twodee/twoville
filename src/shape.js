@@ -349,6 +349,7 @@ export class Shape extends TimelinedEnvironment {
     this.agers = [];
     this.configureState(bounds);
     this.configureTransforms(bounds);
+    console.log("configure transforms");
     this.initializeMarkDom();
     this.configureMarks();
     this.connect();
@@ -392,7 +393,7 @@ export class Shape extends TimelinedEnvironment {
 
   ageDomWithoutMarks(bounds, t) {
     for (let ager of this.agers) {
-      ager(t);
+      ager(this, t);
     }
 
     for (let updateDom of this.updateDoms) {
@@ -542,7 +543,7 @@ export class Text extends Shape {
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
@@ -555,7 +556,7 @@ export class Text extends Shape {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>position</code>. ${e.message}`);
@@ -667,7 +668,7 @@ export class Rectangle extends Shape {
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>rounding</code>. ${e.message}`);
@@ -680,7 +681,7 @@ export class Rectangle extends Shape {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
@@ -692,7 +693,7 @@ export class Rectangle extends Shape {
     } else if (this.timedProperties.hasOwnProperty('corner')) {
       this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
         try {
-          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
@@ -701,7 +702,7 @@ export class Rectangle extends Shape {
     } else if (this.timedProperties.hasOwnProperty('center')) {
       this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
         try {
-          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
@@ -841,7 +842,7 @@ export class Circle extends Shape {
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>radius</code>. ${e.message}`);
@@ -854,7 +855,7 @@ export class Circle extends Shape {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
@@ -936,12 +937,25 @@ export class NodeShape extends Shape {
     for (let mirror of this.mirrors) {
       mirror.configureState(bounds);
     }
+  }
 
-    if (this.nodes.some(node => node.isAnimated) || this.mirrors.some(mirror => mirror.isAnimated)) {
+  get isAnimated() {
+    return this.nodes.some(node => node.isAnimated) || this.mirrors.some(mirror => mirror.isAnimated);
+  }
+
+  get hasAllDefaults() {
+    return this.nodes.every(node => node.hasAllDefaults) && this.mirrors.every(mirror => mirror.hasAllDefaults);
+  }
+
+  configureState(bounds) {
+    this.configureNodes(bounds);
+    this.configureOtherProperties(bounds);
+
+    if (this.isAnimated) {
       this.updateDoms.push(this.updateContentDom.bind(this));
     }
 
-    if (this.nodes.every(node => node.hasAllDefaults) && this.mirrors.every(mirror => mirror.hasAllDefaults)) {
+    if (this.hasAllDefaults) {
       this.updateContentDom(bounds);
     }
   }
@@ -1001,7 +1015,7 @@ export class NodeShape extends Shape {
 
   ageDomWithoutMark(env, bounds, t) {
     for (let ager of this.agers) {
-      ager(t);
+      ager(this, t);
     }
 
     for (let updateDom of this.updateDoms) {
@@ -1087,7 +1101,7 @@ export class Polygon extends VertexShape {
     return shape;
   }
 
-  configureState(bounds) {
+  configureOtherProperties(bounds) {
     this.element = document.createElementNS(svgNamespace, 'polygon');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
@@ -1096,7 +1110,6 @@ export class Polygon extends VertexShape {
       throw new LocatedException(this.where, `I found a <code>polygon</code> with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
     }
 
-    this.configureNodes(bounds);
     this.configureFill(bounds);
   }
 
@@ -1151,12 +1164,11 @@ export class Polyline extends VertexShape {
     return shape;
   }
 
-  configureState(bounds) {
+  configureOtherProperties(bounds) {
     this.element = document.createElementNS(svgNamespace, 'polyline');
     this.element.setAttributeNS(null, 'fill', 'none');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.domNodes = this.nodes.filter(node => node.isDom);
-    this.configureNodes(bounds);
     this.configureStroke(this, bounds, true);
   }
 
@@ -1208,7 +1220,7 @@ export class Line extends VertexShape {
     return shape;
   }
 
-  configureState(bounds) {
+  configureOtherProperties(bounds) {
     this.element = document.createElementNS(svgNamespace, 'line');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
@@ -1217,7 +1229,6 @@ export class Line extends VertexShape {
       throw new LocatedException(this.where, `I found a line with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
     }
 
-    this.configureNodes(bounds);
     this.configureStroke(this, bounds, true);
   }
 
@@ -1276,7 +1287,7 @@ export class Ungon extends VertexShape {
     return shape;
   }
 
-  configureState(bounds) {
+  configureOtherProperties(bounds) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
@@ -1285,21 +1296,28 @@ export class Ungon extends VertexShape {
       throw new LocatedException(this.where, `I found an <code>ungon</code> with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
     }
 
-    this.configureNodes(bounds);
-    this.configureFill(bounds);
-
-    this.configureScalarProperty('rounding', this, this, this.updateContentDom.bind(this), bounds, [], timeline => {
+    this.configureScalarProperty('rounding', this, this, null, bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, `I found an <code>ungon</code> whose <code>rounding</code> was not set.`);
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>rounding</code>. ${e.message}`);
       }
     });
+
+    this.configureFill(bounds);
+  }
+
+  get isAnimated() {
+    return super.isAnimated || this.timedProperties.rounding.isAnimated;
+  }
+
+  get hasAllDefaults() {
+    return super.hasAllDefaults && this.timedProperties.rounding.hasDefault;
   }
 
   updateContentDom(bounds) {
@@ -1417,12 +1435,11 @@ export class Path extends NodeShape {
     }
   }
 
-  configureState(bounds) {
+  configureOtherProperties(bounds) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.domNodes = this.nodes.filter(node => node.isDom);
     this.configureFill(bounds);
-    this.configureNodes(bounds);
   }
 
   updateContentDom(bounds) {
@@ -1491,6 +1508,7 @@ export class Group extends Shape {
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
+    console.log("init");
     this.children = [];
   }
 
@@ -1537,6 +1555,14 @@ export class Group extends Shape {
     }
   }
 
+  configureTransforms(bounds) {
+    console.log("group transforms");
+    super.configureTransforms(bounds);
+    for (let child of this.children) {
+      child.configureTransforms(bounds);
+    }
+  }
+
   updateContentDom(bounds) {
     super.updateContentDom(bounds);
     for (let child of this.children) {
@@ -1556,15 +1582,23 @@ export class Group extends Shape {
     }
   }
 
-  // updateProperties(env, t, bounds, matrix) {
-    // matrix = this.transform(env, t, bounds, matrix);
-    // TODO how do I handle disabled children
-    // const childCentroids = this.children.map(child => child.updateProperties(env, t, bounds, matrix)).filter(centroid => !!centroid);
-    // const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-    // const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
-    // this.updateCentroid(matrix, centroid, bounds);
-    // return centroid;
-  // }
+  ageDomWithoutMarks(bounds, t) {
+    super.ageDomWithoutMarks(bounds, t);
+    for (let child of this.children) {
+      if (child.activate(t)) {
+        child.ageDomWithoutMarks(bounds, t);
+      }
+    }
+  }
+
+  ageDomWithMarks(bounds, t, factor) {
+    super.ageDomWithMarks(bounds, t, factor);
+    for (let child of this.children) {
+      if (child.activate(t)) {
+        child.ageDomWithMarks(bounds, t, factor);
+      }
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -1740,7 +1774,7 @@ const FillMixin = {
     this.configureScalarProperty('opacity', this, this, this.updateOpacityDom.bind(this), bounds, [], timeline => {
       if (timeline) {
         try {
-          timeline.assertScalar(ExpressionInteger, ExpressionReal);
+          timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>opacity</code>. ${e.message}`);
         }
@@ -1751,7 +1785,7 @@ const FillMixin = {
     this.configureVectorProperty('color', this, this, this.updateColorDom.bind(this), bounds, [], timeline => {
       if (timeline) {
         try {
-          timeline.assertList(3, ExpressionInteger, ExpressionReal);
+          timeline.assertList(this, 3, ExpressionInteger, ExpressionReal);
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>color</code>. ${e.message}`);
         }

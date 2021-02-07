@@ -117,10 +117,14 @@ export class VertexNode extends Node {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>vertex</code> with an illegal value for <code>position</code>. ${e.message}`);
+        if (e instanceof LocatedException) {
+          throw new LocatedException(e.where, `I found a <code>vertex</code> with an illegal value for <code>position</code>. ${e.message}`);
+        } else {
+          throw e;
+        }
       }
     });
   }
@@ -184,7 +188,7 @@ export class TurtleNode extends Node {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>turtle</code> with an illegal value for <code>position</code>. ${e.message}`);
@@ -197,7 +201,7 @@ export class TurtleNode extends Node {
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>turtle</code> with an illegal value for <code>heading</code>. ${e.message}`);
@@ -282,7 +286,7 @@ export class MoveNode extends Node {
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>move</code> node with an illegal value for <code>distance</code>. ${e.message}`);
@@ -349,7 +353,7 @@ export class TurnNode extends Node {
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>turn</code> node with an illegal value for <code>degrees</code>. ${e.message}`);
@@ -419,7 +423,7 @@ export class JumpNode extends Node {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>jump</code> node with an illegal value for <code>position</code>. ${e.message}`);
@@ -487,7 +491,7 @@ export class LineNode extends Node {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>line</code> node with an illegal value for <code>position</code>. ${e.message}`);
@@ -562,7 +566,7 @@ export class QuadraticNode extends Node {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>quadratic</code> node with an illegal value for <code>position</code>. ${e.message}`);
@@ -572,7 +576,7 @@ export class QuadraticNode extends Node {
     this.configureVectorProperty('control', this, this.parentEnvironment, null, bounds, [], timeline => {
       if (timeline) {
         try {
-          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found a <code>quadratic</code> node with an illegal value for <code>control</code>. ${e.message}`);
@@ -683,7 +687,7 @@ export class ArcNode extends Node {
       }
 
       try {
-        timeline.assertScalar(ExpressionInteger, ExpressionReal);
+        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an <code>arc</code> node with an illegal value for <code>degrees</code>. ${e.message}`);
@@ -698,7 +702,7 @@ export class ArcNode extends Node {
       this.isWedge = false;
       this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
         try {
-          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>position</code>. ${e.message}`);
@@ -709,7 +713,7 @@ export class ArcNode extends Node {
       locationTimeline = this.timedProperties.center;
       this.configureVectorProperty('center', this, this.parentEnvironment, null, bounds, [], timeline => {
         try {
-          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
@@ -900,7 +904,7 @@ export class CubicNode extends Node {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>position</code>. ${e.message}`);
@@ -910,7 +914,7 @@ export class CubicNode extends Node {
     this.configureVectorProperty('control1', this, this.parentEnvironment, null, bounds, [], timeline => {
       if (timeline) {
         try {
-          timeline.assertList(2, ExpressionInteger, ExpressionReal);
+          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>control1</code>. ${e.message}`);
@@ -926,7 +930,7 @@ export class CubicNode extends Node {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>control2</code>. ${e.message}`);
@@ -1018,8 +1022,6 @@ class GapSegment {
   }
 
   mirror(line) {
-    console.log("line:", line);
-    console.log("this:", this);
     return new GapSegment(mirrorPointLine(this.to, line), mirrorPointLine(this.from, line));
   }
 
@@ -1189,7 +1191,7 @@ export class Mirror extends TimelinedEnvironment {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>mirror</code> with an illegal value for <code>pivot</code>. ${e.message}`);
@@ -1202,7 +1204,7 @@ export class Mirror extends TimelinedEnvironment {
       }
 
       try {
-        timeline.assertList(2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>mirror</code> with an illegal value for <code>axis</code>. ${e.message}`);

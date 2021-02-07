@@ -125,11 +125,14 @@ export class MessagedException extends Error {
 export class LocatedException extends MessagedException {
   constructor(where, message) {
     super(message);
+    if (!where) {
+      console.trace("There's no where information.");
+    }
     this.where = where;
   }
 
   get userMessage() {
-    console.log("this:", this);
+    console.trace(this);
     return `${this.where.debugPrefix()}${this.message}`;
   }
 }
