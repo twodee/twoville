@@ -16,6 +16,10 @@ import {
 } from './ast.js';
 
 import {
+  clamp,
+} from './math.js';
+
+import {
   Environment,
 } from './environment.js';
 
@@ -468,14 +472,22 @@ export class RenderEnvironment extends Environment {
       const isTouchPad = e.wheelDeltaY ? e.wheelDeltaY === -3 * e.deltaY : e.deltaMode === 0;
       const delta = e.deltaY * (isTouchPad ? 1 : 0.1);
 
-      let factor = 1 + delta / 100;
-      this.bounds.x = (this.bounds.x - center.x) * factor + center.x;
-      this.bounds.y = (this.bounds.y - center.y) * factor + center.y;
-      this.bounds.width *= factor;
-      this.bounds.height *= factor;
-      this.updateViewBox();
+      let factor = clamp(1 + delta / 150, 0.9, 1.1);
+      let zoomRatio = this.fitBounds.width / this.bounds.width;
 
-      this.rescale();
+      // factor > 1 means zooming out
+      // factor < 1 means zooming in
+
+      // TODO add settings to control the maximum and minimum zoom
+      if ((zoomRatio < 20 || factor > 1) && (zoomRatio > 0.05 || factor < 1)) {
+        this.bounds.x = (this.bounds.x - center.x) * factor + center.x;
+        this.bounds.y = (this.bounds.y - center.y) * factor + center.y;
+        this.bounds.width *= factor;
+        this.bounds.height *= factor;
+        this.updateViewBox();
+
+        this.rescale();
+      }
     }
   };
 
