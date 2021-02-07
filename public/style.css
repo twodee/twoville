@@ -501,7 +501,7 @@ html.grabbing {
   flex-grow: 1;
 }
 
-#open-delete-button {
+#manage-files-delete-button {
   background-color: red;
 }
 

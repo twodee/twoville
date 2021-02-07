@@ -522,16 +522,16 @@ function initialize() {
   const dialogOverlay = document.getElementById('dialog-overlay');
 
   // Handle open dialog.
-  const openButton = document.getElementById('open-button');
-  const openCancelButton = document.getElementById('open-cancel-button');
-  const openDeleteButton = document.getElementById('open-delete-button');
-  const openDialog = document.getElementById('open-dialog');
-  const openDialogFileList = document.getElementById('open-dialog-files-list');
-  const openProgramButton = document.getElementById('open-program-button');
+  const manageFilesButton = document.getElementById('manage-files-button');
+  const manageFilesCancelButton = document.getElementById('manage-files-cancel-button');
+  const manageFilesDeleteButton = document.getElementById('manage-files-delete-button');
+  const manageFilesDialog = document.getElementById('manage-files-dialog');
+  const manageFilesList = document.getElementById('manage-files-list');
+  const manageFilesOpenButton = document.getElementById('manage-files-open-button');
 
   function closeOpenDialog() {
     dialogOverlay.style.display = 'none';
-    openDialog.style.display = 'none';
+    manageFilesDialog.style.display = 'none';
     document.removeEventListener('keydown', openEscapeListener);
   }
 
@@ -634,7 +634,7 @@ function initialize() {
 
   // Open ---------------------------------------------------------------------
   function refreshOpen() {
-    clearChildren(openDialogFileList);
+    clearChildren(manageFilesList);
     const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
     const names = Object.keys(twos);
 
@@ -643,26 +643,25 @@ function initialize() {
       showAlertDialog('No Files', 'There are no files available to open.');
     } else {
       dialogOverlay.style.display = 'flex';
-      openDialog.style.display = 'flex';
-      clearChildren(openDialogFileList);
+      manageFilesDialog.style.display = 'flex';
+      clearChildren(manageFilesList);
 
       for (let name of Object.keys(twos)) {
         const option = document.createElement('option');
         option.value = name;
         option.appendChild(document.createTextNode(name));
-        openDialogFileList.appendChild(option);
+        manageFilesList.appendChild(option);
       }
 
       document.addEventListener('keydown', openEscapeListener);
     }
   }
 
-  openDialogFileList.addEventListener('dblclick', () => {
-    loadFile(openDialogFileList.value);
+  manageFilesList.addEventListener('dblclick', () => {
+    loadFile(manageFilesList.value);
   });
 
-  //asdfasdf asdfas
-  openButton.addEventListener('click', () => {
+  manageFilesButton.addEventListener('click', () => {
     if (isSaved) {
       refreshOpen();
     } else {
@@ -671,14 +670,14 @@ function initialize() {
       }, () => {});
     }
   });
-  openProgramButton.addEventListener('click', () => {
-    loadFile(openDialogFileList.value);
+  manageFilesOpenButton.addEventListener('click', () => {
+    loadFile(manageFilesList.value);
   });
-  openCancelButton.addEventListener('click', closeOpenDialog);
-  openDeleteButton.addEventListener('click', deleteProgram);
+  manageFilesCancelButton.addEventListener('click', closeOpenDialog);
+  manageFilesDeleteButton.addEventListener('click', deleteProgram);
 
   function deleteProgram() {
-    const name = openDialogFileList.value;
+    const name = manageFilesList.value;
     if (name && confirm(`Delete ${name}?`)) {
       const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
       delete twos[name];
