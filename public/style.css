@@ -295,6 +295,10 @@ html.grabbing {
   visibility: hidden;
 }
 
+.hidden {
+  display: none;
+}
+
 .tool-icon {
   position: absolute;
   left: 0;

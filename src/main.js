@@ -469,6 +469,9 @@ function initialize() {
   showCopyLinksToggle.addEventListener('click', () => {
     settings.showCopyLinks = savedSettings.showCopyLinks = showCopyLinksToggle.checked;
     saveSettings();
+    for (let copyContainer of document.querySelectorAll('.copy-container')) {
+      copyContainer.classList.toggle('hidden', !settings.showCopyLinks);
+    }
   });
 
   mousePrecisionSpinner.value = settings.mousePrecision;
@@ -1369,22 +1372,21 @@ function initializeDocs() {
         readOnly: true,
       });
 
-      if (settings.showCopyLinks) {
-        const copyAnchor = document.createElement('a');
-        copyAnchor.href = '#';
-        copyAnchor.innerText = 'copy';
-        copyAnchor.classList.add('copy-button');
-        copyAnchor.addEventListener('click', e => {
-          copyToClipboard(docEditor.getValue());
-          e.preventDefault();
-        });
+      const copyAnchor = document.createElement('a');
+      copyAnchor.href = '#';
+      copyAnchor.innerText = 'copy';
+      copyAnchor.classList.add('copy-button');
+      copyAnchor.addEventListener('click', e => {
+        copyToClipboard(docEditor.getValue());
+        e.preventDefault();
+      });
 
-        const copyDiv = document.createElement('div');
-        copyDiv.classList.add('copy-container');
-        copyDiv.appendChild(copyAnchor);
+      const copyContainer = document.createElement('div');
+      copyContainer.classList.add('copy-container');
+      copyContainer.appendChild(copyAnchor);
+      copyContainer.classList.toggle('hidden', !settings.showCopyLinks);
 
-        wrapper.appendChild(copyDiv);
-      }
+      wrapper.appendChild(copyContainer);
 
       docEditors.push(docEditor);
     }
