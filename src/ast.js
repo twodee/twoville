@@ -1806,6 +1806,19 @@ export class ExpressionJumpNode extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionGoNode extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, context) {
+    return new GoNode.create(this.instance, context.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionLineNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);

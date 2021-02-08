@@ -325,6 +325,73 @@ export class MoveNode extends Node {
 
 // --------------------------------------------------------------------------- 
 
+export class JumpNode extends Node {
+  static type = 'jump';
+  static article = 'a';
+  static timedIds = ['distance'];
+
+  static create(parentEnvironment, where) {
+    const node = new JumpNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const node = new JumpNode();
+    node.embody(parentEnvironment, pod);
+    return node;
+  }
+
+  get isDom() {
+    return true;
+  }
+
+  configureState(bounds) {
+    this.configureScalarProperty('distance', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>jump</code> node whose <code>distance</code> was not set.');
+      }
+
+      try {
+        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found a <code>jump</code> node with an illegal value for <code>distance</code>. ${e.message}`);
+      }
+    });
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.previousTurtle.position[0] + this.state.distance * Math.cos(this.previousTurtle.heading * Math.PI / 180);
+    this.turtle.position[1] = this.previousTurtle.position[1] + this.state.distance * Math.sin(this.previousTurtle.heading * Math.PI / 180);
+    this.turtle.heading = this.previousTurtle.heading;
+    this.pathCommand = `M ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+
+    this.distanceMark = new DistanceMark(this.parentEnvironment, this.previousTurtle, t => {
+      return this.expressionAt('distance', this.parentEnvironment.root.state.t);
+    }, distance => {
+      this.state.distance = distance;
+    });
+
+    this.marker.addMarks([this.distanceMark], [], []);
+  }
+
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
+    const to = [
+      this.previousTurtle.position[0] + this.state.distance * Math.cos(this.turtle.heading * Math.PI / 180),
+      this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
+    ];
+    this.distanceMark.updateState(to, -this.turtle.heading, this.state.matrix);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class TurnNode extends Node {
   static type = 'turn';
   static article = 'a';
@@ -391,19 +458,19 @@ export class TurnNode extends Node {
 
 // --------------------------------------------------------------------------- 
 
-export class JumpNode extends Node {
-  static type = 'jump';
+export class GoNode extends Node {
+  static type = 'go';
   static article = 'a';
   static timedIds = ['position'];
 
   static create(parentEnvironment, where) {
-    const node = new JumpNode();
+    const node = new GoNode();
     node.initialize(parentEnvironment, where);
     return node;
   }
 
   static reify(parentEnvironment, pod) {
-    const node = new JumpNode();
+    const node = new GoNode();
     node.embody(parentEnvironment, pod);
     return node;
   }
@@ -419,14 +486,14 @@ export class JumpNode extends Node {
   configureState(bounds) {
     this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
       if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>jump</code> node whose <code>position</code> was not set.');
+        throw new LocatedException(this.where, 'I found a <code>go</code> node whose <code>position</code> was not set.');
       }
 
       try {
         timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>jump</code> node with an illegal value for <code>position</code>. ${e.message}`);
+        throw new LocatedException(e.where, `I found a <code>go</code> node with an illegal value for <code>position</code>. ${e.message}`);
       }
     });
   }

@@ -41,6 +41,7 @@ import {
 } from './matrix.js';
 
 import {
+  GoNode,
   JumpNode,
   Mirror,
   TurtleNode,
@@ -51,6 +52,7 @@ import {
   ExpressionBoolean,
   ExpressionInteger,
   ExpressionJumpNode,
+  ExpressionGoNode,
   ExpressionLineNode,
   ExpressionMoveNode,
   ExpressionArcNode,
@@ -1406,6 +1408,7 @@ export class Path extends NodeShape {
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
     this.bindFunction('jump', new FunctionDefinition('jump', [], new ExpressionJumpNode(this)));
+    this.bindFunction('go', new FunctionDefinition('go', [], new ExpressionGoNode(this)));
     this.bindFunction('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
     this.bindFunction('quadratic', new FunctionDefinition('line', [], new ExpressionQuadraticNode(this)));
     this.bindFunction('cubic', new FunctionDefinition('line', [], new ExpressionCubicNode(this)));
@@ -1427,8 +1430,8 @@ export class Path extends NodeShape {
   }
 
   addNode(node) {
-    if (this.nodes.length === 0 && !(node instanceof JumpNode || node instanceof TurtleNode)) {
-      throw new LocatedException(node.where, `I saw a path whose first step is ${node.type}. A path must begin with jump or turtle.`);
+    if (this.nodes.length === 0 && !(node instanceof GoNode || node instanceof TurtleNode)) {
+      throw new LocatedException(node.where, `I saw a path whose first step is ${node.type}. A path must begin with <code>go</code> or <code>turtle</code>.`);
     } else {
       this.nodes.push(node);
     }
