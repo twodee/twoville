@@ -1497,7 +1497,11 @@ export class Path extends NodeShape {
 
   updateInteractionState(bounds) {
     super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.domNodes.map(node => node.pathCommand).join(' '));
+    const commands = this.domNodes.map(node => node.pathCommand);
+    if (this.untimedProperties.hasOwnProperty('closed') && this.untimedProperties.closed.value) {
+      commands.push('z');
+    }
+    this.outlineMark.updateState(commands.join(' '));
   }
 }
 

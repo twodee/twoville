@@ -35,6 +35,7 @@ import {
 import {
   ArcNode,
   CubicNode,
+  GoNode,
   JumpNode,
   LineNode,
   Mirror,
@@ -114,6 +115,8 @@ export class RenderEnvironment extends Environment {
       return MoveNode.reify(env, pod);
     } else if (pod.type === 'turn') {
       return TurnNode.reify(env, pod);
+    } else if (pod.type === 'go') {
+      return GoNode.reify(env, pod);
     } else if (pod.type === 'jump') {
       return JumpNode.reify(env, pod);
     } else if (pod.type === 'line') {

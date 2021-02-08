@@ -42,6 +42,7 @@ import {
   CubicNode,
   LineNode,
   JumpNode,
+  GoNode,
   Mirror,
   MoveNode,
   QuadraticNode,
