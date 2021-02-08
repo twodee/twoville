@@ -402,9 +402,12 @@ html.grabbing {
   white-space: pre-wrap;
 }
 
-.copy-button {
-  display: block;
+.copy-container {
   text-align: right;
+}
+
+.copy-button {
+  display: inline-block;
   font-size: 0.8em;
   text-decoration: none;
 }

@@ -1379,7 +1379,11 @@ function initializeDocs() {
           e.preventDefault();
         });
 
-        wrapper.appendChild(copyAnchor);
+        const copyDiv = document.createElement('div');
+        copyDiv.classList.add('copy-container');
+        copyDiv.appendChild(copyAnchor);
+
+        wrapper.appendChild(copyDiv);
       }
 
       docEditors.push(docEditor);
