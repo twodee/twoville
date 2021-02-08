@@ -4,10 +4,10 @@
 
 <p>You can create mixed shapes using the <code>path</code> command. A path is built up out of <i>nodes</i>. Some nodes plot straight line segments, and others are curved. The many possible node types of <code>path</code> make it the most complex command in all of Twoville. We'll visit just three of them in this lesson.</p>
 
-<p>To start tracing out a path, you issue a <code>jump</code> node and set its <code>position</code> property, like this:</p>
+<p>To start tracing out a path, you issue a <code>go</code> node and set its <code>position</code> property, like this:</p>
 
 <div class="docs-source">with path()
-  jump().position = :zero2</div>
+  go().position = :zero2</div>
 
 <p>If you run this code, you'll see errors. Let's add some color and stroke:</p>
 
@@ -15,7 +15,7 @@
   color = :soggy
   stroke.color = :black
   stroke.size = 2
-  jump().position = :zero2</div>
+  go().position = :zero2</div>
 
 <p>Run this code, and you'll see no errors and no nothing. We need at least two nodes in a path before we see any stroke. We need at least three before we see any of its fill color. To create a straight edge, issue a <code>line</code> node:</p>
 
@@ -23,7 +23,7 @@
   color = :soggy
   stroke.color = :black
   stroke.size = 2
-  jump().position = :zero2
+  go().position = :zero2
   line().position = [100, 0]</div>
 
 <p>Do you see a line? I hope so. Let's make another line segment:</p>
@@ -32,7 +32,7 @@
   color = :soggy
   stroke.color = :black
   stroke.size = 2
-  jump().position = :zero2
+  go().position = :zero2
   line().position = [100, 0]
   line().position = [100, 50]</div>
 
@@ -42,7 +42,7 @@
   color = :soggy
   stroke.color = :black
   stroke.size = 2
-  jump().position = :zero2
+  go().position = :zero2
   line().position = [100, 0]
   line().position = [100, 50]
   with arc()
@@ -55,7 +55,7 @@
   color = :soggy
   stroke.color = :black
   stroke.size = 2
-  jump().position = :zero2
+  go().position = :zero2
   line().position = [100, 0]
   line().position = [100, 50]
   with arc()
@@ -71,7 +71,7 @@
   stroke.color = :black
   stroke.size = 1
   closed = true
-  jump().position = :zero2
+  go().position = :zero2
   line().position = [100, 0]
   line().position = [100, 50]
   with arc()

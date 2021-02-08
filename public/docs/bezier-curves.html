@@ -14,12 +14,12 @@
   stroke.color = :pink
   stroke.size = 2
   opacity = 0
-  jump().position = [20, 0]
+  go().position = [20, 0]
   with quadratic()
     position = [80, 0]
     control = [50, 110]</div>
 
-<p>We issue a <code>jump</code> node to establish the starting endpoint at [20, 0], and then we issue a <code>quadratic</code> curve that ends at [80, 0]. Instead of a straight line connecting them, the control point [50, 110] drags the curve upward.</p>
+<p>We issue a <code>go</code> node to establish the starting endpoint at [20, 0], and then we issue a <code>quadratic</code> curve that ends at [80, 0]. Instead of a straight line connecting them, the control point [50, 110] drags the curve upward.</p>
 
 <p>Here's a challenge for you. Add a <code>line</code> and another <code>quadratic</code> to make this arch:</p>
 
