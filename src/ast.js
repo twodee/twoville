@@ -43,6 +43,7 @@ import {
   LineNode,
   JumpNode,
   CircleNode,
+  RectangleNode,
   GoNode,
   Mirror,
   MoveNode,
@@ -1842,6 +1843,19 @@ export class ExpressionCircleNode extends ExpressionFunction {
 
   evaluate(env, fromTime, toTime, context) {
     return new CircleNode.create(this.instance, context.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionRectangleNode extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, context) {
+    return new RectangleNode.create(this.instance, context.callExpression.where);
   }
 }
 

@@ -28,8 +28,10 @@ import {
   Marker,
   PathMark,
   RayMark,
+  RectangleMark,
   RotationMark,
   VectorPanMark,
+  VerticalPanMark,
   WedgeDegreesMark,
   WedgeMark,
 } from './mark.js';
@@ -444,11 +446,11 @@ export class CircleNode extends Node {
     const centerTimeline = this.timedProperties.center;
     const radiusTimeline = this.timedProperties.radius;
 
-    if (centerTimeline.isAnimated || radiusTimeline?.isAnimated) {
+    if (centerTimeline.isAnimated || radiusTimeline.isAnimated) {
       this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
     }
 
-    if (centerTimeline.hasDefault && (!radiusTimeline || radiusTimeline.hasDefault)) {
+    if (centerTimeline.hasDefault && radiusTimeline.hasDefault) {
       this.updateTurtle(bounds);
     }
   }
@@ -462,7 +464,6 @@ export class CircleNode extends Node {
 
   configureMarks() {
     super.configureMarks();
-    this.outlineMark = new CircleMark();
 
     this.centerMark = new VectorPanMark(this.parentEnvironment, null, t => {
       return this.expressionAt('center', this.parentEnvironment.root.state.t);
@@ -477,19 +478,165 @@ export class CircleNode extends Node {
       this.state.radius = newValue;
     });
 
-    this.marker.addMarks([this.centerMark, this.radiusMark], [this.outlineMark]);
+    this.marker.addMarks([this.centerMark, this.radiusMark], []);
   }
 
   updateInteractionState(matrix) {
     super.updateInteractionState(matrix);
-    // const to = [
-      // this.previousTurtle.position[0] + this.state.distance * Math.cos(this.turtle.heading * Math.PI / 180),
-      // this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
-    // ];
-    // this.distanceMark.updateState(to, -this.turtle.heading, this.state.matrix);
-    this.outlineMark.updateState(this.state.center, this.state.radius);
     this.centerMark.updateState(this.state.center, this.state.matrix);
     this.radiusMark.updateState([this.state.center[0] + this.state.radius, this.state.center[1]], this.state.matrix);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class RectangleNode extends Node {
+  static type = 'rectangle';
+  static article = 'a';
+  static timedIds = ['corner', 'center', 'size'];
+
+  static create(parentEnvironment, where) {
+    const node = new RectangleNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const node = new RectangleNode();
+    node.embody(parentEnvironment, pod);
+    return node;
+  }
+
+  get isDom() {
+    return true;
+  }
+
+  configureState(bounds) {
+    this.configureVectorProperty('size', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>rectangle</code> node whose <code>size</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
+      }
+    });
+
+    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
+      throw new LocatedException(this.where, 'I found a <code>rectangle</code> node whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
+    } else if (this.timedProperties.hasOwnProperty('corner')) {
+      this.configureVectorProperty('corner', this, this.parentEnvironment, null, bounds, [], timeline => {
+        try {
+          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
+        }
+      });
+    } else if (this.timedProperties.hasOwnProperty('center')) {
+      this.configureVectorProperty('center', this, this.parentEnvironment, null, bounds, [], timeline => {
+        try {
+          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
+        }
+      });
+    } else {
+      throw new LocatedException(this.where, "I found a <code>rectangle</code> node whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    }
+
+    const sizeTimeline = this.timedProperties.size;
+    const positionTimeline = this.timedProperties.corner ?? this.timedProperties.center;
+
+    if (sizeTimeline.isAnimated || positionTimeline.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
+    }
+
+    if (sizeTimeline.hasDefault && positionTimeline.hasDefault) {
+      this.updateTurtle(bounds);
+    }
+  }
+
+  updateTurtle(bounds) {
+    let corner;
+    if (this.state.center) {
+      this.turtle.position[0] = this.state.center[0];
+      this.turtle.position[1] = this.state.center[1];
+      corner = [
+        this.state.center[0] - this.state.size[0] * 0.5,
+        this.state.center[1] - this.state.size[1] * 0.5
+      ];
+    } else {
+      this.turtle.position[0] = this.state.corner[0];
+      this.turtle.position[1] = this.state.corner[1];
+      corner = this.state.corner;
+    }
+    this.turtle.heading = this.previousTurtle?.heading ?? 0;
+    this.pathCommand = `
+M ${corner[0]},${bounds.span - corner[1]}
+L ${corner[0] + this.state.size[0]},${bounds.span - corner[1]}
+L ${corner[0] + this.state.size[0]},${bounds.span - (corner[1] + this.state.size[1])}
+L ${corner[0]},${bounds.span - (corner[1] + this.state.size[1])}
+z
+    `;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+
+    let multiplier;
+    let getPositionExpression;
+    let updatePositionState;
+
+    if (this.timedProperties.hasOwnProperty('center')) {
+      getPositionExpression = t => this.expressionAt('center', this.root.state.t);
+      updatePositionState = ([x, y]) => {
+        this.state.center[0] = x;
+        this.state.center[1] = y;
+      };
+      multiplier = 2;
+    } else {
+      getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
+      updatePositionState = ([x, y]) => {
+        this.state.corner[0] = x;
+        this.state.corner[1] = y;
+      };
+      multiplier = 1;
+    }
+
+    this.positionMark = new VectorPanMark(this.parentEnvironment, null, getPositionExpression, updatePositionState);
+
+    this.widthMark = new HorizontalPanMark(this.parentEnvironment, this, multiplier, t => {
+      return this.expressionAt('size', this.root.state.t).get(0);
+    }, newValue => {
+      this.state.size[0] = newValue;
+    });
+
+    this.heightMark = new VerticalPanMark(this.parentEnvironment, this, multiplier, t => {
+      return this.expressionAt('size', this.root.state.t).get(1);
+    }, newValue => {
+      this.state.size[1] = newValue;
+    });
+
+    this.marker.addMarks([this.positionMark, this.widthMark, this.heightMark], []);
+  }
+
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
+    if (this.state.center) {
+      const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
+      this.positionMark.updateState(this.state.center, this.state.matrix);
+      this.widthMark.updateState([this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], this.state.matrix);
+      this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], this.state.matrix);
+    } else {
+      this.positionMark.updateState(this.state.corner, this.state.matrix);
+      this.widthMark.updateState([this.state.corner[0] + this.state.size[0], this.state.corner[1]], this.state.matrix);
+      this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
+    }
   }
 }
 

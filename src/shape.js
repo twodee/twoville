@@ -45,23 +45,25 @@ import {
   CircleNode,
   JumpNode,
   Mirror,
+  RectangleNode,
   TurtleNode,
   VertexNode,
 } from './node.js';
 
 import {
+  ExpressionArcNode,
   ExpressionBoolean,
-  ExpressionInteger,
-  ExpressionJumpNode,
   ExpressionCircleNode,
+  ExpressionCubicNode,
   ExpressionGoNode,
   ExpressionLineNode,
   ExpressionMoveNode,
-  ExpressionArcNode,
-  ExpressionCubicNode,
+  ExpressionInteger,
+  ExpressionJumpNode,
   ExpressionMirror,
   ExpressionQuadraticNode,
   ExpressionReal,
+  ExpressionRectangleNode,
   ExpressionString,
   ExpressionTranslate,
   ExpressionRotate,
@@ -1411,6 +1413,7 @@ export class Path extends NodeShape {
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
     this.bindFunction('jump', new FunctionDefinition('jump', [], new ExpressionJumpNode(this)));
     this.bindFunction('circle', new FunctionDefinition('circle', [], new ExpressionCircleNode(this)));
+    this.bindFunction('rectangle', new FunctionDefinition('rectangle', [], new ExpressionRectangleNode(this)));
     this.bindFunction('go', new FunctionDefinition('go', [], new ExpressionGoNode(this)));
     this.bindFunction('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
     this.bindFunction('quadratic', new FunctionDefinition('line', [], new ExpressionQuadraticNode(this)));
@@ -1433,7 +1436,7 @@ export class Path extends NodeShape {
   }
 
   addNode(node) {
-    if (this.nodes.length === 0 && !(node instanceof GoNode || node instanceof TurtleNode || node instanceof CircleNode)) {
+    if (this.nodes.length === 0 && !(node instanceof GoNode || node instanceof TurtleNode || node instanceof CircleNode || node instanceof RectangleNode)) {
       throw new LocatedException(node.where, `I saw a path whose first step is ${node.type}. A path must begin with <code>go</code>, <code>turtle</code>, or <code>circle</code>.`);
     } else {
       this.nodes.push(node);

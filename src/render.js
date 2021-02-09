@@ -42,6 +42,7 @@ import {
   Mirror,
   MoveNode,
   QuadraticNode,
+  RectangleNode,
   VertexNode,
   TurtleNode,
   TurnNode,
@@ -123,6 +124,8 @@ export class RenderEnvironment extends Environment {
       return JumpNode.reify(env, pod);
     } else if (pod.type === 'circle') {
       return CircleNode.reify(env, pod);
+    } else if (pod.type === 'rectangle') {
+      return RectangleNode.reify(env, pod);
     } else if (pod.type === 'line') {
       return LineNode.reify(env, pod);
     } else if (pod.type === 'quadratic') {
