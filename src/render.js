@@ -35,6 +35,7 @@ import {
 import {
   ArcNode,
   CubicNode,
+  CircleNode,
   GoNode,
   JumpNode,
   LineNode,
@@ -107,6 +108,7 @@ export class RenderEnvironment extends Environment {
       return Mirror.reify(env, pod);
     } else if (pod.type === 'timeline') {
       return Timeline.reify(env, pod);
+
     } else if (pod.type === 'vertex') {
       return VertexNode.reify(env, pod);
     } else if (pod.type === 'turtle') {
@@ -119,6 +121,8 @@ export class RenderEnvironment extends Environment {
       return GoNode.reify(env, pod);
     } else if (pod.type === 'jump') {
       return JumpNode.reify(env, pod);
+    } else if (pod.type === 'circle') {
+      return CircleNode.reify(env, pod);
     } else if (pod.type === 'line') {
       return LineNode.reify(env, pod);
     } else if (pod.type === 'quadratic') {
@@ -127,6 +131,7 @@ export class RenderEnvironment extends Environment {
       return CubicNode.reify(env, pod);
     } else if (pod.type === 'arc') {
       return ArcNode.reify(env, pod);
+
     } else if (pod.type === 'translate') {
       return Translate.reify(env, pod);
     } else if (pod.type === 'scale') {

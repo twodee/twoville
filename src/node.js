@@ -23,6 +23,7 @@ import {
   BumpPositionMark,
   CircleMark,
   DistanceMark,
+  HorizontalPanMark,
   LineMark,
   Marker,
   PathMark,
@@ -387,6 +388,108 @@ export class JumpNode extends Node {
       this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
     ];
     this.distanceMark.updateState(to, -this.turtle.heading, this.state.matrix);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class CircleNode extends Node {
+  static type = 'circle';
+  static article = 'a';
+  static timedIds = ['center', 'radius'];
+
+  static create(parentEnvironment, where) {
+    const node = new CircleNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const node = new CircleNode();
+    node.embody(parentEnvironment, pod);
+    return node;
+  }
+
+  get isDom() {
+    return true;
+  }
+
+  configureState(bounds) {
+    this.configureScalarProperty('radius', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>circle</code> node whose <code>radius</code> was not set.');
+      }
+
+      try {
+        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>radius</code>. ${e.message}`);
+      }
+    });
+
+    this.configureVectorProperty('center', this, this.parentEnvironment, null, bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a <code>circle</code> node whose <code>center</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
+      }
+    });
+
+    const centerTimeline = this.timedProperties.center;
+    const radiusTimeline = this.timedProperties.radius;
+
+    if (centerTimeline.isAnimated || radiusTimeline?.isAnimated) {
+      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
+    }
+
+    if (centerTimeline.hasDefault && (!radiusTimeline || radiusTimeline.hasDefault)) {
+      this.updateTurtle(bounds);
+    }
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.state.center[0];
+    this.turtle.position[1] = this.state.center[1];
+    this.turtle.heading = this.previousTurtle?.heading ?? 0;
+    this.pathCommand = `M ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] - this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]}`;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new CircleMark();
+
+    this.centerMark = new VectorPanMark(this.parentEnvironment, null, t => {
+      return this.expressionAt('center', this.parentEnvironment.root.state.t);
+    }, ([x, y]) => {
+      this.state.center[0] = x;
+      this.state.center[1] = y;
+    });
+
+    this.radiusMark = new HorizontalPanMark(this.parentEnvironment, null, 1, t => {
+      return this.expressionAt('radius', this.parentEnvironment.root.state.t);
+    }, newValue => {
+      this.state.radius = newValue;
+    });
+
+    this.marker.addMarks([this.centerMark, this.radiusMark], [this.outlineMark]);
+  }
+
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
+    // const to = [
+      // this.previousTurtle.position[0] + this.state.distance * Math.cos(this.turtle.heading * Math.PI / 180),
+      // this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
+    // ];
+    // this.distanceMark.updateState(to, -this.turtle.heading, this.state.matrix);
+    this.outlineMark.updateState(this.state.center, this.state.radius);
+    this.centerMark.updateState(this.state.center, this.state.matrix);
+    this.radiusMark.updateState([this.state.center[0] + this.state.radius, this.state.center[1]], this.state.matrix);
   }
 }
 

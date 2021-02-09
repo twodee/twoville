@@ -42,6 +42,7 @@ import {
 
 import {
   GoNode,
+  CircleNode,
   JumpNode,
   Mirror,
   TurtleNode,
@@ -52,6 +53,7 @@ import {
   ExpressionBoolean,
   ExpressionInteger,
   ExpressionJumpNode,
+  ExpressionCircleNode,
   ExpressionGoNode,
   ExpressionLineNode,
   ExpressionMoveNode,
@@ -1408,6 +1410,7 @@ export class Path extends NodeShape {
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
     this.bindFunction('jump', new FunctionDefinition('jump', [], new ExpressionJumpNode(this)));
+    this.bindFunction('circle', new FunctionDefinition('circle', [], new ExpressionCircleNode(this)));
     this.bindFunction('go', new FunctionDefinition('go', [], new ExpressionGoNode(this)));
     this.bindFunction('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
     this.bindFunction('quadratic', new FunctionDefinition('line', [], new ExpressionQuadraticNode(this)));
@@ -1430,8 +1433,8 @@ export class Path extends NodeShape {
   }
 
   addNode(node) {
-    if (this.nodes.length === 0 && !(node instanceof GoNode || node instanceof TurtleNode)) {
-      throw new LocatedException(node.where, `I saw a path whose first step is ${node.type}. A path must begin with <code>go</code> or <code>turtle</code>.`);
+    if (this.nodes.length === 0 && !(node instanceof GoNode || node instanceof TurtleNode || node instanceof CircleNode)) {
+      throw new LocatedException(node.where, `I saw a path whose first step is ${node.type}. A path must begin with <code>go</code>, <code>turtle</code>, or <code>circle</code>.`);
     } else {
       this.nodes.push(node);
     }
@@ -1440,6 +1443,7 @@ export class Path extends NodeShape {
   configureOtherProperties(bounds) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'fill-rule', 'evenodd');
     this.domNodes = this.nodes.filter(node => node.isDom);
     this.configureFill(bounds);
   }
