@@ -72,7 +72,7 @@ export function configureStroke(stateHost, domHost, bounds, isRequired) {
         throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
       }
     } else if (isRequired) {
-      throw new LocatedException(stateHost.where, `I found a ${domHost.article} <code>${domHost.type}</code> whose <code>size</code> is not set.`);
+      throw new LocatedException(stateHost.where, `I found ${domHost.article} <code>${domHost.type}</code> whose <code>size</code> is not set.`);
     } else {
       return false;
     }

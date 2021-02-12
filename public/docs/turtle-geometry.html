@@ -1,0 +1,17 @@
+<h2>Turtle Geometry</h2>
+
+<p>There are at at least two ways of looking at space in Twoville. In the first way, you are situated outside of the 2D scene, and you look down upon it as you'd look down upon a map. You treat the scene as a grid of intersecting streets. Objects on the map are located according to their nearest intersection. You might say, "That maroon circle is at the corner of Main and Hennepin."</p>
+
+<p>Except these streets aren't named&mdash;they're numbered. There are the vertical x-streets, which are numbered according to their distance from the y-axis, and there are the horizontal y-streets, which are numbered according to their distance from the x-axis. We really say, "That maroon circle is centered at (5, 7)," which means its x-street is 5 and its y-street is 7. This way of looking at space in terms of x- and y-coordinates is how we've been operating thus far.</p>
+
+<p>The second way of looking at space is to imagine that you yourself are in the map, perhaps on a bicycle. When you are in the map, you think less about street addresses and more about going forward in your current direction or turning. This way of looking at space is called <em>turtle geometry</em>.</p>
+
+<p>These shapes can be made with turtle geometry: <code>line</code>, <code>polyline</code>, <code>polygon</code>, <code>ungon</code>, and <code>path</code>.</p>
+
+<div class="docs-source">with polygon()
+  color = :indigo
+  with turtle()
+    position = [100, 0]
+    heading = 72
+  move().distance = 5
+  turn().degrees = 72</div>

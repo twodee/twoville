@@ -1179,9 +1179,9 @@ export class Polyline extends VertexShape {
 
   updateContentDom(bounds) {
     super.updateContentDom(bounds);
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.position[0], acc[1] + node.state.position[1]], [0, 0]);
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
-    const coordinates = this.domNodes.map(node => `${node.state.position[0]},${bounds.span - node.state.position[1]}`).join(' ');
+    const coordinates = this.domNodes.map(node => `${node.turtle.position[0]},${bounds.span - node.turtle.position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 
@@ -1193,7 +1193,7 @@ export class Polyline extends VertexShape {
 
   updateInteractionState(bounds) {
     super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.domNodes.map(node => node.state.position));
+    this.outlineMark.updateState(this.domNodes.map(node => node.turtle.position));
   }
 }
 
