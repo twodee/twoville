@@ -1,0 +1,42 @@
+<h2>Repeat Loops</h2>
+
+<p>Check out this program that uses turtle geometry to trace out a hexagon and be prepared to report on what you notice:</p>
+
+<div class="docs-source">with polygon()
+  color = :indigo
+  with turtle()
+    position = [0, 50]
+    heading = -60
+  move().distance = 50
+  turn().degrees = 60
+  move().distance = 50
+  turn().degrees = 60
+  move().distance = 50
+  turn().degrees = 60
+  move().distance = 50
+  turn().degrees = 60
+  move().distance = 50
+  turn().degrees = 60</div>
+
+<p>What do you notice? There are several things to notice. It starts the turtle off on the middle-left of the viewport, aiming it south-southeast. It then moves and turns, moves and turns, moves and turns, and so on. We sure had to write a lot of code to do the same thing over and over again.</p>
+
+<p>We can use a <code>repeat</code> loop to avoid this repetition. A <code>repeat</code> loop needs to know two things: what code to run and how many times to run it. In this case, the code to repeat is a single move-turn combination. Though the shape is a hexagon, we repeat the code just five times, as the initial vertex is visited by the <code>turtle</code> node. Our code simplifies considerably:</p>
+
+<div class="docs-source">with polygon()
+  color = :indigo
+  with turtle()
+    position = [0, 50]
+    heading = -60
+  repeat 5
+    move().distance = 50
+    turn().degrees = 60</div>
+
+<p>Here's a challenge for you. Trace out this pattern with turtle geometry in a <code>polyline</code>:</p>
+
+<img src="/docs/images/boxy-x-pattern.svg" class="docs-image">
+
+<p>Notice that not all the lengths are the same. Once you have this pattern, switch to an <code>ungon</code> and repeat it to make this boxy X-shape:</p>
+
+<img src="/docs/images/boxy-x.svg" class="docs-image">
+
+<p>Once you have a solution, <a href="#boxy-x-solution" class="docs-link">compare it to ours</a>.</p>

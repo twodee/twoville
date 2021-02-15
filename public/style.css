@@ -133,6 +133,8 @@ var {
 
 .panel-section > h3 {
   margin: 0 0 5px 0;
+  color: burlywood;
+  font-size: 1.4em;
 }
 
 #svg {
@@ -399,6 +401,7 @@ html.grabbing {
 
 #docs-content-panel > h2 {
   margin-top: 0;
+  color: burlywood;
 }
 
 .docs-source {
