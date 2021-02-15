@@ -4,14 +4,59 @@
 
 <p>Except these streets aren't named&mdash;they're numbered. There are the vertical x-streets, which are numbered according to their distance from the y-axis, and there are the horizontal y-streets, which are numbered according to their distance from the x-axis. We really say, "That maroon circle is centered at (5, 7)," which means its x-street is 5 and its y-street is 7. This way of looking at space in terms of x- and y-coordinates is how we've been operating thus far.</p>
 
-<p>The second way of looking at space is to imagine that you yourself are in the map, perhaps on a bicycle. When you are in the map, you think less about street addresses and more about going forward in your current direction or turning. This way of looking at space is called <em>turtle geometry</em>.</p>
+<p>The second way of looking at space is to imagine that you yourself are in the map, perhaps on a bicycle. When you are in the map, you think less about street addresses and more about going forward in your current direction or turning. This way of looking at space is called <em>turtle geometry</em>. Certain shapes that would be quite difficult to express in "street space" can be traced out quite naturally in "turtle space."</p>
 
-<p>These shapes can be made with turtle geometry: <code>line</code>, <code>polyline</code>, <code>polygon</code>, <code>ungon</code>, and <code>path</code>.</p>
+<p>Let's introduce the turtle geometry commands by tracing out an elbow. We start our line with a <code>turtle</code> node, whose <code>position</code> property situates the turtle in street space and whose <code>heading</code> property is the number of degrees that the turtle has turned. A heading of 0 degrees means the turtle is looking along the positive x-axis. A heading of 90 degrees means the turtle is looking up. Here's how our elbow begins:</p>
 
-<div class="docs-source">with polygon()
-  color = :indigo
+<div class="docs-source">with polyline()
+  color = :black
+  size = 3
   with turtle()
-    position = [100, 0]
-    heading = 72
-  move().distance = 5
-  turn().degrees = 72</div>
+    position = [25, 25]
+    heading = 0</div>
+
+<p>We inch the turtle forward using a <code>move</code> node, whose <code>distance</code> property determines how far the turtle moves:</p>
+
+<div class="docs-source">with polyline()
+  color = :black
+  size = 3
+  with turtle()
+    position = [25, 25]
+    heading = 0
+  move().distance = 50</div>
+
+<p>Next we turn the turtle so it's facing upward with a <code>turn</code> node:</p>
+
+<div class="docs-source">with polyline()
+  color = :black
+  size = 3
+  with turtle()
+    position = [25, 25]
+    heading = 0
+  move().distance = 50
+  turn().degrees = 90</div>
+
+<p>When we move a second time, we now travel upward:</p>
+
+<div class="docs-source">with polyline()
+  color = :black
+  size = 3
+  with turtle()
+    position = [25, 25]
+    heading = 0
+  move().distance = 50
+  turn().degrees = 90
+	move().distance = 50</div>
+
+<p>That's our elbow defined with turtle geometry.</p>
+
+<p>Turtle geometry nodes can be used to trace out any of these shapes: <code>line</code>, <code>polyline</code>, <code>polygon</code>, <code>ungon</code>, and <code>path</code>.</p>
+
+<p>Here's a challenge for you. Trace out an equilateral triangle using a <code>polygon</code> shape and turtle geometry. Recall that an equilateral triangle is a triangle whose sides are all the same length and whose angles are all the same size. Then switch it to an <code>ungon</code> and round off its edges to make it look like this triangular hashbrown:</p>
+
+<figure>
+  <img src="/docs/images/hashbrown.png" class="docs-image docs-image-75">
+  <figcaption>Image courtesy of Dutch Chef.</figcaption>
+</figure>
+
+<p>Once you have a solution, <a href="#ungon-triangle-solution" class="docs-link">compare it to ours</a>.</p>

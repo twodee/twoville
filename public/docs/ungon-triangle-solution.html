@@ -1,0 +1,25 @@
+<h2>Ungon Triangle Solution</h2>
+
+<p>Does your triangle look something like this? Probably you picked a different color.</p>
+
+<img src="/docs/images/ungon-triangle.svg" class="docs-image">
+
+<p>Here is one way to create the rounded triangle:</p>
+
+<div class="docs-source">with viewport
+  center = [50, 45]
+    size = [45, ~]
+
+with ungon()
+  color = :crimson
+  rounding = 0
+  with turtle()
+    position = [25, 25]
+    heading = 0
+  move().distance = 50
+  turn().degrees = 120
+  move().distance = 50
+  turn().degrees = 120
+  move().distance = 50
+  turn().degrees = 120
+  move().distance = 50</div>

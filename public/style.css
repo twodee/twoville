@@ -437,6 +437,10 @@ html.grabbing {
   padding: 10px;
 }
 
+.docs-image-75 {
+  width: 75%;
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: 150px auto;
@@ -561,4 +565,10 @@ input[type="color"] {
 
 #import-library-picker {
   display: none;
+}
+
+figcaption {
+  color: darkgray;
+  font-size: 80%;
+  text-align: center;
 }
