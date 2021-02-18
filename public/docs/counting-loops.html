@@ -1,0 +1,46 @@
+<h2>Counting Loops</h2>
+
+<p>When you run a race on a track, you are in a loop. If your loop is a <code>repeat</code> loop, you run the exact same way on every lap. In an actual race, however, your behavior tends to change. On the last lap, you probably speed up. To know when to speed up, you keep track of what lap you are on.</p>
+
+<p>When looping in Twoville, you can track what lap you are on with a <code>for</code> loop. A <code>for</code> loop names the number of the lap or <em>iteration</em>, and you can use that name in the code just like you use any number. Consider this loop which draws no shapes but prints out the number of the iteration:</p>
+
+<div class="docs-source">for i to 5
+  print(i)</div>
+
+<p>This code names the number <code>i</code>. You can pick any name you want, but <code>i</code> is common. It is short for <em>index</em>, an idea that we'll discuss later on when we meet lists. When you run this code, what output do you see in the <em>console</em>, the panel on the bottom-left below the code editor?</p>
+
+<p>The counting starts at 0, not 1, and it stops before reaching 5. If we wanted to draw a snowman using a <code>for</code> loop, what number would we use instead of 5?</p>
+
+<p>Let's write a loop to draw the three circles of the snowman's body. Here's how we might start:</p>
+
+<div class="docs-source">for i to 3
+  with circle()
+    radius = 20
+    center = [50, 25]
+    color = :white
+    stroke.color = :black
+    stroke.size = 2</div>
+
+<p>When you run this, it's not easy to see that there are three circles. They all have the same position and radius and are drawn on top of each other. We can use <code>i</code> to arrange them in a stack. We express their y-coordinate with some math that uses <code>i</code>:</p>
+
+<div class="docs-source">for i to 3
+  with circle()
+    radius = 20
+    center = [50, 25 + i * 25]
+    color = :white
+    stroke.color = :black
+    stroke.size = 2</div>
+
+<p>For the first circle, <code>i</code> is 0, and its y-position is 25 + 0 * 25 = 25. For the second circle, its y-position is 25 + 1 * 25 = 50. What's the y-position for the third circle?</p>
+
+<p>We also want the circles to shrink in size as we go up the snowman. That means we should make the radius get smaller as <code>i</code> increases, which we can accomplish with a little subtraction:</p>
+
+<div class="docs-source">for i to 3
+  with circle()
+    radius = 20 - i * 4
+    center = [50, 28 + i * 25]
+    color = :white
+    stroke.color = :black
+    stroke.size = 2</div>
+
+<p>Here's a challenge for you. Decorate that snowman. He looks cold and has no eyes.</p>
