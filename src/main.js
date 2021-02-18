@@ -557,6 +557,7 @@ function initialize() {
       editor.setValue(file.source, 1);
       closeOpenDialog();
 
+    closeOpenDialog();
       isSaved = true;
       syncTitle();
     }
@@ -661,20 +662,28 @@ function initialize() {
   }
 
   manageFilesList.addEventListener('dblclick', () => {
-    loadFile(manageFilesList.value);
-  });
-
-  manageFilesButton.addEventListener('click', () => {
+    closeOpenDialog();
     if (isSaved) {
-      refreshOpen();
+      loadFile(manageFilesList.value);
     } else {
-      showConfirmDialog('Unsaved Changes', 'You have unsaved changes in your current program.', 'Open Anyway', 'Cancel', () => {
-        refreshOpen();
+      showConfirmDialog('Unsaved Changes', 'You have unsaved changes in your current program. These changes will be lost if you open this file.', 'Open Anyway', 'Cancel', () => {
+        loadFile(manageFilesList.value);
       }, () => {});
     }
   });
+
+  manageFilesButton.addEventListener('click', () => {
+    refreshOpen();
+  });
   manageFilesOpenButton.addEventListener('click', () => {
-    loadFile(manageFilesList.value);
+    closeOpenDialog();
+    if (isSaved) {
+      loadFile(manageFilesList.value);
+    } else {
+      showConfirmDialog('Unsaved Changes', 'You have unsaved changes in your current program. These changes will be lost if you open this file.', 'Open Anyway', 'Cancel', () => {
+        loadFile(manageFilesList.value);
+      }, () => {});
+    }
   });
   manageFilesCancelButton.addEventListener('click', closeOpenDialog);
   manageFilesDeleteButton.addEventListener('click', deleteProgram);
