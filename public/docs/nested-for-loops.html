@@ -1,0 +1,48 @@
+<h2>Nested For Loops</h2>
+
+<p>Just as we can nest <code>repeat</code> loops, we can nest <code>for</code> loops. We often see nested <code>for</code> loops in designs that have a two-dimensional grid. One loop names our current row, the other names our current column. Here, for example, we use the row and column coordinates to form a grid of squares:</p>
+
+<div class="docs-source">for row to 10
+  for column to 10
+    with rectangle()
+      color = :black
+      corner = [column * 10, row * 10]
+      size = [8, 8]</div>
+
+<p>The grid looks like this:</p>
+
+<img src="/docs/images/illusion-grid.svg" class="docs-image over-white">
+
+<p>So many shapes with so few lines of code.</p>
+
+<p>There's a famous illusion associated with grids like this. As you move your eyes across the grid, you sense faint gray circles at the intersections between the squares. Do you see them?</p>
+
+<p>Wouldn't it be interesting to put actual gray circles at these intersection points? Then it wouldn't be an illusion anymore, but it'd be hard to tell that it wasn't. Let's try this.</p>
+
+<p>Because the circles only appear between squares, there are fewer of them. We draw them inside a different set of loops that don't count as high as the square loops. Also, we need to put the circle loops first so that the squares will be drawn over them. Our not-illusion code looks this:</p>
+
+<div class="docs-source">with viewport
+  corner = :zero2
+  size = [96, 96]
+  
+for row to 4
+  for column to 4
+    with circle()
+      color = :black
+      opacity = 0.1
+      radius = 3
+      center = [
+        column * 20 + 18,
+        row * 20 + 18
+      ]
+
+for row to 5
+  for column to 5
+    with rectangle()
+      color = :black
+      corner = [column * 20, row * 20]
+      size = [16, 16]</div>
+
+<p>And our not-illusion looks this:</p>
+
+<img src="/docs/images/illusion-grid-fake.svg" class="docs-image over-white">

@@ -1,0 +1,92 @@
+<h2>Nested Repeat Loops</h2>
+
+<p>Our planet spins around itself once per day. It also spins around the sun once per year. Earth's movement is a loop within a loop. We call these <em>nested loops</em>. Let's make some designs with nested loops.</p>
+
+<p>The first shape we'll make is a crinkle cut fry. Our first loop will trace out just the bottom edge of the fry:</p>
+
+<img src="/docs/images/crinkle-cut-fry-pattern.svg" class="docs-image">
+
+<p>This is a very repetitive sequence. We'll use turtle geometry and a <code>repeat</code> loop to trace it out. Here's one way we might write the code:</p>
+
+<div class="docs-source">with viewport
+  corner = [-5, -10]
+  size = [110, 20]
+
+with polyline()
+  color = :red
+  size = 2
+  with turtle()
+    position = [0, 0]
+    heading = -45
+  move().distance = 10
+  repeat 12
+    turn().degrees = 90
+    move().distance = 5
+    turn().degrees = -90
+    move().distance = 5
+  turn().degrees = 90
+  move().distance = 10</div>
+
+<p>The <code>move</code> nodes on lines 11 and 18 form the two longer line segments at the start and end of the fry. On line 12, we have a loop that produces 12 crinkles. To add or take away crinkles, we need only change this number.</p>
+
+<p>The top half of the fry is traced out just as the bottom half was. In fact, we can just repeat the <code>move</code> and <code>turn</code> commands we've already written with another <code>repeat</code> loop, like this:</p>
+
+<div class="docs-source">with polyline()
+  color = :red
+  size = 2
+  with turtle()
+    position = [0, 0]
+    heading = -45
+  repeat 2
+    move().distance = 10
+    repeat 12
+      turn().degrees = 90
+      move().distance = 5
+      turn().degrees = -90
+      move().distance = 5
+    turn().degrees = 90
+    move().distance = 10</div>
+
+<p>How do things look when you run this? Not good. The second iteration of this new loop walks up rather than left. We fix this by turning the turtle at the end of the first iteration:</p>
+
+<div class="docs-source">with polyline()
+  color = :red
+  size = 2
+  with turtle()
+    position = [0, 0]
+    heading = -45
+  repeat 2
+    move().distance = 10
+    repeat 12
+      turn().degrees = 90
+      move().distance = 5
+      turn().degrees = -90
+      move().distance = 5
+    turn().degrees = 90
+    move().distance = 10
+    turn().degrees = 90</div>
+
+<p>That brings the turtle back to where it started. Let's switch the shape to an <code>ungon</code> to smooth out the corners:</p>
+
+<div class="docs-source">with ungon()
+  stroke.color = :red
+  stroke.size = 2
+  color = :orange
+  rounding = 0
+  with turtle()
+    position = [0, 0]
+    heading = -45
+  repeat 2
+    move().distance = 10
+    repeat 12
+      turn().degrees = 90
+      move().distance = 5
+      turn().degrees = -90
+      move().distance = 5
+    turn().degrees = 90
+    move().distance = 10
+    turn().degrees = 90</div>
+
+<p>Our final fry looks too perfect to eat:</p>
+
+<img src="/docs/images/crinkle-cut-fry.svg" class="docs-image docs-image-75">

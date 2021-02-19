@@ -444,6 +444,10 @@ html.grabbing {
   width: 75%;
 }
 
+.over-white {
+  background-color: white;
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: 150px auto;
