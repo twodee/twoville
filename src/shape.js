@@ -1264,6 +1264,14 @@ export class Line extends VertexShape {
 
 // --------------------------------------------------------------------------- 
 
+const UngonFormula = Object.freeze({
+  Absolute: 0,
+  Relative: 1,
+  Symmetric: 2,
+});
+
+// --------------------------------------------------------------------------- 
+
 export class Ungon extends VertexShape {
   static type = 'ungon';
   static article = 'an';
@@ -1296,75 +1304,146 @@ export class Ungon extends VertexShape {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
+    if (this.untimedProperties.hasOwnProperty('formula')) {
+      if (this.untimedProperties.formula.value === 0) {
+        this.state.formula = UngonFormula.Absolute;
+      } else if (this.untimedProperties.formula.value === 1) {
+        this.state.formula = UngonFormula.Relative;
+      } else if (this.untimedProperties.formula.value === 2) {
+        this.state.formula = UngonFormula.Symmetric;
+      } else {
+        // TODO locate it better.
+        throw new LocatedException(this.where, `I found an <code>ungon</code> with a bad formula.`);
+      }
+    } else {
+      this.state.formula = UngonFormula.Symmetric;
+    }
+
     this.domNodes = this.nodes.filter(node => node.isDom);
     if (this.domNodes.length < 3) {
       throw new LocatedException(this.where, `I found an <code>ungon</code> with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
     }
 
-    this.configureScalarProperty('rounding', this, this, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, `I found an <code>ungon</code> whose <code>rounding</code> was not set.`);
-      }
+    if (this.state.formula !== UngonFormula.Symmetric) {
+      this.configureScalarProperty('rounding', this, this, null, bounds, [], timeline => {
+        if (!timeline) {
+          throw new LocatedException(this.where, `I found an <code>ungon</code> whose <code>rounding</code> was not set.`);
+        }
 
-      try {
-        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>rounding</code>. ${e.message}`);
-      }
-    });
+        try {
+          timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>rounding</code>. ${e.message}`);
+        }
+      });
+    }
 
     this.configureFill(bounds);
   }
 
   get isAnimated() {
-    return super.isAnimated || this.timedProperties.rounding.isAnimated;
+    return super.isAnimated || (this.state.formula !== UngonFormula.Symmetric && this.timedProperties.rounding.isAnimated);
   }
 
   get hasAllDefaults() {
-    return super.hasAllDefaults && this.timedProperties.rounding.hasDefault;
+    return super.hasAllDefaults && (this.state.formula === UngonFormula.Symmetric || this.timedProperties.rounding.hasDefault);
   }
 
   updateContentDom(bounds) {
     super.updateContentDom(bounds);
 
-    let rounding = 1 - this.state.rounding;
-    let pathCommands = [];
-
-    let start = [
-      (this.domNodes[0].turtle.position[0] + this.domNodes[1].turtle.position[0]) * 0.5,
-      (this.domNodes[0].turtle.position[1] + this.domNodes[1].turtle.position[1]) * 0.5
-    ];
-    pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
-
-    let previous = start;
     const gap = distancePointPoint(this.domNodes[0].turtle.position, this.domNodes[this.domNodes.length - 1].turtle.position);
     const hasReturn = gap < 1e-6;
     let nnodes = hasReturn ? this.domNodes.length - 1 : this.domNodes.length;
-    for (let i = 1; i < nnodes; ++i) {
-      const a = this.domNodes[i].turtle.position;
-      const b = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
+    let pathCommands = [];
 
-      let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
+    if (this.state.formula === UngonFormula.Symmetric) {
+      let start = [
+        (this.domNodes[0].turtle.position[0] + this.domNodes[1].turtle.position[0]) * 0.5,
+        (this.domNodes[0].turtle.position[1] + this.domNodes[1].turtle.position[1]) * 0.5
+      ];
+      pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
 
-      if (rounding) {
+      let previous = start;
+      for (let i = 1; i < nnodes; ++i) {
+        const a = this.domNodes[i].turtle.position;
+        const b = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
+        let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
+        pathCommands.push(`Q ${a[0]},${bounds.span - a[1]} ${mid[0]},${bounds.span - mid[1]}`);
+        previous = mid;
+      }
+
+      const first = this.domNodes[0].state.position;
+      pathCommands.push(`Q ${first[0]},${bounds.span - first[1]} ${start[0]},${bounds.span - start[1]}`);
+    } else if (this.state.formula === UngonFormula.Absolute) {
+      let rounding = this.state.rounding;
+
+      let vectors = this.domNodes.map((node, i) => {
+        const a = node.turtle.position;
+        const b = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
+
+        let vector = [b[0] - a[0], b[1] - a[1]];
+        let magnitude = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1]);
+        vector[0] /= magnitude;
+        vector[1] /= magnitude;
+
+        return vector;
+      });
+
+      let insetA = [
+        this.domNodes[0].turtle.position[0] + rounding * vectors[0][0],
+        this.domNodes[0].turtle.position[1] + rounding * vectors[0][1],
+      ];
+      pathCommands.push(`M ${insetA[0]},${bounds.span - insetA[1]}`);
+
+      for (let i = 0; i < nnodes; ++i) {
+        const position = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
+        const vector = vectors[(i + 1) % this.domNodes.length];
+
+        let insetB = [
+          position[0] - rounding * vectors[i][0],
+          position[1] - rounding * vectors[i][1],
+        ];
+        pathCommands.push(`L ${insetB[0]},${bounds.span - insetB[1]}`);
+
+        let insetA = [
+          position[0] + rounding * vector[0],
+          position[1] + rounding * vector[1],
+        ];
+        pathCommands.push(`Q ${position[0]},${bounds.span - position[1]} ${insetA[0]},${bounds.span - insetA[1]}`);
+      }
+    } else {
+      let start = [
+        (this.domNodes[0].turtle.position[0] + this.domNodes[1].turtle.position[0]) * 0.5,
+        (this.domNodes[0].turtle.position[1] + this.domNodes[1].turtle.position[1]) * 0.5
+      ];
+      pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
+
+      let rounding = 1 - this.state.rounding;
+
+      let previous = start;
+      for (let i = 1; i < nnodes; ++i) {
+        const a = this.domNodes[i].turtle.position;
+        const b = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
+
+        let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
+
         let control1 = [
           previous[0] + rounding * (a[0] - previous[0]),
           previous[1] + rounding * (a[1] - previous[1]),
         ];
+
         let control2 = [
           mid[0] + rounding * (a[0] - mid[0]),
           mid[1] + rounding * (a[1] - mid[1]),
         ];
-        pathCommands.push(`C ${control1[0]},${bounds.span - control1[1]} ${control2[0]},${bounds.span - control2[1]} ${mid[0]},${bounds.span - mid[1]}`);
-      } else {
-        pathCommands.push(`Q ${a[0]},${bounds.span - a[1]} ${mid[0]},${bounds.span - mid[1]}`);
-      }
-      previous = mid;
-    }
 
-    const first = this.domNodes[0].state.position;
-    if (rounding) {
+        pathCommands.push(`C ${control1[0]},${bounds.span - control1[1]} ${control2[0]},${bounds.span - control2[1]} ${mid[0]},${bounds.span - mid[1]}`);
+        previous = mid;
+      }
+
+      const first = this.domNodes[0].state.position;
       let control1 = [
         previous[0] + rounding * (first[0] - previous[0]),
         previous[1] + rounding * (first[1] - previous[1]),
@@ -1373,9 +1452,8 @@ export class Ungon extends VertexShape {
         start[0] + rounding * (first[0] - start[0]),
         start[1] + rounding * (first[1] - start[1]),
       ];
+
       pathCommands.push(`C ${control1[0]},${bounds.span - control1[1]} ${control2[0]},${bounds.span - control2[1]} ${start[0]},${bounds.span - start[1]}`);
-    } else {
-      pathCommands.push(`Q${first[0]},${bounds.span - first[1]} ${start[0]},${bounds.span - start[1]}`);
     }
 
     pathCommands.push('z');

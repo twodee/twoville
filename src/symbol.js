@@ -72,6 +72,7 @@ export const Symbol = Object.freeze({
 
   ':absolute': new ExpressionInteger(0),
   ':relative': new ExpressionInteger(1),
+  ':symmetric': new ExpressionInteger(2),
 
   // Polygon
   ':open': new ExpressionInteger(0),
