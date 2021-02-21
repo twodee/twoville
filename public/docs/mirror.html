@@ -1,0 +1,69 @@
+<h2>Mirror</h2>
+
+<p>How would you make this twinkling star shape?</p>
+
+<img src="/docs/images/four-star.svg" class="docs-image">
+
+<p>This star is a a sequence of curves. To produce a sequence of curves, we could use a <code>path</code> made of <code>quadratic</code> nodes. Each node would visit one of the four tips, and all would have their control point pulling the curve back to the center of star. We might write the following code:</p>
+
+<div class="docs-source">with path()
+  color = :yellow
+  closed = true
+  go().position = [10, 50]
+  with quadratic()
+    position = [50, 10]
+    control = [50, 50]
+  with quadratic()
+    position = [90, 50]
+    control = [50, 50]
+  with quadratic()
+    position = [50, 90]
+    control = [50, 50]
+  with quadratic()
+    position = [10, 50]
+    control = [50, 50]</div>
+
+<p>This code isn't bad, but if we desire to change the location of the tips or the concavity between them, we'd have to adjust all four nodes. Each tip is slightly different, which would cause trouble if we tried to use a loop to handle the repetition. However, observe that this star is symmetric. In fact, it has two axes of symmetry: the right half is just a mirror reflection of the left half, and the top half is just a mirror reflection of the bottom half. There's a command that we can use to automatically generate these reflections.</p>
+
+<p>We first reduce our program to just the first <code>quadratic</code> node:</p>
+
+<div class="docs-source">with path()
+  color = :yellow
+  closed = true
+  go().position = [10, 50]
+  with quadratic()
+    position = [50, 10]
+    control = [50, 50]</div>
+
+<p>The we add a <code>mirror</code> command to reflect this node around the y-axis. To identify the line about which we reflect, we must define two properties of <code>mirror</code>: <code>axis</code> and <code>pivot</code>. The <code>pivot</code> is any point on the line. The center of the viewport is a fine <code>pivot</code> for this shape. The <code>axis</code> reports the direction of the line. We express this as either <code>[0, 1]</code> or through the symbol <code>:up</code>. This code reflects our node to produce the bottom half of the star:</p>
+
+<div class="docs-source">with path()
+  color = :yellow
+  closed = true
+  go().position = [10, 50]
+  with quadratic()
+    position = [50, 10]
+    control = [50, 50]
+  with mirror()
+    axis = :up
+    pivot = [50, 50]</div>
+
+<p>The top half is still missing. It too is just a reflection, and we can produce it with another <code>mirror</code>. Our <code>axis</code> points <code>:right</code> this time:</p>
+
+<div class="docs-source">with path()
+  color = :yellow
+  closed = true
+  go().position = [10, 50]
+  with quadratic()
+    position = [50, 10]
+    control = [50, 50]
+  with mirror()
+    axis = :up
+    pivot = [50, 50]
+  with mirror()
+    axis = :right
+    pivot = [50, 50]</div>
+
+<p>The star is complete. There's only one part to tweak instead of four. Try changing the curvature either through the handle or in the code. See how the reflected nodes automatically update too?</p>
+
+<p>You can add <code>mirror</code> to any noded shape, which includes <code>polyline</code>, <code>polygon</code>, <code>ungon</code>, or <code>path</code>.</p>
