@@ -5,37 +5,37 @@
 <div class="docs-source">side = 10
 
 with viewport
-  center = [0, 0]
+  center = :zero2
   size = [side + 2, side + 2]
 
 with rectangle()
   color = :soggy
   size = [side, side]
-  center = [0, 0]</div>
+  center = :zero2</div>
 
 <p>Naming <code>side</code> makes it easier to see the connection between the viewport and the rectangle's size because they both refer to the same name. We can tell that the rectangle is a square because both the width and height are set to <code>side</code>. Additionally, if we decide to change <code>side</code> to a different number, we only have to edit the first line of our program. Here we change <code>side</code> to 30:</p>
 
 <div class="docs-source">side = 30
 
 with viewport
-  center = [0, 0]
+  center = :zero2
   size = [side + 2, side + 2]
 
 with rectangle()
   color = :soggy
   size = [side, side]
-  center = [0, 0]</div>
+  center = :zero2</div>
 
 <p>If we hadn't named <code>side</code>, our original program would have looked like this:</p>
 
 <div class="docs-source">with viewport
-  center = [0, 0]
+  center = :zero2
   size = [12, 12]
 
 with rectangle()
   color = :soggy
   size = [10, 10]
-  center = [0, 0]</div>
+  center = :zero2</div>
 
 <p>Changing the size of the rectangle in this version of the program would have required us to update four different numbers.</p>
 
