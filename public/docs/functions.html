@@ -1,0 +1,126 @@
+<h2>Functions</h2>
+
+<p>Suppose you have a pair of pants whose button has popped off somewhere in your day's adventures. You look around home for a spare, but none can be found. You do, however, have fabrication tools, including Twoville, and you decide to make your own button. A button is just a bunch of circles, right?</p>
+
+<p>Our initial code might look something like this:</p>
+
+<div class="docs-source">with circle()
+  center = [50, 50]
+  radius = 50
+  stroke.color = :black
+  stroke.size = 1
+  opacity = 0
+
+with circle()
+  center = [40, 40]
+  radius = 6
+  stroke.color = :black
+  stroke.size = 1
+  opacity = 0
+  
+with circle()
+  center = [60, 60]
+  radius = 6
+  stroke.color = :black
+  stroke.size = 1
+  opacity = 0
+
+with circle()
+  center = [40, 60]
+  radius = 6
+  stroke.color = :black
+  stroke.size = 1
+  opacity = 0
+  
+with circle()
+  center = [60, 40]
+  radius = 6
+  stroke.color = :black
+  stroke.size = 1
+  opacity = 0</div>
+
+<p>We've only traced the perimeters of the circles. There is no fill color. The stroke determines the cutting path of the tool. Notice how the circles are all so similar. They all have the same stroke and opacity. The only properties that vary are <code>center</code> and <code>radius</code>. We could shorten this code up by making a "recipe" for how to plot circles.</p>
+
+<p>Recipes of code are called <em>functions</em>. When we define a function, we train the computer to follow the steps of the recipe whenever it hears the recipe's name. We can make the computer do very complex things by uttering a single word.</p>
+
+<p>To define a function, we use the <code>to</code> command to name our recipe for drawing a circle <code>ring</code>:</p>
+
+<div class="docs-source">to ring()
+  with circle()
+    center = [50, 50]
+    radius = 10
+    stroke.color = :black
+    stroke.size = 1
+    opacity = 0</div>
+
+<p>Run this program. Do you see a circle? You shouldn't. We have defined the recipe, but we haven't uttered its name. The computer knows of the function but it does not run it until we say its name. Here's how we <em>call</em> the function:</p>
+
+<div class="docs-source">to ring()
+  with circle()
+    center = [50, 50]
+    radius = 10
+    stroke.color = :black
+    stroke.size = 1
+    opacity = 0
+
+ring()</div>
+
+<p>You should see a circle now. What if you call the function multiple times?</p>
+
+<div class="docs-source">to ring()
+  with circle()
+    center = [50, 50]
+    radius = 10
+    stroke.color = :black
+    stroke.size = 1
+    opacity = 0
+
+ring()
+ring()
+ring()</div>
+
+<p>Uhh, there might be three circles, but you can't tell. The recipe for drawing a circle does the same thing every time you call it. The three circles are all drawn in the same place. We can fix this by letting the circle's center be provided as a <em>parameter</em>. Parameters are data that is sent in to the recipe when it is called. We first add a parameter for the circle's <code>center</code>. In the parentheses on the first line of the function definition, we name the data coming in from outside the function. In the parentheses of each function call, we provide the data that will be available inside the recipe under that name. We can plot three overlapping rings in a line like this:</p>
+
+<div class="docs-source">to ring(center)
+  with circle()
+    center = center
+    radius = 10
+    stroke.color = :black
+    stroke.size = 1
+    opacity = 0
+
+ring([35, 50])
+ring([50, 50])
+ring([65, 50])</div>
+
+<p>Our recipe can be made more flexible if we add a radius parameter. We need two names in the function definition, and we need to provide two values on each call.</p>
+
+<div class="docs-source">to ring(center, radius)
+  with circle()
+    center = center
+    radius = radius
+    stroke.color = :black
+    stroke.size = 1
+    opacity = 0
+
+ring([35, 50], 10)
+ring([50, 50], 9)
+ring([65, 50], 8)</div>
+
+<p>With this reusable recipe in our cookbook, we rewrite our button as five calls to <code>ring</code>.</code>
+
+<div class="docs-source">to ring(center, radius)
+  with circle()
+    center = center
+    radius = radius
+    stroke.color = :black
+    stroke.size = 1
+    opacity = 0
+
+ring([50, 50], 50)
+ring([40, 40], 6)
+ring([60, 60], 6)
+ring([60, 40], 6)
+ring([40, 60], 6)</div>
+
+<p>This code is much simpler. If we want to adjust the circle, only one chunk of code needs to be edited. We can add another ring with only a single line of code to call our recipe. Our pants are saved, and so is our time and mental energy.</p>
