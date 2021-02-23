@@ -39,11 +39,13 @@ with circle()
   stroke.size = 1
   opacity = 0</div>
 
-<p>We've only traced the perimeters of the circles. There is no fill color. The stroke determines the cutting path of the tool. Notice how the circles are all so similar. They all have the same stroke and opacity. The only properties that vary are <code>center</code> and <code>radius</code>. We could shorten this code up by making a "recipe" for how to plot circles.</p>
+<p>We've only traced the perimeters of the circles in this code. There is no fill color, as the stroke determines the cutting path of the tool.</p>
+
+<p>Notice how the circles are all so similar. They all have the same stroke and opacity. The only properties that vary are <code>center</code> and <code>radius</code>. We can shorten this code up by making a "recipe" that tells the computer how to plot circles.</p>
 
 <p>Recipes of code are called <em>functions</em>. When we define a function, we train the computer to follow the steps of the recipe whenever it hears the recipe's name. We can make the computer do very complex things by uttering a single word.</p>
 
-<p>To define a function, we use the <code>to</code> command to name our recipe for drawing a circle <code>ring</code>:</p>
+<p>To define a function, we use the <code>to</code> command to give our recipe for drawing a circle the name <code>ring</code>:</p>
 
 <div class="docs-source">to ring()
   with circle()
@@ -79,7 +81,7 @@ ring()
 ring()
 ring()</div>
 
-<p>Uhh, there might be three circles, but you can't tell. The recipe for drawing a circle does the same thing every time you call it. The three circles are all drawn in the same place. We can fix this by letting the circle's center be provided as a <em>parameter</em>. Parameters are data that is sent in to the recipe when it is called. We first add a parameter for the circle's <code>center</code>. In the parentheses on the first line of the function definition, we name the data coming in from outside the function. In the parentheses of each function call, we provide the data that will be available inside the recipe under that name. We can plot three overlapping rings in a line like this:</p>
+<p>Uhh, there might be three circles, but you can't tell. The recipe for drawing a circle does the same thing every time you call it. The three circles are all drawn in the same place. We can fix this by letting the circle's center be provided as a <em>parameter</em>. Parameters are data that is sent into the recipe when it is called. We first add a parameter for the circle's <code>center</code>. In the parentheses on the first line of the function definition, we name the data coming in from outside the function. In the parentheses of each function call, we provide the data that will be available inside the recipe under that name. Using the <code>center</code> parameter, we plot three overlapping rings in a line like this:</p>
 
 <div class="docs-source">to ring(center)
   with circle()
