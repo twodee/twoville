@@ -570,21 +570,29 @@ export class Text extends Shape {
 
     this.element.childNodes[0].nodeValue = this.timedProperties.message.defaultValue.value;
 
-    let anchor;
+    let anchor = ['middle', 'center'];
     if (this.untimedProperties.hasOwnProperty('anchor')) {
-      anchor = this.untimedProperties.anchor.value;
-    } else {
-      anchor = 'middle';
-    }
-    this.element.setAttributeNS(null, 'text-anchor', anchor);
+      anchor[0] = this.untimedProperties.anchor.get(0).value;
+      if (anchor[0] === 'west') {
+        anchor[0] = 'start';
+      } else if (anchor[0] === 'center') {
+        anchor[0] = 'middle';
+      } else if (anchor[0] === 'east') {
+        anchor[0] = 'end';
+      }
 
-    let baseline;
-    if (this.untimedProperties.hasOwnProperty('baseline')) {
-      baseline = this.untimedProperties.baseline.value;
-    } else {
-      baseline = 'center';
+      anchor[1] = this.untimedProperties.anchor.get(1).value;
+      if (anchor[1] === 'north') {
+        anchor[1] = 'hanging';
+      } else if (anchor[1] === 'south') {
+        anchor[1] = 'baseline';
+      } else if (anchor[1] === 'center') {
+        anchor[1] = 'central';
+      }
     }
-    this.element.setAttributeNS(null, 'dominant-baseline', baseline);
+
+    this.element.setAttributeNS(null, 'text-anchor', anchor[0]);
+    this.element.setAttributeNS(null, 'dominant-baseline', anchor[1]);
   }
 
   updatePosition(bounds) {

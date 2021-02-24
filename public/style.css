@@ -438,6 +438,12 @@ html.grabbing {
   max-width: 300px;
   margin: 20px auto;
   padding: 10px;
+  font-family: sans-serif;
+}
+
+.docs-li-image {
+  margin-top: 5px;
+  margin-left: 0;
 }
 
 .docs-image-75 {

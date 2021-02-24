@@ -13,15 +13,12 @@ export const Symbol = Object.freeze({
 
   // for alignment-baseline on text elements
   // See https://vanseodesign.com/web-design/svg-text-baseline-alignment for semantics.
-  ':top': new ExpressionString('hanging'),
-  ':center': new ExpressionString('center'),
-  ':central': new ExpressionString('central'),
-  ':bottom': new ExpressionString('baseline'),
-
   // Text anchors.
-  ':start': new ExpressionString('start'),
-  ':middle': new ExpressionString('middle'),
-  ':end': new ExpressionString('end'),
+  ':center': new ExpressionString('center'),
+  ':north': new ExpressionString('north'),
+  ':south': new ExpressionString('south'),
+  ':west': new ExpressionString('west'),
+  ':east': new ExpressionString('east'),
 
   ':short': new ExpressionInteger(0),
   ':long': new ExpressionInteger(1),
