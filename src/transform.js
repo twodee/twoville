@@ -79,7 +79,7 @@ export class Transform extends TimelinedEnvironment {
 export class Translate extends Transform {
   static type = 'translate';
   static article = 'a';
-  static timedIds = ['offsets'];
+  static timedIds = ['offset'];
 
   static create(parentEnvironment, where) {
     const node = new Translate();
@@ -94,16 +94,16 @@ export class Translate extends Transform {
   }
     
   configureState(bounds) {
-    this.configureVectorProperty('offsets', this, this.parentEnvironment, this.updateDomCommand.bind(this), bounds, [], timeline => {
+    this.configureVectorProperty('offset', this, this.parentEnvironment, this.updateDomCommand.bind(this), bounds, [], timeline => {
       if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>translate</code> node whose <code>offsets</code> was not set.');
+        throw new LocatedException(this.where, 'I found a <code>translate</code> node whose <code>offset</code> was not set.');
       }
 
       try {
         timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>translate</code> node with an illegal value for <code>offsets</code>. ${e.message}`);
+        throw new LocatedException(e.where, `I found a <code>translate</code> node with an illegal value for <code>offset</code>. ${e.message}`);
       }
     });
   }
@@ -112,26 +112,26 @@ export class Translate extends Transform {
     super.configureMarks();
 
     this.offsetMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('offsets', this.parentEnvironment.root.state.t);
+      return this.expressionAt('offset', this.parentEnvironment.root.state.t);
     }, ([x, y]) => {
-      this.state.offsets[0] = x;
-      this.state.offsets[1] = y;
+      this.state.offset[0] = x;
+      this.state.offset[1] = y;
     });
 
     this.marker.addMarks([], [], [this.offsetMark]);
   }
 
   updateDomCommand(bounds) {
-    this.command = `translate(${this.state.offsets[0]} ${-this.state.offsets[1]})`;
+    this.command = `translate(${this.state.offset[0]} ${-this.state.offset[1]})`;
   }
 
   toMatrix() {
-    return Matrix.translate(this.state.offsets[0], this.state.offsets[1]);
+    return Matrix.translate(this.state.offset[0], this.state.offset[1]);
   }
 
   updateInteractionState(matrix) {
     super.updateInteractionState(matrix);
-    this.offsetMark.updateState(this.state.offsets, this.state.matrix);
+    this.offsetMark.updateState(this.state.offset, this.state.matrix);
   }
 }
 

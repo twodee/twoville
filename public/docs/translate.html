@@ -1,0 +1,25 @@
+<h2>Translate</h2>
+
+<p>Suppose you've got a shape but discover it's in the wrong spot. You have two choices to get it to the right spot. Either you go back and update every position of the shape, which may be a daunting task for some shapes, or you add a <code>translate</code> modifier to your shape. The <code>translate</code> modifier has an <code>offset</code> property that will be added automatically to all positions.</p>
+
+<p>Consider this square, whose <code>center</code> is shifted right and down by <code>translate</code>:</p>
+
+<div class="docs-source">with rectangle()
+  center = [50, 50]
+  size = [30, 30]
+  color = :tomato
+  with translate()
+    offset = [10, -20]</div>
+
+<p>The <code>translate</code> modifier can be used to animate a shape that slides around:</p>
+
+<div class="docs-source">with rectangle()
+  center = [50, 50]
+  size = [30, 30]
+  color = :tomato
+  with translate()
+    0 -> t
+    t -> 100
+      offset = [10, -20]
+    t -> 50 -> t
+       offset = [-10, 20]</div>
