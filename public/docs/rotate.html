@@ -1,0 +1,26 @@
+<h2>Rotate</h2>
+
+<p>Just as you can <code>translate</code> a shape, you can also <code>rotate</code> one. You have to define two properties so <code>rotate</code> knows what to do. One is the <code>pivot</code> point, which is the center of the rotation. The other is the number of <code>degrees</code> you wish to rotate.</p>
+
+<p>Consider this square that is tilted up by <code>rotate</code>:</p>
+
+<div class="docs-source">with rectangle()
+  center = [50, 50]
+  size = [30, 30]
+  color = :tomato
+  with rotate()
+    pivot = [50, 50]
+    degrees = 45</div>
+
+<p>The <code>rotate</code> modifier can be used to animate a shape that spins around endlessly:</p>
+
+<div class="docs-source">with rectangle()
+  center = [50, 50]
+  size = [30, 30]
+  color = :tomato
+  with rotate()
+    pivot = [50, 50]
+    0 -> t
+      degrees = 0
+    t -> 100
+      degrees = 359</div>
