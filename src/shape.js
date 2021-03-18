@@ -1856,6 +1856,39 @@ export class Tip extends Group {
 
 // --------------------------------------------------------------------------- 
 
+export class LinearGradient {
+  static type = 'mask';
+  static article = 'a';
+  static timedIds = [];
+
+  static create(parentEnvironment, where) {
+    const shape = new Mask();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Mask();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  createHierarchy() {
+    this.element = document.createElementNS(svgNamespace, 'g');
+
+    this.maskElement = document.createElementNS(svgNamespace, 'mask');
+    this.maskElement.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.maskElement.appendChild(this.element);
+  }
+
+  connectToParent() {
+    this.isDrawable = true;
+    this.root.defines.appendChild(this.maskElement);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 const FillMixin = {
   initializeFill: function() {
     this.untimedProperties.stroke = Stroke.create(this);
