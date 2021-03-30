@@ -401,7 +401,7 @@ export class RenderEnvironment extends Environment {
     const matrix = this.svg.getScreenCTM();
     const factor = matrix.a;
     for (let shape of this.shapes) {
-      if (this.state.isEnabled) {
+      if (shape.state.isEnabled) {
         shape.updateContentDom(this.bounds, factor);
         shape.updateInteractionDom(this.bounds, factor);
       }
