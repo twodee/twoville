@@ -1,5 +1,36 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@400;700&display=swap');
 
+:root {
+}
+
+.light {
+  --code-color: crimson;
+  --heading-color: rebeccapurple;
+  --active-link-color: purple;
+  --link-color: red;
+  --right-foreground-color: black;
+  --right-background-color: #F0F0F0;
+  --messager-background-color: #DDDDDD;
+  --messager-foreground-color: #333333;
+  --resizer-color: #DDDDDD;
+  --horizontal-bars-url: url('images/dark_horizontal_bars.png');
+  --vertical-bars-url: url('images/dark_vertical_bars.png');
+}
+
+.dark {
+  --code-color: skyblue;
+  --heading-color: burlywood;
+  --active-link-color: rgb(255, 200, 0);
+  --link-color: orange;
+  --right-foreground-color: white;
+  --right-background-color: black;
+  --messager-background-color: #333333;
+  --messager-foreground-color: #CCCCCC;
+  --resizer-color: #333333;
+  --horizontal-bars-url: url('images/light_horizontal_bars.png');
+  --vertical-bars-url: url('images/light_vertical_bars.png');
+}
+
 * {
   box-sizing: border-box;
 }
@@ -24,20 +55,22 @@ code {
   font-family: 'Roboto Mono', monospace;
   font-style: normal;
   font-weight: bold;
-  color: yellow;
+  /* color: yellow; */
+  color: var(--code-color);
 }
 
 var {
   font-family: 'Roboto Mono', monospace;
   font-style: normal;
   font-weight: bold;
-  color: yellow;
+  /* color: yellow; */
+  color: var(--code-color);
 }
 
 #docs-root code {
   font-family: 'Roboto Mono', monospace;
   font-weight: 500;
-  color: skyblue;
+  color: var(--code-color);
   background: none;
   font-size: 0.95em;
   line-height: 0;
@@ -71,8 +104,8 @@ var {
   height: 200px;
   flex: 0 1 auto;
 
-  background-color: #333333;
-  color: #CCCCCC;
+  background-color: var(--messager-background-color);
+  color: var(--messager-foreground-color);
 }
 
 #messager {
@@ -93,9 +126,8 @@ var {
 }
 
 #right {
-
-  background-color: black;
-  color: white;
+  background-color: var(--right-background-color);
+  color: var(--right-foreground-color);
 
   display: flex;
   flex-direction: column;
@@ -133,7 +165,7 @@ var {
 
 .panel-section > h3 {
   margin: 0 0 5px 0;
-  color: burlywood;
+  color: var(--heading-color);
   font-size: 1.4em;
 }
 
@@ -141,7 +173,6 @@ var {
   width: 100%;
   height: 100vh;
   object-fit: contain;
-  /* object-position: 50% 50%; */
   background-color: rgb(240, 240, 240);
 }
 
@@ -183,7 +214,7 @@ var {
 }
 
 a {
-  color: orange;
+  color: var(--link-color);
 }
 
 #toolbar-left, #toolbar-middle, #toolbar-right {
@@ -216,8 +247,7 @@ html.grabbing {
 }
 
 .resizer {
-  background-color: white;
-  background-color: rgb(50, 50, 50);
+  background-color: var(--resizer-color);
   background-position: center;
   background-repeat: no-repeat;
   display: flex;
@@ -227,12 +257,12 @@ html.grabbing {
 }
 
 .height-resizer {
-  background-image: url('images/horizontal_bars.png');
+  background-image: var(--horizontal-bars-url);
   cursor: row-resize;
 }
 
 .width-resizer {
-  background-image: url('images/vertical_bars.png');
+  background-image: var(--vertical-bars-url);
   cursor: col-resize;
 }
 
@@ -396,12 +426,11 @@ html.grabbing {
 
 #docs-content-panel {
   font-size: 1.2em;
-  /* background-color: green; */
 }
 
 #docs-content-panel > h2 {
   margin-top: 0;
-  color: burlywood;
+  color: var(--heading-color);
 }
 
 .docs-source {
@@ -420,7 +449,7 @@ html.grabbing {
 }
 
 .copy-button:active {
-  color: white;
+  color: var(--active-link-color);
 }
 
 .button-preview {
@@ -531,7 +560,7 @@ html.grabbing {
 
 .link-button {
   background: none;
-  color: orange;
+  color: var(--link-color);
   border: none;
   font-size: inherit;
   font-family: inherit;
@@ -543,7 +572,7 @@ html.grabbing {
 }
 
 .link-button:active {
-  color: rgb(255, 200, 0);
+  color: var(--active-link-color);
 }
 
 .links-list {
@@ -570,9 +599,6 @@ html.grabbing {
 }
 
 input[type="color"] {
-  /* border: none; */
-  /* padding: 0; */
-  /* margin: 0; */
   visibility: hidden;
 }
 

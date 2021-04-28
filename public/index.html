@@ -8,7 +8,7 @@
   <link href="style.css" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body>
+<body class="dark">
 
 <div id="dialog-overlay">
   <div id="save-as-dialog" class="dialog">
@@ -164,8 +164,10 @@
       </div>
 
       <div class="panel-section">
-        <h3>Display</h3>
+        <h3>Canvas</h3>
         <div class="settings-grid">
+          <label for="show-page-outline-toggle">Show page outline</label>
+          <input id="show-page-outline-toggle" type="checkbox">
           <label for="background-color-picker">Background color</label>
           <label id="background-color-preview"><input id="background-color-picker" type="color"></label>
           <span>Content corner</span>
@@ -192,6 +194,11 @@
           <input id="show-time-scrubber-toggle" type="checkbox">
           <label for="mouse-precision-spinner">Mouse-edit precision</label>
           <input id="mouse-precision-spinner" type="number">
+          <label for="theme-picker">Theme</label>
+          <select id="theme-picker">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
         </div>
       </div>
 

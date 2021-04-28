@@ -1,5 +1,6 @@
 import ace from 'ace-builds/src-min-noconflict/ace';
 import 'ace-builds/src-min-noconflict/theme-twilight';
+import 'ace-builds/src-min-noconflict/theme-dawn';
 import './mode-twoville.js';
 import JSZip from 'jszip';
 import GIF from 'gif.js';
@@ -57,10 +58,12 @@ let isLoop;
 
 let defaultSettings = {
   showCopyLinks: true,
+  showPageOutline: true,
   backgroundColor: '#D3D3D3',
   warnOnExit: true,
   showTimeScrubber: false,
   mousePrecision: 2,
+  theme: 'dark',
 };
 const settings = {...defaultSettings};
 
@@ -390,7 +393,6 @@ function save() {
 
 function initialize() {
   editor = ace.edit('editor');
-  editor.setTheme('ace/theme/twilight');
   editor.setOptions({
     fontFamily: 'Roboto Mono',
     fontSize: source0 ? '10pt' : '14pt',
@@ -440,9 +442,11 @@ function initialize() {
   const showTimeScrubberToggle = document.getElementById('show-time-scrubber-toggle');
   const warnOnExitToggle = document.getElementById('warn-on-exit-toggle');
   const showCopyLinksToggle = document.getElementById('show-copy-links-toggle');
+  const showPageOutlineToggle = document.getElementById('show-page-outline-toggle');
   const backgroundColorPicker = document.getElementById('background-color-picker');
   const backgroundColorPreview = document.getElementById('background-color-preview');
   const mousePrecisionSpinner = document.getElementById('mouse-precision-spinner');
+  const themePicker = document.getElementById('theme-picker');
 
   const uiSynchronizers = {
     backgroundColor: () => {
@@ -450,7 +454,22 @@ function initialize() {
       svg.style.backgroundColor = settings.backgroundColor; 
     },
     showCopyLinks: () => {
-      showCopyLinksToggle.checked = settings.showCopyLinks;
+      // showCopyLinksToggle.checked = settings.showCopyLinks;
+    },
+    showPageOutline: () => {
+      // showPageOutlineToggle.checked = settings.showPageOutline;
+    },
+    theme: () => {
+      // themePicker.value = settings.theme;
+      if (settings.theme === 'dark') {
+        editor.setTheme('ace/theme/twilight');
+        document.body.classList.remove('light');
+        document.body.classList.add('dark');
+      } else if (settings.theme === 'light') {
+        editor.setTheme('ace/theme/dawn');
+        document.body.classList.remove('dark');
+        document.body.classList.add('light');
+      }
     },
     warnOnExit: () => {
       warnOnExitToggle.checked = settings.warnOnExit;
@@ -463,6 +482,26 @@ function initialize() {
       mousePrecisionSpinner.value = settings.mousePrecision;
     },
   };
+
+  // Set theme.
+  themePicker.value = settings.theme;
+  uiSynchronizers.theme();
+  themePicker.addEventListener('change', () => {
+    settings.theme = savedSettings.theme = themePicker.value;
+    uiSynchronizers.theme();
+    saveSettings();
+  });
+
+  // Handle show copy links toggling.
+  showPageOutlineToggle.checked = settings.showPageOutline;
+  showPageOutlineToggle.addEventListener('click', () => {
+    settings.showPageOutline = savedSettings.showPageOutline = showPageOutlineToggle.checked;
+    saveSettings();
+    const outline = document.getElementById('x-outline');
+    if (outline) {
+      outline.setAttribute('visibility', settings.showPageOutline ? 'visible' : 'hidden');
+    }
+  });
 
   // Handle show copy links toggling.
   showCopyLinksToggle.checked = settings.showCopyLinks;
@@ -1369,7 +1408,8 @@ function initializeDocs() {
       wrapper.appendChild(source);
 
       const docEditor = ace.edit(source);
-      docEditor.setTheme('ace/theme/twilight');
+      const theme = settings.theme === 'dark' ? 'twilight' : 'dawn';
+      docEditor.setTheme(`ace/theme/${theme}`);
       docEditor.getSession().setMode('ace/mode/twoville');
       docEditor.setOptions({
         autoScrollEditorIntoView: true,

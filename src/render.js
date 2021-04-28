@@ -221,7 +221,7 @@ export class RenderEnvironment extends Environment {
 
     let pageOutline = document.createElementNS(svgNamespace, 'rect');
     pageOutline.setAttributeNS(null, 'id', 'x-outline');
-    pageOutline.setAttributeNS(null, 'visibility', 'visible');
+    pageOutline.setAttributeNS(null, 'visibility', this.settings.showPageOutline ? 'visible' : 'hidden');
     pageOutline.setAttributeNS(null, 'x', this.fitBounds.x);
     pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
     pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
