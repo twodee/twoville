@@ -1,27 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@400;700&display=swap');
 
 :root {
+  --shadow-radius: 20px;
 }
 
 .light {
-  --code-color: crimson;
-  --heading-color: rebeccapurple;
+  --shadow-color: #CCCCCC;
+  --code-color: rebeccapurple;
+  --heading-color: #29498a;
+  --heading-color: #cc764c;
   --active-link-color: purple;
-  --link-color: red;
-  --right-foreground-color: black;
-  --right-background-color: #F0F0F0;
-  --messager-background-color: #DDDDDD;
+  --link-color: #5e84d1;
+  --right-foreground-color: #333333;
+  --right-background-color: #fff3e3;
+  --messager-background-color: #fff3e3;
   --messager-foreground-color: #333333;
-  --resizer-color: #DDDDDD;
+  --resizer-color: #ede2d3;
   --horizontal-bars-url: url('images/dark_horizontal_bars.png');
   --vertical-bars-url: url('images/dark_vertical_bars.png');
 }
 
 .dark {
-  --code-color: skyblue;
-  --heading-color: burlywood;
+  --shadow-color: white;
+  --code-color: #eeff00;
+  --heading-color: #cda869;
   --active-link-color: rgb(255, 200, 0);
-  --link-color: orange;
+  --link-color: #7587a6;
   --right-foreground-color: white;
   --right-background-color: black;
   --messager-background-color: #333333;
@@ -509,9 +513,9 @@ html.grabbing {
 .dialog {
   min-width: 400px;
   max-height: 500px;
-  background-color: black;
-  box-shadow: 0 0 20px 0px white;
-  color: white;
+  background-color: var(--right-background-color);
+  box-shadow: 0 0 var(--shadow-radius) 0px var(--shadow-color);
+  color: var(--right-foreground-color);
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -524,7 +528,7 @@ html.grabbing {
 
 .dialog-heading {
   margin: 0;
-  color: salmon;
+  color: var(--heading-color);
 }
 
 .dialog-button {

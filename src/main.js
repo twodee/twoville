@@ -1,6 +1,6 @@
 import ace from 'ace-builds/src-min-noconflict/ace';
 import 'ace-builds/src-min-noconflict/theme-twilight';
-import 'ace-builds/src-min-noconflict/theme-dawn';
+import 'ace-builds/src-min-noconflict/theme-katzenmilch';
 import './mode-twoville.js';
 import JSZip from 'jszip';
 import GIF from 'gif.js';
@@ -461,14 +461,19 @@ function initialize() {
     },
     theme: () => {
       // themePicker.value = settings.theme;
+      let theme;
       if (settings.theme === 'dark') {
-        editor.setTheme('ace/theme/twilight');
+        theme = 'twilight';
         document.body.classList.remove('light');
         document.body.classList.add('dark');
       } else if (settings.theme === 'light') {
-        editor.setTheme('ace/theme/dawn');
+        theme = 'katzenmilch';
         document.body.classList.remove('dark');
         document.body.classList.add('light');
+      }
+      editor.setTheme(`ace/theme/${theme}`);
+      for (let docEditor of docEditors) {
+        docEditor.setTheme(`ace/theme/${theme}`);
       }
     },
     warnOnExit: () => {
@@ -595,8 +600,6 @@ function initialize() {
       const file = twos[name];
       editor.setValue(file.source, 1);
       closeOpenDialog();
-
-    closeOpenDialog();
       isSaved = true;
       syncTitle();
     }
@@ -689,7 +692,7 @@ function initialize() {
       manageFilesDialog.style.display = 'flex';
       clearChildren(manageFilesList);
 
-      for (let name of Object.keys(twos)) {
+      for (let name of Object.keys(twos).sort()) {
         const option = document.createElement('option');
         option.value = name;
         option.appendChild(document.createTextNode(name));
@@ -1408,7 +1411,7 @@ function initializeDocs() {
       wrapper.appendChild(source);
 
       const docEditor = ace.edit(source);
-      const theme = settings.theme === 'dark' ? 'twilight' : 'dawn';
+      const theme = settings.theme === 'dark' ? 'twilight' : 'solarized_light';
       docEditor.setTheme(`ace/theme/${theme}`);
       docEditor.getSession().setMode('ace/mode/twoville');
       docEditor.setOptions({
