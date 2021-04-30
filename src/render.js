@@ -4,11 +4,13 @@ import {
   Token,
   clearChildren,
   removeClassMembers,
+  removeClassMembersExcept,
   svgNamespace,
 } from './common.js';
 
 import {
   Expression,
+  ExpressionBoolean,
   ExpressionInteger,
   ExpressionReal,
   ExpressionString,
@@ -257,15 +259,10 @@ export class RenderEnvironment extends Environment {
     this.svg.appendChild(this.centeredForegroundMarkGroup);
 
     this.sceneMarkGroup = document.createElementNS(svgNamespace, 'g');
-    this.sceneMarkGroup.setAttributeNS(null, 'id', 'mark-group');
+    this.sceneMarkGroup.setAttributeNS(null, 'id', 'scene-mark-group');
     this.sceneMarkGroup.classList.add('mark-group');
     this.sceneMarkGroup.appendChild(pageOutline);
     this.backgroundMarkGroup.appendChild(this.sceneMarkGroup);
-
-    // for (let shape of this.shapes) {
-      // shape.validate();
-      // shape.start();
-    // }
 
     for (let shape of this.shapes) {
       shape.configure(this.bounds);
@@ -278,6 +275,9 @@ export class RenderEnvironment extends Environment {
       const grid = this.get('viewport').get('grid');
       const gridX = grid.get(0);
       const gridY = grid.get(1);
+      const gridGroup = document.createElementNS(svgNamespace, 'g');
+      gridGroup.setAttributeNS(null, 'id', 'grid-mark-group');
+      gridGroup.classList.add('mark-group');
 
       if (gridX instanceof ExpressionReal || gridX instanceof ExpressionInteger) {
         const gap = gridX.value;
@@ -288,10 +288,10 @@ export class RenderEnvironment extends Environment {
           line.setAttributeNS(null, 'visibility', 'visible');
           line.setAttributeNS(null, 'x1', tick);
           line.setAttributeNS(null, 'x2', tick);
-          line.setAttributeNS(null, 'y1', corner.get(1).value);
-          line.setAttributeNS(null, 'y2', corner.get(1).value + size.get(1).value);
+          line.setAttributeNS(null, 'y1', this.bounds.span - corner.get(1).value);
+          line.setAttributeNS(null, 'y2', this.bounds.span - (corner.get(1).value + size.get(1).value));
           line.classList.add('grid-line');
-          this.sceneMarkGroup.appendChild(line);
+          gridGroup.appendChild(line);
         }
       }
 
@@ -302,14 +302,16 @@ export class RenderEnvironment extends Environment {
         for (let tick = first; tick <= last; tick += gap) {
           const line = document.createElementNS(svgNamespace, 'line');
           line.setAttributeNS(null, 'visibility', 'visible');
-          line.setAttributeNS(null, 'y1', tick);
-          line.setAttributeNS(null, 'y2', tick);
+          line.setAttributeNS(null, 'y1', this.bounds.span - tick);
+          line.setAttributeNS(null, 'y2', this.bounds.span - tick);
           line.setAttributeNS(null, 'x1', corner.get(0).value);
           line.setAttributeNS(null, 'x2', corner.get(0).value + size.get(0).value);
           line.classList.add('grid-line');
-          this.sceneMarkGroup.appendChild(line);
+          gridGroup.appendChild(line);
         }
       }
+
+      this.svg.insertBefore(gridGroup, this.backgroundMarkGroup);
     }
 
     this.isStarted = true;
@@ -393,7 +395,30 @@ export class RenderEnvironment extends Environment {
     let clone = this.svg.cloneNode(true);
     clone.removeAttribute('style');
     clone.setAttributeNS(null, 'viewBox', `${this.fitBounds.x} ${this.fitBounds.y} ${this.fitBounds.width} ${this.fitBounds.height}`);
-    removeClassMembers(clone, 'mark-group');
+
+    let markGroupsToKeep = [];
+
+    const gridOption = this.get('export').get('grid');
+    if (gridOption instanceof ExpressionBoolean && gridOption.value) {
+      markGroupsToKeep.push('grid-mark-group');
+
+      // The stylesheet won't be coming with the exported SVG, so we imbue the
+      // styles directly on the elements.
+      for (let line of clone.querySelectorAll('.grid-line')) {
+        line.setAttributeNS(null, 'stroke-width', 1);
+        line.setAttributeNS(null, 'stroke-opacity', 0.5);
+        line.setAttributeNS(null, 'stroke', 'rgb(180, 180, 180)');
+        line.setAttributeNS(null, 'stroke-dasharray', 'none');
+        line.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+      }
+    }
+
+    if (markGroupsToKeep.length === 0) {
+      removeClassMembers(clone, 'mark-group');
+    } else {
+      removeClassMembersExcept(clone, 'mark-group', markGroupsToKeep);
+    }
+
     return clone;
   }
 

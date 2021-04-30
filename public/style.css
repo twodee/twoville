@@ -313,6 +313,8 @@ html.grabbing {
 }
 
 .grid-line {
+  /* These styles are also applied in the cloneSvgWithoutMarks function in
+     render.js. */
   stroke-width: 1;
   stroke-opacity: 0.5;
   stroke: rgb(180, 180, 180);

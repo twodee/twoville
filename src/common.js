@@ -207,6 +207,22 @@ export function removeClassMembers(root, className) {
 
 // --------------------------------------------------------------------------- 
 
+export function removeClassMembersExcept(root, className, keepList) {
+  if (root.classList.contains(className)) {
+    if (!keepList.includes(root.id)) {
+      root.parentNode.removeChild(root);
+    }
+  } else {
+    for (let i = root.childNodes.length - 1; i >= 0; --i) {
+      if (root.childNodes[i].nodeType == Node.ELEMENT_NODE) {
+        removeClassMembersExcept(root.childNodes[i], className, keepList);
+      }
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 Number.prototype.toShortFloat = function(ndigits = 3) {
   return parseFloat(this.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: ndigits}));
 }
