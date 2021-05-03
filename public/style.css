@@ -59,7 +59,6 @@ code {
   font-family: 'Roboto Mono', monospace;
   font-style: normal;
   font-weight: bold;
-  /* color: yellow; */
   color: var(--code-color);
 }
 
@@ -67,7 +66,6 @@ var {
   font-family: 'Roboto Mono', monospace;
   font-style: normal;
   font-weight: bold;
-  /* color: yellow; */
   color: var(--code-color);
 }
 
@@ -581,10 +579,15 @@ a:active, .copy-button:active, .link-button:active {
   padding-left: 20px;
 }
 
+#rename-prompt {
+  margin-top: 3px;
+  align-self: flex-end;
+}
+
 #save-as-error-box {
   white-space: pre;
   display: none;
-  color: yellow;
+  color: orange;
   font-weight: bold;
 }
 

@@ -779,6 +779,10 @@ function initialize() {
   const saveAsDialog = document.getElementById('save-as-dialog');
   const saveAsFileNameInput = document.getElementById('save-as-file-name-input');
   const saveAsErrorBox = document.getElementById('save-as-error-box');
+  const renamePrompt = document.getElementById('rename-prompt');
+  const saveAsPrompt = document.getElementById('save-as-prompt');
+  const oldNameBox = document.getElementById('old-name-box');
+  const removeOldCheckbox = document.getElementById('remove-old-checkbox');
 
   function closeSaveAsDialog() {
     dialogOverlay.style.display = 'none';
@@ -797,6 +801,15 @@ function initialize() {
     dialogOverlay.style.display = 'flex';
     saveAsDialog.style.display = 'flex';
     saveAsFileNameInput.focus();
+    removeOldCheckbox.checked = false;
+    if (currentName) {
+      renamePrompt.style.display = 'block';
+      oldNameBox.innerText = currentName;
+      saveAsPrompt.innerHTML = `The file's old name is <code>${currentName}</code>. What is the new name?`;
+    } else {
+      saveAsPrompt.innerHTML = `What is the name of the file?`;
+      renamePrompt.style.display = 'none';
+    }
     document.addEventListener('keydown', saveAsEscapeListener);
   }
 
@@ -807,9 +820,17 @@ function initialize() {
   saveAsCancelButton.addEventListener('click', closeSaveAsDialog);
 
   function reallySaveAs() {
+    const oldName = currentName;
     currentName = saveAsFileNameInput.value;
     localStorage.setItem('most-recent-two', currentName);
+
     save();
+
+    if (removeOldCheckbox.checked && oldName !== currentName) {
+      let twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
+      delete twos[oldName];
+      localStorage.setItem('twos', JSON.stringify(twos));
+    }
   }
 
   function trySaveAs() {
@@ -820,6 +841,7 @@ function initialize() {
     } else {
       const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
       closeSaveAsDialog();
+      // if user want to rename, delete old file after saving new version
       if (twos.hasOwnProperty(name)) {
         showOverwriteDialog(name);
       } else {

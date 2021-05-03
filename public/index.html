@@ -13,8 +13,9 @@
 <div id="dialog-overlay">
   <div id="save-as-dialog" class="dialog">
     <h2 class="dialog-heading">Save As</h2> 
-    <p>What name do want to give this program?</p>
+    <p id="save-as-prompt"></p>
     <input id="save-as-file-name-input" type="text" autocomplete="off">
+    <label id="rename-prompt"><input type="checkbox" id="remove-old-checkbox"> remove <code id="old-name-box"></code></label>
     <div class="dialog-buttons">
       <button id="save-as-cancel-button" class="dialog-button">cancel</button>
       <button id="save-as-okay-button" class="dialog-button">save</button>
