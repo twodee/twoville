@@ -35,7 +35,8 @@ let messagerContainer;
 let evaluateButton;
 let recordGifButton;
 let recordFramesButton;
-let exportButton;
+let exportSvgButton;
+let exportPngButton;
 let fitButton;
 let stopButton;
 let settingsRoot;
@@ -119,18 +120,48 @@ function downloadDataUrl(name, url) {
 
 export function exportSvgWithMarks() {
   if (scene) {
-    serializeThenDownload(scene.svg);
+    downloadSvg(scene.svg);
   }
 }
 
 export function exportSvgWithoutMarks() {
   if (scene) {
     const clone = scene.cloneSvgWithoutMarks();
-    serializeThenDownload(clone);
+    downloadSvg(clone);
   }
 }
 
-function serializeThenDownload(root) {
+export function exportPngWithoutMarks() {
+  if (scene) {
+    const clone = scene.cloneSvgWithoutMarks();
+    downloadPng(clone);
+  }
+}
+
+function downloadPng(root) {
+  const data = new XMLSerializer().serializeToString(root);
+  const svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(svgBlob);
+  const name = scene.get('export').get('name').value;
+  const size = scene.get('export').get('size');
+
+  const img = new Image(size.get(0).value, size.get(1).value);
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = size.get(0).value;
+    canvas.height = size.get(1).value;
+    const context = canvas.getContext('2d');
+    context.drawImage(img, 0, 0);
+    canvas.toBlob(blob => {
+      downloadBlob(`${name}.png`, blob);
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  };
+
+  img.src = url;
+}
+
+function downloadSvg(root) {
   let data = new XMLSerializer().serializeToString(root);
   let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
   let name = scene.get('export').get('name').value;
@@ -408,7 +439,8 @@ function initialize() {
   evaluateButton = document.getElementById('evaluate-button');
   recordGifButton = document.getElementById('record-gif-button');
   recordFramesButton = document.getElementById('record-frames-button');
-  exportButton = document.getElementById('export-button');
+  exportSvgButton = document.getElementById('export-svg-button');
+  exportPngButton = document.getElementById('export-png-button');
   fitButton = document.getElementById('fit-button');
   stopButton = document.getElementById('stop-button');
   playOnceButton = document.getElementById('play-once-button');
@@ -1065,7 +1097,8 @@ function initialize() {
     }
   });
 
-  exportButton.addEventListener('click', exportSvgWithoutMarks);
+  exportSvgButton.addEventListener('click', exportSvgWithoutMarks);
+  exportPngButton.addEventListener('click', exportPngWithoutMarks);
 
   fitButton.addEventListener('click', () => {
     if (scene) scene.fit();
