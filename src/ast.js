@@ -986,7 +986,12 @@ export class ExpressionIdentifier extends Expression {
     if (value) {
       return value;
     } else {
-      throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of this "${this.nameToken.source}" before.`);
+      let f = env.getFunction(this.nameToken.source);
+      if (f) {
+        throw new LocatedException(this.where, `I saw <code>${this.nameToken.source}</code>, which is the name of a function, but I'm not sure what to do with just the name. To call the function, add parentheses.`);
+      } else {
+        throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of this <code>${this.nameToken.source}</code> before.`);
+      }
     }
   }
 

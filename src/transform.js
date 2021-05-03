@@ -170,7 +170,7 @@ export class Rotate extends Transform {
 
     this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
       if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>pivot</code> was not set.');
+        throw new LocatedException(this.where, `I found a <code>${this.type}</code> node whose <code>pivot</code> was not set.`);
       }
 
       try {
@@ -309,7 +309,7 @@ export class Shear extends Transform {
 
     this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
       if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>pivot</code> was not set.');
+        throw new LocatedException(this.where, `I found a <code>${this.type}</code> node whose <code>pivot</code> was not set.`);
       }
 
       try {
@@ -434,7 +434,7 @@ export class Scale extends Transform {
 
     this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
       if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>pivot</code> was not set.');
+        throw new LocatedException(this.where, `I found a <code>${this.type}</code> node whose <code>pivot</code> was not set.`);
       }
 
       try {

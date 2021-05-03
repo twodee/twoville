@@ -9,7 +9,7 @@
   --code-color: rebeccapurple;
   --heading-color: #29498a;
   --heading-color: #cc764c;
-  --active-link-color: purple;
+  --active-link-color: #414e64;
   --link-color: #5e84d1;
   --right-foreground-color: #333333;
   --right-background-color: #fff3e3;
@@ -24,7 +24,7 @@
   --shadow-color: white;
   --code-color: #eeff00;
   --heading-color: #cda869;
-  --active-link-color: rgb(255, 200, 0);
+  --active-link-color: #bdc5d4;
   --link-color: #7587a6;
   --right-foreground-color: white;
   --right-background-color: black;
@@ -454,7 +454,7 @@ html.grabbing {
   text-decoration: none;
 }
 
-.copy-button:active {
+a:active, .copy-button:active, .link-button:active {
   color: var(--active-link-color);
 }
 
@@ -575,10 +575,6 @@ html.grabbing {
   cursor: pointer;
   outline: none;
   white-space: pre;
-}
-
-.link-button:active {
-  color: var(--active-link-color);
 }
 
 .links-list {
