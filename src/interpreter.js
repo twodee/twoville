@@ -20,6 +20,7 @@ import {
 const seedrandom = require('seedrandom');
 
 import { 
+  ExpressionBoolean,
   ExpressionInteger,
   ExpressionReal,
   ExpressionString,
@@ -84,6 +85,7 @@ export class InterpreterEnvironment extends Environment {
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));
+    this.untimedProperties.viewport.bind('autofit', new ExpressionBoolean(false));
 
     this.bindGlobalFunctions();
   }

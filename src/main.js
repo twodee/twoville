@@ -49,8 +49,6 @@ let spinner;
 let scrubber;
 let timeSpinner;
 let interpreterWorker;
-let contentCornerBox;
-let contentSizeBox;
 let currentName;
 
 let frameIndex = 0;
@@ -185,9 +183,6 @@ function scrubTo(t) {
   timeSpinner.value = t;
   scrubber.value = t;
   scene.ageContentAndInteraction(t);
-
-  // contentCornerBox.innerText = `[${scene.box.min[0].toShortFloat(2)}, ${scene.box.min[1].toShortFloat(2)}]`;
-  // contentSizeBox.innerText = `[${(scene.box.max[0] - scene.box.min[0]).toShortFloat(2)}, ${(scene.box.max[1] - scene.box.min[1]).toShortFloat(2)}]`;
 }
 
 function animateFrame() {
@@ -450,8 +445,6 @@ function initialize() {
   spinner = document.getElementById('spinner');
   scrubber = document.getElementById('scrubber');
   timeSpinner = document.getElementById('time-spinner');
-  contentCornerBox = document.getElementById('content-corner-box');
-  contentSizeBox = document.getElementById('content-size-box');
   const svg = document.getElementById('svg');
   new Messager(document.getElementById('messager'), document, highlight);
 

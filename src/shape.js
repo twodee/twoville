@@ -114,6 +114,7 @@ export class Shape extends TimelinedEnvironment {
     this.id = pod.id;
     this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
     this.transforms = pod.transforms.map(subpod => this.root.omniReify(this, subpod));
+    this.boundingBox = new BoundingBox();
   }
 
   static reify(parentEnvironment, pod) {
@@ -355,9 +356,13 @@ export class Shape extends TimelinedEnvironment {
     this.agers = [];
     this.configureState(bounds);
     this.configureTransforms(bounds);
+    this.computeBoundingBox();
     this.initializeMarkDom();
     this.configureMarks();
     this.connect();
+  }
+
+  computeBoundingBox() {
   }
 
   configureMarks() {
@@ -421,6 +426,7 @@ export class Shape extends TimelinedEnvironment {
     // }
     const commands = this.transforms.map(transform => transform.command).join(' ');
     this.element.setAttributeNS(null, 'transform', commands);
+    this.updateMatrix();
   }
 
   updateContentState(bounds) {
@@ -442,6 +448,15 @@ export class Shape extends TimelinedEnvironment {
     for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
       const transform = this.transforms[i];
       transform.updateInteractionState(matrix);
+      matrix = transform.toMatrix().multiplyMatrix(matrix);
+    }
+  }
+
+  updateMatrix() {
+    // The transforms need their prior transform for proper interaction.
+    let matrix = Matrix.identity();
+    for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
+      const transform = this.transforms[i];
       matrix = transform.toMatrix().multiplyMatrix(matrix);
     }
     this.state.matrix = matrix;
@@ -817,6 +832,61 @@ export class Rectangle extends Shape {
       this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
     }
   }
+
+  computeBoundingBox() {
+    let positions;
+
+    if (this.state.size) {
+      if (this.state.center) {
+        positions = [
+          [
+            this.state.center[0] - this.state.size[0] * 0.5,
+            this.state.center[1] - this.state.size[1] * 0.5,
+          ],
+          [
+            this.state.center[0] + this.state.size[0] * 0.5,
+            this.state.center[1] - this.state.size[1] * 0.5,
+          ],
+          [
+            this.state.center[0] - this.state.size[0] * 0.5,
+            this.state.center[1] + this.state.size[1] * 0.5,
+          ],
+          [
+            this.state.center[0] + this.state.size[0] * 0.5,
+            this.state.center[1] + this.state.size[1] * 0.5,
+          ],
+        ];
+
+      } else if (this.state.corner) {
+        positions = [
+          this.state.corner,
+          [
+            this.state.corner[0] + this.state.size[0],
+            this.state.corner[1],
+          ],
+          [
+            this.state.corner[0],
+            this.state.corner[1] + this.state.size[1],
+          ],
+          [
+            this.state.corner[0] + this.state.size[0],
+            this.state.corner[1] + this.state.size[1],
+          ],
+        ];
+      }
+    }
+
+    if (positions) {
+      for (let position of positions) {
+        let transformedPosition = this.state.matrix.multiplyVector(position);
+        this.boundingBox.enclosePoint(transformedPosition);
+      }
+    }
+
+    // TODO: add intervals
+    // TODO: handle stroke
+    // TODO: handle transforms
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -874,6 +944,21 @@ export class Circle extends Shape {
         throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
       }
     });
+  }
+
+  computeBoundingBox() {
+    if (this.state.center && this.state.radius) {
+      this.boundingBox.enclosePoint([
+        this.state.center[0] - this.state.radius,
+        this.state.center[1] - this.state.radius,
+      ]);
+      this.boundingBox.enclosePoint([
+        this.state.center[0] + this.state.radius,
+        this.state.center[1] + this.state.radius,
+      ]);
+    }
+
+    // add intervals
   }
 
   updateRadius(bounds) {

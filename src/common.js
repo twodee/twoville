@@ -278,19 +278,43 @@ export class BoundingBox {
     this.max = [Number.MIN_VALUE, Number.MIN_VALUE];
   }
 
-  include(p) {
+  encloseBox(box) {
     this.isEmpty = false;
 
-    if (p[0] < this.min[0]) {
-      this.min[0] = p[0];
-    } else if (p[0] > this.max[0]) {
-      this.max[0] = p[0];
+    if (box.min[0] < this.min[0]) {
+      this.min[0] = box.min[0];
+    } else if (box.max[0] > this.max[0]) {
+      this.max[0] = box.max[0];
     }
 
-    if (p[1] < this.min[1]) {
-      this.min[1] = p[1];
-    } else if (p[1] > this.max[1]) {
-      this.max[1] = p[1];
+    if (box.min[1] < this.min[1]) {
+      this.min[1] = box.min[1];
+    } else if (box.max[1] > this.max[1]) {
+      this.max[1] = box.max[1];
+    }
+  }
+
+  get width() {
+    return this.max[0] - this.min[0];
+  }
+
+  get height() {
+    return this.max[1] - this.min[1];
+  }
+
+  enclosePoint(point) {
+    this.isEmpty = false;
+
+    if (point[0] < this.min[0]) {
+      this.min[0] = point[0];
+    } else if (point[0] > this.max[0]) {
+      this.max[0] = point[0];
+    }
+
+    if (point[1] < this.min[1]) {
+      this.min[1] = point[1];
+    } else if (point[1] > this.max[1]) {
+      this.max[1] = point[1];
     }
 
     return this;

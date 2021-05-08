@@ -170,13 +170,14 @@ export class RenderEnvironment extends Environment {
     this.defines = document.createElementNS(svgNamespace, 'defs');
     this.svg.appendChild(this.defines);
 
-    let size = this.get('viewport').get('size');
+    const viewport = this.get('viewport');
+    let size = viewport.get('size');
 
     let corner;
-    if (this.get('viewport').owns('corner')) {
-      corner = this.get('viewport').get('corner');
-    } else if (this.get('viewport').owns('center')) {
-      let center = this.get('viewport').get('center');
+    if (viewport.owns('corner')) {
+      corner = viewport.get('corner');
+    } else if (viewport.owns('center')) {
+      let center = viewport.get('center');
       corner = new ExpressionVector([
         new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
         new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
@@ -197,13 +198,6 @@ export class RenderEnvironment extends Environment {
     };
     this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
 
-    // for (let filler of this.viewportFillers) {
-      // filler.setAttributeNS(null, 'x', this.fitBounds.x);
-      // filler.setAttributeNS(null, 'y', this.fitBounds.y);
-      // filler.setAttributeNS(null, 'width', this.fitBounds.width);
-      // filler.setAttributeNS(null, 'height', this.fitBounds.height);
-    // }
-
     // Retain viewBox only if we've rendered previously and the viewport hasn't
     // changed. Otherwise we fit the viewBox to the viewport.
     if (this.previousBounds &&
@@ -220,15 +214,6 @@ export class RenderEnvironment extends Environment {
     } else {
       this.fit();
     }
-
-    let pageOutline = document.createElementNS(svgNamespace, 'rect');
-    pageOutline.setAttributeNS(null, 'id', 'x-outline');
-    pageOutline.setAttributeNS(null, 'visibility', this.settings.showPageOutline ? 'visible' : 'hidden');
-    pageOutline.setAttributeNS(null, 'x', this.fitBounds.x);
-    pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
-    pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
-    pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
-    pageOutline.classList.add('mark', 'viewport-outline');
 
     this.bounds.startTime = this.get('time').get('start').value;
     this.bounds.stopTime = this.get('time').get('stop').value;
@@ -261,18 +246,47 @@ export class RenderEnvironment extends Environment {
     this.sceneMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.sceneMarkGroup.setAttributeNS(null, 'id', 'scene-mark-group');
     this.sceneMarkGroup.classList.add('mark-group');
-    this.sceneMarkGroup.appendChild(pageOutline);
     this.backgroundMarkGroup.appendChild(this.sceneMarkGroup);
 
+    const boundingBox = new BoundingBox();
     for (let shape of this.shapes) {
       shape.configure(this.bounds);
+      boundingBox.encloseBox(shape.boundingBox);
     }
-    this.state = {};
 
+    if (viewport.get('autofit').value) {
+      this.fitBounds = {
+        x: boundingBox.min[0],
+        y: boundingBox.min[1],
+        width: boundingBox.width,
+        height: boundingBox.height,
+      };
+      this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
+      this.fit();
+
+      // TODO: Is this the best way to ensure that the transform gets updated?
+      for (let shape of this.shapes) {
+        for (let transform of shape.transforms) {
+          transform.updateDomCommand(this.bounds);
+        }
+      }
+    }
+
+    let pageOutline = document.createElementNS(svgNamespace, 'rect');
+    pageOutline.setAttributeNS(null, 'id', 'x-outline');
+    pageOutline.setAttributeNS(null, 'visibility', this.settings.showPageOutline ? 'visible' : 'hidden');
+    pageOutline.setAttributeNS(null, 'x', this.fitBounds.x);
+    pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
+    pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
+    pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
+    pageOutline.classList.add('mark', 'viewport-outline');
+    this.sceneMarkGroup.appendChild(pageOutline);
+
+    this.state = {};
     this.drawables = this.shapes.filter(shape => shape.isDrawable);
 
-    if (this.get('viewport').owns('grid')) {
-      const grid = this.get('viewport').get('grid');
+    if (viewport.owns('grid')) {
+      const grid = viewport.get('grid');
       const gridX = grid.get(0);
       const gridY = grid.get(1);
       const gridGroup = document.createElementNS(svgNamespace, 'g');
