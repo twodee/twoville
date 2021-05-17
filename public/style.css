@@ -100,23 +100,21 @@ var {
 }
 
 #messager-container {
-  /* Must be relative to anchor resizer. */
-  /* position: relative; */
-
   height: 200px;
   flex: 0 1 auto;
 
   background-color: var(--messager-background-color);
   color: var(--messager-foreground-color);
+
+  /* These used to be on #messager, but overflow was sometimes cut off. */
+  overflow: auto;
 }
 
 #messager {
   font-family: 'Roboto Mono', monospace;
   font-size: 150%;
-  overflow: auto;
-  width: 100%;
-  height: 100%;
-  padding: 10px;
+  /* I want the space on the textarea because I want it to scroll. */
+  margin: 10px;
 }
 
 #editor {
