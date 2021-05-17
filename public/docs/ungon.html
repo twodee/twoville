@@ -5,7 +5,7 @@
 <p>Here's the pentagonal house again, but this time it uses the <code>ungon</code> command:</p>
 
 <div class="docs-source">with ungon()
-  rounding = 0
+  formula = :symmetric
   color = :orange
   vertex().position = [10, 10]
   vertex().position = [90, 10]
@@ -13,4 +13,30 @@
   vertex().position = [50, 90]
   vertex().position = [10, 60]</div>
 
-<p>Ungons have one additional over polygons: <code>rounding</code>. When <code>rounding</code> is 0, the corners are only slightly rounded. When <code>rounding</code> is 1, the corners are really rounded. If you use a number outside of [0, 1], be prepared for strange effects.</p>
+<p>This ungon is symmetric, which means the corners are rounded off all the way to the midpoints of the edges.</p>
+
+<p>An ungon with absolute rounding shaves off only a fixed length of each edge around a corner. If an ungon's <code>formula</code> property is <code>absolute</code>, it must also have its <code>rounding</code> property set. Here we shave off 5 units from each edge:</p>
+
+<div class="docs-source">with ungon()
+  formula = :absolute
+  rounding = 5
+  color = :orange
+  vertex().position = [10, 10]
+  vertex().position = [90, 10]
+  vertex().position = [90, 60]
+  vertex().position = [50, 90]
+  vertex().position = [10, 60]</div>
+
+<p>An ungon with relativing rounding (whose <code>formula</code> property is set to <code>relative</code>) shaves off a proportion of each edge around a corner. Here we shave off 25% of each edge:</p>
+
+<div class="docs-source">with ungon()
+  formula = :relative
+  rounding = 0.25
+  color = :orange
+  vertex().position = [10, 10]
+  vertex().position = [90, 10]
+  vertex().position = [90, 60]
+  vertex().position = [50, 90]
+  vertex().position = [10, 60]</div>
+
+<p>If you use a number outside of [0, 1], be prepared for strange effects.</p>

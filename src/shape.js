@@ -483,9 +483,10 @@ export class Shape extends TimelinedEnvironment {
     // }
 
     // First get all the model state in order.
-    // for (let transform of this.transforms) {
-      // transform.updateDomCommand(bounds);
-    // }
+    // A drag on a transform marker will have changed the state.
+    for (let transform of this.transforms) {
+      transform.updateDomCommand(bounds);
+    }
     // this.updateMarkerState();
 
     // Now update DOM.
@@ -1238,7 +1239,7 @@ export class Polygon extends VertexShape {
 export class Polyline extends VertexShape {
   static type = 'polyline';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes', 'join', 'enabled'];
+  static timedIds = ['size', 'color', 'opacity', 'join', 'enabled'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -1295,7 +1296,7 @@ export class Polyline extends VertexShape {
 export class Line extends VertexShape {
   static type = 'line';
   static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'dashes', 'enabled'];
+  static timedIds = ['size', 'color', 'opacity', 'enabled'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -1474,7 +1475,7 @@ export class Ungon extends VertexShape {
 
       let vectors = this.domNodes.map((node, i) => {
         const a = node.turtle.position;
-        const b = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
+        const b = this.domNodes[(i + 1) % nnodes].turtle.position;
 
         let vector = [b[0] - a[0], b[1] - a[1]];
         let magnitude = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1]);
@@ -1491,8 +1492,8 @@ export class Ungon extends VertexShape {
       pathCommands.push(`M ${insetA[0]},${bounds.span - insetA[1]}`);
 
       for (let i = 0; i < nnodes; ++i) {
-        const position = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
-        const vector = vectors[(i + 1) % this.domNodes.length];
+        const position = this.domNodes[(i + 1) % nnodes].turtle.position;
+        const vector = vectors[(i + 1) % nnodes];
 
         let insetB = [
           position[0] - rounding * vectors[i][0],
