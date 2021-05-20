@@ -41,8 +41,9 @@ import {
 } from './matrix.js';
 
 import {
-  GoNode,
+  BackNode,
   CircleNode,
+  GoNode,
   JumpNode,
   Mirror,
   RectangleNode,
@@ -53,6 +54,7 @@ import {
 import {
   ExpressionArcNode,
   ExpressionBoolean,
+  ExpressionBackNode,
   ExpressionCircleNode,
   ExpressionCubicNode,
   ExpressionGoNode,
@@ -1587,9 +1589,10 @@ export class Path extends NodeShape {
     this.bindFunction('circle', new FunctionDefinition('circle', [], new ExpressionCircleNode(this)));
     this.bindFunction('rectangle', new FunctionDefinition('rectangle', [], new ExpressionRectangleNode(this)));
     this.bindFunction('go', new FunctionDefinition('go', [], new ExpressionGoNode(this)));
+    this.bindFunction('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
     this.bindFunction('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
-    this.bindFunction('quadratic', new FunctionDefinition('line', [], new ExpressionQuadraticNode(this)));
-    this.bindFunction('cubic', new FunctionDefinition('line', [], new ExpressionCubicNode(this)));
+    this.bindFunction('quadratic', new FunctionDefinition('quadratic', [], new ExpressionQuadraticNode(this)));
+    this.bindFunction('cubic', new FunctionDefinition('cubic', [], new ExpressionCubicNode(this)));
     this.bindFunction('arc', new FunctionDefinition('arc', [], new ExpressionArcNode(this)));
     this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
@@ -1597,7 +1600,6 @@ export class Path extends NodeShape {
   static create(parentEnvironment, where) {
     const shape = new Path();
     shape.initialize(parentEnvironment, where);
-    shape.untimedProperties.closed = new ExpressionBoolean(false);
     return shape;
   }
 
@@ -1657,10 +1659,6 @@ export class Path extends NodeShape {
 				segments.push(...mirroredSegments);
 			}
 		}
-
-    if (this.untimedProperties.hasOwnProperty('closed') && this.untimedProperties.closed.value) {
-      pathCommands.push('z');
-    }
    
     this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
 
@@ -1677,9 +1675,6 @@ export class Path extends NodeShape {
   updateInteractionState(bounds) {
     super.updateInteractionState(bounds);
     const commands = this.domNodes.map(node => node.pathCommand);
-    if (this.untimedProperties.hasOwnProperty('closed') && this.untimedProperties.closed.value) {
-      commands.push('z');
-    }
     this.outlineMark.updateState(commands.join(' '));
   }
 }

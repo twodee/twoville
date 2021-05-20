@@ -708,6 +708,51 @@ export class TurnNode extends Node {
 
 // --------------------------------------------------------------------------- 
 
+export class BackNode extends Node {
+  static type = 'back';
+  static article = 'a';
+  static timedIds = [];
+
+  static create(parentEnvironment, where) {
+    const node = new BackNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const node = new BackNode();
+    node.embody(parentEnvironment, pod);
+    return node;
+  }
+
+  segment(previousSegment) {
+    // TODO what's supposed to happen here?
+    return new GapSegment(this.previousTurtle?.position, this.turtle.position);
+  }
+
+  get isDom() {
+    return true;
+  }
+
+  configureState(bounds) {
+    this.updateTurtle(bounds);
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.previousTurtle.position[0];
+    this.turtle.position[1] = this.previousTurtle.position[1];
+    this.turtle.heading = this.previousTurtle.heading;
+    this.pathCommand = `z`;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.marker.addMarks([], [], []);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class GoNode extends Node {
   static type = 'go';
   static article = 'a';

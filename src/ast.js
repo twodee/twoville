@@ -39,6 +39,7 @@ import {
 
 import {
   ArcNode,
+  BackNode,
   CubicNode,
   LineNode,
   JumpNode,
@@ -1809,6 +1810,19 @@ export class ExpressionJumpNode extends ExpressionFunction {
 
   evaluate(env, fromTime, toTime, context) {
     return new JumpNode.create(this.instance, context.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionBackNode extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, context) {
+    return new BackNode.create(this.instance, context.callExpression.where);
   }
 }
 

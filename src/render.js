@@ -36,6 +36,7 @@ import {
 
 import {
   ArcNode,
+  BackNode,
   CubicNode,
   CircleNode,
   GoNode,
@@ -120,6 +121,8 @@ export class RenderEnvironment extends Environment {
       return MoveNode.reify(env, pod);
     } else if (pod.type === 'turn') {
       return TurnNode.reify(env, pod);
+    } else if (pod.type === 'back') {
+      return BackNode.reify(env, pod);
     } else if (pod.type === 'go') {
       return GoNode.reify(env, pod);
     } else if (pod.type === 'jump') {
