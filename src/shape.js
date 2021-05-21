@@ -1658,6 +1658,10 @@ export class Path extends NodeShape {
 
 				segments.push(...mirroredSegments);
 			}
+
+      if (distancePointPoint(segments[0].from, segments[segments.length - 1].to) < 1e-6) {
+        pathCommands.push('z');
+      }
 		}
    
     this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
