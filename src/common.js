@@ -274,24 +274,54 @@ export function sentenceCase(s) {
 export class BoundingBox {
   constructor() {
     this.isEmpty = true;
-    this.min = [Number.MAX_VALUE, Number.MAX_VALUE];
-    this.max = [Number.MIN_VALUE, Number.MIN_VALUE];
+    this.min = [0, 0];
+    this.max = [0, 0];
   }
 
   encloseBox(box) {
-    this.isEmpty = false;
-
-    if (box.min[0] < this.min[0]) {
+    if (this.isEmpty) {
       this.min[0] = box.min[0];
-    } else if (box.max[0] > this.max[0]) {
+      this.min[1] = box.min[1];
       this.max[0] = box.max[0];
+      this.max[1] = box.max[1];
+      this.isEmpty = false;
+    } else {
+      if (box.min[0] < this.min[0]) {
+        this.min[0] = box.min[0];
+      } else if (box.max[0] > this.max[0]) {
+        this.max[0] = box.max[0];
+      }
+
+      if (box.min[1] < this.min[1]) {
+        this.min[1] = box.min[1];
+      } else if (box.max[1] > this.max[1]) {
+        this.max[1] = box.max[1];
+      }
+    }
+  }
+
+  enclosePoint(point) {
+    if (this.isEmpty) {
+      this.isEmpty = false;
+      this.min[0] = point[0];
+      this.min[1] = point[1];
+      this.max[0] = point[0];
+      this.max[1] = point[1];
+    } else {
+      if (point[0] < this.min[0]) {
+        this.min[0] = point[0];
+      } else if (point[0] > this.max[0]) {
+        this.max[0] = point[0];
+      }
+
+      if (point[1] < this.min[1]) {
+        this.min[1] = point[1];
+      } else if (point[1] > this.max[1]) {
+        this.max[1] = point[1];
+      }
     }
 
-    if (box.min[1] < this.min[1]) {
-      this.min[1] = box.min[1];
-    } else if (box.max[1] > this.max[1]) {
-      this.max[1] = box.max[1];
-    }
+    return this;
   }
 
   get width() {
@@ -300,24 +330,6 @@ export class BoundingBox {
 
   get height() {
     return this.max[1] - this.min[1];
-  }
-
-  enclosePoint(point) {
-    this.isEmpty = false;
-
-    if (point[0] < this.min[0]) {
-      this.min[0] = point[0];
-    } else if (point[0] > this.max[0]) {
-      this.max[0] = point[0];
-    }
-
-    if (point[1] < this.min[1]) {
-      this.min[1] = point[1];
-    } else if (point[1] > this.max[1]) {
-      this.max[1] = point[1];
-    }
-
-    return this;
   }
 
   thicken(width) {
