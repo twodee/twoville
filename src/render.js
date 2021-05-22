@@ -256,6 +256,7 @@ export class RenderEnvironment extends Environment {
       shape.configure(this.bounds);
       boundingBox.encloseBox(shape.boundingBox);
     }
+    console.log("boundingBox:", boundingBox);
 
     if (viewport.get('autofit').value) {
       this.fitBounds = {

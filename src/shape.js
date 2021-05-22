@@ -859,10 +859,12 @@ export class Rectangle extends Shape {
             this.state.center[1] + this.state.size[1] * 0.5,
           ],
         ];
-
       } else if (this.state.corner) {
         positions = [
-          this.state.corner,
+          [
+            this.state.corner[0],
+            this.state.corner[1],
+          ],
           [
             this.state.corner[0] + this.state.size[0],
             this.state.corner[1],
@@ -877,6 +879,21 @@ export class Rectangle extends Shape {
           ],
         ];
       }
+
+      const thickness = this.untimedProperties.stroke.state.size * 0.5;
+      positions[0][0] -= thickness;
+      positions[1][0] += thickness;
+      positions[2][0] -= thickness;
+      positions[3][0] += thickness;
+
+      positions[0][1] -= thickness;
+      positions[1][1] -= thickness;
+      positions[2][1] += thickness;
+      positions[3][1] += thickness;
+      console.log("positions[0]:", positions[0]);
+      console.log("positions[1]:", positions[1]);
+      console.log("positions[2]:", positions[2]);
+      console.log("positions[3]:", positions[3]);
     }
 
     if (positions) {
@@ -885,6 +902,8 @@ export class Rectangle extends Shape {
         this.boundingBox.enclosePoint(transformedPosition);
       }
     }
+
+    console.log("this.boundingBox:", this.boundingBox.toString());
 
     // TODO: add intervals
     // TODO: handle stroke

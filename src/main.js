@@ -1104,7 +1104,7 @@ function initialize() {
 
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-      save();
+      saveSomehow();
       event.preventDefault();
       return false;
     } else {
