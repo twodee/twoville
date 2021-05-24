@@ -49,6 +49,7 @@ import {
   Mirror,
   MoveNode,
   QuadraticNode,
+  TabNode,
   TurnNode,
   TurtleNode,
   VertexNode,
@@ -1049,7 +1050,7 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
     if (value) {
       return value;
     } else {
-      throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of this "${this.nameToken.source}" before.`);
+      throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of this <code>${this.nameToken.source}</code> before.`);
     }
   }
 
@@ -1134,7 +1135,7 @@ export class ExpressionFunctionCall extends Expression {
   lookup(env, fromTime, toTime) {
     let f = env.getFunction(this.nameToken.source);
     if (!f) {
-      throw new LocatedException(this.where, `I've not heard of any function named "${this.nameToken.source}".`);
+      throw new LocatedException(this.where, `I've not heard of any function named <code>${this.nameToken.source}</code>.`);
     }
     return f;
   }
@@ -1735,6 +1736,19 @@ export class ExpressionRectangle extends ExpressionFunction {
   }
 }
  
+// --------------------------------------------------------------------------- 
+
+export class ExpressionTabNode extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env, fromTime, toTime, context) {
+    return TabNode.create(this.instance, context.callExpression.where);
+  }
+}
+
 // --------------------------------------------------------------------------- 
 
 export class ExpressionVertexNode extends ExpressionFunction {

@@ -64,3 +64,30 @@ export function clamp(x, a, b) {
     return x;
   }
 }
+
+// --------------------------------------------------------------------------- 
+
+export function unitVectorBetween(a, b) {
+  let diff = [
+    b[0] - a[0],
+    b[1] - a[1],
+  ];
+  const magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
+  return [
+    diff[0] /= magnitude,
+    diff[1] /= magnitude,
+  ];
+}
+
+// --------------------------------------------------------------------------- 
+
+export function rotateVector(vector, degrees) {
+  const radians = degrees * Math.PI / 180;
+  return [
+    vector[0] * Math.cos(radians) - vector[1] * Math.sin(radians), 
+    vector[0] * Math.sin(radians) + vector[1] * Math.cos(radians), 
+  ];
+}
+
+// --------------------------------------------------------------------------- 
+

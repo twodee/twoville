@@ -15,6 +15,8 @@ import {
 
 import {
   mirrorPointLine,
+  unitVectorBetween,
+  rotateVector,
 } from './math.js';
 
 import {
@@ -92,6 +94,115 @@ export class Node extends TimelinedEnvironment {
 
 // --------------------------------------------------------------------------- 
 
+export class TabNode extends Node {
+  static type = 'tab';
+  static article = 'a';
+  static timedIds = [];
+
+  static create(parentEnvironment, where) {
+    const node = new TabNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const node = new TabNode();
+    node.embody(parentEnvironment, pod);
+    return node;
+  }
+
+  get isDom() {
+    return true;
+  }
+
+  configureState(bounds) {
+    // TODO check type
+
+    if (this.owns('size')) {
+      this.state.size = this.untimedProperties.size.value;
+      this.parentEnvironment.state.tabSize = this.state.size;
+    } else {
+      this.state.size = this.parentEnvironment.state.tabSize;
+    }
+
+    if (this.owns('degrees')) {
+      this.state.degrees = this.untimedProperties.degrees.value;
+      this.parentEnvironment.state.tabDegrees = this.state.degrees;
+    } else {
+      this.state.degrees = this.parentEnvironment.state.tabDegrees;
+    }
+    console.log("this.state.degrees:", this.state.degrees);
+
+    if (this.owns('inset')) {
+      this.state.inset = this.untimedProperties.inset.value;
+      this.parentEnvironment.state.tabInset = this.state.inset;
+    } else {
+      this.state.inset = this.parentEnvironment.state.tabInset;
+    }
+
+    this.updateTurtle(bounds);
+  }
+
+  getPositions(from, to) {
+    const scale = this.state.size / Math.sin(this.state.degrees * Math.PI / 180);
+    let v = unitVectorBetween(from.position, to.position);
+    const fore = rotateVector(v, -this.state.degrees);
+    const aft = rotateVector([-v[0], -v[1]], this.state.degrees);
+
+    const positions = [];
+    
+    let start;
+    let stop;
+    if (this.state.inset > 0) {
+      start = [
+        from.position[0] + v[0] * this.state.inset,
+        from.position[1] + v[1] * this.state.inset,
+      ];
+      stop = [
+        to.position[0] - v[0] * this.state.inset,
+        to.position[1] - v[1] * this.state.inset,
+      ];
+      positions.push(start);
+    } else {
+      start = from.position;
+      stop = to.position;
+    }
+
+    positions.push([
+      start[0] + fore[0] * scale,
+      start[1] + fore[1] * scale,
+    ]);
+
+    positions.push([
+      stop[0] + aft[0] * scale,
+      stop[1] + aft[1] * scale,
+    ]);
+
+    if (this.state.inset > 0) {
+      positions.push(stop);
+    }
+
+    return positions;
+  }
+
+  updateTurtle(bounds) {
+    this.turtle.position[0] = this.previousTurtle.position[0];
+    this.turtle.position[1] = this.previousTurtle.position[1];
+    this.turtle.heading = this.previousTurtle.heading;
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.marker.addMarks([], [], []);
+  }
+
+  updateInteractionState(matrix) {
+    super.updateInteractionState(matrix);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class VertexNode extends Node {
   static type = 'vertex';
   static article = 'a';
@@ -130,6 +241,10 @@ export class VertexNode extends Node {
         }
       }
     });
+  }
+
+  getPositions() {
+    return [this.turtle.position];
   }
 
   updateTurtle(bounds) {
@@ -223,6 +338,10 @@ export class TurtleNode extends Node {
     }
   }
 
+  getPositions() {
+    return [this.turtle.position];
+  }
+
   updateTurtle(bounds) {
     this.turtle.position[0] = this.state.position[0];
     this.turtle.position[1] = this.state.position[1];
@@ -295,6 +414,10 @@ export class MoveNode extends Node {
         throw new LocatedException(e.where, `I found a <code>move</code> node with an illegal value for <code>distance</code>. ${e.message}`);
       }
     });
+  }
+
+  getPositions() {
+    return [this.turtle.position];
   }
 
   updateTurtle(bounds) {

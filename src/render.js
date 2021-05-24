@@ -46,9 +46,10 @@ import {
   MoveNode,
   QuadraticNode,
   RectangleNode,
-  VertexNode,
+  TabNode,
   TurtleNode,
   TurnNode,
+  VertexNode,
 } from './node.js';
 
 import {
@@ -112,9 +113,10 @@ export class RenderEnvironment extends Environment {
       return Mirror.reify(env, pod);
     } else if (pod.type === 'timeline') {
       return Timeline.reify(env, pod);
-
     } else if (pod.type === 'vertex') {
       return VertexNode.reify(env, pod);
+    } else if (pod.type === 'tab') {
+      return TabNode.reify(env, pod);
     } else if (pod.type === 'turtle') {
       return TurtleNode.reify(env, pod);
     } else if (pod.type === 'move') {
@@ -256,7 +258,7 @@ export class RenderEnvironment extends Environment {
       shape.configure(this.bounds);
       boundingBox.encloseBox(shape.boundingBox);
     }
-    console.log("boundingBox:", boundingBox);
+    // console.log("boundingBox:", boundingBox);
 
     if (viewport.get('autofit').value) {
       this.fitBounds = {

@@ -47,6 +47,9 @@ import {
   JumpNode,
   Mirror,
   RectangleNode,
+  TabNode,
+  MoveNode,
+  LineNode,
   TurtleNode,
   VertexNode,
 } from './node.js';
@@ -71,6 +74,7 @@ import {
   ExpressionRotate,
   ExpressionScale,
   ExpressionShear,
+  ExpressionTabNode,
   ExpressionTurnNode,
   ExpressionTurtleNode,
   ExpressionVector,
@@ -890,10 +894,6 @@ export class Rectangle extends Shape {
       positions[1][1] -= thickness;
       positions[2][1] += thickness;
       positions[3][1] += thickness;
-      console.log("positions[0]:", positions[0]);
-      console.log("positions[1]:", positions[1]);
-      console.log("positions[2]:", positions[2]);
-      console.log("positions[3]:", positions[3]);
     }
 
     if (positions) {
@@ -903,10 +903,9 @@ export class Rectangle extends Shape {
       }
     }
 
-    console.log("this.boundingBox:", this.boundingBox.toString());
+    // console.log("this.boundingBox:", this.boundingBox.toString());
 
     // TODO: add intervals
-    // TODO: handle stroke
     // TODO: handle transforms
   }
 }
@@ -1051,6 +1050,23 @@ export class NodeShape extends Shape {
 
   configureNodes(bounds) {
     for (let [i, node] of this.nodes.entries()) {
+
+      // If we have a tab node, it must be followed by node that produces a
+      // straight line.
+      if (node instanceof TabNode) {
+        if (i === this.nodes.length - 1) {
+          throw new LocatedException(node.where, `I found ${node.article} ${node.type} node at the end of a sequence. It must be followed by a node that produces a straight line.`);
+        } else {
+          const nextNode = this.nodes[i + 1];
+          if (!(nextNode instanceof VertexNode ||
+                nextNode instanceof MoveNode ||
+                nextNode instanceof BackNode ||
+                nextNode instanceof LineNode)) {
+            throw new LocatedException(node.where, `I found ${node.article} ${node.type} node that was followed by ${nextNode.article} ${nextNode.type} node. It must be followed by a node that produces a straight line.`);
+          }
+        }
+      }
+
       node.configure(i > 0 ? this.nodes[i - 1].turtle : null, bounds);
     }
 
@@ -1068,6 +1084,10 @@ export class NodeShape extends Shape {
   }
 
   configureState(bounds) {
+    this.state.tabSize = 1;
+    this.state.tabDegrees = 45;
+    this.state.tabInset = 0;
+
     this.configureNodes(bounds);
     this.configureOtherProperties(bounds);
 
@@ -1202,6 +1222,7 @@ export class Polygon extends VertexShape {
     super.initialize(parentEnvironment, where);
     this.initializeFill();
 
+    this.bindFunction('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
     this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
@@ -1235,7 +1256,9 @@ export class Polygon extends VertexShape {
 
   updateContentDom(bounds) {
     super.updateContentDom(bounds);
-    const positions = this.domNodes.map(node => node.turtle.position);
+    const positions = this.domNodes.flatMap((node, index) => {
+      return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
+    });
     this.mirrorPositions(positions);
     const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
