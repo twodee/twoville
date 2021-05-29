@@ -1087,6 +1087,8 @@ export class NodeShape extends Shape {
     this.state.tabSize = 1;
     this.state.tabDegrees = 45;
     this.state.tabInset = 0;
+    this.state.tabIsCounterclockwise = true;
+    this.state.turtle0 = null;
 
     this.configureNodes(bounds);
     this.configureOtherProperties(bounds);
@@ -1228,6 +1230,7 @@ export class Polygon extends VertexShape {
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
     this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+    this.bindFunction('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -1250,6 +1253,8 @@ export class Polygon extends VertexShape {
     if (this.domNodes.length < 3) {
       throw new LocatedException(this.where, `I found a <code>polygon</code> with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
     }
+
+    this.state.turtle0 = this.domNodes[0].turtle;
 
     this.configureFill(bounds);
   }
@@ -1424,6 +1429,7 @@ export class Ungon extends VertexShape {
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
     this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+    this.bindFunction('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
   }
 
   static create(parentEnvironment, where) {
@@ -1624,6 +1630,7 @@ export class Path extends NodeShape {
     super.initialize(parentEnvironment, where);
     this.initializeFill();
 
+    this.bindFunction('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
@@ -1670,7 +1677,9 @@ export class Path extends NodeShape {
   updateContentDom(bounds) {
     super.updateContentDom(bounds);
 
-    const pathCommands = this.domNodes.map(node => node.pathCommand);
+    const pathCommands = this.domNodes.map((node, index) => {
+      return node.getPathCommand(bounds, this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
+    });
 
 	  if (this.mirrors.length > 0) {
       let segments = [];

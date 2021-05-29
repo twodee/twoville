@@ -37,6 +37,7 @@ let recordGifButton;
 let recordFramesButton;
 let exportSvgButton;
 let exportPngButton;
+let sendToChrisButton;
 let fitButton;
 let stopButton;
 let settingsRoot;
@@ -436,6 +437,7 @@ function initialize() {
   recordFramesButton = document.getElementById('record-frames-button');
   exportSvgButton = document.getElementById('export-svg-button');
   exportPngButton = document.getElementById('export-png-button');
+  sendToChrisButton = document.getElementById('send-to-chris-button');
   fitButton = document.getElementById('fit-button');
   stopButton = document.getElementById('stop-button');
   playOnceButton = document.getElementById('play-once-button');
@@ -1115,6 +1117,8 @@ function initialize() {
   exportSvgButton.addEventListener('click', exportSvgWithoutMarks);
   exportPngButton.addEventListener('click', exportPngWithoutMarks);
 
+  sendToChrisButton.addEventListener('click', sendToChris);
+
   fitButton.addEventListener('click', () => {
     if (scene) scene.fit();
   });
@@ -1416,6 +1420,26 @@ function initialize() {
   });
 
   initializeDocs();
+}
+
+function sendToChris() {
+  const name = prompt("What's your name?");
+  const payload = {
+    name,
+    source: editor.getValue(),
+  };
+  fetch('save.php', {
+    headers: {'Content-Type': 'application/json'},
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }).then(response => {
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    return response;
+  }).then(response => {
+    console.log("response.body:", response.body);
+  });
 }
 
 function copyToClipboard(text) {

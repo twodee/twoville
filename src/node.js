@@ -116,7 +116,7 @@ export class TabNode extends Node {
   }
 
   configureState(bounds) {
-    // TODO check type
+    // TODO check types
 
     if (this.owns('size')) {
       this.state.size = this.untimedProperties.size.value;
@@ -131,7 +131,6 @@ export class TabNode extends Node {
     } else {
       this.state.degrees = this.parentEnvironment.state.tabDegrees;
     }
-    console.log("this.state.degrees:", this.state.degrees);
 
     if (this.owns('inset')) {
       this.state.inset = this.untimedProperties.inset.value;
@@ -140,14 +139,27 @@ export class TabNode extends Node {
       this.state.inset = this.parentEnvironment.state.tabInset;
     }
 
+    if (this.owns('winding')) {
+      this.state.isCounterclockwise = this.untimedProperties.winding.value === 1;
+      this.parentEnvironment.state.tabIsCounterclockwise = this.state.isCounterclockwise;
+    } else {
+      this.state.isCounterclockwise = this.parentEnvironment.state.tabIsCounterclockwise;
+    }
+
     this.updateTurtle(bounds);
+  }
+
+  getPathCommand(bounds, from, to) {
+    const positions = this.getPositions(from, to);
+    return positions.map(position => `L${position[0]},${bounds.span - position[1]}`).join(' ');
   }
 
   getPositions(from, to) {
     const scale = this.state.size / Math.sin(this.state.degrees * Math.PI / 180);
     let v = unitVectorBetween(from.position, to.position);
-    const fore = rotateVector(v, -this.state.degrees);
-    const aft = rotateVector([-v[0], -v[1]], this.state.degrees);
+    const sign = this.state.isCounterclockwise ? -1 : 1;
+    const fore = rotateVector(v, sign * this.state.degrees);
+    const aft = rotateVector([-v[0], -v[1]], -sign * this.state.degrees);
 
     const positions = [];
     
@@ -346,7 +358,12 @@ export class TurtleNode extends Node {
     this.turtle.position[0] = this.state.position[0];
     this.turtle.position[1] = this.state.position[1];
     this.turtle.heading = this.state.heading;
+    this.parentEnvironment.state.turtle0 = this.turtle;
     this.pathCommand = `M ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
@@ -427,6 +444,10 @@ export class MoveNode extends Node {
     this.pathCommand = `L ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
   }
 
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
+  }
+
   configureMarks() {
     super.configureMarks();
 
@@ -491,7 +512,12 @@ export class JumpNode extends Node {
     this.turtle.position[0] = this.previousTurtle.position[0] + this.state.distance * Math.cos(this.previousTurtle.heading * Math.PI / 180);
     this.turtle.position[1] = this.previousTurtle.position[1] + this.state.distance * Math.sin(this.previousTurtle.heading * Math.PI / 180);
     this.turtle.heading = this.previousTurtle.heading;
+    this.parentEnvironment.state.turtle0 = this.turtle;
     this.pathCommand = `M ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
@@ -582,7 +608,12 @@ export class CircleNode extends Node {
     this.turtle.position[0] = this.state.center[0];
     this.turtle.position[1] = this.state.center[1];
     this.turtle.heading = this.previousTurtle?.heading ?? 0;
+    this.parentEnvironment.state.turtle0 = this.turtle;
     this.pathCommand = `M ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] - this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]}`;
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
@@ -706,6 +737,11 @@ L ${corner[0] + this.state.size[0]},${bounds.span - (corner[1] + this.state.size
 L ${corner[0]},${bounds.span - (corner[1] + this.state.size[1])}
 z
     `;
+    this.parentEnvironment.state.turtle0 = this.turtle;
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
@@ -861,11 +897,26 @@ export class BackNode extends Node {
     this.updateTurtle(bounds);
   }
 
+  getPositions() {
+    return [this.turtle.position];
+  }
+
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.previousTurtle.position[0];
-    this.turtle.position[1] = this.previousTurtle.position[1];
-    this.turtle.heading = this.previousTurtle.heading;
+    if (this.parentEnvironment.state.turtle0) {
+      this.turtle.position[0] = this.parentEnvironment.state.turtle0.position[0];
+      this.turtle.position[1] = this.parentEnvironment.state.turtle0.position[1];
+      this.turtle.heading = this.previousTurtle.heading;
+    } else {
+      // I don't like this. Surely there's a better way to determine the starting point of the path.
+      this.turtle.position[0] = this.parentEnvironment.nodes[0].turtle.position[0];
+      this.turtle.position[1] = this.parentEnvironment.nodes[0].turtle.position[1];
+      this.turtle.heading = this.previousTurtle.heading;
+    }
     this.pathCommand = `z`;
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
@@ -920,7 +971,12 @@ export class GoNode extends Node {
     this.turtle.position[0] = this.state.position[0];
     this.turtle.position[1] = this.state.position[1];
     this.turtle.heading = 0;
+    this.parentEnvironment.state.turtle0 = this.turtle;
     this.pathCommand = `M ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
@@ -989,6 +1045,10 @@ export class LineNode extends Node {
     this.turtle.position[1] = this.state.position[1];
     this.turtle.heading = this.previousTurtle.heading;
     this.pathCommand = `L ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
@@ -1092,6 +1152,10 @@ export class QuadraticNode extends Node {
     } else {
       this.pathCommand = `T ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
     }
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
@@ -1291,6 +1355,10 @@ export class ArcNode extends Node {
     }
   }
 
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
+  }
+
   configureMarks() {
     super.configureMarks();
 
@@ -1444,6 +1512,10 @@ export class CubicNode extends Node {
     } else {
       this.pathCommand = `S ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
     }
+  }
+
+  getPathCommand(bounds, from, to) {
+    return this.pathCommand;
   }
 
   configureMarks() {
