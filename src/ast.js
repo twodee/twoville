@@ -18,6 +18,7 @@ import {
 import {
   Circle,
   Cutout,
+  Grid,
   Group,
   Line,
   Mask,
@@ -1728,6 +1729,14 @@ export class ExpressionCircle extends ExpressionFunction {
   }
 }
 
+// --------------------------------------------------------------------------- 
+
+export class ExpressionGrid extends ExpressionFunction {
+  evaluate(env, fromTime, toTime, context) {
+    return Grid.create(env, context.callExpression.where);
+  }
+}
+ 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRectangle extends ExpressionFunction {

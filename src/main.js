@@ -24,7 +24,7 @@ import {
 
 import Interpreter from './interpreter.worker.js';
 
-const hasWorker = false;
+const hasWorker = true;
 
 let editor;
 let docEditors = [];
@@ -237,6 +237,7 @@ function stopInterpreting() {
   stopButton.classList.add('hidden');
   evaluateButton.classList.remove('hidden');
   stopSpinning();
+  editor.focus();
 }
 
 function postInterpret(pod, successCallback) {

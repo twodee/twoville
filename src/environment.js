@@ -18,6 +18,7 @@ import {
   ExpressionCosine,
   ExpressionCutout,
   ExpressionDebug,
+  ExpressionGrid,
   ExpressionGroup,
   ExpressionHypotenuse,
   ExpressionInt,
@@ -175,6 +176,7 @@ export class Environment {
 
   bindGlobalFunctions() {
     Object.assign(this.functions, {
+      grid: new FunctionDefinition('grid', [], new ExpressionGrid()),
       rectangle: new FunctionDefinition('rectangle', [], new ExpressionRectangle()),
       line: new FunctionDefinition('line', [], new ExpressionLine()),
       path: new FunctionDefinition('path', [], new ExpressionPath()),

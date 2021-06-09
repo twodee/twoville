@@ -141,7 +141,6 @@ export class RenderEnvironment extends Environment {
       return CubicNode.reify(env, pod);
     } else if (pod.type === 'arc') {
       return ArcNode.reify(env, pod);
-
     } else if (pod.type === 'translate') {
       return Translate.reify(env, pod);
     } else if (pod.type === 'scale') {
@@ -290,50 +289,6 @@ export class RenderEnvironment extends Environment {
 
     this.state = {};
     this.drawables = this.shapes.filter(shape => shape.isDrawable);
-
-    if (viewport.owns('grid')) {
-      const grid = viewport.get('grid');
-      const gridX = grid.get(0);
-      const gridY = grid.get(1);
-      const gridGroup = document.createElementNS(svgNamespace, 'g');
-      gridGroup.setAttributeNS(null, 'id', 'grid-mark-group');
-      gridGroup.classList.add('mark-group');
-
-      if (gridX instanceof ExpressionReal || gridX instanceof ExpressionInteger) {
-        const gap = gridX.value;
-        const first = Math.ceil(corner.get(0).value / gap) * gap;
-        const last = corner.get(0).value + size.get(0).value;
-        for (let tick = first; tick <= last; tick += gap) {
-          const line = document.createElementNS(svgNamespace, 'line');
-          line.setAttributeNS(null, 'visibility', 'visible');
-          line.setAttributeNS(null, 'x1', tick);
-          line.setAttributeNS(null, 'x2', tick);
-          line.setAttributeNS(null, 'y1', this.bounds.span - corner.get(1).value);
-          line.setAttributeNS(null, 'y2', this.bounds.span - (corner.get(1).value + size.get(1).value));
-          line.classList.add('grid-line');
-          gridGroup.appendChild(line);
-        }
-      }
-
-      if (gridY instanceof ExpressionReal || gridY instanceof ExpressionInteger) {
-        const gap = gridY.value;
-        const first = Math.ceil(corner.get(1).value / gap) * gap;
-        const last = corner.get(1).value + size.get(1).value;
-        for (let tick = first; tick <= last; tick += gap) {
-          const line = document.createElementNS(svgNamespace, 'line');
-          line.setAttributeNS(null, 'visibility', 'visible');
-          line.setAttributeNS(null, 'y1', this.bounds.span - tick);
-          line.setAttributeNS(null, 'y2', this.bounds.span - tick);
-          line.setAttributeNS(null, 'x1', corner.get(0).value);
-          line.setAttributeNS(null, 'x2', corner.get(0).value + size.get(0).value);
-          line.classList.add('grid-line');
-          gridGroup.appendChild(line);
-        }
-      }
-
-      this.svg.insertBefore(gridGroup, this.backgroundMarkGroup);
-    }
-
     this.isStarted = true;
   }
 
@@ -415,30 +370,7 @@ export class RenderEnvironment extends Environment {
     let clone = this.svg.cloneNode(true);
     clone.removeAttribute('style');
     clone.setAttributeNS(null, 'viewBox', `${this.fitBounds.x} ${this.fitBounds.y} ${this.fitBounds.width} ${this.fitBounds.height}`);
-
-    let markGroupsToKeep = [];
-
-    const gridOption = this.get('export').get('grid');
-    if (gridOption instanceof ExpressionBoolean && gridOption.value) {
-      markGroupsToKeep.push('grid-mark-group');
-
-      // The stylesheet won't be coming with the exported SVG, so we imbue the
-      // styles directly on the elements.
-      for (let line of clone.querySelectorAll('.grid-line')) {
-        line.setAttributeNS(null, 'stroke-width', 1);
-        line.setAttributeNS(null, 'stroke-opacity', 0.5);
-        line.setAttributeNS(null, 'stroke', 'rgb(180, 180, 180)');
-        line.setAttributeNS(null, 'stroke-dasharray', 'none');
-        line.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
-      }
-    }
-
-    if (markGroupsToKeep.length === 0) {
-      removeClassMembers(clone, 'mark-group');
-    } else {
-      removeClassMembersExcept(clone, 'mark-group', markGroupsToKeep);
-    }
-
+    removeClassMembers(clone, 'mark-group');
     return clone;
   }
 

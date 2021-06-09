@@ -4,6 +4,7 @@ import {
   LocatedException,
   SourceLocation,
   Turtle,
+  clearChildren,
   sentenceCase,
   svgNamespace,
 } from './common.js';
@@ -126,6 +127,8 @@ export class Shape extends TimelinedEnvironment {
   static reify(parentEnvironment, pod) {
     if (pod.type === 'rectangle') {
       return Rectangle.reify(parentEnvironment, pod);
+    } else if (pod.type === 'grid') {
+      return Grid.reify(parentEnvironment, pod);
     } else if (pod.type === 'circle') {
       return Circle.reify(parentEnvironment, pod);
     } else if (pod.type === 'polygon') {
@@ -1023,6 +1026,256 @@ export class Circle extends Shape {
     this.outlineMark.updateState(this.state.center, this.state.radius);
     this.centerMark.updateState(this.state.center, this.state.matrix);
     this.radiusMark.updateState([this.state.center[0] + this.state.radius, this.state.center[1]], this.state.matrix);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Grid extends Shape {
+  static type = 'grid';
+  static article = 'a';
+  static timedIds = ['corner', 'center', 'size', 'enabled'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+    this.untimedProperties.stroke = Stroke.create(this);
+    this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
+    this.untimedProperties.stroke.bind('color', new ExpressionVector([
+      new ExpressionReal(180 / 255),
+      new ExpressionReal(180 / 255),
+      new ExpressionReal(180 / 255)
+    ]));
+    this.untimedProperties.stroke.bind('size', new ExpressionReal(0.1));
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Grid();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Grid();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  configureState(bounds) {
+    this.element = document.createElementNS(svgNamespace, 'g');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    this.configureVectorProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a grid whose <code>size</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
+      }
+    });
+
+    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
+      throw new LocatedException(this.where, 'I found a grid whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
+    } else if (this.timedProperties.hasOwnProperty('corner')) {
+      this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
+        try {
+          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
+        }
+      });
+    } else if (this.timedProperties.hasOwnProperty('center')) {
+      this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
+        try {
+          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
+        }
+      });
+    } else {
+      throw new LocatedException(this.where, "I found a grid whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    }
+
+    this.configureStroke(this.untimedProperties.stroke, bounds, false);
+  }
+
+  updateSize(bounds) {
+    // this.element.setAttributeNS(null, 'width', this.state.size[0]);
+    // this.element.setAttributeNS(null, 'height', this.state.size[1]);
+  }
+
+  updateCenter(bounds) {
+    this.state.centroid = this.state.center;
+    // this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
+    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
+  }
+
+  updateCorner(bounds) {
+    this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
+    // this.element.setAttributeNS(null, 'x', this.state.corner[0]);
+    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
+  }
+
+  updateContentDom(bounds) {
+    super.updateContentDom(bounds);
+
+    this.updateSize(bounds);
+    if (this.timedProperties.hasOwnProperty('center')) {
+      this.updateCenter(bounds);
+    } else {
+      this.updateCorner(bounds);
+    }
+
+    clearChildren(this.element);
+    
+    this.state.ticks = [5, 5];
+
+    if (this.state.ticks[0] > 0) {
+      const gap = this.state.ticks[0];
+      const first = Math.ceil(this.state.corner[0] / gap) * gap;
+      const last = this.state.corner[0] + this.state.size[0];
+      for (let tick = first; tick <= last; tick += gap) {
+        const line = document.createElementNS(svgNamespace, 'line');
+        line.setAttributeNS(null, 'visibility', 'visible');
+        line.setAttributeNS(null, 'x1', tick);
+        line.setAttributeNS(null, 'x2', tick);
+        line.setAttributeNS(null, 'y1', bounds.span - this.state.corner[1]);
+        line.setAttributeNS(null, 'y2', bounds.span - (this.state.corner[1] + this.state.size[1]));
+        // line.classList.add('grid-line');
+        this.element.appendChild(line);
+      }
+    }
+
+    if (this.state.ticks[1] > 0) {
+      const gap = this.state.ticks[1];
+      const first = Math.ceil(this.state.corner[1] / gap) * gap;
+      const last = this.state.corner[1] + this.state.size[1];
+      for (let tick = first; tick <= last; tick += gap) {
+        const line = document.createElementNS(svgNamespace, 'line');
+        line.setAttributeNS(null, 'visibility', 'visible');
+        line.setAttributeNS(null, 'y1', bounds.span - tick);
+        line.setAttributeNS(null, 'y2', bounds.span - tick);
+        line.setAttributeNS(null, 'x1', this.state.corner[0]);
+        line.setAttributeNS(null, 'x2', this.state.corner[0] + this.state.size[0]);
+        // line.classList.add('grid-line');
+        this.element.appendChild(line);
+      }
+    }
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new RectangleMark();
+
+    let multiplier;
+    let getPositionExpression;
+    let updatePositionState;
+
+    if (this.timedProperties.hasOwnProperty('center')) {
+      getPositionExpression = t => this.expressionAt('center', this.root.state.t);
+      updatePositionState = ([x, y]) => {
+        this.state.center[0] = x;
+        this.state.center[1] = y;
+      };
+      multiplier = 2;
+    } else {
+      getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
+      updatePositionState = ([x, y]) => {
+        this.state.corner[0] = x;
+        this.state.corner[1] = y;
+      };
+      multiplier = 1;
+    }
+
+    this.positionMark = new VectorPanMark(this, null, getPositionExpression, updatePositionState);
+
+    this.widthMark = new HorizontalPanMark(this, this, multiplier, t => {
+      return this.expressionAt('size', this.root.state.t).get(0);
+    }, newValue => {
+      this.state.size[0] = newValue;
+    });
+
+    this.heightMark = new VerticalPanMark(this, this, multiplier, t => {
+      return this.expressionAt('size', this.root.state.t).get(1);
+    }, newValue => {
+      this.state.size[1] = newValue;
+    });
+
+    this.markers[0].addMarks([this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
+  }
+ 
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
+    if (this.state.center) {
+      const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
+      this.outlineMark.updateState(corner, this.state.size, this.state.rounding);
+      this.positionMark.updateState(this.state.center, this.state.matrix);
+      this.widthMark.updateState([this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], this.state.matrix);
+      this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], this.state.matrix);
+    } else {
+      this.outlineMark.updateState(this.state.corner, this.state.size, this.state.rounding);
+      this.positionMark.updateState(this.state.corner, this.state.matrix);
+      this.widthMark.updateState([this.state.corner[0] + this.state.size[0], this.state.corner[1]], this.state.matrix);
+      this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
+    }
+  }
+
+  computeBoundingBox() {
+    let positions;
+
+    if (this.state.size) {
+      if (this.state.center) {
+        positions = [
+          [
+            this.state.center[0] - this.state.size[0] * 0.5,
+            this.state.center[1] - this.state.size[1] * 0.5,
+          ],
+          [
+            this.state.center[0] + this.state.size[0] * 0.5,
+            this.state.center[1] - this.state.size[1] * 0.5,
+          ],
+          [
+            this.state.center[0] - this.state.size[0] * 0.5,
+            this.state.center[1] + this.state.size[1] * 0.5,
+          ],
+          [
+            this.state.center[0] + this.state.size[0] * 0.5,
+            this.state.center[1] + this.state.size[1] * 0.5,
+          ],
+        ];
+      } else if (this.state.corner) {
+        positions = [
+          [
+            this.state.corner[0],
+            this.state.corner[1],
+          ],
+          [
+            this.state.corner[0] + this.state.size[0],
+            this.state.corner[1],
+          ],
+          [
+            this.state.corner[0],
+            this.state.corner[1] + this.state.size[1],
+          ],
+          [
+            this.state.corner[0] + this.state.size[0],
+            this.state.corner[1] + this.state.size[1],
+          ],
+        ];
+      }
+    }
+
+    if (positions) {
+      for (let position of positions) {
+        let transformedPosition = this.state.matrix.multiplyVector(position);
+        this.boundingBox.enclosePoint(transformedPosition);
+      }
+    }
   }
 }
 
@@ -2032,6 +2285,7 @@ const FillMixin = {
   },
 
   configureFill: function(bounds) {
+    this.element.setAttributeNS(null, 'fill', 'none');
     this.configureColor(bounds);
     this.configureStroke(this.untimedProperties.stroke, bounds, false);
   },
