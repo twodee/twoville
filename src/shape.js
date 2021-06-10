@@ -1045,7 +1045,7 @@ export class Grid extends Shape {
       new ExpressionReal(180 / 255),
       new ExpressionReal(180 / 255)
     ]));
-    this.untimedProperties.stroke.bind('size', new ExpressionReal(0.1));
+    this.untimedProperties.stroke.bind('size', new ExpressionReal(1));
   }
 
   static create(parentEnvironment, where) {
@@ -1065,6 +1065,9 @@ export class Grid extends Shape {
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
     this.state.ticks = [1, 1];
+    this.state.size = [bounds.width, bounds.height];
+    this.state.corner = [bounds.x, bounds.y];
+    this.updateCorner(bounds);
 
     this.configureVectorProperty('ticks', this, this, this.updateTicks.bind(this), bounds, [], timeline => {
       if (!timeline) {
@@ -1081,7 +1084,7 @@ export class Grid extends Shape {
 
     this.configureVectorProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
       if (!timeline) {
-        throw new LocatedException(this.where, 'I found a grid whose <code>size</code> was not set.');
+        return false;
       }
 
       try {
@@ -1112,8 +1115,8 @@ export class Grid extends Shape {
           throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
         }
       });
-    } else {
-      throw new LocatedException(this.where, "I found a grid whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    // } else {
+      // throw new LocatedException(this.where, "I found a grid whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
     }
 
     this.configureStroke(this.untimedProperties.stroke, bounds, false);
@@ -1189,40 +1192,48 @@ export class Grid extends Shape {
     this.outlineMark = new RectangleMark();
 
     let multiplier;
-    let getPositionExpression;
-    let updatePositionState;
+    const interactiveMarks = [];
 
-    if (this.timedProperties.hasOwnProperty('center')) {
-      getPositionExpression = t => this.expressionAt('center', this.root.state.t);
-      updatePositionState = ([x, y]) => {
-        this.state.center[0] = x;
-        this.state.center[1] = y;
-      };
-      multiplier = 2;
-    } else {
-      getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
-      updatePositionState = ([x, y]) => {
-        this.state.corner[0] = x;
-        this.state.corner[1] = y;
-      };
-      multiplier = 1;
+    if (this.timedProperties.hasOwnProperty('center') || this.timedProperties.hasOwnProperty('center')) {
+      let getPositionExpression;
+      let updatePositionState;
+      if (this.timedProperties.hasOwnProperty('center')) {
+        getPositionExpression = t => this.expressionAt('center', this.root.state.t);
+        updatePositionState = ([x, y]) => {
+          this.state.center[0] = x;
+          this.state.center[1] = y;
+        };
+        multiplier = 2;
+      } else if (this.timedProperties.hasOwnProperty('corner')) {
+        getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
+        updatePositionState = ([x, y]) => {
+          this.state.corner[0] = x;
+          this.state.corner[1] = y;
+        };
+        multiplier = 1;
+      }
+
+      this.positionMark = new VectorPanMark(this, null, getPositionExpression, updatePositionState);
+      interactiveMarks.push(this.positionMark);
     }
 
-    this.positionMark = new VectorPanMark(this, null, getPositionExpression, updatePositionState);
+    if (this.timedProperties.hasOwnProperty('size')) {
+      this.widthMark = new HorizontalPanMark(this, this, multiplier, t => {
+        return this.expressionAt('size', this.root.state.t).get(0);
+      }, newValue => {
+        this.state.size[0] = newValue;
+      });
 
-    this.widthMark = new HorizontalPanMark(this, this, multiplier, t => {
-      return this.expressionAt('size', this.root.state.t).get(0);
-    }, newValue => {
-      this.state.size[0] = newValue;
-    });
+      this.heightMark = new VerticalPanMark(this, this, multiplier, t => {
+        return this.expressionAt('size', this.root.state.t).get(1);
+      }, newValue => {
+        this.state.size[1] = newValue;
+      });
 
-    this.heightMark = new VerticalPanMark(this, this, multiplier, t => {
-      return this.expressionAt('size', this.root.state.t).get(1);
-    }, newValue => {
-      this.state.size[1] = newValue;
-    });
+      interactiveMarks.push(this.widthMark, this.heightMark);
+    }
 
-    this.markers[0].addMarks([this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
+    this.markers[0].addMarks(interactiveMarks, [this.outlineMark]);
   }
  
   updateInteractionState(bounds) {
@@ -1230,14 +1241,22 @@ export class Grid extends Shape {
     if (this.state.center) {
       const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
       this.outlineMark.updateState(corner, this.state.size, this.state.rounding);
-      this.positionMark.updateState(this.state.center, this.state.matrix);
-      this.widthMark.updateState([this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], this.state.matrix);
-      this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], this.state.matrix);
+      if (this.positionMark) {
+        this.positionMark.updateState(this.state.center, this.state.matrix);
+      }
+      if (this.widthMark) {
+        this.widthMark.updateState([this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], this.state.matrix);
+        this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], this.state.matrix);
+      }
     } else {
       this.outlineMark.updateState(this.state.corner, this.state.size, this.state.rounding);
-      this.positionMark.updateState(this.state.corner, this.state.matrix);
-      this.widthMark.updateState([this.state.corner[0] + this.state.size[0], this.state.corner[1]], this.state.matrix);
-      this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
+      if (this.positionMark) {
+        this.positionMark.updateState(this.state.corner, this.state.matrix);
+      }
+      if (this.widthMark) {
+        this.widthMark.updateState([this.state.corner[0] + this.state.size[0], this.state.corner[1]], this.state.matrix);
+        this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
+      }
     }
   }
 
