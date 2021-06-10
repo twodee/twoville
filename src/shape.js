@@ -1034,7 +1034,7 @@ export class Circle extends Shape {
 export class Grid extends Shape {
   static type = 'grid';
   static article = 'a';
-  static timedIds = ['corner', 'center', 'size', 'enabled'];
+  static timedIds = ['ticks', 'corner', 'center', 'size', 'enabled'];
 
   initialize(parentEnvironment, where) {
     super.initialize(parentEnvironment, where);
@@ -1063,6 +1063,21 @@ export class Grid extends Shape {
   configureState(bounds) {
     this.element = document.createElementNS(svgNamespace, 'g');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    this.state.ticks = [1, 1];
+
+    this.configureVectorProperty('ticks', this, this, this.updateTicks.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        return false;
+      }
+
+      try {
+        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>ticks</code>. ${e.message}`);
+      }
+    });
 
     this.configureVectorProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
       if (!timeline) {
@@ -1104,6 +1119,9 @@ export class Grid extends Shape {
     this.configureStroke(this.untimedProperties.stroke, bounds, false);
   }
 
+  updateTicks(bounds) {
+  }
+
   updateSize(bounds) {
     // this.element.setAttributeNS(null, 'width', this.state.size[0]);
     // this.element.setAttributeNS(null, 'height', this.state.size[1]);
@@ -1132,8 +1150,6 @@ export class Grid extends Shape {
     }
 
     clearChildren(this.element);
-    
-    this.state.ticks = [5, 5];
 
     if (this.state.ticks[0] > 0) {
       const gap = this.state.ticks[0];
@@ -1146,7 +1162,7 @@ export class Grid extends Shape {
         line.setAttributeNS(null, 'x2', tick);
         line.setAttributeNS(null, 'y1', bounds.span - this.state.corner[1]);
         line.setAttributeNS(null, 'y2', bounds.span - (this.state.corner[1] + this.state.size[1]));
-        // line.classList.add('grid-line');
+        line.classList.add('grid-line');
         this.element.appendChild(line);
       }
     }
@@ -1162,7 +1178,7 @@ export class Grid extends Shape {
         line.setAttributeNS(null, 'y2', bounds.span - tick);
         line.setAttributeNS(null, 'x1', this.state.corner[0]);
         line.setAttributeNS(null, 'x2', this.state.corner[0] + this.state.size[0]);
-        // line.classList.add('grid-line');
+        line.classList.add('grid-line');
         this.element.appendChild(line);
       }
     }

@@ -621,6 +621,12 @@ function initialize() {
     // page is reloaded.
     localStorage.setItem('most-recent-two', name);
 
+    // Invalidate previous scene so we don't carry over bounds or selection.
+    if (scene) {
+      clearChildren(scene.svg);
+      scene = null;
+    }
+
     const twos = JSON.parse(localStorage.getItem('twos')); 
 
     if (twos.hasOwnProperty(name)) {

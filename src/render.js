@@ -174,6 +174,19 @@ export class RenderEnvironment extends Environment {
     this.defines = document.createElementNS(svgNamespace, 'defs');
     this.svg.appendChild(this.defines);
 
+    const style = document.createElementNS(svgNamespace, 'style');
+    this.svg.appendChild(style);
+
+    style.textContent = `
+      .grid-line {
+        vector-effect: non-scaling-stroke;
+      }
+
+      text {
+        font-family: sans-serif;
+      }
+    `;
+
     const viewport = this.get('viewport');
     let size = viewport.get('size');
 
@@ -193,7 +206,6 @@ export class RenderEnvironment extends Environment {
       ]);
     }
 
-    // previousFitBounds = fitBounds;
     this.fitBounds = {
       x: corner.get(0).value,
       y: corner.get(1).value,
@@ -201,23 +213,7 @@ export class RenderEnvironment extends Environment {
       height: size.get(1).value,
     };
     this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
-
-    // Retain viewBox only if we've rendered previously and the viewport hasn't
-    // changed. Otherwise we fit the viewBox to the viewport.
-    if (this.previousBounds &&
-        this.fitBounds.x == previousFitBounds.x &&
-        this.fitBounds.y == previousFitBounds.y &&
-        this.fitBounds.width == previousFitBounds.width &&
-        this.fitBounds.height == previousFitBounds.height) {
-      this.bounds.x = this.previousBounds.x;
-      this.bounds.y = this.previousBounds.y;
-      this.bounds.width = this.previousBounds.width;
-      this.bounds.height = this.previousBounds.height;
-      this.bounds.span = this.previousBounds.span;
-      this.updateViewBox();
-    } else {
-      this.fit();
-    }
+    this.fit();
 
     this.bounds.startTime = this.get('time').get('start').value;
     this.bounds.stopTime = this.get('time').get('stop').value;
@@ -257,7 +253,6 @@ export class RenderEnvironment extends Environment {
       shape.configure(this.bounds);
       boundingBox.encloseBox(shape.boundingBox);
     }
-    // console.log("boundingBox:", boundingBox);
 
     if (viewport.get('autofit').value) {
       this.fitBounds = {
