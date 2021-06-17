@@ -480,7 +480,8 @@ export class Scale extends Transform {
       this.state.pivot[1] = y;
     });
 
-    this.marker.addMarks([this.widthFactorMark, this.heightFactorMark, this.pivotMark], [], [], []);
+    // this.marker.addMarks([this.widthFactorMark, this.heightFactorMark, this.pivotMark], [], [], []);
+    this.marker.addMarks([], [], [], []);
 
     // this.lineMarks = [
       // new LineMark(),

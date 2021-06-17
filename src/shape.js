@@ -887,6 +887,7 @@ export class Rectangle extends Shape {
         ];
       }
 
+      // TODO handle no stroke
       const thickness = this.untimedProperties.stroke.state.size * 0.5;
       positions[0][0] -= thickness;
       positions[1][0] += thickness;
@@ -1498,6 +1499,25 @@ export class VertexShape extends NodeShape {
         }
       }
     }
+  }
+
+  computeBoundingBox() {
+    for (let node of this.domNodes) {
+      const position = node.turtle.position;
+      let transformedPosition = this.state.matrix.multiplyVector(position);
+      this.boundingBox.enclosePoint(transformedPosition);
+    }
+
+    if (this.untimedProperties.hasOwnProperty('stroke')) {
+      if (this.untimedProperties.stroke.state.hasOwnProperty('size')) {
+        const halfStrokeSize = this.untimedProperties.stroke.state.size * 0.5;
+        this.boundingBox.thicken(halfStrokeSize);
+      }
+    } else if (this.timedProperties.hasOwnProperty('stroke')) {
+      this.boundingBox.thicken(this.state.size * 0.5);
+    }
+
+    // TODO handle stroke
   }
 }
 

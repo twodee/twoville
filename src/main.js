@@ -548,8 +548,13 @@ function initialize() {
 
   mousePrecisionSpinner.value = settings.mousePrecision;
   mousePrecisionSpinner.addEventListener('input', () => {
-    settings.mousePrecision = savedSettings.mousePrecision = parseInt(mousePrecisionSpinner.value);
-    saveSettings();
+    if (mousePrecisionSpinner.value.match(/^\d+$/)) {
+      mousePrecisionSpinner.classList.toggle('bad-input', false);
+      settings.mousePrecision = savedSettings.mousePrecision = parseInt(mousePrecisionSpinner.value);
+      saveSettings();
+    } else {
+      mousePrecisionSpinner.classList.toggle('bad-input', true);
+    }
   });
 
   warnOnExitToggle.checked = settings.warnOnExit;
@@ -938,6 +943,9 @@ function initialize() {
   }
 
   function loadNewFile() {
+    if (scene) {
+      scene.clear();
+    }
     editor.setValue('', 1);
     currentName = null;
     localStorage.removeItem('most-recent-two');

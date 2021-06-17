@@ -604,3 +604,18 @@ figcaption {
   font-size: 80%;
   text-align: center;
 }
+
+.bad-input {
+  background-color: pink;
+  outline: 2px solid red;
+}
+
+@media print {
+  #toolbar {
+    display: none;
+  }
+
+  #x-outline {
+    visibility: hidden;
+  }
+}

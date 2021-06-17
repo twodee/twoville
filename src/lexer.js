@@ -59,9 +59,7 @@ export function lex(source) {
   function dash() {
     consume();
 
-    if (has(/\d/)) {
-      digits();
-    } else if (has('>')) {
+    if (has('>')) {
       consume();
       emit(Tokens.RightArrow);
     } else if (has('.')) {
