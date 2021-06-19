@@ -480,6 +480,8 @@ a:active, .copy-button:active, .link-button:active {
   grid-template-columns: 150px auto;
   grid-gap: 5px 3px;
   align-items: baseline;
+  /* justify-content: start; */
+  justify-items: start;
 }
 
 #dialog-overlay {
@@ -589,6 +591,14 @@ a:active, .copy-button:active, .link-button:active {
   height: 20px;
   cursor: pointer;
   border: 1px solid white;
+  align-self: stretch;
+  justify-self: stretch;
+}
+
+#mouse-precision-spinner {
+  align-self: stretch;
+  justify-self: stretch;
+  min-width: 0;
 }
 
 input[type="color"] {
