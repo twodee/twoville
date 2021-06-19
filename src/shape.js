@@ -99,6 +99,16 @@ export class Shape extends TimelinedEnvironment {
     this.bindFunction('rotate', new FunctionDefinition('rotate', [], new ExpressionRotate(this)));
     this.bindFunction('shear', new FunctionDefinition('shear', [], new ExpressionShear(this)));
 
+    // This shape should not have been made inside the context of any other
+    // shape. We must walk the whole environment chain.
+    let environment = parentEnvironment;
+    while (environment !== parentEnvironment.root) {
+      if (environment instanceof Shape) {
+        throw new LocatedException(where, `I found ${this.article} <code>${this.type}</code> created inside another shape, which is not allowed.`);
+      }
+      environment = environment.parentEnvironment;
+    }
+
     this.root.serial += 1;
     this.root.shapes.push(this);
   }
