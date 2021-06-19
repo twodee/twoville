@@ -636,6 +636,7 @@ export class ExpressionOr extends ExpressionBinaryOperator {
 
   evaluate(env, fromTime, toTime, context) {
     const evaluatedL = this.l.evaluate(env, fromTime, toTime, context);
+    // console.error("evaluatedL:", evaluatedL);
     if (evaluatedL instanceof ExpressionInteger) {
       const evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
       if (evaluatedR instanceof ExpressionInteger) {

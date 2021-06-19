@@ -2,7 +2,10 @@ const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 const { document } = (new JSDOM(`...`)).window;
 
-const {LocatedException} = require('../src/common');
+const {
+  LocatedException,
+  SourceLocation,
+} = require('../src/common');
 const {Messager} = require('../src/messager');
 const {InterpreterEnvironment} = require('../src/interpreter');
 const {lex} = require('../src/lexer');
@@ -65,7 +68,7 @@ function assertSame(expected, actual) {
 
 test('xor of bad types', () => {
   const caser = (a, b) => {
-    expect(() => new ExpressionXor(a, b).evaluate()).toThrow(LocatedException);
+    expect(() => new ExpressionXor(a, b, new SourceLocation(0, 0, 0, 0)).evaluate()).toThrow(LocatedException);
   };
   caser(new ExpressionInteger(0), new ExpressionBoolean(false));
   caser(new ExpressionBoolean(true), new ExpressionInteger(1));
@@ -74,7 +77,7 @@ test('xor of bad types', () => {
 
 test('and of bad types', () => {
   const caser = (a, b) => {
-    expect(() => new ExpressionAnd(a, b).evaluate()).toThrow(LocatedException);
+    expect(() => new ExpressionAnd(a, b, new SourceLocation(0, 0, 0, 0)).evaluate()).toThrow(LocatedException);
   };
   caser(new ExpressionInteger(1), new ExpressionBoolean(false));
   caser(new ExpressionBoolean(true), new ExpressionInteger(1));
@@ -83,7 +86,7 @@ test('and of bad types', () => {
 
 test('or of bad types', () => {
   const caser = (a, b) => {
-    expect(() => new ExpressionOr(a, b).evaluate()).toThrow(LocatedException);
+    expect(() => new ExpressionOr(a, b, new SourceLocation(0, 0, 0, 0)).evaluate()).toThrow(LocatedException);
   };
   caser(new ExpressionInteger(0), new ExpressionBoolean(false));
   caser(new ExpressionBoolean(false), new ExpressionInteger(1));
@@ -326,6 +329,11 @@ test('binary operator -', () => {
   evaluateExpression('5 - 3', new ExpressionInteger(2));
   evaluateExpression('3 - 5', new ExpressionInteger(-2));
   evaluateExpression('(5 - 3)', new ExpressionInteger(2));
+  evaluateExpression('[5-3,-1,-3-7]', new ExpressionVector([
+    new ExpressionInteger(2),
+    new ExpressionInteger(-1),
+    new ExpressionInteger(-10),
+  ]));
 });
 
 // --------------------------------------------------------------------------- 
