@@ -897,17 +897,18 @@ export class Rectangle extends Shape {
         ];
       }
 
-      // TODO handle no stroke
-      const thickness = this.untimedProperties.stroke.state.size * 0.5;
-      positions[0][0] -= thickness;
-      positions[1][0] += thickness;
-      positions[2][0] -= thickness;
-      positions[3][0] += thickness;
+      if (this.untimedProperties.stroke.state.size) {
+        const thickness = this.untimedProperties.stroke.state.size * 0.5;
+        positions[0][0] -= thickness;
+        positions[1][0] += thickness;
+        positions[2][0] -= thickness;
+        positions[3][0] += thickness;
 
-      positions[0][1] -= thickness;
-      positions[1][1] -= thickness;
-      positions[2][1] += thickness;
-      positions[3][1] += thickness;
+        positions[0][1] -= thickness;
+        positions[1][1] -= thickness;
+        positions[2][1] += thickness;
+        positions[3][1] += thickness;
+      }
     }
 
     if (positions) {
