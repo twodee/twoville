@@ -168,7 +168,7 @@ export class RenderEnvironment extends Environment {
   start() {
     this.mouseAtSvg = this.svg.createSVGPoint();
 
-    this.svg.addEventListener('wheel', this.onWheel, {passive: true});
+    this.svg.addEventListener('wheel', this.onWheel);
     this.svg.addEventListener('mousedown', this.onMouseDown);
 
     this.defines = document.createElementNS(svgNamespace, 'defs');
@@ -451,12 +451,9 @@ export class RenderEnvironment extends Environment {
       const matrix = this.svg.getScreenCTM().inverse();
       let center = this.mouseAtSvg.matrixTransform(matrix);
 
-      // https://stackoverflow.com/questions/10744645/detect-touchpad-vs-mouse-in-javascript/54861787#54861787
-      const isTouchPad = e.wheelDeltaY ? e.wheelDeltaY === -3 * e.deltaY : e.deltaMode === 0;
-      const delta = e.deltaY * (isTouchPad ? 1 : 0.1);
+      const delta = wheelDistance(e);
 
-      let factor = clamp(1 + delta / 150, 0.9, 1.1);
-      // let factor = 1 + delta / 150;
+      let factor = clamp(1 + delta, 0.9, 1.1);
       let zoomRatio = this.fitBounds.width / this.bounds.width;
 
       // factor > 1 means zooming out
@@ -508,3 +505,20 @@ export class RenderEnvironment extends Environment {
 
 // --------------------------------------------------------------------------- 
 
+function wheelDistance(event) {
+  // https://stackoverflow.com/questions/10744645/detect-touchpad-vs-mouse-in-javascript/54861787#54861787
+  const isTouchPad = event.wheelDeltaY ? event.wheelDeltaY === -3 * event.deltaY : event.deltaMode === 0;
+
+  let delta = event.deltaY;
+
+  // Firefox ~89 reports the delta in lines, while every other browser seems to use pixels.
+  // We scale up the lines. The font size defaults to 16, but that number is too small. I 
+  // bumped this up arbitrarily.
+  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+    delta *= 30;
+  }
+
+  return delta / 120 * (isTouchPad ? 1 : 0.1);
+}
+
+// --------------------------------------------------------------------------- 

@@ -1515,8 +1515,8 @@ export class VertexShape extends NodeShape {
   computeBoundingBox() {
     for (let node of this.domNodes) {
       const position = node.turtle.position;
-      let transformedPosition = this.state.matrix.multiplyVector(position);
-      this.boundingBox.enclosePoint(transformedPosition);
+      // let transformedPosition = this.state.matrix.multiplyVector(position);
+      // this.boundingBox.enclosePoint(transformedPosition);
     }
 
     if (this.untimedProperties.hasOwnProperty('stroke')) {
