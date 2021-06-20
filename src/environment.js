@@ -28,6 +28,7 @@ import {
   ExpressionMask,
   ExpressionMultiply,
   ExpressionPath,
+  ExpressionPolar,
   ExpressionPolygon,
   ExpressionPolyline,
   ExpressionPrint,
@@ -46,6 +47,7 @@ import {
   ExpressionTangent,
   ExpressionTip,
   ExpressionUngon,
+  ExpressionUnpolar,
   ExpressionVector,
 } from './ast.js';
 
@@ -194,6 +196,8 @@ export class Environment {
       random: new FunctionDefinition('random', ['min', 'max'], new ExpressionRandom()),
       seed: new FunctionDefinition('seed', ['value'], new ExpressionSeed()),
       sin: new FunctionDefinition('sin', ['degrees'], new ExpressionSine()),
+      polar: new FunctionDefinition('polar', ['x', 'y'], new ExpressionPolar()),
+      unpolar: new FunctionDefinition('unpolar', ['radius', 'degrees'], new ExpressionUnpolar()),
       cos: new FunctionDefinition('cos', ['degrees'], new ExpressionCosine()),
       tan: new FunctionDefinition('tan', ['degrees'], new ExpressionTangent()),
       asin: new FunctionDefinition('asin', ['ratio'], new ExpressionArcSine()),

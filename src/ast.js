@@ -2100,6 +2100,34 @@ export class ExpressionSine extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionPolar extends ExpressionFunction {
+  evaluate(env, fromTime, toTime, context) {
+    let x = env.get('x').value;
+    let y = env.get('y').value;
+    let radius = Math.sqrt(x * x + y * y);
+    let degrees = Math.atan2(y, x);
+    return new ExpressionVector([
+      new ExpressionReal(radius),
+      new ExpressionReal(degrees),
+    ]);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionUnpolar extends ExpressionFunction {
+  evaluate(env, fromTime, toTime, context) {
+    let degrees = env.get('degrees').value;
+    let radius = env.get('radius').value;
+    return new ExpressionVector([
+      new ExpressionReal(Math.cos(degrees * Math.PI / 180) * radius),
+      new ExpressionReal(Math.sin(degrees * Math.PI / 180) * radius),
+    ]);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionCosine extends ExpressionFunction {
   evaluate(env, fromTime, toTime, context) {
     let degrees = env.get('degrees').value;
