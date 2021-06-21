@@ -193,15 +193,31 @@ var {
   pointer-events: none;
 }
 
-#time-toolbar {
+#bottom-tools {
   position: absolute;
   bottom: 10px;
   left: 10px;
   right: 10px;
   margin: 0;
-  width: calc(100% - 20px);
-  text-align: center;
   pointer-events: none;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
+  /* Why was this here? */
+  /* width: calc(100% - 20px); */
+}
+
+#mouse-status-label {
+  color: gray;
+  align-self: flex-end;
+  /* font-family: monospace; */
+  /* white-space: pre; */
+}
+
+#time-toolbar {
+  text-align: center;
 }
 
 #time-toolbar input {

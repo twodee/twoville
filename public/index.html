@@ -131,13 +131,16 @@
       </div>
     </div>
 
-    <div id="time-toolbar">
-      <div>
-        <input type="number" id="time-spinner" value="0" min="0" max="100">
-        <input type="button" id="play-once-button" value="&rarr;">
-        <input type="button" id="play-loop-button" value="&infin;">
+    <div id="bottom-tools">
+      <div id="mouse-status-label">foo</div>
+      <div id="time-toolbar">
+        <div>
+          <input type="number" id="time-spinner" value="0" min="0" max="100">
+          <input type="button" id="play-once-button" value="&rarr;">
+          <input type="button" id="play-loop-button" value="&infin;">
+        </div>
+        <input type="range" id="scrubber" value="0" min="0" max="100000">
       </div>
-      <input type="range" id="scrubber" value="0" min="0" max="100000">
     </div>
   </div>
 
@@ -191,7 +194,7 @@
           <input id="warn-on-exit-toggle" type="checkbox">
           <label for="show-time-scrubber-toggle">Show time scrubber</label>
           <input id="show-time-scrubber-toggle" type="checkbox">
-          <label for="mouse-precision-spinner">Mouse-edit precision</label>
+          <label for="mouse-precision-spinner">Mouse precision</label>
           <input id="mouse-precision-spinner" type="number" step="1" min="0" max="20">
           <label for="theme-picker">Theme</label>
           <select id="theme-picker">

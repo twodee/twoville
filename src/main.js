@@ -245,7 +245,7 @@ function postInterpret(pod, successCallback) {
   if (oldScene) {
     oldScene.stop();
   }
-  scene = RenderEnvironment.reify(document.getElementById('svg'), pod, settings);
+  scene = RenderEnvironment.reify(document.getElementById('svg'), document.getElementById('mouse-status-label'), pod, settings);
 
   let hasTweak;
 

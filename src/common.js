@@ -229,6 +229,12 @@ Number.prototype.toShortFloat = function(ndigits = 3) {
 
 // --------------------------------------------------------------------------- 
 
+export function formatFloat(x, ndigits) {
+  return x.toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: ndigits});
+}
+
+// --------------------------------------------------------------------------- 
+
 export function standardizeDegrees(degrees) {
   if (degrees < 0) {
     while (degrees <= -360) {

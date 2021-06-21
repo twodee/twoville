@@ -3,6 +3,7 @@ import {
   SourceLocation,
   Token,
   clearChildren,
+  formatFloat,
   removeClassMembers,
   removeClassMembersExcept,
   svgNamespace,
@@ -89,11 +90,13 @@ export class RenderEnvironment extends Environment {
     this.bindGlobalFunctions();
   }
 
-  static reify(svg, pod, settings) {
+  static reify(svg, mouseStatusLabel, pod, settings) {
     const scene = new RenderEnvironment();
     scene.svg = svg;
+    scene.mouseStatusLabel = mouseStatusLabel;
     scene.omniReify = RenderEnvironment.omniReify;
     scene.root = scene;
+    scene.isMouseDown = false;
     scene.settings = settings;
     scene.embody(undefined, pod);
     return scene;
@@ -167,9 +170,14 @@ export class RenderEnvironment extends Environment {
 
   start() {
     this.mouseAtSvg = this.svg.createSVGPoint();
+    console.log("this.mouseAtSvg:", this.mouseAtSvg);
+
+    console.log(this.svg.getScreenCTM());
 
     this.svg.addEventListener('wheel', this.onWheel);
     this.svg.addEventListener('mousedown', this.onMouseDown);
+    this.svg.addEventListener('mousemove', this.onMouseMove);
+    this.svg.addEventListener('mouseup', this.onMouseUp);
 
     this.defines = document.createElementNS(svgNamespace, 'defs');
     this.svg.appendChild(this.defines);
@@ -342,6 +350,7 @@ export class RenderEnvironment extends Environment {
     if (this.isStarted) {
       this.rescale();
     }
+    this.currentTransform = this.svg.getScreenCTM().inverse();
   }
 
   rebound(oldBounds) {
@@ -477,29 +486,33 @@ export class RenderEnvironment extends Environment {
     // matrix here so that all the mouse coordinates are in the same space.
     this.mouseAtSvg.x = e.clientX;
     this.mouseAtSvg.y = e.clientY;
-    this.mouseTransform = this.svg.getScreenCTM().inverse();
-    this.mouseAt = this.mouseAtSvg.matrixTransform(this.mouseTransform);
-
-    this.svg.addEventListener('mousemove', this.onMouseMove);
-    this.svg.addEventListener('mouseup', this.onMouseUp);
+    this.mouseDownTransform = this.svg.getScreenCTM().inverse();
+    this.mouseAt = this.mouseAtSvg.matrixTransform(this.mouseDownTransform);
+    this.isMouseDown = true;
   };
 
   onMouseMove = e => {
     this.mouseAtSvg.x = e.clientX;
     this.mouseAtSvg.y = e.clientY;
-    const newMouseAt = this.mouseAtSvg.matrixTransform(this.mouseTransform);
 
-    let delta = [newMouseAt.x - this.mouseAt.x, newMouseAt.y - this.mouseAt.y];
-    this.bounds.x -= delta[0];
-    this.bounds.y -= delta[1];
-    this.updateViewBox();
-    this.mouseAt = newMouseAt;
+    if (this.isMouseDown) {
+      const newMouseAt = this.mouseAtSvg.matrixTransform(this.mouseDownTransform);
+      let delta = [newMouseAt.x - this.mouseAt.x, newMouseAt.y - this.mouseAt.y];
+      this.bounds.x -= delta[0];
+      this.bounds.y -= delta[1];
+      this.updateViewBox();
+      this.mouseAt = newMouseAt;
+    }
+
+    const mouseNowAt = this.mouseAtSvg.matrixTransform(this.currentTransform);
+    this.mouseStatusLabel.innerText = `[${formatFloat(mouseNowAt.x, this.settings.mousePrecision)}, ${formatFloat(this.bounds.span - mouseNowAt.y, this.settings.mousePrecision)}]`;
   };
 
   onMouseUp = e => {
-    this.deselect();
-    this.svg.removeEventListener('mousemove', this.onMouseMove);
-    this.svg.removeEventListener('mouseup', this.onMouseUp);
+    if (this.isMouseDown) {
+      this.deselect();
+      this.isMouseDown = false;
+    }
   };
 }
 
