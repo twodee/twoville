@@ -1498,7 +1498,7 @@ function initializeDocs() {
       wrapper.appendChild(source);
 
       const docEditor = ace.edit(source);
-      const theme = settings.theme === 'dark' ? 'twilight' : 'solarized_light';
+      const theme = settings.theme === 'dark' ? 'twilight' : 'katzenmilch';
       docEditor.setTheme(`ace/theme/${theme}`);
       docEditor.getSession().setMode('ace/mode/twoville');
       docEditor.setOptions({

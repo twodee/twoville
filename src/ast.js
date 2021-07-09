@@ -914,6 +914,11 @@ export class ExpressionNegative extends Expression {
     this.operand = operand;
   }
 
+  toPretty() {
+    const pretty = this.operand.precedence < this.precedence ? `(${this.operand.toPretty()})` : `${this.operand.toPretty()}`;
+    return `-${pretty}`;
+  }
+
   evaluate(env, fromTime, toTime, context) {
     let evaluatedL = this.operand.evaluate(env, fromTime, toTime, context);
 
@@ -1307,6 +1312,34 @@ export class ExpressionFor extends Expression {
 
   isTimeSensitive(env) {
     return this.start.isTimeSensitive(env) || this.stop.isTimeSensitive(env) || this.by.isTimeSensitive(env) || this.body.isTimeSensitive(env);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionForArray extends Expression {
+  static precedence = Precedence.Atom;
+
+  constructor(i, array, body, where, unevaluated) {
+    super(where, unevaluated);
+    this.i = i;
+    this.array = array;
+    this.body = body;
+  }
+
+  evaluate(env, fromTime, toTime, context) {
+    let arrayValues = this.array.evaluate(env, fromTime, toTime, context).value;
+
+    for (let i = 0; i < arrayValues.length; i += 1) {
+      new ExpressionAssignment(this.i, arrayValues[i], true).evaluate(env, fromTime, toTime, context);
+      this.body.evaluate(env, fromTime, toTime, context);
+    }
+
+    // TODO return?
+  }
+
+  isTimeSensitive(env) {
+    return this.array.isTimeSensitive(env) || this.body.isTimeSensitive(env);
   }
 }
 

@@ -20,6 +20,7 @@ import {
   ExpressionDivide,
   ExpressionDistributedIdentifier,
   ExpressionFor,
+  ExpressionForArray,
   ExpressionFunctionCall,
   ExpressionFunctionDefinition,
   ExpressionMore,
@@ -393,9 +394,9 @@ export function parse(tokens, source) {
   function expressionUnary() {
     let a;
     if (has(Tokens.Minus)) {
-      consume(); // eat -
+      const negativeToken = consume(); // eat -
       a = expressionUnary();
-      a = new ExpressionNegative(a, a.where);
+      a = new ExpressionNegative(a, SourceLocation.span(negativeToken.where, a.where));
     } else if (has(Tokens.Not)) {
       consume(); // eat !
       a = expressionUnary();
@@ -687,7 +688,15 @@ export function parse(tokens, source) {
             stop = expression();
             stop = new ExpressionAdd(new ExpressionInteger(1), stop);
           } else {
-            throw new LocatedException(SourceLocation.span(sourceStart, start.where), 'I expected the range operator .. in a for-in loop.');
+            // throw new LocatedException(SourceLocation.span(sourceStart, start.where), 'I expected the range operator .. in a for-in loop.');
+            const array = start;
+            if (has(Tokens.Linebreak)) {
+              consume(); // eat linebreak
+              let body = block();
+              return new ExpressionForArray(j, array, body, SourceLocation.span(sourceStart, body.where));
+            } else {
+              throw new LocatedException(SourceLocation.span(sourceStart, start.where), 'Bad for-in');
+            }
           }
         } else if (has(Tokens.To)) {
           consume(); // eat to

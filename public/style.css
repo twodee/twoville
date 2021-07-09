@@ -212,8 +212,6 @@ var {
 #mouse-status-label {
   color: gray;
   align-self: flex-end;
-  /* font-family: monospace; */
-  /* white-space: pre; */
 }
 
 #time-toolbar {
