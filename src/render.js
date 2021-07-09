@@ -99,6 +99,7 @@ export class RenderEnvironment extends Environment {
     scene.isMouseDown = false;
     scene.settings = settings;
     scene.embody(undefined, pod);
+
     return scene;
   }
 
@@ -170,9 +171,6 @@ export class RenderEnvironment extends Environment {
 
   start() {
     this.mouseAtSvg = this.svg.createSVGPoint();
-    console.log("this.mouseAtSvg:", this.mouseAtSvg);
-
-    console.log(this.svg.getScreenCTM());
 
     this.svg.addEventListener('wheel', this.onWheel);
     this.svg.addEventListener('mousedown', this.onMouseDown);
@@ -476,7 +474,7 @@ export class RenderEnvironment extends Environment {
         this.bounds.height *= factor;
         this.updateViewBox();
 
-        this.rescale();
+        // this.rescale();
       }
     }
   };

@@ -313,12 +313,14 @@ function postInterpret(pod, successCallback) {
 
       // The scene must be wiped. Otherwise the bounds tracked between runs get
       // messed up.
+      scene.stop();
       scene = null;
 
       throw e;
     } else {
       console.trace(e);
       Messager.log(e.message);
+      scene.stop();
       scene = null;
     }
   }
@@ -629,6 +631,7 @@ function initialize() {
     // Invalidate previous scene so we don't carry over bounds or selection.
     if (scene) {
       clearChildren(scene.svg);
+      scene.stop();
       scene = null;
     }
 
