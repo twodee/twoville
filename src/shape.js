@@ -911,12 +911,12 @@ export class Rectangle extends Shape {
       }
     }
 
-    if (positions) {
-      for (let position of positions) {
-        let transformedPosition = this.state.matrix.multiplyVector(position);
-        this.boundingBox.enclosePoint(transformedPosition);
-      }
-    }
+    // if (positions) {
+      // for (let position of positions) {
+        // let transformedPosition = this.state.matrix.multiplyVector(position);
+        // this.boundingBox.enclosePoint(transformedPosition);
+      // }
+    // }
 
     // console.log("this.boundingBox:", this.boundingBox.toString());
 

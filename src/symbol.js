@@ -69,6 +69,7 @@ export const Symbol = Object.freeze({
   ':cornflower': new ExpressionVector([new ExpressionReal(0.392), new ExpressionReal(0.584), new ExpressionReal(0.929)]),
   ':crimson': new ExpressionVector([new ExpressionReal(0.863), new ExpressionReal(0.078), new ExpressionReal(0.235)]),
   ':tomato': new ExpressionVector([new ExpressionReal(255 / 255), new ExpressionReal(99 / 255), new ExpressionReal(71 / 255)]),
+  ':brown': new ExpressionVector([new ExpressionReal(165 / 255), new ExpressionReal(42 / 255), new ExpressionReal(42 / 255)]),
 
   ':absolute': new ExpressionInteger(0),
   ':relative': new ExpressionInteger(1),
