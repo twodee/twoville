@@ -425,9 +425,27 @@ function initialize() {
   editor = ace.edit('editor');
   editor.setOptions({
     fontFamily: 'Roboto Mono',
-    fontSize: source0 ? '10pt' : '14pt',
+    fontSize: source0 ? 14 : 18,
     tabSize: 2,
     useSoftTabs: true
+  });
+
+  editor.commands.addCommand({
+    name: "increaseFontSize",
+    bindKey: {win: "Ctrl-=", mac: "Command-="},
+    exec: function(editor) {
+      editor.setFontSize(editor.getFontSize() + 1);
+    }
+  });
+
+  editor.commands.addCommand({
+    name: "decreaseFontSize",
+    bindKey: {win: "Ctrl--", mac: "Command--"},
+    exec: function(editor) {
+      if (editor.getFontSize() > 4) {
+        editor.setFontSize(editor.getFontSize() - 1);
+      }
+    }
   });
 
   Range = ace.require('ace/range').Range;

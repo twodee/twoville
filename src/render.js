@@ -379,7 +379,8 @@ export class RenderEnvironment extends Environment {
   rescale() {
     const matrix = this.svg.getScreenCTM();
     const factor = matrix.a;
-    for (let shape of this.shapes) {
+    // TODO should this be all shapes?
+    for (let shape of this.drawables) {
       if (shape.state.isEnabled) {
         shape.updateContentDom(this.bounds, factor);
         shape.updateInteractionDom(this.bounds, factor);

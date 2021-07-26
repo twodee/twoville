@@ -100,7 +100,8 @@ export class Shape extends TimelinedEnvironment {
     this.bindFunction('shear', new FunctionDefinition('shear', [], new ExpressionShear(this)));
 
     // This shape should not have been made inside the context of any other
-    // shape. We must walk the whole environment chain.
+    // shape. We must walk the whole environment chain to make sure there's
+    // no shape in the stack.
     let environment = parentEnvironment;
     while (environment !== parentEnvironment.root) {
       if (environment instanceof Shape) {
@@ -2088,12 +2089,12 @@ export class Group extends Shape {
     return shape;
   }
 
-  start() {
-    super.start();
-    this.createHierarchy();
-    this.markers[0].addMarks([], []);
-    this.connect();
-  }
+  // start() {
+    // super.start();
+    // this.createHierarchy();
+    // this.markers[0].addMarks([], []);
+    // this.connect();
+  // }
 
   createHierarchy() {
     this.element = document.createElementNS(svgNamespace, 'g');
@@ -2241,72 +2242,155 @@ export class Tip extends Group {
     return shape;
   }
 
-  createHierarchy() {
-    this.element = document.createElementNS(svgNamespace, 'marker');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.element.setAttributeNS(null, 'orient', 'auto');
-    this.element.setAttributeNS(null, 'markerUnits', 'strokeWidth');
-
-    // Without this, the marker gets clipped.
-    this.element.setAttributeNS(null, 'overflow', 'visible');
-  }
-
   connectToParent() {
     this.isDrawable = true;
     this.root.defines.appendChild(this.element);
   }
 
-  validate() {
-    this.assertProperty('size');
-    this.assertProperty('anchor');
+  configureMarks() {
+    console.log("configure marks!");
+    super.configureMarks();
+    this.markers[0].addMarks([], [], [], []);
+  }
 
-    if (this.owns('corner') && this.owns('center')) {
-      throw new LocatedException(this.where, 'I found a tip whose corner and center properties were both set. Define only one of these.');
-    }
+  configureState(bounds) {
+    console.log("configure state!!!!!!!");
+    this.state.centroid = [0, 0];
 
-    if (!this.owns('corner') && !this.owns('center')) {
-      throw new LocatedException(this.where, 'I found a tip whose location I couldn\'t figure out. Please define its corner or center.');
+    this.element = document.createElementNS(svgNamespace, 'marker');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'orient', 'auto-start-reverse');
+    this.element.setAttributeNS(null, 'markerUnits', 'strokeWidth');
+
+    // Without this, the marker gets clipped.
+    this.element.setAttributeNS(null, 'overflow', 'visible');
+
+    this.configureVectorProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
+      if (!timeline) {
+        throw new LocatedException(this.where, 'I found a tip whose <code>size</code> was not set.');
+      }
+
+      try {
+        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+        return true;
+      } catch (e) {
+        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
+      }
+    });
+
+    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
+      throw new LocatedException(this.where, 'I found a tip whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
+    } else if (this.timedProperties.hasOwnProperty('corner')) {
+      this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
+        try {
+          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
+        }
+      });
+    } else if (this.timedProperties.hasOwnProperty('center')) {
+      this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
+        try {
+          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
+        }
+      });
+    } else {
+      throw new LocatedException(this.where, "I found a tip whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
     }
   }
 
-  updateProperties(env, t, bounds, matrix) {
-    const anchor = this.valueAt(env, 'anchor', t);
-    const size = this.valueAt(env, 'size', t);
+  updateSize(bounds) {
+    // this.element.setAttributeNS(null, 'width', this.state.size[0]);
+    // this.element.setAttributeNS(null, 'height', this.state.size[1]);
+    // this.state.corner = [
+      // this.state.center[0] - this.state.size[0] * 0.5,
+      // this.state.center[1] - this.state.size[1] * 0.5,
+    // ];
+  }
 
-    let corner;
-    if (this.owns('corner')) {
-      corner = this.valueAt(env, 'corner', t);
-    } else {
-      let center = this.valueAt(env, 'center', t);
-      corner = new ExpressionVector([
-        new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
-        new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
-      ]);
-    }
+  updateCenter(bounds) {
+    this.state.centroid = this.state.center;
+    this.state.corner = [
+      this.state.center[0] - this.state.size[0] * 0.5,
+      this.state.center[1] - this.state.size[1] * 0.5,
+    ];
+    // this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
+    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
+  }
+
+  updateCorner(bounds) {
+    this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
+    // this.element.setAttributeNS(null, 'x', this.state.corner[0]);
+    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
+  }
+
+  // updateProperties(env, t, bounds, matrix) {
+    // console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    // const anchor = this.valueAt(env, 'anchor', t);
+    // const size = this.valueAt(env, 'size', t);
+
+    // let corner;
+    // if (this.owns('corner')) {
+      // corner = this.valueAt(env, 'corner', t);
+    // } else {
+      // let center = this.valueAt(env, 'center', t);
+      // corner = new ExpressionVector([
+        // new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
+        // new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
+      // ]);
+    // }
+
+    // const markerBounds = {
+      // x: corner.get(0).value,
+      // y: corner.get(1).value,
+      // width: size.get(0).value,
+      // height: size.get(1).value,
+    // };
+    // markerBounds.span = markerBounds.y + (markerBounds.y + markerBounds.height);
+
+    // this.element.setAttributeNS(null, 'viewBox', `${markerBounds.x} ${markerBounds.y} ${markerBounds.width} ${markerBounds.height}`);
+
+    // console.log("anchor:", anchor.toString());
+
+    // matrix = this.transform(env, t, bounds, matrix);
+    // const childCentroids = this.children.map(child => child.updateProperties(env, t, markerBounds, matrix));
+    // const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
+    // const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
+    // this.updateCentroid(matrix, centroid, bounds);
+
+    // return centroid;
+  // }
+
+  updateContentDom(bounds) {
+    console.log("ucd________________________");
+    console.log("this.state:", this.state);
+    this.element.setAttributeNS(null, 'markerWidth', this.state.size[0]);
+    this.element.setAttributeNS(null, 'markerHeight', this.state.size[1]);
+    this.element.setAttributeNS(null, 'refX', 0);
+    this.element.setAttributeNS(null, 'refY', 0);
+    this.element.setAttributeNS(null, 'viewBox', `${this.state.corner[0]} ${this.state.corner[1]} ${this.state.size[0]} ${this.state.size[1]}`);
 
     const markerBounds = {
-      x: corner.get(0).value,
-      y: corner.get(1).value,
-      width: size.get(0).value,
-      height: size.get(1).value,
+      x: this.state.corner[0],
+      y: this.state.corner[1],
+      width: this.state.size[0],
+      height: this.state.size[1],
     };
     markerBounds.span = markerBounds.y + (markerBounds.y + markerBounds.height);
-
-    this.element.setAttributeNS(null, 'viewBox', `${markerBounds.x} ${markerBounds.y} ${markerBounds.width} ${markerBounds.height}`);
-
-    this.element.setAttributeNS(null, 'markerWidth', size.get(0).value);
-    this.element.setAttributeNS(null, 'markerHeight', size.get(1).value);
-    this.element.setAttributeNS(null, 'refX', anchor.get(0).value);
-    this.element.setAttributeNS(null, 'refY', anchor.get(1).value);
-
-    matrix = this.transform(env, t, bounds, matrix);
-    const childCentroids = this.children.map(child => child.updateProperties(env, t, markerBounds, matrix));
-    const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-    const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
-    this.updateCentroid(matrix, centroid, bounds);
-
-    return centroid;
+    for (let child of this.children) {
+      console.log("child:", child);
+      child.updateContentDom(markerBounds);
+    }
   }
+
+  // updateInteractionState(bounds) {
+    // super.updateInteractionState(bounds);
+  // }
+
 }
 
 // --------------------------------------------------------------------------- 
