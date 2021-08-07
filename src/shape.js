@@ -138,6 +138,8 @@ export class Shape extends TimelinedEnvironment {
   static reify(parentEnvironment, pod) {
     if (pod.type === 'rectangle') {
       return Rectangle.reify(parentEnvironment, pod);
+    } else if (pod.type === 'raster') {
+      return Raster.reify(parentEnvironment, pod);
     } else if (pod.type === 'grid') {
       return Grid.reify(parentEnvironment, pod);
     } else if (pod.type === 'circle') {
@@ -923,6 +925,221 @@ export class Rectangle extends Shape {
 
     // TODO: add intervals
     // TODO: handle transforms
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Raster extends Shape {
+  static type = 'raster';
+  static article = 'a';
+  static timedIds = ['corner', 'center', 'width', 'height', 'enabled'];
+
+  initialize(parentEnvironment, where) {
+    super.initialize(parentEnvironment, where);
+  }
+
+  static create(parentEnvironment, where) {
+    const shape = new Raster();
+    shape.initialize(parentEnvironment, where);
+    return shape;
+  }
+
+  static reify(parentEnvironment, pod) {
+    const shape = new Raster();
+    shape.embody(parentEnvironment, pod);
+    return shape;
+  }
+
+  configureState(bounds) {
+    this.element = document.createElementNS(svgNamespace, 'image');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    // TODO assert id
+    this.root.addRaster(this.untimedProperties.id.value, this);
+
+    // TODO allow no centroid
+    this.state.centroid = [0, 0];
+
+    if (!this.timedProperties.hasOwnProperty('width') && !this.timedProperties.hasOwnProperty('height')) {
+      throw new LocatedException(this.where, 'I found a <code>raster</code> that had neither its <code>width</code> nor <code>height</code> set. At least one of these must be defined.');
+    }
+
+    if (this.timedProperties.hasOwnProperty('width')) {
+      this.configureScalarProperty('width', this, this, this.updateWidth.bind(this), bounds, [], timeline => {
+        try {
+          timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>width</code>. ${e.message}`);
+        }
+      });
+    }
+
+    if (this.timedProperties.hasOwnProperty('height')) {
+      this.configureScalarProperty('height', this, this, this.updateHeight.bind(this), bounds, [], timeline => {
+        try {
+          timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>height</code>. ${e.message}`);
+        }
+      });
+    }
+
+    if (this.timedProperties.hasOwnProperty('width') && this.timedProperties.hasOwnProperty('height')) {
+      this.element.setAttributeNS(null, 'preserveAspectRatio', 'none');
+    }
+
+    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
+      throw new LocatedException(this.where, 'I found a <code>raster</code> whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
+    } else if (this.timedProperties.hasOwnProperty('corner')) {
+      this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, [], timeline => {
+        try {
+          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
+        }
+      });
+    } else if (this.timedProperties.hasOwnProperty('center')) {
+      this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, [], timeline => {
+        try {
+          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          return true;
+        } catch (e) {
+          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
+        }
+      });
+    } else {
+      throw new LocatedException(this.where, "I found a <code>raster</code> whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    }
+  }
+
+  updateWidth(bounds) {
+    this.element.setAttributeNS(null, 'width', this.state.width);
+  }
+
+  updateHeight(bounds) {
+    this.element.setAttributeNS(null, 'height', this.state.height);
+  }
+
+  updateCenter(bounds) {
+    // this.state.centroid = this.state.center;
+    // this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
+    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
+  }
+
+  updateCorner(bounds) {
+    // this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
+  }
+
+  setRaster(aspectRatio, url) {
+    this.element.setAttributeNS(null, 'href', url);
+    this.state.aspectRatio = aspectRatio;
+    this.synchronizeDimensions();
+  }
+
+  synchronizeDimensions() {
+    if (this.timedProperties.hasOwnProperty('width') && !this.timedProperties.hasOwnProperty('height')) {
+      this.state.height = this.state.width / this.state.aspectRatio;
+    } else if (this.timedProperties.hasOwnProperty('height') && !this.timedProperties.hasOwnProperty('width')) {
+      this.state.width = this.state.height * this.state.aspectRatio;
+    }
+  }
+
+  updateContentDom(bounds) {
+    super.updateContentDom(bounds);
+
+    this.element.setAttributeNS(null, 'height', this.state.height);
+    this.element.setAttributeNS(null, 'width', this.state.width);
+
+    let x;
+    let y;
+    if (this.state.corner) {
+      x = this.state.corner[0];
+      y = this.state.corner[1];
+    } else if (this.state.center) {
+      x = this.state.center[0] - 0.5 * this.state.width;
+      y = this.state.center[1] - 0.5 * this.state.height;
+    }
+
+    this.element.setAttributeNS(null, 'x', x);
+    this.element.setAttributeNS(null, 'y', bounds.span - y - this.state.height);
+  }
+
+  configureMarks() {
+    super.configureMarks();
+    this.outlineMark = new RectangleMark();
+
+    let multiplier;
+    let getPositionExpression;
+    let updatePositionState;
+
+    if (this.timedProperties.hasOwnProperty('center')) {
+      getPositionExpression = t => this.expressionAt('center', this.root.state.t);
+      updatePositionState = ([x, y]) => {
+        this.state.center[0] = x;
+        this.state.center[1] = y;
+      };
+      multiplier = 2;
+    } else {
+      getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
+      updatePositionState = ([x, y]) => {
+        this.state.corner[0] = x;
+        this.state.corner[1] = y;
+      };
+      multiplier = 1;
+    }
+
+    this.positionMark = new VectorPanMark(this, null, getPositionExpression, updatePositionState);
+
+    let resizeMarks = [];
+    if (this.timedProperties.hasOwnProperty('width')) {
+      this.widthMark = new HorizontalPanMark(this, this, multiplier, t => {
+        return this.expressionAt('width', this.root.state.t);
+      }, newValue => {
+        this.state.width = newValue;
+        this.synchronizeDimensions();
+      });
+      resizeMarks.push(this.widthMark);
+    }
+
+    if (this.timedProperties.hasOwnProperty('height')) {
+      this.heightMark = new VerticalPanMark(this, this, multiplier, t => {
+        return this.expressionAt('height', this.root.state.t);
+      }, newValue => {
+        this.state.height = newValue;
+        this.synchronizeDimensions();
+      });
+      resizeMarks.push(this.heightMark);
+    }
+
+    this.markers[0].addMarks([this.positionMark, ...resizeMarks], [this.outlineMark]);
+  }
+ 
+  updateInteractionState(bounds) {
+    super.updateInteractionState(bounds);
+    if (this.state.center) {
+      const corner = [this.state.center[0] - this.state.width * 0.5, this.state.center[1] - this.state.height * 0.5];
+      this.outlineMark.updateState(corner, [this.state.width, this.state.height], 0);
+      this.positionMark.updateState(this.state.center, this.state.matrix);
+      if (this.widthMark) {
+        this.widthMark.updateState([this.state.center[0] + this.state.width * 0.5, this.state.center[1]], this.state.matrix);
+      }
+      if (this.heightMark) {
+        this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.height * 0.5], this.state.matrix);
+      }
+    } else {
+      this.outlineMark.updateState(this.state.corner, [this.state.width, this.state.height], 0);
+      this.positionMark.updateState(this.state.corner, this.state.matrix);
+      if (this.widthMark) {
+        this.widthMark.updateState([this.state.corner[0] + this.state.width, this.state.corner[1]], this.state.matrix);
+      }
+      if (this.heightMark) {
+        this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.height], this.state.matrix);
+      }
+    }
   }
 }
 
@@ -2248,13 +2465,11 @@ export class Tip extends Group {
   }
 
   configureMarks() {
-    console.log("configure marks!");
     super.configureMarks();
     this.markers[0].addMarks([], [], [], []);
   }
 
   configureState(bounds) {
-    console.log("configure state!!!!!!!");
     this.state.centroid = [0, 0];
 
     this.element = document.createElementNS(svgNamespace, 'marker');
@@ -2366,8 +2581,6 @@ export class Tip extends Group {
   // }
 
   updateContentDom(bounds) {
-    console.log("ucd________________________");
-    console.log("this.state:", this.state);
     this.element.setAttributeNS(null, 'markerWidth', this.state.size[0]);
     this.element.setAttributeNS(null, 'markerHeight', this.state.size[1]);
     this.element.setAttributeNS(null, 'refX', 0);
@@ -2382,7 +2595,6 @@ export class Tip extends Group {
     };
     markerBounds.span = markerBounds.y + (markerBounds.y + markerBounds.height);
     for (let child of this.children) {
-      console.log("child:", child);
       child.updateContentDom(markerBounds);
     }
   }

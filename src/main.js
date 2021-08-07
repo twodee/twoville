@@ -51,6 +51,8 @@ let scrubber;
 let timeSpinner;
 let interpreterWorker;
 let currentName;
+let rasterRows;
+let rastersList;
 
 let frameIndex = 0;
 let delay;
@@ -59,11 +61,11 @@ let isLoop;
 let defaultSettings = {
   showCopyLinks: true,
   showPageOutline: true,
-  backgroundColor: '#D3D3D3',
+  backgroundColor: '#E6E6E6',
   warnOnExit: true,
   showTimeScrubber: false,
   mousePrecision: 2,
-  theme: 'dark',
+  theme: 'light',
 };
 const settings = {...defaultSettings};
 
@@ -254,6 +256,11 @@ function postInterpret(pod, successCallback) {
     hasTweak = false;
     document.documentElement.classList.remove('grab');
     document.documentElement.classList.add('grabbing');
+
+    let range = editor.getSelectionRange();
+    let doc = editor.getSession().getDocument();
+    let oldText = doc.getTextRange(range);
+    return oldText;
   };
 
   scene.tweak = newText => {
@@ -288,6 +295,72 @@ function postInterpret(pod, successCallback) {
   try {
     scene.clear();
     scene.start();
+
+    // Go through rasters. Add DOM for any that aren't 
+    // Perhaps existing rasters should be provided to scene to prevent
+    // invalid elements.
+    for (const [id, rasterElement] of Object.entries(scene.rasters)) {
+      if (!rasterRows.hasOwnProperty(id)) {
+        const rasterLabel = document.createElement('span');
+        rasterLabel.appendChild(document.createTextNode(id));
+        rasterLabel.setAttribute('class', 'raster-id');
+
+        const previewImage = document.createElement('img');
+        previewImage.setAttribute('class', 'raster-preview');
+
+        const fileInput = document.createElement('input');
+        fileInput.setAttribute('type', 'file');
+        fileInput.setAttribute('accept', 'image/*');
+        fileInput.addEventListener('change', onUploadRaster);
+        fileInput.style.display = 'none';
+
+        const uploadButton = document.createElement('button');
+        uploadButton.setAttribute('class', 'raster-action');
+        uploadButton.appendChild(document.createTextNode('upload'));
+        uploadButton.addEventListener('click', () => fileInput.click());
+
+        const removeButton = document.createElement('button');
+        removeButton.setAttribute('class', 'raster-action');
+        removeButton.appendChild(document.createTextNode('remove'));
+        removeButton.addEventListener('click', onRemoveRaster);
+
+        const row = document.createElement('div');
+        row.setAttribute('class', 'raster-row');
+        row.setAttribute('data-id', `${id}`);
+
+        const listItem = document.createElement('li');
+        listItem.setAttribute('data-id', `${id}`);
+
+        const actions = document.createElement('div');
+        actions.classList.add('raster-actions');
+        actions.appendChild(uploadButton);
+        actions.appendChild(removeButton);
+        
+        row.appendChild(fileInput);
+        row.appendChild(previewImage);
+        row.appendChild(rasterLabel);
+        row.appendChild(actions);
+
+        listItem.appendChild(row);
+        
+        rastersList.appendChild(listItem);
+
+        document.getElementById('no-rasters-item').style.display = 'none';
+
+        rasterRows[id] = row;
+      } else {
+        // Input already exists for this name. Attach any uploaded
+        // image to the image element in the SVG.
+        const input = rasterRows[id].children[0];
+        if (input.files.length > 0) {
+          attachRaster(id);
+        }
+      }
+
+      if (rasterRows[id].children[0].files.length === 0) {
+        Messager.log(`I see a new raster named <code>${id}</code>. Upload its image in the Rasters panel.`);
+      }
+    }
 
     timeSpinner.min = scrubber.min = scene.bounds.startTime;
     timeSpinner.max = scrubber.max = scene.bounds.stopTime;
@@ -324,6 +397,69 @@ function postInterpret(pod, successCallback) {
       scene = null;
     }
   }
+}
+
+function onRemoveRaster(event) {
+  const row = event.target.parentNode.parentNode;
+  const id = row.dataset.id;
+  rastersList.removeChild(row.parentNode);
+  if (rastersList.children.length === 1) {
+    document.getElementById('no-rasters-item').style.display = 'list-item';
+  }
+  delete rasterRows[id];
+}
+
+function attachRaster(id) {
+  readImage(rasterRows[id].children[0].files[0])
+    .then(({image, dataUrl}) => {
+      if (scene && scene.rasters.hasOwnProperty(id)) {
+        rasterRows[id].children[1].src = dataUrl;
+        scene.rasters[id].setRaster(image.width / image.height, dataUrl);
+        // TODO width/height are dependent on raster. Setting the image 
+        // update one or the other, which forces a DOM change. How is this
+        // best maintained?
+        // scene.rasters[id].updateContentDom(scene.bounds);
+        // scene.rasters[id].updateInteractionState(scene.bounds);
+        // scene.rasters[id].updateInteractionDom(scene.bounds, 1);
+        scrubTo(parseInt(scrubber.value));
+      }
+    });
+}
+
+function readImage(file) {
+  return readFile(file).then(dataUrl => {
+    return new Promise((resolve, reject) => {
+      const image = document.createElement('img');
+      image.addEventListener('load', () => {
+        resolve({image, dataUrl});
+      });
+      image.src = dataUrl;
+    });
+  });
+}
+
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      resolve(reader.result);
+    });
+    reader.readAsDataURL(file);
+  });
+}
+
+function imageToDataUrl(image) {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  canvas.getContext('2d').drawImage(image, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+function onUploadRaster(event) {
+  const row = event.target.parentNode;
+  const id = row.dataset.id;
+  attachRaster(id);
 }
 
 function startInterpreting(successCallback) {
@@ -1456,6 +1592,8 @@ function initialize() {
   });
 
   initializeDocs();
+  rasterRows = {};
+  rastersList = document.getElementById('rasters-list');
 }
 
 function sendToChris() {

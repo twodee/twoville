@@ -14,6 +14,7 @@ import {
   ExpressionArcSine,
   ExpressionArcTangent,
   ExpressionArcTangent2,
+  ExpressionRaster,
   ExpressionCircle,
   ExpressionCosine,
   ExpressionCutout,
@@ -180,6 +181,7 @@ export class Environment {
     Object.assign(this.functions, {
       grid: new FunctionDefinition('grid', [], new ExpressionGrid()),
       rectangle: new FunctionDefinition('rectangle', [], new ExpressionRectangle()),
+      raster: new FunctionDefinition('raster', [], new ExpressionRaster()),
       line: new FunctionDefinition('line', [], new ExpressionLine()),
       path: new FunctionDefinition('path', [], new ExpressionPath()),
       ungon: new FunctionDefinition('ungon', [], new ExpressionUngon()),

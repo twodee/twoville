@@ -496,8 +496,10 @@ export function parse(tokens, source) {
     } else if (has(Tokens.LeftParenthesis)) {
       let leftToken = consume();
       let a = expression();
+      a.isLocked = true;
       if (has(Tokens.RightParenthesis)) {
-        consume();
+        let rightToken = consume();
+        a.where = SourceLocation.span(leftToken.where, rightToken.where);
         return a;
       } else {
         throw new LocatedException(SourceLocation.span(leftToken.where, a.where), 'I expected a right parenthesis after this expression.');

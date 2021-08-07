@@ -16,6 +16,7 @@ import {
 } from './environment.js';
 
 import {
+  Raster,
   Circle,
   Cutout,
   Grid,
@@ -61,12 +62,18 @@ import {
 // --------------------------------------------------------------------------- 
 
 export class Expression {
-  constructor(where, unevaluated) {
+  constructor(where, unevaluated, prevalues) {
     this.where = where;
     this.unevaluated = unevaluated ? unevaluated : this;
+    this.prevalues = prevalues;
+    this.isLocked = false;
   }
 
   isTimeSensitive(env) {
+    return false;
+  }
+
+  isNumericLiteral() {
     return false;
   }
 
@@ -82,6 +89,7 @@ export class Expression {
     const pod = {
       type: this.constructor.name,
       where: this.where,
+      isLocked: this.isLocked,
     };
 
     if (this.unevaluated && this.unevaluated !== this) {
@@ -106,47 +114,51 @@ export class Expression {
       prevalues = pod.prevalues.map(prevalue => omniReify(env, prevalue));
     }
 
+    let e;
     if (pod.type === 'ExpressionReal') {
-      return new ExpressionReal(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionReal(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionBoolean') {
-      return new ExpressionBoolean(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionBoolean(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionInteger') {
-      return new ExpressionInteger(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionInteger(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionString') {
-      return new ExpressionString(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionString(pod.value, SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionVector') {
-      return new ExpressionVector(pod.value.map(element => omniReify(env, element)), SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionVector(pod.value.map(element => omniReify(env, element)), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionDitto') {
-      return new ExpressionDitto(SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionDitto(SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionAdd') {
-      return new ExpressionAdd(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionAdd(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionMultiply') {
-      return new ExpressionMultiply(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionMultiply(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionPower') {
-      return new ExpressionPower(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionPower(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionDivide') {
-      return new ExpressionDivide(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionDivide(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionSubtract') {
-      return new ExpressionSubtract(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionSubtract(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionRemainder') {
-      return new ExpressionRemainder(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionRemainder(omniReify(env, pod.l), omniReify(env, pod.r), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionIdentifier') {
-      return new ExpressionIdentifier(Token.reify(pod.nameToken), SourceLocation.reify(pod.where), unevaluated);
+      e = new ExpressionIdentifier(Token.reify(pod.nameToken), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionMemberIdentifier') {
-      return new ExpressionMemberIdentifier(omniReify(pod.base), Token.reify(pod.nameToken), SourceLocation.reify(pod.where), unevaluated);
+      e = new ExpressionMemberIdentifier(omniReify(pod.base), Token.reify(pod.nameToken), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionFunctionCall') {
-      return new ExpressionFunctionCall(Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
+      e = new ExpressionFunctionCall(Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionMemberFunctionCall') {
-      return new ExpressionMemberFunctionCall(omniReify(env, pod.host), Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
+      e = new ExpressionMemberFunctionCall(omniReify(env, pod.host), Token.reify(pod.nameToken), pod.actuals.map(actual => omniReify(env, actual)), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionSubscript') {
-      return new ExpressionSubscript(omniReify(env, pod.base), omniReify(env, pod.index), SourceLocation.reify(pod.where), unevaluated);
+      e = new ExpressionSubscript(omniReify(env, pod.base), omniReify(env, pod.index), SourceLocation.reify(pod.where), unevaluated);
     } else if (pod.type === 'ExpressionNegative') {
-      return new ExpressionNegative(omniReify(env, pod.operand), SourceLocation.reify(pod.where), unevaluated, prevalues);
+      e = new ExpressionNegative(omniReify(env, pod.operand), SourceLocation.reify(pod.where), unevaluated, prevalues);
     } else if (pod.type === 'ExpressionUnit') {
-      return new ExpressionUnit(SourceLocation.reify(pod.where));
+      e = new ExpressionUnit(SourceLocation.reify(pod.where));
     } else {
       throw new MessagedException(`I don't know ${pod.type}!`);
     }
+
+    e.isLocked = pod.isLocked;
+    return e;
   }
 
   static assertScalar(env, e, types) {
@@ -174,6 +186,10 @@ export class Expression {
         throw new LocatedException(e.where, `Each element in the list must be ${typesToSeries(types)}.`);
       }
     });
+  }
+
+  cloneCommons(source) {
+    this.isLocked = source.isLocked;
   }
 }
 
@@ -222,7 +238,9 @@ export class ExpressionBoolean extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionBoolean(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    let e = new ExpressionBoolean(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    e.cloneCommons(this);
+    return e;
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -252,8 +270,14 @@ export class ExpressionInteger extends ExpressionData {
     super(value, where, unevaluated, prevalues);
   }
 
+  isNumericLiteral() {
+    return true;
+  }
+
   clone() {
-    return new ExpressionInteger(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    let e = new ExpressionInteger(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    e.cloneCommons(this);
+    return e;
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -381,7 +405,9 @@ export class ExpressionCharacter extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionCharacter(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    let e = new ExpressionCharacter(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    e.cloneCommons(this);
+    return e;
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -420,7 +446,9 @@ export class ExpressionString extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionString(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    let e = new ExpressionString(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    e.cloneCommons(this);
+    return e;
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -474,12 +502,18 @@ export class ExpressionReal extends ExpressionData {
     super(value, where, unevaluated, prevalues);
   }
 
+  isNumericLiteral() {
+    return true;
+  }
+
   evaluate(env, fromTime, toTime, context) {
     return this;
   }
 
   clone() {
-    return new ExpressionReal(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    let e = new ExpressionReal(this.value, this.where?.clone(), this.unevaluated, this.prevalues);
+    e.cloneCommons(this);
+    return e;
   }
 
   toPretty() {
@@ -565,8 +599,8 @@ export class ExpressionReal extends ExpressionData {
 // --------------------------------------------------------------------------- 
 
 export class ExpressionBinaryOperator extends Expression {
-  constructor(l, r, operator, where, unevaluated) {
-    super(where, unevaluated);
+  constructor(l, r, operator, where, unevaluated, prevalues) {
+    super(where, unevaluated, prevalues);
     this.l = l;
     this.r = r;
     this.operator = operator;
@@ -785,8 +819,8 @@ export class ExpressionMoreEqual extends ExpressionBinaryOperator {
 export class ExpressionAdd extends ExpressionBinaryOperator {
   static precedence = Precedence.Additive;
 
-  constructor(l, r, where, unevaluated) {
-    super(l, r, '+', where, unevaluated);
+  constructor(l, r, where, unevaluated, prevalues) {
+    super(l, r, '+', where, unevaluated, prevalues);
   }
 
   evaluate(env, fromTime, toTime, context) {
@@ -794,6 +828,7 @@ export class ExpressionAdd extends ExpressionBinaryOperator {
     let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let sum = evaluatedL.add(evaluatedR);
+    sum.prevalues = [evaluatedL, evaluatedR];
     sum.unevaluated = this;
 
     return sum;
@@ -814,6 +849,7 @@ export class ExpressionSubtract extends ExpressionBinaryOperator {
     let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let difference = evaluatedL.subtract(evaluatedR);
+    difference.prevalues = [evaluatedL, evaluatedR];
     difference.unevaluated = this;
 
     return difference;
@@ -834,6 +870,7 @@ export class ExpressionMultiply extends ExpressionBinaryOperator {
     let evaluatedR = this.r.evaluate(env, fromTime, toTime, context);
 
     let product = evaluatedL.multiply(evaluatedR);
+    product.prevalues = [evaluatedL, evaluatedR];
     product.unevaluated = this;
 
     return product;
@@ -912,6 +949,10 @@ export class ExpressionNegative extends Expression {
   constructor(operand, where, unevaluated) {
     super(where, unevaluated);
     this.operand = operand;
+  }
+
+  isNumericLiteral() {
+    return this.operand.isNumericLiteral();
   }
 
   toPretty() {
@@ -1781,6 +1822,14 @@ export class ExpressionRectangle extends ExpressionFunction {
  
 // --------------------------------------------------------------------------- 
 
+export class ExpressionRaster extends ExpressionFunction {
+  evaluate(env, fromTime, toTime, context) {
+    return Raster.create(env, context.callExpression.where);
+  }
+}
+ 
+// --------------------------------------------------------------------------- 
+
 export class ExpressionTabNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
@@ -2354,7 +2403,9 @@ export class ExpressionVector extends ExpressionData {
   }
 
   clone() {
-    return new ExpressionVector(this.value.map(e => e.clone()), this.where?.clone(), this.unevaluated, this.prevalues);
+    let e = new ExpressionVector(this.value.map(e => e.clone()), this.where?.clone(), this.unevaluated, this.prevalues);
+    e.cloneCommons(this);
+    return e;
   }
 
   evaluate(env, fromTime, toTime, context) {

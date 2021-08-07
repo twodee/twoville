@@ -7,6 +7,7 @@ import {
 import { 
   ExpressionAdd,
   ExpressionDivide,
+  ExpressionIdentifier,
   ExpressionInteger,
   ExpressionMultiply,
   ExpressionNegative,
@@ -418,7 +419,11 @@ export class TweakableMark {
       this.untweakedExpression = this.expression.clone();
       this.mouseDownAt = this.transform(event);
       this.shape.root.select(this.shape);
-      this.shape.root.startTweak(this.expression.unevaluated.where);
+      this.manipulation = setupManipulation(this.expression);
+      this.manipulation.formatReal = x => x.toShortFloat(this.shape.root.settings.mousePrecision);
+      this.manipulation.oldCode = this.shape.root.startTweak(this.manipulation.where);
+      this.manipulation.shape = this.shape;
+      // this.originalCode = this.shape.root.startTweak(manipulateWhere(this.expression));
       this.shape.root.isTweaking = true;
       window.addEventListener('mousemove', this.onMouseMove);
       window.addEventListener('mouseup', this.onMouseUp);
@@ -431,7 +436,7 @@ export class TweakableMark {
     if (event.buttons === 1) {
       let mouseAt = this.transform(event);
       let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
-      let replacement = this.getNewSource(delta, event.shiftKey, mouseAt);
+      let replacement = this.getNewSource(delta, event.shiftKey, mouseAt, this.originalCode);
       this.shape.root.tweak(replacement);
     }
   };
@@ -520,7 +525,7 @@ export class VectorPanMark extends PanMark {
     this.addVertical();
   }
 
-  getNewSource(delta, isShiftModified) {
+  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
     let x = parseFloat((this.untweakedExpression.get(0).value + delta[0]).toShortFloat(this.shape.root.settings.mousePrecision));
     let y = parseFloat((this.untweakedExpression.get(1).value + delta[1]).toShortFloat(this.shape.root.settings.mousePrecision));
 
@@ -546,7 +551,7 @@ export class HorizontalPanMark extends PanMark {
     this.addHorizontal();
   }
 
-  getNewSource(delta, isShiftModified) {
+  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
     const oldValue = this.untweakedExpression.value;
 
     let newValue = parseFloat((oldValue + delta[0] * this.multiplier).toShortFloat(this.shape.root.settings.mousePrecision));
@@ -558,7 +563,8 @@ export class HorizontalPanMark extends PanMark {
     this.backfill(newValue);
 
     const newExpression = new ExpressionReal(newValue);
-    return manipulateSource(this.untweakedExpression, newExpression, this.shape);
+    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
+    return this.manipulation.newCode(newExpression);
   }
 }
 
@@ -571,7 +577,7 @@ export class VerticalPanMark extends PanMark {
     this.addVertical();
   }
 
-  getNewSource(delta, isShiftModified) {
+  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
     const oldValue = this.untweakedExpression.value;
 
     let newValue = parseFloat((oldValue + delta[1] * this.multiplier).toShortFloat(this.shape.root.settings.mousePrecision));
@@ -583,7 +589,8 @@ export class VerticalPanMark extends PanMark {
     this.backfill(newValue);
 
     const newExpression = new ExpressionReal(newValue);
-    return manipulateSource(this.untweakedExpression, newExpression, this.shape);
+    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
+    return this.manipulation.newCode(newExpression);
   }
 }
 
@@ -615,7 +622,7 @@ export class RotationMark extends PanMark {
     super.updatePositionDom(bounds, factor, degreesPosition);
   }
 
-  getNewSource(delta, isShiftModified, mouseAt) {
+  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
     const pivotToMouse = [
       mouseAt.x - this.pivot[0],
       mouseAt.y - this.pivot[1],
@@ -652,7 +659,8 @@ export class RotationMark extends PanMark {
     this.backfill(newDegrees);
 
     const newExpression = new ExpressionReal(newDegrees);
-    return manipulateSource(this.untweakedExpression, newExpression, this.shape);
+    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
+    return this.manipulation.newCode(newExpression);
   }
 }
 
@@ -682,7 +690,7 @@ export class AxisMark extends PanMark {
     super.updatePositionDom(bounds, factor, this.axisPosition);
   }
 
-  getNewSource(delta, isShiftModified, mouseAt) {
+  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
     const diff = [
       mouseAt.x - this.pivot[0],
       mouseAt.y - this.pivot[1]
@@ -715,7 +723,7 @@ export class DistanceMark extends PanMark {
     this.rotation -= heading;
   }
 
-  getNewSource(delta, isShiftModified, mouseAt) {
+  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
     const headingVector = [
       Math.cos(this.host.heading * Math.PI / 180),
       Math.sin(this.host.heading * Math.PI / 180),
@@ -737,7 +745,8 @@ export class DistanceMark extends PanMark {
     this.backfill(newDistance);
 
     const newExpression = new ExpressionReal(newDistance);
-    return manipulateSource(this.untweakedExpression, newExpression, this.shape);
+    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
+    return this.manipulation.newCode(newExpression);
   }
 }
 
@@ -755,7 +764,7 @@ export class WedgeDegreesMark extends PanMark {
     this.center = center;
   }
 
-  getNewSource(delta, isShiftModified, mouseAt) {
+  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
     // Find vector from center to root position.
     let centerToFrom = [
       this.from[0] - this.center[0],
@@ -807,7 +816,8 @@ export class WedgeDegreesMark extends PanMark {
     this.backfill(degrees);
 
     const newExpression = new ExpressionReal(degrees);
-    return manipulateSource(this.untweakedExpression, newExpression, this.shape);
+    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
+    return this.manipulation.newCode(newExpression);
   }
 }
 
@@ -835,7 +845,7 @@ export class BumpDegreesMark extends PanMark {
     this.center = center;
   }
 
-  getNewSource(delta, isShiftModified, mouseAt) {
+  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
     let centerToMouse = [
       mouseAt.x - this.center[0],
       mouseAt.y - this.center[1],
@@ -920,86 +930,369 @@ export class BumpDegreesMark extends PanMark {
     this.backfill(degrees);
 
     const newExpression = new ExpressionReal(degrees);
-    return manipulateSource(this.untweakedExpression, newExpression, this.shape);
+    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
+    return this.manipulation.newCode(newExpression);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-function manipulateSource(oldExpression, newExpression, shape) {
-  const unevaluated = oldExpression.unevaluated;
-  const oldValue = oldExpression.value;
-  const newValue = newExpression.value;
-  console.log("oldExpression:", oldExpression);
-  console.log("newExpression:", newExpression);
+function setupManipulation(oldEvaluated) {
+  const oldValue = oldEvaluated.value;
+  const oldUnevaluated = oldEvaluated.unevaluated;
+  console.log("oldUnevaluated:", oldUnevaluated);
 
-  if (unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
-    return newExpression.toPretty();
-  } else if (unevaluated instanceof ExpressionAdd &&
-             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-    const right = unevaluated.r.value;
-    const left = oldValue - right;
-    return new ExpressionAdd(unevaluated.l, new ExpressionReal((newValue - left).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-  } else if (unevaluated instanceof ExpressionAdd &&
-             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-    const left = unevaluated.l.value;
-    const right = oldValue - left;
-    return new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-  } else if (unevaluated instanceof ExpressionSubtract &&
-             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-    const right = unevaluated.r.value;
-    const left = oldValue + right;
-    return new ExpressionSubtract(unevaluated.l, new ExpressionReal((left - newValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-  } else if (unevaluated instanceof ExpressionSubtract &&
-             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-    const left = unevaluated.l.value;
-    const right = left - oldValue;
-    return new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-  } else if (unevaluated instanceof ExpressionMultiply &&
-             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-    const right = unevaluated.r.value;
-    const left = oldValue / right;
-    return new ExpressionMultiply(unevaluated.l, new ExpressionReal((newValue / left).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-  } else if (unevaluated instanceof ExpressionMultiply &&
-             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-    const left = unevaluated.l.value;
-    const right = oldValue / left;
-    return new ExpressionMultiply(new ExpressionReal((newValue / right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-  } else if (unevaluated instanceof ExpressionDivide &&
-             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-    const right = unevaluated.r.value;
-    const left = oldExpression.prevalues[0].value;
-    return new ExpressionDivide(unevaluated.l, new ExpressionReal((left / newValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-  } else if (unevaluated instanceof ExpressionDivide &&
-             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-    const left = unevaluated.l.value;
-    const right = left / oldValue;
-    return new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-  } else if (unevaluated instanceof ExpressionPower &&
-             (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-    const right = unevaluated.r.value;
-    const left = oldExpression.prevalues[0];
-    // const left = Math.pow(oldValue, 1 / right);
-
-    // If the left operand is 1, there's no hope of raising it to any value.
-    if ((left instanceof ExpressionInteger && left.value === 1) ||
-        (left instanceof ExpressionReal && Math.abs(left.value - 1) < 0.001)) {
-      return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-    } else {
-      return new ExpressionPower(unevaluated.l, new ExpressionReal((Math.log(newValue) / Math.log(left.value)).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-    }
-  } else if (unevaluated instanceof ExpressionPower &&
-             (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-    const left = unevaluated.l.value;
-    const right = Math.log(oldValue) / Math.log(left);
-    return new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-  } else if (unevaluated instanceof ExpressionNegative &&
-             (unevaluated.operand instanceof ExpressionReal || unevaluated.operand instanceof ExpressionInteger)) {
-    return new ExpressionNegative(new ExpressionReal((-newExpression.value).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-  } else {
-    return new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
+  // Handle parenthesized expressions: (e) -> (e) + delta.
+  if (oldEvaluated.unevaluated.isLocked) {
+    return {
+      where: oldUnevaluated.where,
+      newCode: function(newExpression) {
+        const newValue = newExpression.value;
+        return `${this.oldCode} + ${new ExpressionReal(this.formatReal(newValue - oldValue)).toPretty()}`;
+      },
+    };
   }
+
+  // Handle raw numbers: e -> f.
+  else if (oldUnevaluated.isNumericLiteral()) {
+    return {
+      where: oldUnevaluated.where,
+      newCode: function(newExpression) {
+        return newExpression.toPretty();
+      },
+    };
+  }
+
+  // Handle negative numbers: -e -> f.
+  else if (oldUnevaluated instanceof ExpressionNegative && oldUnevaluated.operand.isNumericLiteral()) {
+    return {
+      where: oldUnevaluated.where,
+      newCode: function(newExpression) {
+        const newValue = newExpression.value;
+        if (newValue < 0) {
+          return new ExpressionNegative(new ExpressionReal(this.formatReal(-newValue))).toPretty();
+        } else {
+          return new ExpressionReal(this.formatReal(newValue)).toPretty();
+        }
+      },
+    };
+  }
+
+  // Handle additions: e + f -> e + g OR g + f.
+  else if (oldUnevaluated instanceof ExpressionAdd) {
+    const l = oldUnevaluated.l;
+    const r = oldUnevaluated.r;
+    if (!r.isLocked) {
+      if (r.isNumericLiteral() ||
+          (r instanceof ExpressionNegative && r.operand.isNumericLiteral()) ||
+          (r instanceof ExpressionIdentifier && oldEvaluated.prevalues[1].unevaluated.isNumericLiteral())) {
+        return {
+          where: (r instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[1].unevaluated.where : r.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const rightValue = oldEvaluated.prevalues[1].value;
+            const leftValue = oldValue - rightValue;
+            const deltaValue = newValue - leftValue;
+            return new ExpressionReal(this.formatReal(deltaValue)).toPretty();
+          },
+        };
+      }
+    } else if (!l.isLocked) {
+      if (l.isNumericLiteral() ||
+          (l instanceof ExpressionNegative && l.operand.isNumericLiteral()) ||
+          (l instanceof ExpressionIdentifier && oldEvaluated.prevalues[0].unevaluated.isNumericLiteral())) {
+        return {
+          where: (l instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[0].unevaluated.where : l.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const leftValue = oldEvaluated.prevalues[0].value;
+            const rightValue = oldValue - leftValue;
+            const deltaValue = newValue - rightValue;
+            return new ExpressionReal(this.formatReal(deltaValue)).toPretty();
+          },
+        };
+      }
+    }
+  }
+
+  // Handle subtractions: e - f -> e - g OR g - f.
+  else if (oldUnevaluated instanceof ExpressionSubtract) {
+    const l = oldUnevaluated.l;
+    const r = oldUnevaluated.r;
+    if (!r.isLocked) {
+      if (r.isNumericLiteral() ||
+          (r instanceof ExpressionNegative && r.operand.isNumericLiteral()) ||
+          (r instanceof ExpressionIdentifier && oldEvaluated.prevalues[1].unevaluated.isNumericLiteral())) {
+        return {
+          where: (r instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[1].unevaluated.where : r.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const rightValue = oldEvaluated.prevalues[1].value;
+            const leftValue = oldValue + rightValue;
+            const deltaValue = leftValue - newValue;
+            return new ExpressionReal(this.formatReal(deltaValue)).toPretty();
+          },
+        };
+      }
+    } else if (!l.isLocked) {
+      if (l.isNumericLiteral() ||
+          (l instanceof ExpressionNegative && l.operand.isNumericLiteral()) ||
+          (l instanceof ExpressionIdentifier && oldEvaluated.prevalues[0].unevaluated.isNumericLiteral())) {
+        return {
+          where: (l instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[0].unevaluated.where : l.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const leftValue = oldEvaluated.prevalues[0].value;
+            const rightValue = leftValue - oldValue;
+            const deltaValue = newValue + rightValue;
+            return new ExpressionReal(this.formatReal(deltaValue)).toPretty();
+          },
+        };
+      }
+    }
+  }
+
+  // Handle multiplications: e * f -> e * g OR g * f.
+  else if (oldUnevaluated instanceof ExpressionMultiply) {
+    const l = oldUnevaluated.l;
+    const r = oldUnevaluated.r;
+    if (!r.isLocked) {
+      if (r.isNumericLiteral() ||
+          (r instanceof ExpressionNegative && r.operand.isNumericLiteral()) ||
+          (r instanceof ExpressionIdentifier && oldEvaluated.prevalues[1].unevaluated.isNumericLiteral())) {
+        return {
+          where: (r instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[1].unevaluated.where : r.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const rightValue = oldEvaluated.prevalues[1].value;
+            const leftValue = oldValue / rightValue;
+            const deltaValue = newValue / leftValue;
+            return new ExpressionReal(this.formatReal(deltaValue)).toPretty();
+          },
+        };
+      }
+    } else if (!l.isLocked) {
+      if (l.isNumericLiteral() ||
+          (l instanceof ExpressionNegative && l.operand.isNumericLiteral()) ||
+          (l instanceof ExpressionIdentifier && oldEvaluated.prevalues[0].unevaluated.isNumericLiteral())) {
+        return {
+          where: (l instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[0].unevaluated.where : l.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const leftValue = oldEvaluated.prevalues[0].value;
+            const rightValue = oldValue / leftValue;
+            const deltaValue = newValue / rightValue;
+            return new ExpressionReal(this.formatReal(deltaValue)).toPretty();
+          },
+        };
+      }
+    }
+  }
+
+  // Handle divisions: e / f -> e / g OR g / f.
+  else if (oldUnevaluated instanceof ExpressionDivide) {
+    const l = oldUnevaluated.l;
+    const r = oldUnevaluated.r;
+    if (!r.isLocked) {
+      if (r.isNumericLiteral() ||
+          (r instanceof ExpressionNegative && r.operand.isNumericLiteral()) ||
+          (r instanceof ExpressionIdentifier && oldEvaluated.prevalues[1].unevaluated.isNumericLiteral())) {
+        return {
+          where: (r instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[1].unevaluated.where : r.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const leftValue = oldEvaluated.prevalues[0].value;
+            const primeValue = leftValue / newValue;
+            return new ExpressionReal(this.formatReal(primeValue)).toPretty();
+          },
+        };
+      }
+    } else if (!l.isLocked) {
+      if (l.isNumericLiteral() ||
+          (l instanceof ExpressionNegative && l.operand.isNumericLiteral()) ||
+          (l instanceof ExpressionIdentifier && oldEvaluated.prevalues[0].unevaluated.isNumericLiteral())) {
+        return {
+          where: (l instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[0].unevaluated.where : l.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const rightValue = oldEvaluated.prevalues[1].value;
+            const primeValue = newValue * rightValue;
+            return new ExpressionReal(this.formatReal(primeValue)).toPretty();
+          },
+        };
+      }
+    }
+  }
+
+  // Handle power: e ^ f -> e ^ g OR g ^ f.
+  else if (oldUnevaluated instanceof ExpressionPower) {
+    const l = oldUnevaluated.l;
+    const r = oldUnevaluated.r;
+    if (!r.isLocked) {
+      // 1 can't be raised to any value but it's own self.
+      if ((r.isNumericLiteral() ||
+           (r instanceof ExpressionNegative && r.operand.isNumericLiteral()) ||
+           (r instanceof ExpressionIdentifier && oldEvaluated.prevalues[1].unevaluated.isNumericLiteral())) &&
+          Math.abs(oldEvaluated.prevalues[0].value - 1) > 0.001){
+        return {
+          where: (r instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[1].unevaluated.where : r.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const leftValue = oldEvaluated.prevalues[0].value;
+            const primeValue = Math.log(newValue) / Math.log(leftValue);
+            return new ExpressionReal(this.formatReal(primeValue)).toPretty();
+          },
+        };
+      }
+    } else if (!l.isLocked) {
+      if (l.isNumericLiteral() ||
+          (l instanceof ExpressionNegative && l.operand.isNumericLiteral()) ||
+          (l instanceof ExpressionIdentifier && oldEvaluated.prevalues[0].unevaluated.isNumericLiteral())) {
+        return {
+          where: (l instanceof ExpressionIdentifier) ? oldEvaluated.prevalues[0].unevaluated.where : l.where,
+          newCode: function(newExpression) {
+            const newValue = newExpression.value;
+            const rightValue = oldEvaluated.prevalues[1].value;
+            const primeValue = Math.pow(newValue, 1 / rightValue);
+            return new ExpressionReal(this.formatReal(primeValue)).toPretty();
+          },
+        };
+      }
+    }
+  }
+
+  return {
+    where: oldUnevaluated.where,
+    newCode: function(newExpression) {
+      const newValue = newExpression.value;
+      return `${this.oldCode} + ${new ExpressionReal(this.formatReal(newValue - oldValue)).toPretty()}`;
+    },
+  };
 }
+
+// --------------------------------------------------------------------------- 
+
+// function manipulateWhere(oldExpression) {
+  // const unevaluated = oldExpression.unevaluated;
+
+  // console.log("unevaluated:", unevaluated);
+  // if (unevaluated.isLocked || unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
+    // return unevaluated.where;
+  // } else if (unevaluated instanceof ExpressionAdd &&
+             // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+    // console.log("yes here!");
+    // return unevaluated.r.where;
+  // } else if (unevaluated instanceof ExpressionAdd &&
+             // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+    // return unevaluated.l.where;
+  // } else if (unevaluated instanceof ExpressionSubtract &&
+             // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+    // return unevaluated.r.where;
+  // } else if (unevaluated instanceof ExpressionSubtract &&
+             // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+    // return unevaluated.l.where;
+  // } else if (unevaluated instanceof ExpressionMultiply && !unevaluated.r.isLocked &&
+             // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+    // return unevaluated.r.where;
+  // } else if (unevaluated instanceof ExpressionMultiply && !unevaluated.l.isLocked) {
+    // if (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger) {
+      // return unevaluated.l.where;
+    // } else {
+      // return oldExpression.prevalues[0].where;
+    // }
+  // }
+
+  // return null;
+// }
+
+// --------------------------------------------------------------------------- 
+
+// function manipulateSource(oldExpression, newExpression, shape, originalCode) {
+  // const unevaluated = oldExpression.unevaluated;
+  // const oldValue = oldExpression.value;
+  // const newValue = newExpression.value;
+
+  // let e;
+
+  // if (!unevaluated.isLocked) {
+    // if (unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
+      // e = newExpression.toPretty();
+    // } else if (unevaluated instanceof ExpressionAdd &&
+               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+      // const right = unevaluated.r.value;
+      // const left = oldValue - right;
+      // e = new ExpressionAdd(unevaluated.l, new ExpressionReal((newValue - left).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
+    // } else if (unevaluated instanceof ExpressionAdd &&
+               // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+      // const left = unevaluated.l.value;
+      // const right = oldValue - left;
+      // e = new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
+    // } else if (unevaluated instanceof ExpressionSubtract &&
+               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+      // const right = unevaluated.r.value;
+      // const left = oldValue + right;
+      // e = new ExpressionSubtract(unevaluated.l, new ExpressionReal((left - newValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
+    // } else if (unevaluated instanceof ExpressionSubtract &&
+               // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+      // const left = unevaluated.l.value;
+      // const right = left - oldValue;
+      // e = new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
+    // } else if (unevaluated instanceof ExpressionMultiply && !unevaluated.r.isLocked &&
+               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+      // const right = unevaluated.r.value;
+      // const left = oldValue / right;
+      // e = new ExpressionReal((newValue / left).toShortFloat(shape.root.settings.mousePrecision)).toPretty();
+    // } else if (unevaluated instanceof ExpressionMultiply && !unevaluated.l.isLocked) {
+      // if (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger) {
+        // const left = unevaluated.l.value;
+        // const right = oldValue / left;
+        // e = new ExpressionReal((newValue / right).toShortFloat(shape.root.settings.mousePrecision)).toPretty();
+      // } else {
+        // console.log("oldExpression.prevalues[0]:", oldExpression.prevalues[0]);
+        // const left = oldExpression.prevalues[0].value;
+        // const right = oldValue / left;
+        // e = new ExpressionReal((newValue / right).toShortFloat(shape.root.settings.mousePrecision)).toPretty();
+      // }
+    // } else if (unevaluated instanceof ExpressionDivide &&
+               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+      // const right = unevaluated.r.value;
+      // const left = oldExpression.prevalues[0].value;
+      // e = new ExpressionDivide(unevaluated.l, new ExpressionReal((left / newValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
+    // } else if (unevaluated instanceof ExpressionDivide &&
+               // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+      // const left = unevaluated.l.value;
+      // const right = left / oldValue;
+      // e = new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
+    // } else if (unevaluated instanceof ExpressionPower &&
+               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
+      // const right = unevaluated.r.value;
+      // const left = oldExpression.prevalues[0];
+      // const left = Math.pow(oldValue, 1 / right);
+
+      // If the left operand is 1, there's no hope of raising it to any value.
+      // if ((left instanceof ExpressionInteger && left.value === 1) ||
+          // (left instanceof ExpressionReal && Math.abs(left.value - 1) < 0.001)) {
+        // e = new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
+      // } else {
+        // e = new ExpressionPower(unevaluated.l, new ExpressionReal((Math.log(newValue) / Math.log(left.value)).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
+      // }
+    // } else if (unevaluated instanceof ExpressionPower &&
+               // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
+      // const left = unevaluated.l.value;
+      // const right = Math.log(oldValue) / Math.log(left);
+      // e = new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
+    // } else if (unevaluated instanceof ExpressionNegative &&
+               // (unevaluated.operand instanceof ExpressionReal || unevaluated.operand instanceof ExpressionInteger)) {
+      // e = new ExpressionNegative(new ExpressionReal((-newExpression.value).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
+    // }
+  // }
+
+  // if (!e) {
+    // e = `${originalCode} + ${new ExpressionReal((newValue - oldValue).toShortFloat(shape.root.settings.mousePrecision)).toPretty()}`;
+  // }
+
+  // return e;
+// }
 
 // --------------------------------------------------------------------------- 
 

@@ -88,6 +88,12 @@ export class RenderEnvironment extends Environment {
     };
     this.functions = {};
     this.bindGlobalFunctions();
+
+    this.rasters = {};
+  }
+
+  addRaster(id, raster) {
+    this.rasters[id] = raster;
   }
 
   static reify(svg, mouseStatusLabel, pod, settings) {
