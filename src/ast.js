@@ -16,6 +16,7 @@ import {
 } from './environment.js';
 
 import {
+  Shape,
   Raster,
   Circle,
   Cutout,
@@ -1062,6 +1063,7 @@ export class ExpressionIdentifier extends Expression {
       env.sourceSpans.push(context.whereAssigned);
     }
 
+    console.log("env pre bind:", env);
     env.bind(this.nameToken.source, value, fromTime, toTime, context.rhs);
 
     return value;
@@ -1116,6 +1118,7 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
       baseValue.sourceSpans.push(context.whereAssigned);
     }
 
+    console.log("member pre bind");
     baseValue.bind(this.nameToken.source, rhsValue, fromTime, toTime, context.rhs);
 
     return rhsValue;
@@ -1195,10 +1198,14 @@ export class ExpressionFunctionCall extends Expression {
       throw new LocatedException(this.where, `I expected function ${this.nameToken.source} to be called with ${f.formals.length} parameter${f.formals.length == 1 ? '' : 's'}.`);
     }
 
+    console.log(this.nameToken.source, env, env.instance);
+
     let callEnvironment = Environment.create(env);
+    callEnvironment.instance = env.instance;
     for (let [i, actual] of this.actuals.entries()) {
+      console.log(i, actual);
       let value = actual.evaluate(env, fromTime, toTime, context);
-      callEnvironment.bind(f.formals[i], value);
+      callEnvironment.bindStack(f.formals[i], value);
     }
 
     let returnValue = f.body.evaluate(callEnvironment, fromTime, toTime, {...context, callExpression: this});
@@ -1224,6 +1231,7 @@ export class ExpressionMemberFunctionCall extends ExpressionFunctionCall {
   constructor(host, nameToken, actuals, where, unevaluated) {
     super(nameToken, actuals, where, unevaluated);
     this.host = host;
+    console.log("got one!!!!!!!!!!!!!!!!!!!!!");
   }
 
   // TODO
@@ -1762,27 +1770,36 @@ export class ExpressionWith extends Expression {
   }
 
   evaluate(env, fromTime, toTime) {
-    let withEnv = this.scope.evaluate(env, fromTime, toTime);
+    let instance = this.scope.evaluate(env, fromTime, toTime);
 
-    if (!(withEnv instanceof Environment || withEnv instanceof ExpressionVector)) {
+    if (!(instance instanceof Environment || instance instanceof ExpressionVector)) {
       throw new LocatedException(this.scope.where, `I encountered a with expression whose subject isn't an environment or a vector.`);
     }
 
-    if (withEnv.hasOwnProperty('sourceSpans')) {
-      withEnv.sourceSpans.push(this.where);
+    if (instance.hasOwnProperty('sourceSpans')) {
+      instance.sourceSpans.push(this.where);
     }
 
-    withEnv.parent = env;
+    const oldInstance = env.instance;
 
-    if (withEnv instanceof Environment) {
-      this.body.evaluate(withEnv, fromTime, toTime);
+    // Should I make a new environment here? That would make any declarations
+    // inside the with block disappear at its end. So, I want to reuse the
+    // current env, but set its instance. It'd also need to restored at the end.
+    if (instance instanceof Environment) {
+      env.instance = instance;
+      console.log("env.instance:", env.instance);
+      console.log("env with instance:", env);
+      this.body.evaluate(env, fromTime, toTime);
     } else {
-      withEnv.forEach(elementEnv => {
-        this.body.evaluate(elementEnv, fromTime, toTime);
+      instance.forEach(element => {
+        env.instance = element;
+        this.body.evaluate(env, fromTime, toTime);
       });
     }
 
-    return withEnv;
+    env.instance = oldInstance;
+
+    return instance;
   }
 
   isTimeSensitive(env) {

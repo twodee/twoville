@@ -711,6 +711,7 @@ export class Rectangle extends Shape {
     this.element = document.createElementNS(svgNamespace, 'rect');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
 
+    console.log("this:", this);
     this.configureFill(bounds);
 
     this.configureScalarProperty('rounding', this, this, this.updateRounding.bind(this), bounds, [], timeline => {
@@ -2205,6 +2206,7 @@ export class Path extends NodeShape {
 
   configureOtherProperties(bounds) {
     this.element = document.createElementNS(svgNamespace, 'path');
+    this.element.setAttributeNS(null, 'stroke-linecap', 'round');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.setAttributeNS(null, 'fill-rule', 'evenodd');
     this.domNodes = this.nodes.filter(node => node.isDom);

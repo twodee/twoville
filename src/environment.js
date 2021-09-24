@@ -52,10 +52,6 @@ import {
   ExpressionVector,
 } from './ast.js';
 
-// import { 
-  // Shape,
-// } from './shape.js';
-
 // --------------------------------------------------------------------------- 
 
 export class Environment {
@@ -108,11 +104,19 @@ export class Environment {
     };
   }
 
+  bindStack(id, value) {
+    this.untimedProperties[id] = value;
+  }
+
   // Binding to a plain old Environment means the data isn't bound up with
   // time. The TimelinedEnvironment will override this for data that is bound
   // up with time.
   bind(id, value) {
-    this.untimedProperties[id] = value;
+    if (this.instance) {
+      this.instance.bind(id, value);
+    } else {
+      this.untimedProperties[id] = value;
+    }
   }
 
   bindFunction(id, method) {
@@ -124,6 +128,10 @@ export class Environment {
   }
 
   getFunction(id) {
+    if (this.instance && this.instance.functions[id]) {
+      return this.instance.functions[id];
+    }
+
     let f = this.functions[id];
     if (!f && this.parentEnvironment) {
       f = this.parentEnvironment.getFunction(id);
@@ -155,13 +163,31 @@ export class Environment {
   }
 
   get(id) {
+    // 1. p should be pulled from env:
+    // with rectangle()
+    //   vertex().position = p
+    //
+    // 2. p should be pulled from shape:
+    // with rectangle()
+    //   p = 6
+    //   vertex().position = p
+
     let env = this;
     while (env) {
+      if (env.instance) {
+        const property = env.instance.get(id);
+        if (property) {
+          return property;
+        }
+      }
+
       if (env.untimedProperties.hasOwnProperty(id)) {
         return env.untimedProperties[id];
       }
+
       env = env.parentEnvironment;
     }
+
     return undefined;
   }
 
@@ -258,35 +284,40 @@ export class TimelinedEnvironment extends Environment {
   }
 
   bind(id, value, fromTime, toTime) {
-    if (!this.isTimed(id)) {
-      super.bind(id, value);
+    console.log("bind:", id, this);
+    if (this.instance) {
+      this.instance.bind(id, value, fromTime, toTime);
     } else {
-      if (!this.timedProperties.hasOwnProperty(id)) {
-        this.timedProperties[id] = new Timeline();
-      }
-      const timeline = this.timedProperties[id];
-
-      // We are assigning one timeline to another...
-      if (value instanceof Timeline) {
-        if (fromTime && toTime) {
-          timeline.setFromValue(fromTime, value.intervalFrom(fromTime).fromValue);
-          timeline.setToValue(toTime, value.intervalTo(toTime).toValue);
-        } else if (fromTime) {
-          timeline.setFromValue(fromTime, value.intervalFrom(fromTime).fromValue);
-        } else if (toTime) {
-          timeline.setToValue(toTime, value.intervalTo(toTime).toValue);
-        } else {
-          timeline.setDefault(value.getDefault());
-        }
-      } else if (fromTime && toTime) {
-        timeline.setFromValue(fromTime, value);
-        timeline.setToValue(toTime, value);
-      } else if (fromTime) {
-        timeline.setFromValue(fromTime, value);
-      } else if (toTime) {
-        timeline.setToValue(toTime, value);
+      if (!this.isTimed(id)) {
+        super.bind(id, value);
       } else {
-        timeline.setDefault(value);
+        if (!this.timedProperties.hasOwnProperty(id)) {
+          this.timedProperties[id] = new Timeline();
+        }
+        const timeline = this.timedProperties[id];
+
+        // We are assigning one timeline to another...
+        if (value instanceof Timeline) {
+          if (fromTime && toTime) {
+            timeline.setFromValue(fromTime, value.intervalFrom(fromTime).fromValue);
+            timeline.setToValue(toTime, value.intervalTo(toTime).toValue);
+          } else if (fromTime) {
+            timeline.setFromValue(fromTime, value.intervalFrom(fromTime).fromValue);
+          } else if (toTime) {
+            timeline.setToValue(toTime, value.intervalTo(toTime).toValue);
+          } else {
+            timeline.setDefault(value.getDefault());
+          }
+        } else if (fromTime && toTime) {
+          timeline.setFromValue(fromTime, value);
+          timeline.setToValue(toTime, value);
+        } else if (fromTime) {
+          timeline.setFromValue(fromTime, value);
+        } else if (toTime) {
+          timeline.setToValue(toTime, value);
+        } else {
+          timeline.setDefault(value);
+        }
       }
     }
   }
