@@ -39,15 +39,15 @@ export class Transform extends TimelinedEnvironment {
     this.sourceSpans = [];
   }
 
-  toPod() {
-    const pod = super.toPod();
+  deflate() {
+    const pod = super.deflate();
     pod.sourceSpans = this.sourceSpans;
     return pod;
   }
 
   embody(parentEnvironment, pod) {
     super.embody(parentEnvironment, pod);
-    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
+    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.inflate(subpod));
   }
 
   configureMarks() {
@@ -87,9 +87,9 @@ export class Translate extends Transform {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new Translate();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
     
@@ -148,9 +148,9 @@ export class Rotate extends Transform {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new Rotate();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
     
@@ -246,9 +246,9 @@ export class Shear extends Transform {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflater(parentEnvironment, pod, inflater) {
     const node = new Shear();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -350,9 +350,9 @@ export class Scale extends Transform {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new Scale();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 

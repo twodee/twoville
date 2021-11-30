@@ -23,25 +23,24 @@ export class Interval {
     this.setTween(tween);
   }
 
-  toPod() {
+  deflate() {
     return {
-      fromTime: this.fromTime?.toPod(),
-      fromValue: this.fromValue?.toPod(),
-      toTime: this.toTime?.toPod(),
-      toValue: this.toValue?.toPod(),
+      fromTime: this.fromTime?.deflate(),
+      fromValue: this.fromValue?.deflate(),
+      toTime: this.toTime?.deflate(),
+      toValue: this.toValue?.deflate(),
       tween: this.tween,
     };
   }
 
-  static reify(env, pod) {
-    const interval = new Interval(
-      env.root.omniReify(env, pod.fromTime),
-      env.root.omniReify(env, pod.fromValue),
-      env.root.omniReify(env, pod.toTime),
-      env.root.omniReify(env, pod.toValue),
-      pod.tween,
+  static inflate(env, object, inflater) {
+    return new Interval(
+      inflater.inflate(env, object.fromTime),
+      inflater.inflate(env, object.fromValue),
+      inflater.inflate(env, object.toTime),
+      inflater.inflate(env, object.toValue),
+      object.tween,
     );
-    return interval;
   }
 
   setTween(tween) {

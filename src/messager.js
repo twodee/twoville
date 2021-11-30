@@ -31,11 +31,7 @@ export class Messager {
       rest.innerHTML = ': ' + message;
       messagerElement.appendChild(rest);
     } else {
-      // let textNode = messagerDocument.createTextNode(text);
-      // messagerElement.appendChild(textNode);
-      let div = messagerDocument.createElement('div');
-      div.innerHTML = text;
-      messagerElement.appendChild(div);
+      messagerElement.insertAdjacentHTML('beforeend', text);
     }
     messagerElement.appendChild(messagerDocument.createElement('br'));
   }

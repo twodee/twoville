@@ -24,9 +24,9 @@ export class Stroke extends TimelinedEnvironment {
     return stroke;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const stroke = new Stroke();
-    stroke.embody(parentEnvironment, pod);
+    stroke.embody(parentEnvironment, pod, inflater);
     stroke.state = {};
     return stroke;
   }

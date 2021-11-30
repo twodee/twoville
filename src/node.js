@@ -55,15 +55,15 @@ export class Node extends TimelinedEnvironment {
     this.sourceSpans = [];
   }
 
-  toPod() {
-    const pod = super.toPod();
+  deflate() {
+    const pod = super.deflate();
     pod.sourceSpans = this.sourceSpans;
     return pod;
   }
 
   embody(parentEnvironment, pod) {
     super.embody(parentEnvironment, pod);
-    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
+    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.inflate(subpod));
   }
 
   castCursor(column, row) {
@@ -105,9 +105,9 @@ export class TabNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new TabNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -226,9 +226,9 @@ export class VertexNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new VertexNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -297,9 +297,9 @@ export class TurtleNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new TurtleNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -408,9 +408,9 @@ export class MoveNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new MoveNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -483,9 +483,9 @@ export class JumpNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new JumpNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -555,9 +555,9 @@ export class CircleNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new CircleNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -655,9 +655,9 @@ export class RectangleNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new RectangleNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -812,9 +812,9 @@ export class TurnNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new TurnNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -878,9 +878,9 @@ export class BackNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new BackNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -938,9 +938,9 @@ export class GoNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new GoNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -1011,9 +1011,9 @@ export class LineNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new LineNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -1083,9 +1083,9 @@ export class QuadraticNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new QuadraticNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -1215,9 +1215,9 @@ export class ArcNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new ArcNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflate);
     return node;
   }
 
@@ -1429,9 +1429,9 @@ export class CubicNode extends Node {
     return node;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const node = new CubicNode();
-    node.embody(parentEnvironment, pod);
+    node.embody(parentEnvironment, pod, inflater);
     return node;
   }
 
@@ -1716,9 +1716,9 @@ export class Mirror extends TimelinedEnvironment {
     return mirror;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(parentEnvironment, pod, inflater) {
     const mirror = new Mirror();
-    mirror.embody(parentEnvironment, pod);
+    mirror.embody(parentEnvironment, pod, inflater);
     return mirror;
   }
 
@@ -1728,15 +1728,15 @@ export class Mirror extends TimelinedEnvironment {
     this.sourceSpans = [];
   }
 
-  toPod() {
-    const pod = super.toPod();
+  deflate() {
+    const pod = super.deflate();
     pod.sourceSpans = this.sourceSpans;
     return pod;
   }
 
   embody(parentEnvironment, pod) {
     super.embody(parentEnvironment, pod);
-    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
+    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.inflate(subpod));
   }
 
   configureState(bounds) {

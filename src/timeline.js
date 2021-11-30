@@ -18,31 +18,24 @@ import {
 
 export class Timeline {
   constructor() {
-    this.defaultValue = undefined;
     this.intervals = [];
   }
 
-  toPod() {
+  deflate() {
     return {
       type: 'timeline',
-      defaultValue: this.defaultValue ? this.defaultValue.toPod() : undefined,
-      intervals: this.intervals.map(interval => interval.toPod()),
+      intervals: this.intervals.map(interval => interval.deflate()),
     };
   }
 
-  static reify(env, pod) {
+  static inflate(env, object, inflater) {
     const timeline = new Timeline();
-    timeline.defaultValue = env.root.omniReify(env, pod.defaultValue);
-    timeline.intervals = pod.intervals.map(interval => Interval.reify(env, interval));
+    timeline.intervals = object.intervals.map(interval => Interval.inflate(env, interval, inflater));
     return timeline;
   }
 
-  get hasDefault() {
-    return !!this.defaultValue && this.defaultValue.isPrimitive;
-  }
-
   get isAnimated() {
-    return !this.defaultValue?.isPrimitive || this.intervals.length > 0;
+    return this.intervals.length > 0;
   }
 
   bind(id, rhs, from, to) {
@@ -62,15 +55,7 @@ export class Timeline {
   }
 
   toString() {
-    return '[default: ' + this.defaultValue?.value + ', intervals: ' + this.intervals.map(interval => interval.toString()).join(',') + ']';
-  }
-
-  getDefault() {
-    return this.defaultValue;
-  }
-
-  setDefault(exvalue) {
-    this.defaultValue = exvalue;
+    return '[intervals: ' + this.intervals.map(interval => interval.toString()).join(',') + ']';
   }
 
   intervalAt(t) {
@@ -95,8 +80,6 @@ export class Timeline {
       } else {
         return null;
       }
-    } else {
-      return this.defaultValue;
     }
   }
 
@@ -104,13 +87,6 @@ export class Timeline {
     let interval = this.intervalAt(t);
     if (interval) {
       return interval.interpolate(env, t);
-    } else if (this.defaultValue) {
-      if ('isTimeSensitive' in this.defaultValue && this.defaultValue.isTimeSensitive(env)) {
-        env.untimedProperties.t = new ExpressionInteger(t);
-        return this.defaultValue.evaluate(env);
-      } else { 
-        return this.defaultValue;
-      }
     } else {
       return undefined;
     }
@@ -186,21 +162,13 @@ export class Timeline {
     }
   }
 
-  assertScalar(env, ...types) {
-    if (this.defaultValue) {
-      Expression.assertScalar(env, this.defaultValue, types);
-    }
-
+  assertScalar(env, types) {
     for (let interval of this.intervals) {
       interval.assertScalar(env, types);
     }
   }
 
-  assertList(env, length, ...types) {
-    if (this.defaultValue) {
-      Expression.assertList(env, this.defaultValue, length, types);
-    }
-
+  assertList(env, length, types) {
     for (let interval of this.intervals) {
       interval.assertList(env, length, types);
     }

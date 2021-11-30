@@ -9,9 +9,12 @@ import {
   svgNamespace,
 } from './common.js';
 
+import {TimelinedEnvironment} from './environment.js';
+
 import {
-  TimelinedEnvironment,
-} from './environment.js';
+  ObjectFrame,
+  StrokeFrame,
+} from './frame.js';
 
 import {
   Stroke,
@@ -56,6 +59,7 @@ import {
 } from './node.js';
 
 import {
+  Expression,
   ExpressionArcNode,
   ExpressionBoolean,
   ExpressionBackNode,
@@ -75,6 +79,7 @@ import {
   ExpressionRotate,
   ExpressionScale,
   ExpressionShear,
+  ExpressionStroke,
   ExpressionTabNode,
   ExpressionTurnNode,
   ExpressionTurtleNode,
@@ -84,88 +89,45 @@ import {
 
 // --------------------------------------------------------------------------- 
 
-export class Shape extends TimelinedEnvironment {
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+export class Shape extends ObjectFrame {
+  initialize(where) {
+    super.initialize(null, where);
 
-    this.id = this.root.serial;
     this.sourceSpans = [];
     this.transforms = [];
 
-    this.bind('opacity', new ExpressionReal(1));
-    this.bind('enabled', new ExpressionBoolean(true));
-    this.bindFunction('translate', new FunctionDefinition('translate', [], new ExpressionTranslate(this)));
-    this.bindFunction('scale', new FunctionDefinition('scale', [], new ExpressionScale(this)));
-    this.bindFunction('rotate', new FunctionDefinition('rotate', [], new ExpressionRotate(this)));
-    this.bindFunction('shear', new FunctionDefinition('shear', [], new ExpressionShear(this)));
+    this.bindStatic('enabled', new ExpressionBoolean(true));
+    this.bindStatic('translate', new FunctionDefinition('translate', [], new ExpressionTranslate(this)));
+    this.bindStatic('scale', new FunctionDefinition('scale', [], new ExpressionScale(this)));
+    this.bindStatic('rotate', new FunctionDefinition('rotate', [], new ExpressionRotate(this)));
+    this.bindStatic('shear', new FunctionDefinition('shear', [], new ExpressionShear(this)));
+  }
 
-    // This shape should not have been made inside the context of any other
-    // shape. We must walk the whole environment chain to make sure there's
-    // no shape in the stack.
-    let environment = parentEnvironment;
-    while (environment !== parentEnvironment.root) {
-      if (environment instanceof Shape) {
-        throw new LocatedException(where, `I found ${this.article} <code>${this.type}</code> created inside another shape, which is not allowed.`);
-      }
-      environment = environment.parentEnvironment;
+  // This version contains full data, unlike deflate, which is just a
+  // reference.
+  deflateReferent() {
+    const object = super.deflate();
+    object.id = this.id;
+    object.sourceSpans = this.sourceSpans;
+    object.transforms = this.transforms.map(transform => transform.deflate());
+    if (this.stroke) {
+      object.stroke = this.stroke.deflate();
     }
-
-    this.root.serial += 1;
-    this.root.shapes.push(this);
+    return object;
   }
 
-  toExpandedPod() {
-    // This version contains full data, unlike toPod, which is just a reference.
-    const pod = super.toPod();
-    pod.id = this.id;
-    pod.sourceSpans = this.sourceSpans;
-    pod.transforms = this.transforms.map(transform => transform.toPod());
-    return pod;
-  }
-
-  toPod() {
+  deflate() {
     return {type: 'reference', id: this.id};
   }
 
-  embody(parentEnvironment, pod) {
-    super.embody(parentEnvironment, pod);
-    this.id = pod.id;
-    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.reify(subpod));
-    this.transforms = pod.transforms.map(subpod => this.root.omniReify(this, subpod));
+  embody(object, inflater) {
+    super.embody(null, object, inflater);
+    this.id = object.id;
+    this.sourceSpans = object.sourceSpans.map(subobject => SourceLocation.inflate(subobject));
+    this.transforms = object.transforms.map(subobject => inflater.inflate(this, subobject));
     this.boundingBox = new BoundingBox();
-  }
-
-  static reify(parentEnvironment, pod) {
-    if (pod.type === 'rectangle') {
-      return Rectangle.reify(parentEnvironment, pod);
-    } else if (pod.type === 'raster') {
-      return Raster.reify(parentEnvironment, pod);
-    } else if (pod.type === 'grid') {
-      return Grid.reify(parentEnvironment, pod);
-    } else if (pod.type === 'circle') {
-      return Circle.reify(parentEnvironment, pod);
-    } else if (pod.type === 'polygon') {
-      return Polygon.reify(parentEnvironment, pod);
-    } else if (pod.type === 'polyline') {
-      return Polyline.reify(parentEnvironment, pod);
-    } else if (pod.type === 'ungon') {
-      return Ungon.reify(parentEnvironment, pod);
-    } else if (pod.type === 'line') {
-      return Line.reify(parentEnvironment, pod);
-    } else if (pod.type === 'text') {
-      return Text.reify(parentEnvironment, pod);
-    } else if (pod.type === 'path') {
-      return Path.reify(parentEnvironment, pod);
-    } else if (pod.type === 'group') {
-      return Group.reify(parentEnvironment, pod);
-    } else if (pod.type === 'mask') {
-      return Mask.reify(parentEnvironment, pod);
-    } else if (pod.type === 'cutout') {
-      return Cutout.reify(parentEnvironment, pod);
-    } else if (pod.type === 'tip') {
-      return Tip.reify(parentEnvironment, pod);
-    } else {
-      throw new Error(`unimplemented shape: ${pod.type}`);
+    if (object.stroke) {
+      this.stroke = StrokeFrame.inflate(this, object.stroke, inflater);
     }
   }
 
@@ -190,73 +152,65 @@ export class Shape extends TimelinedEnvironment {
   }
   
   connectToParent() {
-    if (this.owns('parent')) {
-      this.get('parent').children.push(this);
-      this.isDrawable = false;
-    } else {
-      this.isDrawable = true;
-    }
+    // if (this.owns('parent')) {
+      // this.get('parent').children.push(this);
+      // this.isDrawable = false;
+    // } else {
+      // this.isDrawable = true;
+    // }
 
-    let elementToConnect;
-    if (this.owns('mask')) {
-      const mask = this.get('mask');
-      const groupElement = document.createElementNS(svgNamespace, 'g');
-      groupElement.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
-      groupElement.appendChild(this.element);
-      elementToConnect = groupElement;
-    } else {
-      elementToConnect = this.element;
-    }
+    // let elementToConnect;
+    // if (this.owns('mask')) {
+      // const mask = this.get('mask');
+      // const groupElement = document.createElementNS(svgNamespace, 'g');
+      // groupElement.setAttributeNS(null, 'mask', 'url(#element-' + mask.id + ')');
+      // groupElement.appendChild(this.element);
+      // elementToConnect = groupElement;
+    // } else {
+      // elementToConnect = this.element;
+    // }
 
-    if (this.owns('parent')) {
-      this.get('parent').element.appendChild(elementToConnect);
-    } else {
-      this.root.mainGroup.appendChild(elementToConnect);
-    }
+    // if (this.owns('parent')) {
+      // this.get('parent').element.appendChild(elementToConnect);
+    // } else {
+      // this.root.mainGroup.appendChild(elementToConnect);
+    // }
   }
 
   connect() {
-    this.connectToParent();
+    // this.connectToParent();
 
-    if (this.isCutoutChild) {
-      this.bind('color', new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]));
-    }
+    // if (this.isCutoutChild) {
+      // this.bind('color', new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]));
+    // }
 
-    if (this.owns('clippers')) {
-      let clipPath = document.createElementNS(svgNamespace, 'clipPath');
-      clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
-      let clippers = this.get('clippers');
-      clippers.forEach(clipper => {
-        let use = document.createElementNS(svgNamespace, 'use');
-        use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
-        clipPath.appendChild(use);
-      });
-      this.root.defines.appendChild(clipPath);
-      this.element.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
-    }
+    // if (this.owns('clippers')) {
+      // let clipPath = document.createElementNS(svgNamespace, 'clipPath');
+      // clipPath.setAttributeNS(null, 'id', 'clip-' + this.id);
+      // let clippers = this.get('clippers');
+      // clippers.forEach(clipper => {
+        // let use = document.createElementNS(svgNamespace, 'use');
+        // use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#element-' + clipper.id);
+        // clipPath.appendChild(use);
+      // });
+      // this.root.defines.appendChild(clipPath);
+      // this.element.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
+    // }
 
-    this.initializeMarks();
+    // this.initializeMarks();
   }
 
   get isCutoutChild() {
-    return this.owns('parent') && (this.get('parent') instanceof Cutout || this.get('parent').isCutoutChild);
+    // return this.owns('parent') && (this.get('parent') instanceof Cutout || this.get('parent').isCutoutChild);
+    return false;
   }
 
-  select() {
-    this.isSelected = true;
-    this.markers[0].select();
-  }
+  // select() {
+    // this.isSelected = true;
+    // this.markers[0].select();
+  // }
 
-  deselect() {
-    this.isSelected = false;
-    if (this.selectedMarker) {
-      this.selectedMarker.deselect();
-    }
-    this.selectedMarker = undefined;
-    this.markers[0].deselect();
-  }
-
-  initializeMarkDom() {
+  initializeMarkDom(root) {
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.backgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-background-marks`);
 
@@ -271,6 +225,82 @@ export class Shape extends TimelinedEnvironment {
 
     this.element.classList.add('cursor-selectable');
     this.element.classList.add(`tag-${this.id}`);
+
+    // TODO
+    // if (this.has('parent')) {
+      // this.getStatic('parent').backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
+      // this.getStatic('parent').midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
+      // this.getStatic('parent').foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+      // this.getStatic('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
+    // } else {
+      root.backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
+      root.midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
+      root.foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+      root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
+    // }
+
+    for (let marker of this.markers) {
+      marker.initializeDom(root);
+    }
+
+    this.registerListeners(root);
+  }
+
+  registerListeners(root) {
+    this.element.addEventListener('mouseenter', event => {
+      event.stopPropagation();
+      if (!this.isSelected) {
+        this.markers[0].hover();
+      }
+
+      // if (this.root.isTweaking) return;
+      // Only show the marks if the source code is evaluated and fresh.
+      // if (!this.isSelected && !this.root.isStale) {
+      // }
+      // if (event.buttons === 0) {
+        // this.root.contextualizeCursor(event.toElement);
+      // }
+    });
+
+    this.element.addEventListener('mouseleave', event => {
+      event.stopPropagation();
+
+      // The cursor is leaving the shape, but it might just be running across a mark. The marks
+      // are all tagged with class tag-SHAPE-ID. Don't unhover if we're on the shape or one of
+      // its marks.
+      const isStillShape = event.toElement && event.toElement.classList.contains(`tag-${this.id}`);
+      if (!isStillShape && !this.isSelected) {
+        this.markers[0].unhover();
+      }
+
+      // if (event.buttons === 0) {
+        // this.root.contextualizeCursor(event.toElement);
+      // }
+    });
+
+    this.element.addEventListener('click', event => {
+      // If the event bubbles up to the parent SVG, that means no shape was
+      // clicked on, and everything will be deselected. We don't want that.
+      event.stopPropagation();
+      root.select(this);
+      
+      // if (!this.root.isStale) {
+      // }
+    });
+  }
+
+  select() {
+    this.isSelected = true;
+    this.markers[0].select();
+  }
+
+  deselect() {
+    this.isSelected = false;
+    this.markers[0].deselect();
+    // if (this.selectedMarker) {
+      // this.selectedMarker.deselect();
+    // }
+    // this.selectedMarker = undefined;
   }
 
   initializeMarks() {
@@ -370,21 +400,32 @@ export class Shape extends TimelinedEnvironment {
     return false;
   }
 
-  configure(bounds) {
-    this.state = {};
-    this.updateDoms = [];
+  configureState() {
+  }
 
-    const enabledTimeline = this.timedProperties.enabled;
-    this.agers = [];
-    this.configureState(bounds);
-    this.configureTransforms(bounds);
-    this.computeBoundingBox();
-    this.initializeMarkDom();
-    this.configureMarks();
-    this.connect();
+  emplaceDom() {
+  }
+
+  configure(bounds) {
+    // this.state = {};
+    // this.updateDoms = [];
+
+    // const enabledTimeline = this.timedProperties.enabled;
+    // this.agers = [];
+    // this.configureState(bounds);
+    // this.configureTransforms(bounds);
+    // this.computeBoundingBox();
+    // this.initializeMarkDom();
+    // this.configureMarks();
+    // this.connect();
   }
 
   computeBoundingBox() {
+  }
+
+  initializeMarkState() {
+    this.markers = [];
+    this.addMarker(new Marker(this));
   }
 
   configureMarks() {
@@ -544,6 +585,47 @@ export class Shape extends TimelinedEnvironment {
   updateStrokeJoinDom(type) {
     this.element.setAttributeNS(null, 'stroke-linejoin', type);
   }
+
+  synchronizeMarkState(t) {
+  }
+
+  synchronizeMarkDom(t, bounds) {
+  }
+
+  static inflate(object, inflater) {
+    if (object.type === 'rectangle') {
+      return Rectangle.inflate(object, inflater);
+    } else if (object.type === 'raster') {
+      return Raster.inflate(object, inflater);
+    } else if (object.type === 'grid') {
+      return Grid.inflate(object, inflater);
+    } else if (object.type === 'circle') {
+      return Circle.inflate(object, inflater);
+    } else if (object.type === 'polygon') {
+      return Polygon.inflate(object, inflater);
+    } else if (object.type === 'polyline') {
+      return Polyline.inflate(object, inflater);
+    } else if (object.type === 'ungon') {
+      return Ungon.inflate(object, inflater);
+    } else if (object.type === 'line') {
+      return Line.inflate(object, inflater);
+    } else if (object.type === 'text') {
+      return Text.inflate(object, inflater);
+    } else if (object.type === 'path') {
+      return Path.inflate(object, inflater);
+    } else if (object.type === 'group') {
+      return Group.inflate(object, inflater);
+    } else if (object.type === 'mask') {
+      return Mask.inflate(object, inflater);
+    } else if (object.type === 'cutout') {
+      return Cutout.inflate(object, inflater);
+    } else if (object.type === 'tip') {
+      return Tip.inflate(object, inflater);
+    } else {
+      console.error("object:", object);
+      throw new Error(`unimplemented shape: ${object.type}`);
+    }
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -553,20 +635,20 @@ export class Text extends Shape {
   static article = 'a';
   static timedIds = ['position', 'message', 'size', 'color', 'opacity', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
     this.initializeFill();
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Text();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Text();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -599,7 +681,7 @@ export class Text extends Shape {
       }
 
       try {
-        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>position</code>. ${e.message}`);
@@ -690,171 +772,207 @@ export class Rectangle extends Shape {
   static article = 'a';
   static timedIds = ['corner', 'center', 'size', 'color', 'opacity', 'rounding', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
-    this.initializeFill();
+  initialize(where) {
+    super.initialize(where);
+    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Rectangle();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Rectangle();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
-  configureState(bounds) {
-    this.element = document.createElementNS(svgNamespace, 'rect');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('size');
+    this.assertProperty('color');
 
-    console.log("this:", this);
-    this.configureFill(bounds);
-
-    this.configureScalarProperty('rounding', this, this, this.updateRounding.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        return false;
-      }
-
-      try {
-        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>rounding</code>. ${e.message}`);
-      }
-    });
-
-    this.configureVectorProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a rectangle whose <code>size</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
-      }
-    });
-
-    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
+    if (this.has('corner') && this.has('center')) {
       throw new LocatedException(this.where, 'I found a rectangle whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
-    } else if (this.timedProperties.hasOwnProperty('corner')) {
-      this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
-        try {
-          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
-        }
-      });
-    } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
-        try {
-          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
-        }
-      });
-    } else {
+    } else if (!this.has('corner') && !this.has('center')) {
       throw new LocatedException(this.where, "I found a rectangle whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
     }
+
+    // Assert types of extent properties.
+    this.assertScalarType('rounding', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('size', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('corner', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('size', fromTime, toTime);
+    this.assertCompleteTimeline('center', fromTime, toTime);
+    this.assertCompleteTimeline('corner', fromTime, toTime);
+    this.assertCompleteTimeline('rounding', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+    this.assertCompleteTimeline('color', fromTime, toTime);
+
+    this.stroke?.validate(fromTime, toTime);
   }
 
-  updateRounding(bounds) {
-    this.element.setAttributeNS(null, 'rx', this.state.rounding);
-    this.element.setAttributeNS(null, 'ry', this.state.rounding);
+  initializeState() {
+    super.initializeState();
+    this.stroke?.initializeState();
+    this.hasCenter = this.has('center');
   }
 
-  updateSize(bounds) {
-    this.element.setAttributeNS(null, 'width', this.state.size[0]);
-    this.element.setAttributeNS(null, 'height', this.state.size[1]);
-  }
-
-  updateCenter(bounds) {
-    this.state.centroid = this.state.center;
-    this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
-  }
-
-  updateCorner(bounds) {
-    this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
-    this.element.setAttributeNS(null, 'x', this.state.corner[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
-  }
-
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
-    if (this.timedProperties.hasOwnProperty('rounding')) {
-      this.updateRounding(bounds);
+  initializeStaticState() {
+    if (this.hasStatic('rounding')) {
+      this.state.rounding = this.getStatic('rounding').value;
     }
-    this.updateSize(bounds);
-    if (this.timedProperties.hasOwnProperty('center')) {
-      this.updateCenter(bounds);
-    } else {
-      this.updateCorner(bounds);
+
+    if (this.hasStatic('corner')) {
+      this.state.corner = this.getStatic('corner').toPrimitiveArray();
+    }
+
+    if (this.hasStatic('size')) {
+      this.state.size = this.getStatic('size').toPrimitiveArray();
+    }
+
+    if (this.hasStatic('center')) {
+      this.state.center = this.getStatic('center').toPrimitiveArray();
+    }
+
+    if (this.hasStatic('color')) {
+      this.state.color = this.getStatic('color').toPrimitiveArray();
+    }
+
+    if (this.hasStatic('opacity')) {
+      this.state.opacity = this.getStatic('opacity').value;
     }
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializePropertyAnimation('rounding');
+    this.initializePropertyAnimation('size');
+    this.initializePropertyAnimation('center');
+    this.initializePropertyAnimation('corner');
+    this.initializePropertyAnimation('color');
+    this.initializePropertyAnimation('opacity');
+  }
+
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'rect');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    root.mainGroup.appendChild(this.element);
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+
     this.outlineMark = new RectangleMark();
+    this.markers[0].setBackgroundMarks(this.outlineMark);
 
+    let tweakPosition;
     let multiplier;
-    let getPositionExpression;
-    let updatePositionState;
-
-    if (this.timedProperties.hasOwnProperty('center')) {
-      getPositionExpression = t => this.expressionAt('center', this.root.state.t);
-      updatePositionState = ([x, y]) => {
-        this.state.center[0] = x;
-        this.state.center[1] = y;
-      };
+    if (this.hasCenter) {
       multiplier = 2;
+      tweakPosition = position => this.state.center = position;
     } else {
-      getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
-      updatePositionState = ([x, y]) => {
-        this.state.corner[0] = x;
-        this.state.corner[1] = y;
-      };
       multiplier = 1;
+      tweakPosition = position => this.state.corner = position;
     }
 
-    this.positionMark = new VectorPanMark(this, null, getPositionExpression, updatePositionState);
+    this.positionMark = new VectorPanMark(this, null, tweakPosition);
+    this.widthMark = new HorizontalPanMark(this, null, multiplier, value => this.state.size[0] = value);
+    this.heightMark = new VerticalPanMark(this, null, multiplier, value => this.state.size[1] = value);
+    this.markers[0].setForegroundMarks(this.positionMark, this.widthMark, this.heightMark);
+  }
 
-    this.widthMark = new HorizontalPanMark(this, this, multiplier, t => {
-      return this.expressionAt('size', this.root.state.t).get(0);
-    }, newValue => {
-      this.state.size[0] = newValue;
-    });
+  synchronizeMarkExpressions(t) {
+    if (this.hasCenter) {
+      this.positionMark.synchronizeExpressions(this.expressionAt('center', t));
+    } else {
+      this.positionMark.synchronizeExpressions(this.expressionAt('corner', t));
+    }
+    this.widthMark.synchronizeExpressions(this.expressionAt('size', t).get(0));
+    this.heightMark.synchronizeExpressions(this.expressionAt('size', t).get(1));
+  }
 
-    this.heightMark = new VerticalPanMark(this, this, multiplier, t => {
-      return this.expressionAt('size', this.root.state.t).get(1);
-    }, newValue => {
-      this.state.size[1] = newValue;
-    });
-
-    this.markers[0].addMarks([this.positionMark, this.widthMark, this.heightMark], [this.outlineMark]);
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+    this.outlineMark.synchronizeState(this.state.corner, this.state.size, this.state.rounding);
+    if (this.hasCenter) {
+      this.positionMark.synchronizeState(this.state.center);
+      this.widthMark.synchronizeState([
+        this.state.center[0] + 0.5 * this.state.size[0],
+        this.state.center[1],
+      ]);
+      this.heightMark.synchronizeState([
+        this.state.center[0],
+        this.state.center[1] + 0.5 * this.state.size[1],
+      ]);
+    } else {
+      this.positionMark.synchronizeState(this.state.corner);
+      this.widthMark.synchronizeState([
+        this.state.corner[0] + this.state.size[0],
+        this.state.corner[1],
+      ]);
+      this.heightMark.synchronizeState([
+        this.state.corner[0],
+        this.state.corner[1] + this.state.size[1],
+      ]);
+    }
   }
  
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    if (this.state.center) {
-      const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
-      this.outlineMark.updateState(corner, this.state.size, this.state.rounding);
-      this.positionMark.updateState(this.state.center, this.state.matrix);
-      this.widthMark.updateState([this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], this.state.matrix);
-      this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], this.state.matrix);
-    } else {
-      this.outlineMark.updateState(this.state.corner, this.state.size, this.state.rounding);
-      this.positionMark.updateState(this.state.corner, this.state.matrix);
-      this.widthMark.updateState([this.state.corner[0] + this.state.size[0], this.state.corner[1]], this.state.matrix);
-      this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
+  synchronizeMarkDom(t, bounds) {
+    super.synchronizeMarkDom(t, bounds);
+    this.outlineMark.synchronizeDom(bounds);
+    this.positionMark.synchronizeDom(bounds);
+    this.widthMark.synchronizeDom(bounds);
+    this.heightMark.synchronizeDom(bounds);
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('rounding', t);
+    this.synchronizeStateProperty('size', t);
+    this.synchronizeStateProperty('center', t);
+    this.synchronizeStateProperty('corner', t);
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
+
+    this.state.colorBytes = [
+      Math.floor(this.state.color[0] * 255),
+      Math.floor(this.state.color[1] * 255),
+      Math.floor(this.state.color[2] * 255),
+    ];
+
+    if (this.hasCenter) {
+      this.state.corner = [
+        this.state.center[0] - 0.5 * this.state.size[0],
+        this.state.center[1] - 0.5 * this.state.size[1],
+      ];
     }
+
+    this.stroke?.synchronizeState(t);
+  }
+
+  synchronizeDom(t, bounds) {
+    if (this.state.rounding) {
+      this.element.setAttributeNS(null, 'rx', this.state.rounding);
+      this.element.setAttributeNS(null, 'ry', this.state.rounding);
+    }
+
+    this.element.setAttributeNS(null, 'width', this.state.size[0]);
+    this.element.setAttributeNS(null, 'height', this.state.size[1]);
+
+    this.element.setAttributeNS(null, 'x', this.state.corner[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
+
+    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
+
+    this.stroke?.synchronizeDom(t, this.element);
   }
 
   computeBoundingBox() {
@@ -936,19 +1054,19 @@ export class Raster extends Shape {
   static article = 'a';
   static timedIds = ['corner', 'center', 'width', 'height', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Raster();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Raster();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -997,7 +1115,7 @@ export class Raster extends Shape {
     } else if (this.timedProperties.hasOwnProperty('corner')) {
       this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, [], timeline => {
         try {
-          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
@@ -1006,7 +1124,7 @@ export class Raster extends Shape {
     } else if (this.timedProperties.hasOwnProperty('center')) {
       this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, [], timeline => {
         try {
-          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
@@ -1151,54 +1269,143 @@ export class Circle extends Shape {
   static article = 'a';
   static timedIds = ['center', 'radius', 'color', 'opacity', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
-    this.initializeFill();
+  initialize(where) {
+    super.initialize(where);
+    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Circle();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Circle();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
-  configureState(bounds) {
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('radius');
+    this.assertProperty('center');
+    this.assertProperty('color');
+
+    // Assert types of extent properties.
+    this.assertScalarType('radius', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('radius', fromTime, toTime);
+    this.assertCompleteTimeline('center', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+    this.assertCompleteTimeline('color', fromTime, toTime);
+
+    this.stroke?.validate(fromTime, toTime);
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.stroke?.initializeState();
+  }
+
+  initializeStaticState() {
+    if (this.hasStatic('radius')) {
+      this.state.radius = this.getStatic('radius').value;
+    }
+
+    if (this.hasStatic('center')) {
+      this.state.center = this.getStatic('center').toPrimitiveArray();
+    }
+
+    if (this.hasStatic('center')) {
+      this.state.center = this.getStatic('center').toPrimitiveArray();
+    }
+
+    if (this.hasStatic('color')) {
+      this.state.color = this.getStatic('color').toPrimitiveArray();
+    }
+
+    if (this.hasStatic('opacity')) {
+      this.state.opacity = this.getStatic('opacity').value;
+    }
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializePropertyAnimation('radius');
+    this.initializePropertyAnimation('center');
+    this.initializePropertyAnimation('color');
+    this.initializePropertyAnimation('opacity');
+  }
+
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'circle');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    root.mainGroup.appendChild(this.element);
+  }
 
-    this.configureFill(bounds);
+  initializeMarkState() {
+    super.initializeMarkState();
 
-    this.configureScalarProperty('radius', this, this, this.updateRadius.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>circle</code> whose <code>radius</code> was not set.');
-      }
+    this.outlineMark = new CircleMark();
+    this.markers[0].setBackgroundMarks(this.outlineMark);
 
-      try {
-        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>radius</code>. ${e.message}`);
-      }
-    });
+    this.centerMark = new VectorPanMark(this, null, value => this.state.center = value);
+    this.radiusMark = new HorizontalPanMark(this, null, 1, value => this.state.radius = value);
+    this.markers[0].setForegroundMarks(this.centerMark, this.radiusMark);
+  }
 
-    this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>circle</code> whose <code>center</code> was not set.');
-      }
+  synchronizeMarkExpressions(t) {
+    this.centerMark.synchronizeExpressions(this.expressionAt('center', t));
+    this.radiusMark.synchronizeExpressions(this.expressionAt('radius', t));
+  }
 
-      try {
-        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
-      }
-    });
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+    this.outlineMark.synchronizeState(this.state.center, this.state.radius);
+    this.centerMark.synchronizeState(this.state.center);
+    this.radiusMark.synchronizeState([
+      this.state.center[0] + this.state.radius,
+      this.state.center[1],
+    ]);
+  }
+ 
+  synchronizeMarkDom(t, bounds) {
+    super.synchronizeMarkDom(t, bounds);
+    this.outlineMark.synchronizeDom(bounds);
+    this.centerMark.synchronizeDom(bounds);
+    this.radiusMark.synchronizeDom(bounds);
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('radius', t);
+    this.synchronizeStateProperty('center', t);
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
+
+    this.state.colorBytes = [
+      Math.floor(this.state.color[0] * 255),
+      Math.floor(this.state.color[1] * 255),
+      Math.floor(this.state.color[2] * 255),
+    ];
+
+    this.stroke?.synchronizeState(t);
+  }
+
+  synchronizeDom(t, bounds) {
+    this.element.setAttributeNS(null, 'r', this.state.radius);
+
+    this.element.setAttributeNS(null, 'cx', this.state.center[0]);
+    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
+
+    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
+
+    this.stroke?.synchronizeDom(t, this.element);
   }
 
   computeBoundingBox() {
@@ -1215,49 +1422,6 @@ export class Circle extends Shape {
 
     // add intervals
   }
-
-  updateRadius(bounds) {
-    this.element.setAttributeNS(null, 'r', this.state.radius);
-  }
-
-  updateCenter(bounds) {
-    this.state.centroid = this.state.center;
-    this.element.setAttributeNS(null, 'cx', this.state.center[0]);
-    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
-  }
-
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
-    this.updateCenter(bounds);
-    this.updateRadius(bounds);
-  }
-
-  configureMarks() {
-    super.configureMarks();
-    this.outlineMark = new CircleMark();
-
-    this.centerMark = new VectorPanMark(this, null, t => {
-      return this.expressionAt('center', this.root.state.t);
-    }, ([x, y]) => {
-      this.state.center[0] = x;
-      this.state.center[1] = y;
-    });
-
-    this.radiusMark = new HorizontalPanMark(this, null, 1, t => {
-      return this.expressionAt('radius', this.root.state.t);
-    }, newValue => {
-      this.state.radius = newValue;
-    });
-
-    this.markers[0].addMarks([this.centerMark, this.radiusMark], [this.outlineMark]);
-  }
-
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.state.center, this.state.radius);
-    this.centerMark.updateState(this.state.center, this.state.matrix);
-    this.radiusMark.updateState([this.state.center[0] + this.state.radius, this.state.center[1]], this.state.matrix);
-  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -1267,8 +1431,8 @@ export class Grid extends Shape {
   static article = 'a';
   static timedIds = ['ticks', 'corner', 'center', 'size', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
     this.untimedProperties.stroke = Stroke.create(this);
     this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
     this.untimedProperties.stroke.bind('color', new ExpressionVector([
@@ -1279,15 +1443,15 @@ export class Grid extends Shape {
     this.untimedProperties.stroke.bind('size', new ExpressionReal(1));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Grid();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Grid();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -1306,7 +1470,7 @@ export class Grid extends Shape {
       }
 
       try {
-        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>ticks</code>. ${e.message}`);
@@ -1319,7 +1483,7 @@ export class Grid extends Shape {
       }
 
       try {
-        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
@@ -1331,7 +1495,7 @@ export class Grid extends Shape {
     } else if (this.timedProperties.hasOwnProperty('corner')) {
       this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
         try {
-          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
@@ -1340,7 +1504,7 @@ export class Grid extends Shape {
     } else if (this.timedProperties.hasOwnProperty('center')) {
       this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
         try {
-          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
@@ -1548,23 +1712,23 @@ export class Grid extends Shape {
 // --------------------------------------------------------------------------- 
 
 export class NodeShape extends Shape {
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
     this.nodes = [];
     this.mirrors = [];
   }
 
-  toExpandedPod() {
-    const pod = super.toExpandedPod();
-    pod.nodes = this.nodes.map(node => node.toPod());
-    pod.mirrors = this.mirrors.map(mirror => mirror.toPod());
-    return pod;
+  deflateReferent() {
+    const object = super.deflateReferent();
+    object.nodes = this.nodes.map(node => node.deflate());
+    object.mirrors = this.mirrors.map(mirror => mirror.deflate());
+    return object;
   }
 
-  embody(parentEnvironment, pod) {
-    super.embody(parentEnvironment, pod);
-    this.nodes = pod.nodes.map(subpod => this.root.omniReify(this, subpod));
-    this.mirrors = pod.mirrors.map(subpod => this.root.omniReify(this, subpod));
+  embody(object, inflater) {
+    super.embody(object, inflater);
+    this.nodes = object.nodes.map(subobject => inflater.inflate(this, subobject));
+    this.mirrors = object.mirrors.map(subobject => inflater.inflate(this, subobject));
   }
 
   configureNodes(bounds) {
@@ -1758,8 +1922,8 @@ export class Polygon extends VertexShape {
   static article = 'a';
   static timedIds = ['color', 'opacity', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
     this.initializeFill();
 
     this.bindFunction('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
@@ -1771,15 +1935,15 @@ export class Polygon extends VertexShape {
     this.bindFunction('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Polygon();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Polygon();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -1828,8 +1992,8 @@ export class Polyline extends VertexShape {
   static article = 'a';
   static timedIds = ['size', 'color', 'opacity', 'join', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
 
     this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
@@ -1838,15 +2002,15 @@ export class Polyline extends VertexShape {
     this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Polyline();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Polyline();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -1885,8 +2049,8 @@ export class Line extends VertexShape {
   static article = 'a';
   static timedIds = ['size', 'color', 'opacity', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
 
     this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
@@ -1894,15 +2058,15 @@ export class Line extends VertexShape {
     this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Line();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Line();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -1958,8 +2122,8 @@ export class Ungon extends VertexShape {
   static article = 'an';
   static timedIds = ['rounding', 'color', 'opacity', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
     this.initializeFill();
 
     this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
@@ -1970,15 +2134,15 @@ export class Ungon extends VertexShape {
     this.bindFunction('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Ungon();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Ungon();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -2164,8 +2328,8 @@ export class Path extends NodeShape {
   static article = 'a';
   static timedIds = ['color', 'opacity', 'enabled'];
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
     this.initializeFill();
 
     this.bindFunction('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
@@ -2184,15 +2348,15 @@ export class Path extends NodeShape {
     this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Path();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Path();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -2280,31 +2444,31 @@ export class Group extends Shape {
   static article = 'a';
   static timedIds = ['enabled']; // TODO does enabled work on group
 
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
+  initialize(where) {
+    super.initialize(where);
     this.children = [];
   }
 
-  toExpandedPod() {
-    const pod = super.toExpandedPod();
-    pod.children = this.children.map(child => child.toExpandedPod());
-    return pod;
+  deflateReferent() {
+    const object = super.deflateReferent();
+    object.children = this.children.map(child => child.deflateReferent());
+    return object;
   }
 
-  embody(parentEnvironment, pod) {
-    super.embody(parentEnvironment, pod);
-    this.children = pod.children.map(subpod => Shape.reify(this, subpod));
+  embody(object, inflater) {
+    super.embody(object, inflater);
+    this.children = object.children.map(subobject => Shape.inflate(this, subobject));
   }
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Group();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Group();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -2380,15 +2544,15 @@ export class Mask extends Group {
   static article = 'a';
   static timedIds = [];
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Mask();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Mask();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -2413,15 +2577,15 @@ export class Cutout extends Mask {
   static article = 'a';
   static timedIds = [];
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Cutout();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Cutout();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -2449,15 +2613,15 @@ export class Tip extends Group {
   static article = 'a';
   static timedIds = ['size', 'anchor', 'corner', 'center', 'enabled'];
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Tip();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Tip();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -2488,7 +2652,7 @@ export class Tip extends Group {
       }
 
       try {
-        timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
@@ -2500,7 +2664,7 @@ export class Tip extends Group {
     } else if (this.timedProperties.hasOwnProperty('corner')) {
       this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
         try {
-          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
@@ -2509,7 +2673,7 @@ export class Tip extends Group {
     } else if (this.timedProperties.hasOwnProperty('center')) {
       this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
         try {
-          timeline.assertList(this, 2, ExpressionInteger, ExpressionReal);
+          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
           return true;
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
@@ -2614,15 +2778,15 @@ export class LinearGradient {
   static article = 'a';
   static timedIds = [];
 
-  static create(parentEnvironment, where) {
+  static create(where) {
     const shape = new Mask();
-    shape.initialize(parentEnvironment, where);
+    shape.initialize(where);
     return shape;
   }
 
-  static reify(parentEnvironment, pod) {
+  static inflate(object, inflater) {
     const shape = new Mask();
-    shape.embody(parentEnvironment, pod);
+    shape.embody(object, inflater);
     return shape;
   }
 
@@ -2649,7 +2813,7 @@ const FillMixin = {
   },
 
   configureFill: function(bounds) {
-    this.element.setAttributeNS(null, 'fill', 'none');
+    // this.element.setAttributeNS(null, 'fill', 'none');
     this.configureColor(bounds);
     this.configureStroke(this.untimedProperties.stroke, bounds, false);
   },
@@ -2669,7 +2833,7 @@ const FillMixin = {
     this.configureVectorProperty('color', this, this, this.updateColorDom.bind(this), bounds, [], timeline => {
       if (timeline) {
         try {
-          timeline.assertList(this, 3, ExpressionInteger, ExpressionReal);
+          timeline.assertList({objectFrame: this}, 3, ExpressionInteger, ExpressionReal);
         } catch (e) {
           throw new LocatedException(e.where, `I found an illegal value for <code>color</code>. ${e.message}`);
         }
@@ -2678,7 +2842,7 @@ const FillMixin = {
       // If the opacity is non-zero anywhen, then color is a required property.
       const opacityTimeline = this.timedProperties.opacity;
       const needsColor =
-        !this.isCutoutChild &&
+        !this.isCutoutChild && // Color will get assigned to black in connect.
         ((opacityTimeline.defaultValue && opacityTimeline.defaultValue.value > 0) ||
          opacityTimeline.intervals.some(interval => (interval.hasFrom() && interval.fromValue.value > 0 || interval.hasTo() && interval.toValue.value > 0)));
 

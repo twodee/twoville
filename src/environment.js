@@ -2,7 +2,7 @@ import {
   FunctionDefinition,
   LocatedException,
   SourceLocation,
-  mop,
+  objectMap,
 } from './common.js';
 
 import { 
@@ -64,11 +64,6 @@ export class Environment {
     if (where) {
       this.where = where;
     }
-
-    // Let's make the root easy to access.
-    if (parentEnvironment) {
-      this.root = parentEnvironment.root;
-    }
   }
 
   static create(parentEnvironment, where) {
@@ -77,29 +72,25 @@ export class Environment {
     return env;
   }
 
-  embody(parentEnvironment, pod) {
-    this.parentEnvironment = parentEnvironment;
-    this.functions = {};
-    if (parentEnvironment) {
-      this.root = parentEnvironment.root;
-    }
+  // embody(parentEnvironment, pod) {
+    // this.parentEnvironment = parentEnvironment;
+    // this.functions = {};
+    // this.untimedProperties = objectMap(pod.untimedProperties, subpod => inflater.inflate(this, subpod));
+    // if (pod.where) {
+      // this.where = SourceLocation.inflate(pod.where);
+    // }
+  // }
 
-    this.untimedProperties = mop(pod.untimedProperties, subpod => this.root.omniReify(this, subpod));
-    if (pod.where) {
-      this.where = SourceLocation.reify(pod.where);
-    }
-  }
+  // static inflate(parentEnvironment, pod, inflater) {
+    // const env = new Environment();
+    // env.embody(parentEnvironment, pod, inflater);
+    // return env;
+  // }
 
-  static reify(parentEnvironment, pod) {
-    const env = new Environment();
-    env.embody(parentEnvironment, pod);
-    return env;
-  }
-
-  toPod() {
+  deflate() {
     return {
       type: this.type,
-      untimedProperties: mop(this.untimedProperties, property => property.toPod()),
+      untimedProperties: objectMap(this.untimedProperties, property => property.deflate()),
       where: this.where,
     };
   }
@@ -112,11 +103,11 @@ export class Environment {
   // time. The TimelinedEnvironment will override this for data that is bound
   // up with time.
   bind(id, value) {
-    if (this.instance) {
-      this.instance.bind(id, value);
-    } else {
+    // if (this.instance) {
+      // this.instance.bind(id, value);
+    // } else {
       this.untimedProperties[id] = value;
-    }
+    // }
   }
 
   bindFunction(id, method) {
@@ -128,10 +119,6 @@ export class Environment {
   }
 
   getFunction(id) {
-    if (this.instance && this.instance.functions[id]) {
-      return this.instance.functions[id];
-    }
-
     let f = this.functions[id];
     if (!f && this.parentEnvironment) {
       f = this.parentEnvironment.getFunction(id);
@@ -174,13 +161,6 @@ export class Environment {
 
     let env = this;
     while (env) {
-      if (env.instance) {
-        const property = env.instance.get(id);
-        if (property) {
-          return property;
-        }
-      }
-
       if (env.untimedProperties.hasOwnProperty(id)) {
         return env.untimedProperties[id];
       }
@@ -197,46 +177,6 @@ export class Environment {
 
   get article() {
     return this.constructor.article;
-  }
-
-  // evaluate(env, fromTime, toTime) {
-    // return this;
-  // }
-
-  bindGlobalFunctions() {
-    Object.assign(this.functions, {
-      grid: new FunctionDefinition('grid', [], new ExpressionGrid()),
-      rectangle: new FunctionDefinition('rectangle', [], new ExpressionRectangle()),
-      raster: new FunctionDefinition('raster', [], new ExpressionRaster()),
-      line: new FunctionDefinition('line', [], new ExpressionLine()),
-      path: new FunctionDefinition('path', [], new ExpressionPath()),
-      ungon: new FunctionDefinition('ungon', [], new ExpressionUngon()),
-      polygon: new FunctionDefinition('polygon', [], new ExpressionPolygon()),
-      polyline: new FunctionDefinition('polyline', [], new ExpressionPolyline()),
-      text: new FunctionDefinition('text', [], new ExpressionText()),
-      group: new FunctionDefinition('group', [], new ExpressionGroup()),
-      tip: new FunctionDefinition('tip', [], new ExpressionTip()),
-      mask: new FunctionDefinition('mask', [], new ExpressionMask()),
-      cutout: new FunctionDefinition('cutout', [], new ExpressionCutout()),
-      circle: new FunctionDefinition('circle', [], new ExpressionCircle()),
-      print: new FunctionDefinition('print', ['message'], new ExpressionPrint()),
-      debug: new FunctionDefinition('debug', ['expression'], new ExpressionDebug()),
-      random: new FunctionDefinition('random', ['min', 'max'], new ExpressionRandom()),
-      seed: new FunctionDefinition('seed', ['value'], new ExpressionSeed()),
-      sin: new FunctionDefinition('sin', ['degrees'], new ExpressionSine()),
-      polar: new FunctionDefinition('polar', ['x', 'y'], new ExpressionPolar()),
-      unpolar: new FunctionDefinition('unpolar', ['radius', 'degrees'], new ExpressionUnpolar()),
-      cos: new FunctionDefinition('cos', ['degrees'], new ExpressionCosine()),
-      tan: new FunctionDefinition('tan', ['degrees'], new ExpressionTangent()),
-      asin: new FunctionDefinition('asin', ['ratio'], new ExpressionArcSine()),
-      hypotenuse: new FunctionDefinition('hypotenuse', ['a', 'b'], new ExpressionHypotenuse()),
-      acos: new FunctionDefinition('acos', ['ratio'], new ExpressionArcCosine()),
-      atan: new FunctionDefinition('atan', ['ratio'], new ExpressionArcTangent()),
-      atan2: new FunctionDefinition('atan2', ['a', 'b'], new ExpressionArcTangent2()),
-      sqrt: new FunctionDefinition('sqrt', ['x'], new ExpressionSquareRoot()),
-      abs: new FunctionDefinition('abs', ['x'], new ExpressionAbsoluteValue()),
-      int: new FunctionDefinition('int', ['x'], new ExpressionInt()),
-    });
   }
 
   resolveReferences() {
@@ -268,14 +208,14 @@ export class TimelinedEnvironment extends Environment {
     this.timedProperties = {};
   }
 
-  embody(parentEnvironment, pod) {
-    super.embody(parentEnvironment, pod);
-    this.timedProperties = mop(pod.timedProperties, subpod => this.root.omniReify(this, subpod));
-  }
+  // embody(parentEnvironment, pod, inflater) {
+    // super.embody(parentEnvironment, pod);
+    // this.timedProperties = objectMap(pod.timedProperties, subpod => inflater.inflate(this, subpod));
+  // }
 
-  toPod() {
-    const pod = super.toPod();
-    pod.timedProperties = mop(this.timedProperties, value => value.toPod());
+  deflate() {
+    const pod = super.deflate();
+    pod.timedProperties = objectMap(this.timedProperties, value => value.deflate());
     return pod;
   }
 
@@ -284,10 +224,9 @@ export class TimelinedEnvironment extends Environment {
   }
 
   bind(id, value, fromTime, toTime) {
-    console.log("bind:", id, this);
-    if (this.instance) {
-      this.instance.bind(id, value, fromTime, toTime);
-    } else {
+    // if (this.instance) {
+      // this.instance.bind(id, value, fromTime, toTime);
+    // } else {
       if (!this.isTimed(id)) {
         super.bind(id, value);
       } else {
@@ -319,7 +258,7 @@ export class TimelinedEnvironment extends Environment {
           timeline.setDefault(value);
         }
       }
-    }
+    // }
   }
 
   // Assumes property exists.
@@ -368,8 +307,9 @@ export class TimelinedEnvironment extends Environment {
       // If the default value is time sensitive, then it must be updated every frame.
       if (defaultValue.isTimeSensitive(domHost)) {
         const ager = (env, t) => {
-          const subenv = Environment.create(env, null);
-          subenv.bind('t', new ExpressionInteger(t));
+          // TODO this one slipped through when I added object frames. Are there others? Did I do this right?
+          const subenv = {stackFrame: Environment.create(env, null)};
+          subenv.stackFrame.bind('t', new ExpressionInteger(t));
           const v = defaultValue.evaluate(subenv);
           propertyHost.state[property] = resolveDefault(v);
         };

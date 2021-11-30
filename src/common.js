@@ -81,16 +81,22 @@ export class SourceLocation {
            this.columnEnd + ':';
   }
 
+  deflate() {
+    return {
+      type: 'source-location',
+      lineStart: this.lineStart,
+      lineEnd: this.lineEnd,
+      columnStart: this.columnStart,
+      columnEnd: this.columnEnd,
+    };
+  }
+
   static span(a, b) {
     return new SourceLocation(a.lineStart, b.lineEnd, a.columnStart, b.columnEnd);
   }
 
-  static reify(pod) {
-    if (pod) {
-      return new SourceLocation(pod.lineStart, pod.lineEnd, pod.columnStart, pod.columnEnd);
-    } else {
-      return undefined;
-    }
+  static inflate(pod) {
+    return new SourceLocation(pod.lineStart, pod.lineEnd, pod.columnStart, pod.columnEnd);
   }
 }
 
@@ -103,8 +109,8 @@ export class Token {
     this.where = where;
   }
 
-  static reify(pod) {
-    return new Token(pod.type, pod.source, SourceLocation.reify(pod.where));
+  static inflate(pod) {
+    return new Token(pod.type, pod.source, SourceLocation.inflate(pod.where));
   }
 }
 
@@ -145,6 +151,18 @@ export class FunctionDefinition {
     this.formals = formals;
     this.body = body;
   }
+
+  deflate() {
+    return {
+      type: 'function-signature',
+      name: this.name,
+      formals: this.formals,
+    };
+  }
+
+  static inflate(object, inflater) {
+    return new FunctionDefinition(object.name, object.formals);
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -177,7 +195,7 @@ export const Precedence = Object.freeze({
 
 // --------------------------------------------------------------------------- 
 
-export const mop = (object, xform) => Object.fromEntries(Object.entries(object).map(([key, value]) => [key, xform(value)]));
+export const objectMap = (object, xform) => Object.fromEntries(Object.entries(object).map(([key, value]) => [key, xform(value, key)]));
 
 // --------------------------------------------------------------------------- 
 

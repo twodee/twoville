@@ -10,19 +10,11 @@ import {
   MessagedException,
 } from './common.js';
 
-import {
-  RenderEnvironment,
-} from './render.js';
-
-import {
-  interpret,
-} from './interpreter.js';
-
-import {
-  Messager
-} from './messager.js';
-
-import Interpreter from './interpreter.worker.js';
+import {RenderEnvironment} from './render.js';
+import {Interpreter} from './interpreter.js';
+import {Messager} from './messager.js';
+import {Inflater} from './inflater.js';
+import InterpreterWorker from './interpreter.worker.js';
 
 const hasWorker = false;
 
@@ -172,7 +164,11 @@ function downloadSvg(root) {
 function animateTo(t) {
   timeSpinner.value = t;
   scrubber.value = t;
-  scene.ageContent(t);
+  scene.synchronizeState(t);
+  scene.synchronizeDom(t);
+  scene.synchronizeMarkState(t);
+  scene.synchronizeMarkExpressions(t);
+  scene.synchronizeMarkDom();
 }
 
 function scrubTo(t) {
@@ -185,7 +181,11 @@ function scrubTo(t) {
   frameIndex = t;
   timeSpinner.value = t;
   scrubber.value = t;
-  scene.ageContentAndInteraction(t);
+  scene.synchronizeState(t);
+  scene.synchronizeDom(t);
+  scene.synchronizeMarkState(t);
+  scene.synchronizeMarkExpressions(t);
+  scene.synchronizeMarkDom(t);
 }
 
 function animateFrame() {
@@ -247,7 +247,9 @@ function postInterpret(pod, successCallback) {
   if (oldScene) {
     oldScene.stop();
   }
-  scene = RenderEnvironment.reify(document.getElementById('svg'), document.getElementById('mouse-status-label'), pod, settings);
+
+  console.log("pod:", pod);
+  scene = RenderEnvironment.inflate(document.getElementById('svg'), document.getElementById('mouse-status-label'), pod, settings, Inflater);
 
   let hasTweak;
 
@@ -263,7 +265,7 @@ function postInterpret(pod, successCallback) {
     return oldText;
   };
 
-  scene.tweak = newText => {
+  scene.tweak = (newText, shape) => {
     // Ace doesn't have a way to do atomic group of changes, which is what I want
     // for handler events. We work around this by undoing before each tweak.
     if (hasTweak) {
@@ -283,7 +285,10 @@ function postInterpret(pod, successCallback) {
     range.setEnd(range.end.row, range.start.column + newText.length);
     editor.getSelection().setSelectionRange(range);
 
-    scene.flushManipulation();
+    shape.synchronizeDom(frameIndex, scene.bounds);
+    shape.synchronizeMarkState(frameIndex);
+    shape.synchronizeMarkDom(frameIndex, scene.bounds);
+    // scene.flushManipulation();
   };
 
   scene.stopTweak = () => {
@@ -294,7 +299,7 @@ function postInterpret(pod, successCallback) {
 
   try {
     scene.clear();
-    scene.start();
+    scene.initializeDom();
 
     // Go through rasters. Add DOM for any that aren't 
     // Perhaps existing rasters should be provided to scene to prevent
@@ -472,7 +477,7 @@ function startInterpreting(successCallback) {
   Messager.clear();
 
   if (hasWorker) {
-    interpreterWorker = new Interpreter();
+    interpreterWorker = new InterpreterWorker();
     interpreterWorker.addEventListener('message', event => {
       if (event.data.type === 'output') {
         Messager.log(event.data.payload);
@@ -489,10 +494,10 @@ function startInterpreting(successCallback) {
       source: editor.getValue(),
     });
   } else {
-    const scene = interpret(editor.getValue(), Messager.log);
+    const scene = Interpreter.interpret(editor.getValue(), Messager.log);
     stopInterpreting();
     if (scene) {
-      postInterpret(scene.toPod(), successCallback);
+      postInterpret(scene.deflate(), successCallback);
     }
   }
 }
@@ -895,6 +900,12 @@ function initialize() {
         manageFilesList.appendChild(option);
       }
 
+      // Select name of current file because the user may want to open
+      // other files with similar names.
+      if (currentName) {
+        manageFilesList.value = currentName;
+      }
+
       document.addEventListener('keydown', openEscapeListener);
     }
   }
@@ -910,19 +921,32 @@ function initialize() {
     }
   });
 
-  manageFilesButton.addEventListener('click', () => {
-    refreshOpen();
-  });
-  manageFilesOpenButton.addEventListener('click', () => {
-    closeOpenDialog();
-    if (isSaved) {
-      loadFile(manageFilesList.value);
-    } else {
-      showConfirmDialog('Unsaved Changes', 'You have unsaved changes in your current program. These changes will be lost if you open this file.', 'Open Anyway', 'Cancel', () => {
+  const openSelectedFile = () => {
+    if (manageFilesList.value) {
+      closeOpenDialog();
+      if (isSaved) {
         loadFile(manageFilesList.value);
-      }, () => {});
+      } else {
+        showConfirmDialog('Unsaved Changes', 'You have unsaved changes in your current program. These changes will be lost if you open this file.', 'Open Anyway', 'Cancel', () => {
+          loadFile(manageFilesList.value);
+        }, () => {});
+      }
+    }
+  };
+
+  manageFilesList.addEventListener('keyup', event => {
+    if (event.key === 'Enter') {
+      openSelectedFile();
     }
   });
+
+  manageFilesButton.addEventListener('click', () => {
+    refreshOpen();
+    manageFilesList.focus();
+  });
+
+  manageFilesOpenButton.addEventListener('click', openSelectedFile);
+
   manageFilesCancelButton.addEventListener('click', closeOpenDialog);
   manageFilesDeleteButton.addEventListener('click', deleteProgram);
 
@@ -1126,7 +1150,7 @@ function initialize() {
   editor.getSession().selection.on('changeCursor', () => {
     if (scene) {
       const cursor = editor.getCursorPosition();
-      scene.castCursor(cursor.column, cursor.row);
+      // scene.castCursor(cursor.column, cursor.row);
     }
   });
 
@@ -1276,9 +1300,31 @@ function initialize() {
   saveDirtyButton.addEventListener('click', saveSomehow);
   saveCleanButton.addEventListener('click', saveSomehow);
 
+  // Remove some bindings.
+  const bindings = editor.keyBinding.$defaultHandler.commandKeyBinding;
+  delete bindings['cmd-,'];
+  delete bindings['ctrl-,'];
+
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {
       saveSomehow();
+      event.preventDefault();
+      return false;
+    } else if ((event.ctrlKey || event.metaKey) && event.key === 'o') {
+      manageFilesButton.click();
+      event.preventDefault();
+      return false;
+    } else if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+      startInterpreting();
+      event.preventDefault();
+      return false;
+    } else if ((event.ctrlKey || event.metaKey) && event.key === '.') {
+      if (scene) scene.fit();
+      event.preventDefault();
+      return false;
+    } else if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
+      editor.getSelection().selectAll();
+      editor.focus();
       event.preventDefault();
       return false;
     } else {
@@ -1369,33 +1415,6 @@ function initialize() {
 
     return onMouseDown;
   }
-
-  // const generateWidthResizer = resizer => {
-    // const onMouseMove = e => {
-      // const parentPanel = resizer.parentNode;
-      // const bounds = resizer.parentNode.getBoundingClientRect();
-      // const relativeX = e.clientX - bounds.x;
-      // parentPanel.children[0].style['width'] = `${relativeX - 4}px`;
-      // parentPanel.children[2].style['width'] = `${bounds.height - (relativeX + 4)}px`;
-      // editor.resize();
-
-      // if (!isEmbedded) {
-        // localStorage.setItem('left-width', parentPanel.children[0].style.width);
-      // }
-
-      // e.preventDefault();
-    // };
-
-    // const onMouseDown = e => {
-      // document.addEventListener('mousemove', onMouseMove);
-      // document.addEventListener('mouseup', () => {
-        // document.removeEventListener('mousemove', onMouseMove);
-      // });
-      // e.preventDefault();
-    // };
-
-    // return onMouseDown;
-  // }
 
   const generateLeftResizer = (resizer, i) => {
     const onMouseMove = e => {

@@ -28,86 +28,130 @@ export class Marker {
 
   constructor(shape) {
     this.shape = shape;
+    this.foregroundMarks = [];
+    this.backgroundMarks = [];
+    this.centeredForegroundMarks = [];
+    this.midgroundMarks = [];
   }
 
-  showMarks() {
+  show() {
     this.showBackgroundMarks();
     this.midgroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
     this.foregroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
   }
 
-  hoverMarks() {
+  hover() {
     this.backgroundMarkGroup.classList.add('hovered');
     this.midgroundMarkGroup.classList.add('hovered');
     this.foregroundMarkGroup.classList.add('hovered');
     this.centeredForegroundMarkGroup.classList.add('hovered');
-    this.showMarks();
+    this.show();
   }
 
-  unhoverMarks() {
+  unhover() {
     this.backgroundMarkGroup.classList.remove('hovered');
     this.midgroundMarkGroup.classList.remove('hovered');
     this.foregroundMarkGroup.classList.remove('hovered');
     this.centeredForegroundMarkGroup.classList.remove('hovered');
-    this.hideMarks();
+    this.hide();
   }
 
   showBackgroundMarks() {
     this.backgroundMarkGroup.setAttributeNS(null, 'visibility', 'visible');
   }
 
-  hideMarks() {
+  hide() {
     this.backgroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
     this.midgroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
     this.foregroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
   }
 
-  addMarks(foregroundMarks, backgroundMarks, centeredForegroundMarks = [], midgroundMarks = []) {
-    this.backgroundMarks = backgroundMarks;
-    this.midgroundMarks = midgroundMarks;
+  setForegroundMarks(...foregroundMarks) {
     this.foregroundMarks = foregroundMarks;
-    this.centeredForegroundMarks = centeredForegroundMarks;
+  }
 
+  setBackgroundMarks(...backgroundMarks) {
+    this.backgroundMarks = backgroundMarks;
+  }
+
+  initializeDom(root) {
+    // Let marks create their elements first.
+    this.foregroundMarks.forEach(mark => mark.initializeDom(root));
+    this.backgroundMarks.forEach(mark => mark.initializeDom(root));
+
+    // Then add background marks' elements into the hierarchy.
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.backgroundMarkGroup.classList.add('mark-group');
+    this.shape.backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
     for (let mark of this.backgroundMarks) {
       mark.element.classList.add('mark');
       mark.element.classList.add(`tag-${this.shape.id}`);
       this.backgroundMarkGroup.appendChild(mark.element);
     }
 
-    this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    this.midgroundMarkGroup.classList.add('mark-group');
-    for (let mark of this.midgroundMarks) {
-      mark.element.classList.add('mark');
-      mark.element.classList.add(`tag-${this.shape.id}`);
-      this.midgroundMarkGroup.appendChild(mark.element);
-    }
-
+    // Then add foreground marks' elements into the hierarchy.
     this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.foregroundMarkGroup.classList.add('mark-group');
+    this.shape.foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
     for (let mark of this.foregroundMarks) {
       mark.element.classList.add('mark');
       mark.element.classList.add(`tag-${this.shape.id}`);
       this.foregroundMarkGroup.appendChild(mark.element);
     }
 
+    // Then add midground marks' elements into the hierarchy.
+    this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.midgroundMarkGroup.classList.add('mark-group');
+    this.shape.midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
+    for (let mark of this.midgroundMarks) {
+      mark.element.classList.add('mark');
+      mark.element.classList.add(`tag-${this.shape.id}`);
+      this.midgroundMarkGroup.appendChild(mark.element);
+    }
+
+    // Then add centered foreground marks' elements into the hierarchy.
     this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.centeredForegroundMarkGroup.classList.add('mark-group');
+    this.shape.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     for (let mark of this.centeredForegroundMarks) {
       mark.element.classList.add('mark');
       mark.element.classList.add(`tag-${this.shape.id}`);
       this.centeredForegroundMarkGroup.appendChild(mark.element);
     }
 
-    this.hideMarks();
-    this.registerListeners();
+    this.hide();
   }
 
+  // addMarks(foregroundMarks, backgroundMarks, centeredForegroundMarks = [], midgroundMarks = []) {
+    // this.backgroundMarks = backgroundMarks;
+    // this.midgroundMarks = midgroundMarks;
+    // this.foregroundMarks = foregroundMarks;
+    // this.centeredForegroundMarks = centeredForegroundMarks;
+
+    // this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    // this.midgroundMarkGroup.classList.add('mark-group');
+    // for (let mark of this.midgroundMarks) {
+      // mark.element.classList.add('mark');
+      // mark.element.classList.add(`tag-${this.shape.id}`);
+      // this.midgroundMarkGroup.appendChild(mark.element);
+    // }
+
+    // this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    // this.centeredForegroundMarkGroup.classList.add('mark-group');
+    // for (let mark of this.centeredForegroundMarks) {
+      // mark.element.classList.add('mark');
+      // mark.element.classList.add(`tag-${this.shape.id}`);
+      // this.centeredForegroundMarkGroup.appendChild(mark.element);
+    // }
+
+    // this.hide();
+    // this.registerListeners();
+  // }
+
   deselect() {
-    this.hideMarks();
+    this.hide();
   }
 
   select() {
@@ -115,32 +159,32 @@ export class Marker {
     this.midgroundMarkGroup.classList.remove('hovered');
     this.foregroundMarkGroup.classList.remove('hovered');
     this.centeredForegroundMarkGroup.classList.remove('hovered');
-    this.showMarks();
+    this.show();
   }
 
-  updateState(centroid) {
-    this.centroid = centroid;
-  }
+  // updateState(centroid) {
+    // this.centroid = centroid;
+  // }
 
-  updateDom(bounds, factor) {
-    this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${this.centroid[0]} ${-this.centroid[1]})`);
+  // updateDom(bounds, factor) {
+    // this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${this.centroid[0]} ${-this.centroid[1]})`);
 
-    for (let mark of this.foregroundMarks) {
-      mark.updateDom(bounds, factor);
-    }
+    // for (let mark of this.foregroundMarks) {
+      // mark.updateDom(bounds, factor);
+    // }
 
-    for (let mark of this.centeredForegroundMarks) {
-      mark.updateDom(bounds, factor);
-    }
+    // for (let mark of this.centeredForegroundMarks) {
+      // mark.updateDom(bounds, factor);
+    // }
 
-    for (let mark of this.backgroundMarks) {
-      mark.updateDom(bounds, factor);
-    }
+    // for (let mark of this.backgroundMarks) {
+      // mark.updateDom(bounds, factor);
+    // }
 
-    for (let mark of this.midgroundMarks) {
-      mark.updateDom(bounds, factor);
-    }
-  }
+    // for (let mark of this.midgroundMarks) {
+      // mark.updateDom(bounds, factor);
+    // }
+  // }
 
   // updateScale(bounds, factor) {
     // for (let mark of this.foregroundMarks) {
@@ -151,31 +195,31 @@ export class Marker {
     // }
   // }
 
-  updateManipulability() {
-    for (let mark of this.foregroundMarks) {
-      mark.updateManipulability();
-    }
-  }
+  // updateManipulability() {
+    // for (let mark of this.foregroundMarks) {
+      // mark.updateManipulability();
+    // }
+  // }
 
-  registerListeners() {
-    for (let mark of [...this.backgroundMarks, ...this.foregroundMarks, ...this.centeredForegroundMarks, ...this.midgroundMarks]) {
-      mark.element.addEventListener('mouseenter', event => {
-        if (event.buttons === 0) {
-          this.shape.root.contextualizeCursor(event.toElement);
-        }
-      });
+  // registerListeners() {
+    // for (let mark of [...this.backgroundMarks, ...this.foregroundMarks, ...this.centeredForegroundMarks, ...this.midgroundMarks]) {
+      // mark.element.addEventListener('mouseenter', event => {
+        // if (event.buttons === 0) {
+          // this.shape.root.contextualizeCursor(event.toElement);
+        // }
+      // });
 
-      mark.element.addEventListener('mouseleave', event => {
-        if (this.isUnhoverTransition(event)) {
-          this.unhoverMarks();
-        }
+      // mark.element.addEventListener('mouseleave', event => {
+        // if (this.isUnhoverTransition(event)) {
+          // this.unhoverMarks();
+        // }
 
-        if (event.buttons === 0) {
-          this.shape.root.contextualizeCursor(event.toElement);
-        }
-      });
-    }
-  }
+        // if (event.buttons === 0) {
+          // this.shape.root.contextualizeCursor(event.toElement);
+        // }
+      // });
+    // }
+  // }
 
   isUnhoverTransition(event) {
     // Only turn off marks if shape wasn't explicitly click-selected and the
@@ -188,45 +232,57 @@ export class Marker {
 
 // --------------------------------------------------------------------------- 
 
-export class RectangleMark {
+export class Mark {
   constructor() {
+    this.initializeState();
+  }
+
+  initializeState() {
+    this.state = {};
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class RectangleMark extends Mark {
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'rect');
   }
 
-  updateState(corner, size, rounding) {
-    this.corner = corner;
-    this.size = size;
-    this.rounding = rounding;
+  synchronizeState(corner, size, rounding) {
+    this.state.corner = corner;
+    this.state.size = size;
+    this.state.rounding = rounding;
   }
 
-  updateDom(bounds, factor) {
-    this.element.setAttributeNS(null, 'x', this.corner[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.corner[1] - this.size[1]);
-    this.element.setAttributeNS(null, 'width', this.size[0]);
-    this.element.setAttributeNS(null, 'height', this.size[1]);
-    if (this.rounding !== undefined) {
-      this.element.setAttributeNS(null, 'rx', this.rounding);
-      this.element.setAttributeNS(null, 'ry', this.rounding);
+  synchronizeDom(bounds, factor) {
+    this.element.setAttributeNS(null, 'x', this.state.corner[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.state.corner[1] - this.state.size[1]);
+    this.element.setAttributeNS(null, 'width', this.state.size[0]);
+    this.element.setAttributeNS(null, 'height', this.state.size[1]);
+    if (this.state.rounding !== undefined) {
+      this.element.setAttributeNS(null, 'rx', this.state.rounding);
+      this.element.setAttributeNS(null, 'ry', this.state.rounding);
     }
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class CircleMark {
-  constructor() {
+export class CircleMark extends Mark {
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'circle');
   }
 
-  updateState(center, radius) {
-    this.center = center;
-    this.radius = radius;
+  synchronizeState(center, radius) {
+    this.state.center = center;
+    this.state.radius = radius;
   }
 
-  updateDom(bounds, center, radius) {
-    this.element.setAttributeNS(null, 'cx', this.center[0]);
-    this.element.setAttributeNS(null, 'cy', bounds.span - this.center[1]);
-    this.element.setAttributeNS(null, 'r', this.radius);
+  synchronizeDom(bounds, factor) {
+    this.element.setAttributeNS(null, 'cx', this.state.center[0]);
+    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
+    this.element.setAttributeNS(null, 'r', this.state.radius);
   }
 }
 
@@ -375,16 +431,17 @@ export class PolylineMark {
 
 // --------------------------------------------------------------------------- 
 
-export class TweakableMark {
-  constructor(shape, host, getExpression, backfill) {
+export class TweakableMark extends Mark {
+  constructor(shape, host, tweakShapeState) {
+    super();
     this.shape = shape;
-    this.getExpression = getExpression;
-    this.backfill = backfill;
+    this.tweakShapeState = tweakShapeState;
     this.host = host ?? shape;
     this.mouseDownAt = null;
+  }
 
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'g');
-    this.element.addEventListener('mousedown', this.onMouseDown);
 
     this.circle = document.createElementNS(svgNamespace, 'circle');
     this.circle.classList.add('mark-piece');
@@ -395,14 +452,71 @@ export class TweakableMark {
     this.circle.setAttributeNS(null, 'r', 1);
     this.element.appendChild(this.circle);
 
-    this.mouseAtSvg = this.shape.root.svg.createSVGPoint();
+    this.mouseAtSvg = root.svg.createSVGPoint();
+
+    this.registerListeners(root);
   }
 
-  transform(event) {
+  registerListeners(root) {
+    let onMouseDown, onMouseMove, onMouseUp;
+
+    onMouseDown = event => {
+      event.stopPropagation();
+
+      // The shape might not be hovered, which makes the marks appear, but not
+      // selected. Clicking forces the shape's selection.
+      root.select(this.shape);
+
+      // I need the expression associated with the mark.
+      // I need to record where the mouse is at.
+      // I need to figure out what subexpression, if any, will get updated.
+      
+      // Keep a copy of the original expression around. It's cleaner to build
+      // off it it.
+      this.untweakedExpression = this.expression.clone();
+
+      // Transform SVG coordinates of mouse to local space.
+      this.mouseDownAt = this.transform(root, event);
+
+      this.manipulation = configureManipulation(this.expression);
+      this.manipulation.formatReal = x => x.toShortFloat(root.settings.mousePrecision);
+      this.manipulation.oldCode = root.startTweak(this.manipulation.where);
+      this.manipulation.shape = this.shape;
+      root.isTweaking = true;
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+
+      // if (this.expression && !this.shape.root.isStale) {
+    };
+
+    onMouseMove = event => {
+      event.stopPropagation();
+
+      if (event.buttons === 1) {
+        let mouseAt = this.transform(root, event);
+        let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
+        let replacement = this.manipulate(delta, event.shiftKey, mouseAt, this.manipulation);
+        root.tweak(replacement, this.shape);
+      }
+    };
+
+    onMouseUp = event => {
+      event.stopPropagation();
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      // this.shape.root.contextualizeCursor(event.toElement);
+      root.stopTweak();
+    };
+
+    this.element.addEventListener('mousedown', onMouseDown);
+  }
+
+  transform(root, event) {
     this.mouseAtSvg.x = event.clientX;
     this.mouseAtSvg.y = event.clientY;
-    let mouseAt = this.mouseAtSvg.matrixTransform(this.shape.root.svg.getScreenCTM().inverse());
-    mouseAt.y = this.shape.root.bounds.span - mouseAt.y;
+    let mouseAt = this.mouseAtSvg.matrixTransform(root.svg.getScreenCTM().inverse());
+    mouseAt.y = root.bounds.span - mouseAt.y;
     return mouseAt;
   }
 
@@ -410,57 +524,19 @@ export class TweakableMark {
     this.expression = this.getExpression();
     this.element.classList.toggle('disabled-mark', !this.expression);
   }
-
-  onMouseDown = event => {
-    event.stopPropagation();
-    this.expression = this.getExpression();
-
-    if (this.expression && !this.shape.root.isStale) {
-      this.untweakedExpression = this.expression.clone();
-      this.mouseDownAt = this.transform(event);
-      this.shape.root.select(this.shape);
-      this.manipulation = setupManipulation(this.expression);
-      this.manipulation.formatReal = x => x.toShortFloat(this.shape.root.settings.mousePrecision);
-      this.manipulation.oldCode = this.shape.root.startTweak(this.manipulation.where);
-      this.manipulation.shape = this.shape;
-      // this.originalCode = this.shape.root.startTweak(manipulateWhere(this.expression));
-      this.shape.root.isTweaking = true;
-      window.addEventListener('mousemove', this.onMouseMove);
-      window.addEventListener('mouseup', this.onMouseUp);
-    }
-  };
-
-  onMouseMove = event => {
-    event.stopPropagation();
-
-    if (event.buttons === 1) {
-      let mouseAt = this.transform(event);
-      let delta = [mouseAt.x - this.mouseDownAt.x, mouseAt.y - this.mouseDownAt.y];
-      let replacement = this.getNewSource(delta, event.shiftKey, mouseAt, this.originalCode);
-      this.shape.root.tweak(replacement);
-    }
-  };
-
-  onMouseUp = event => {
-    event.stopPropagation();
-    window.removeEventListener('mousemove', this.onMouseMove);
-    window.removeEventListener('mouseup', this.onMouseUp);
-    this.shape.root.contextualizeCursor(event.toElement);
-    this.shape.root.stopTweak();
-  };
 }
 
 // --------------------------------------------------------------------------- 
 
 export class PanMark extends TweakableMark {
-  constructor(shape, host, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
   }
 
-  updateState(position, matrix) {
-    this.position = position;
-    this.matrix = matrix;
-    this.updateMatrixState();
+  synchronizeState(position) {
+    this.state.position = position;
+    // this.state.matrix = matrix;
+    // this.updateMatrixState();
   }
 
   updateMatrixState() {
@@ -471,6 +547,13 @@ export class PanMark extends TweakableMark {
 
   updateDom(bounds, factor) {
     this.updatePositionDom(bounds, factor, this.position);
+  }
+
+  synchronizeDom(bounds) {
+    // const transformedPosition = this.matrix.multiplyVector(position);
+    this.commandString = `translate(${this.state.position[0]} ${bounds.span - this.state.position[1]})`;
+    // this.commandString += ` rotate(${-this.rotation})`;
+    this.element.setAttributeNS(null, "transform", `${this.commandString}`);
   }
 
   updatePositionDom(bounds, factor, position) {
@@ -519,15 +602,27 @@ export class PanMark extends TweakableMark {
 // --------------------------------------------------------------------------- 
 
 export class VectorPanMark extends PanMark {
-  constructor(shape, host, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
+  }
+
+  initializeDom(root) {
+    super.initializeDom(root);
     this.addHorizontal();
     this.addVertical();
   }
 
-  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
-    let x = parseFloat((this.untweakedExpression.get(0).value + delta[0]).toShortFloat(this.shape.root.settings.mousePrecision));
-    let y = parseFloat((this.untweakedExpression.get(1).value + delta[1]).toShortFloat(this.shape.root.settings.mousePrecision));
+  synchronizeExpressions(positionExpression) {
+    this.expression = positionExpression;
+  }
+
+  synchronizeState(positionValue) {
+    super.synchronizeState(positionValue);
+  }
+
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
+    let x = manipulation.formatReal(this.untweakedExpression.get(0).value + delta[0]);
+    let y = manipulation.formatReal(this.untweakedExpression.get(1).value + delta[1]);
 
     if (isShiftModified) {
       x = Math.round(x);
@@ -536,7 +631,7 @@ export class VectorPanMark extends PanMark {
 
     this.expression.set(0, new ExpressionReal(x));
     this.expression.set(1, new ExpressionReal(y));
-    this.backfill([x, y]);
+    this.tweakShapeState([x, y]);
 
     return '[' + this.expression.get(0).value + ', ' + this.expression.get(1).value + ']';
   }
@@ -545,25 +640,36 @@ export class VectorPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class HorizontalPanMark extends PanMark {
-  constructor(shape, host, multiplier = 1, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, multiplier = 1, tweakShapeState) {
+    super(shape, host, tweakShapeState);
     this.multiplier = multiplier;
+  }
+
+  initializeDom(root) {
+    super.initializeDom(root);
     this.addHorizontal();
   }
 
-  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
+  synchronizeExpressions(positionExpression) {
+    this.expression = positionExpression;
+  }
+
+  synchronizeState(positionValue) {
+    super.synchronizeState(positionValue);
+  }
+
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const oldValue = this.untweakedExpression.value;
 
-    let newValue = parseFloat((oldValue + delta[0] * this.multiplier).toShortFloat(this.shape.root.settings.mousePrecision));
+    let newValue = manipulation.formatReal(oldValue + delta[0] * this.multiplier);
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
 
     this.expression.value = newValue;
-    this.backfill(newValue);
+    this.tweakShapeState(newValue);
 
     const newExpression = new ExpressionReal(newValue);
-    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
     return this.manipulation.newCode(newExpression);
   }
 }
@@ -571,25 +677,36 @@ export class HorizontalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class VerticalPanMark extends PanMark {
-  constructor(shape, host, multiplier = 1, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, multiplier = 1, tweakShapeState) {
+    super(shape, host, tweakShapeState);
     this.multiplier = multiplier;
+  }
+
+  initializeDom(root) {
+    super.initializeDom(root);
     this.addVertical();
   }
 
-  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
+  synchronizeExpressions(positionExpression) {
+    this.expression = positionExpression;
+  }
+
+  synchronizeState(positionValue) {
+    super.synchronizeState(positionValue);
+  }
+
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const oldValue = this.untweakedExpression.value;
 
-    let newValue = parseFloat((oldValue + delta[1] * this.multiplier).toShortFloat(this.shape.root.settings.mousePrecision));
+    let newValue = manipulation.formatReal(oldValue + delta[1] * this.multiplier);
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
 
     this.expression.value = newValue;
-    this.backfill(newValue);
+    this.tweakShapeState(newValue);
 
     const newExpression = new ExpressionReal(newValue);
-    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
     return this.manipulation.newCode(newExpression);
   }
 }
@@ -597,8 +714,8 @@ export class VerticalPanMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class RotationMark extends PanMark {
-  constructor(shape, host, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
     this.addArc();
   }
 
@@ -622,7 +739,7 @@ export class RotationMark extends PanMark {
     super.updatePositionDom(bounds, factor, degreesPosition);
   }
 
-  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const pivotToMouse = [
       mouseAt.x - this.pivot[0],
       mouseAt.y - this.pivot[1],
@@ -656,10 +773,9 @@ export class RotationMark extends PanMark {
     }
 
     this.expression.value = newDegrees;
-    this.backfill(newDegrees);
+    this.tweakShapeState(newDegrees);
 
     const newExpression = new ExpressionReal(newDegrees);
-    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
     return this.manipulation.newCode(newExpression);
   }
 }
@@ -667,8 +783,8 @@ export class RotationMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class AxisMark extends PanMark {
-  constructor(shape, host, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
     this.addArc();
   }
 
@@ -690,7 +806,7 @@ export class AxisMark extends PanMark {
     super.updatePositionDom(bounds, factor, this.axisPosition);
   }
 
-  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const diff = [
       mouseAt.x - this.pivot[0],
       mouseAt.y - this.pivot[1]
@@ -702,7 +818,7 @@ export class AxisMark extends PanMark {
 
     this.expression.set(0, new ExpressionReal(diff[0]));
     this.expression.set(1, new ExpressionReal(diff[1]));
-    this.backfill(diff);
+    this.tweakShapeState(diff);
 
     return '[' + this.expression.get(0).value + ', ' + this.expression.get(1).value + ']';
   }
@@ -711,8 +827,8 @@ export class AxisMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class DistanceMark extends PanMark {
-  constructor(shape, host, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
     this.addHorizontal();
   }
 
@@ -723,7 +839,7 @@ export class DistanceMark extends PanMark {
     this.rotation -= heading;
   }
 
-  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const headingVector = [
       Math.cos(this.host.heading * Math.PI / 180),
       Math.sin(this.host.heading * Math.PI / 180),
@@ -742,10 +858,9 @@ export class DistanceMark extends PanMark {
     }
 
     this.expression.value = newDistance;
-    this.backfill(newDistance);
+    this.tweakShapeState(newDistance);
 
     const newExpression = new ExpressionReal(newDistance);
-    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
     return this.manipulation.newCode(newExpression);
   }
 }
@@ -753,8 +868,8 @@ export class DistanceMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class WedgeDegreesMark extends PanMark {
-  constructor(shape, host, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
     this.addArc();
   }
 
@@ -764,7 +879,7 @@ export class WedgeDegreesMark extends PanMark {
     this.center = center;
   }
 
-  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
     // Find vector from center to root position.
     let centerToFrom = [
       this.from[0] - this.center[0],
@@ -813,10 +928,9 @@ export class WedgeDegreesMark extends PanMark {
     }
 
     this.expression.value = degrees;
-    this.backfill(degrees);
+    this.tweakShapeState(degrees);
 
     const newExpression = new ExpressionReal(degrees);
-    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
     return this.manipulation.newCode(newExpression);
   }
 }
@@ -824,8 +938,8 @@ export class WedgeDegreesMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class BumpDegreesMark extends PanMark {
-  constructor(shape, host, getExpression, backfill) {
-    super(shape, host, getExpression, backfill);
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
     this.addHorizontal();
   }
 
@@ -845,7 +959,7 @@ export class BumpDegreesMark extends PanMark {
     this.center = center;
   }
 
-  getNewSource(delta, isShiftModified, mouseAt, originalCode) {
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
     let centerToMouse = [
       mouseAt.x - this.center[0],
       mouseAt.y - this.center[1],
@@ -927,20 +1041,18 @@ export class BumpDegreesMark extends PanMark {
     }
 
     this.expression.value = degrees;
-    this.backfill(degrees);
+    this.tweakShapeState(degrees);
 
     const newExpression = new ExpressionReal(degrees);
-    // return manipulateSource(this.untweakedExpression, newExpression, this.shape, originalCode);
     return this.manipulation.newCode(newExpression);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-function setupManipulation(oldEvaluated) {
+function configureManipulation(oldEvaluated) {
   const oldValue = oldEvaluated.value;
   const oldUnevaluated = oldEvaluated.unevaluated;
-  console.log("oldUnevaluated:", oldUnevaluated);
 
   // Handle parenthesized expressions: (e) -> (e) + delta.
   if (oldEvaluated.unevaluated.isLocked) {
@@ -1169,130 +1281,6 @@ function setupManipulation(oldEvaluated) {
     },
   };
 }
-
-// --------------------------------------------------------------------------- 
-
-// function manipulateWhere(oldExpression) {
-  // const unevaluated = oldExpression.unevaluated;
-
-  // console.log("unevaluated:", unevaluated);
-  // if (unevaluated.isLocked || unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
-    // return unevaluated.where;
-  // } else if (unevaluated instanceof ExpressionAdd &&
-             // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-    // console.log("yes here!");
-    // return unevaluated.r.where;
-  // } else if (unevaluated instanceof ExpressionAdd &&
-             // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-    // return unevaluated.l.where;
-  // } else if (unevaluated instanceof ExpressionSubtract &&
-             // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-    // return unevaluated.r.where;
-  // } else if (unevaluated instanceof ExpressionSubtract &&
-             // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-    // return unevaluated.l.where;
-  // } else if (unevaluated instanceof ExpressionMultiply && !unevaluated.r.isLocked &&
-             // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-    // return unevaluated.r.where;
-  // } else if (unevaluated instanceof ExpressionMultiply && !unevaluated.l.isLocked) {
-    // if (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger) {
-      // return unevaluated.l.where;
-    // } else {
-      // return oldExpression.prevalues[0].where;
-    // }
-  // }
-
-  // return null;
-// }
-
-// --------------------------------------------------------------------------- 
-
-// function manipulateSource(oldExpression, newExpression, shape, originalCode) {
-  // const unevaluated = oldExpression.unevaluated;
-  // const oldValue = oldExpression.value;
-  // const newValue = newExpression.value;
-
-  // let e;
-
-  // if (!unevaluated.isLocked) {
-    // if (unevaluated instanceof ExpressionReal || unevaluated instanceof ExpressionInteger) {
-      // e = newExpression.toPretty();
-    // } else if (unevaluated instanceof ExpressionAdd &&
-               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-      // const right = unevaluated.r.value;
-      // const left = oldValue - right;
-      // e = new ExpressionAdd(unevaluated.l, new ExpressionReal((newValue - left).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-    // } else if (unevaluated instanceof ExpressionAdd &&
-               // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-      // const left = unevaluated.l.value;
-      // const right = oldValue - left;
-      // e = new ExpressionAdd(new ExpressionReal((newValue - right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-    // } else if (unevaluated instanceof ExpressionSubtract &&
-               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-      // const right = unevaluated.r.value;
-      // const left = oldValue + right;
-      // e = new ExpressionSubtract(unevaluated.l, new ExpressionReal((left - newValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-    // } else if (unevaluated instanceof ExpressionSubtract &&
-               // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-      // const left = unevaluated.l.value;
-      // const right = left - oldValue;
-      // e = new ExpressionSubtract(new ExpressionReal((newValue + right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-    // } else if (unevaluated instanceof ExpressionMultiply && !unevaluated.r.isLocked &&
-               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-      // const right = unevaluated.r.value;
-      // const left = oldValue / right;
-      // e = new ExpressionReal((newValue / left).toShortFloat(shape.root.settings.mousePrecision)).toPretty();
-    // } else if (unevaluated instanceof ExpressionMultiply && !unevaluated.l.isLocked) {
-      // if (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger) {
-        // const left = unevaluated.l.value;
-        // const right = oldValue / left;
-        // e = new ExpressionReal((newValue / right).toShortFloat(shape.root.settings.mousePrecision)).toPretty();
-      // } else {
-        // console.log("oldExpression.prevalues[0]:", oldExpression.prevalues[0]);
-        // const left = oldExpression.prevalues[0].value;
-        // const right = oldValue / left;
-        // e = new ExpressionReal((newValue / right).toShortFloat(shape.root.settings.mousePrecision)).toPretty();
-      // }
-    // } else if (unevaluated instanceof ExpressionDivide &&
-               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-      // const right = unevaluated.r.value;
-      // const left = oldExpression.prevalues[0].value;
-      // e = new ExpressionDivide(unevaluated.l, new ExpressionReal((left / newValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-    // } else if (unevaluated instanceof ExpressionDivide &&
-               // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-      // const left = unevaluated.l.value;
-      // const right = left / oldValue;
-      // e = new ExpressionDivide(new ExpressionReal((newValue * right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-    // } else if (unevaluated instanceof ExpressionPower &&
-               // (unevaluated.r instanceof ExpressionReal || unevaluated.r instanceof ExpressionInteger)) {
-      // const right = unevaluated.r.value;
-      // const left = oldExpression.prevalues[0];
-      // const left = Math.pow(oldValue, 1 / right);
-
-      // If the left operand is 1, there's no hope of raising it to any value.
-      // if ((left instanceof ExpressionInteger && left.value === 1) ||
-          // (left instanceof ExpressionReal && Math.abs(left.value - 1) < 0.001)) {
-        // e = new ExpressionAdd(unevaluated, new ExpressionReal((newValue - oldValue).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-      // } else {
-        // e = new ExpressionPower(unevaluated.l, new ExpressionReal((Math.log(newValue) / Math.log(left.value)).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-      // }
-    // } else if (unevaluated instanceof ExpressionPower &&
-               // (unevaluated.l instanceof ExpressionReal || unevaluated.l instanceof ExpressionInteger)) {
-      // const left = unevaluated.l.value;
-      // const right = Math.log(oldValue) / Math.log(left);
-      // e = new ExpressionPower(new ExpressionReal(Math.pow(newValue, 1 / right).toShortFloat(shape.root.settings.mousePrecision)), unevaluated.r).toPretty();
-    // } else if (unevaluated instanceof ExpressionNegative &&
-               // (unevaluated.operand instanceof ExpressionReal || unevaluated.operand instanceof ExpressionInteger)) {
-      // e = new ExpressionNegative(new ExpressionReal((-newExpression.value).toShortFloat(shape.root.settings.mousePrecision))).toPretty();
-    // }
-  // }
-
-  // if (!e) {
-    // e = `${originalCode} + ${new ExpressionReal((newValue - oldValue).toShortFloat(shape.root.settings.mousePrecision)).toPretty()}`;
-  // }
-
-  // return e;
-// }
 
 // --------------------------------------------------------------------------- 
 

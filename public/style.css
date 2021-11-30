@@ -316,7 +316,7 @@ html.grabbing {
   fill: gray;
 }
 
-.viewport-outline {
+.view-outline {
   stroke-width: 1;
   stroke: rgb(180, 180, 180);
   stroke-dasharray: none;

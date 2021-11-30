@@ -19,63 +19,25 @@ import {
 } from './ast.js';
 
 import {
-  clamp,
-} from './math.js';
-
-import {
-  Environment,
-} from './environment.js';
-
-import {
-  Stroke,
-} from './stroke.js';
-
-import {
   Shape,
-  Group,
 } from './shape.js';
 
 import {
-  ArcNode,
-  BackNode,
-  CubicNode,
-  CircleNode,
-  GoNode,
-  JumpNode,
-  LineNode,
-  Mirror,
-  MoveNode,
-  QuadraticNode,
-  RectangleNode,
-  TabNode,
-  TurtleNode,
-  TurnNode,
-  VertexNode,
-} from './node.js';
+  Inflater,
+} from './inflater.js';
 
-import {
-  Rotate,
-  Scale,
-  Shear,
-  Translate,
-} from './transform.js';
+import {clamp} from './math.js';
+import {Frame} from './frame.js';
 
-import {
-  Timeline,
-} from './timeline.js';
+export class RenderEnvironment extends Frame {
+  embody(object, inflater) {
+    super.embody(null, object, inflater);
+    this.shapes = object.shapes.map(shape => Shape.inflate(shape, Inflater));
 
-export class RenderEnvironment extends Environment {
-  embody(env, pod) {
-    super.embody(env, pod);
-    this.shapes = [];
-    for (let shape of pod.shapes) {
-      this.shapes.push(Shape.reify(this, shape));
-    }
-
-    this.resolveReferences();
-    for (let shape of this.shapes) {
-      shape.resolveReferences();
-    }
+    // this.resolveReferences();
+    // for (let shape of this.shapes) {
+      // shape.resolveReferences();
+    // }
 
     this.bounds = {
       x: 0,
@@ -86,8 +48,6 @@ export class RenderEnvironment extends Environment {
       stopTime: 0,
       // nticks: 0
     };
-    this.functions = {};
-    this.bindGlobalFunctions();
 
     this.rasters = {};
   }
@@ -96,86 +56,23 @@ export class RenderEnvironment extends Environment {
     this.rasters[id] = raster;
   }
 
-  static reify(svg, mouseStatusLabel, pod, settings) {
+  static inflate(svg, mouseStatusLabel, pod, settings, inflater) {
     const scene = new RenderEnvironment();
     scene.svg = svg;
     scene.mouseStatusLabel = mouseStatusLabel;
-    scene.omniReify = RenderEnvironment.omniReify;
     scene.root = scene;
     scene.isMouseDown = false;
     scene.settings = settings;
-    scene.embody(undefined, pod);
+    scene.embody(pod, inflater);
 
     return scene;
-  }
-
-  static omniReify(env, pod) {
-    if (!pod) {
-      return undefined;
-    } else if (pod.type === 'environment') {
-      return Environment.reify(env, pod);
-    } else if (pod.type === 'reference') {
-      return pod;
-      // return env.root.shapes.find(shape => shape.id === pod.id);
-    } else if (pod.type === 'stroke') {
-      return Stroke.reify(env, pod);
-    } else if (pod.type === 'mirror') {
-      return Mirror.reify(env, pod);
-    } else if (pod.type === 'timeline') {
-      return Timeline.reify(env, pod);
-    } else if (pod.type === 'vertex') {
-      return VertexNode.reify(env, pod);
-    } else if (pod.type === 'tab') {
-      return TabNode.reify(env, pod);
-    } else if (pod.type === 'turtle') {
-      return TurtleNode.reify(env, pod);
-    } else if (pod.type === 'move') {
-      return MoveNode.reify(env, pod);
-    } else if (pod.type === 'turn') {
-      return TurnNode.reify(env, pod);
-    } else if (pod.type === 'back') {
-      return BackNode.reify(env, pod);
-    } else if (pod.type === 'go') {
-      return GoNode.reify(env, pod);
-    } else if (pod.type === 'jump') {
-      return JumpNode.reify(env, pod);
-    } else if (pod.type === 'circle') {
-      return CircleNode.reify(env, pod);
-    } else if (pod.type === 'rectangle') {
-      return RectangleNode.reify(env, pod);
-    } else if (pod.type === 'line') {
-      return LineNode.reify(env, pod);
-    } else if (pod.type === 'quadratic') {
-      return QuadraticNode.reify(env, pod);
-    } else if (pod.type === 'cubic') {
-      return CubicNode.reify(env, pod);
-    } else if (pod.type === 'arc') {
-      return ArcNode.reify(env, pod);
-    } else if (pod.type === 'translate') {
-      return Translate.reify(env, pod);
-    } else if (pod.type === 'scale') {
-      return Scale.reify(env, pod);
-    } else if (pod.type === 'rotate') {
-      return Rotate.reify(env, pod);
-    } else if (pod.type === 'group') {
-      return Group.reify(env, pod);
-    } else if (pod.type === 'shear') {
-      return Shear.reify(env, pod);
-    } else if (!pod.type) {
-    } else if (pod.type.startsWith('Expression')) {
-      const e = Expression.reify(env, pod, RenderEnvironment.omniReify);
-      return e;
-    } else {
-      console.log(pod);
-      throw Error('can\'t reify');
-    }
   }
 
   clear() {
     clearChildren(this.svg);
   }
 
-  start() {
+  initializeDom() {
     this.mouseAtSvg = this.svg.createSVGPoint();
 
     this.svg.addEventListener('wheel', this.onWheel);
@@ -199,14 +96,14 @@ export class RenderEnvironment extends Environment {
       }
     `;
 
-    const viewport = this.get('viewport');
-    let size = viewport.get('size');
+    const viewProperties = this.getStatic('view');
+    let size = viewProperties.get('size');
 
     let corner;
-    if (viewport.owns('corner')) {
-      corner = viewport.get('corner');
-    } else if (viewport.owns('center')) {
-      let center = viewport.get('center');
+    if (viewProperties.has('corner')) {
+      corner = viewProperties.get('corner');
+    } else if (viewProperties.has('center')) {
+      let center = viewProperties.get('center');
       corner = new ExpressionVector([
         new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
         new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
@@ -229,7 +126,6 @@ export class RenderEnvironment extends Environment {
 
     this.bounds.startTime = this.get('time').get('start').value;
     this.bounds.stopTime = this.get('time').get('stop').value;
-    // this.bounds.nticks = this.bounds.stopTime - this.bounds.startTime;
 
     this.mainGroup = document.createElementNS(svgNamespace, 'g');
     this.mainGroup.setAttributeNS(null, 'id', 'main-group');
@@ -260,29 +156,51 @@ export class RenderEnvironment extends Environment {
     this.sceneMarkGroup.classList.add('mark-group');
     this.backgroundMarkGroup.appendChild(this.sceneMarkGroup);
 
-    const boundingBox = new BoundingBox();
+    const fromTime = this.getStatic('time').get('start').value;
+    const toTime = this.getStatic('time').get('stop').value;
     for (let shape of this.shapes) {
-      shape.configure(this.bounds);
-      boundingBox.encloseBox(shape.boundingBox);
+      shape.validate(fromTime, toTime);
     }
 
-    if (viewport.get('autofit').value) {
-      this.fitBounds = {
-        x: boundingBox.min[0],
-        y: boundingBox.min[1],
-        width: boundingBox.width,
-        height: boundingBox.height,
-      };
-      this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
-      this.fit();
+    for (let shape of this.shapes) {
+      shape.initializeState();
+    }
+
+    for (let shape of this.shapes) {
+      shape.initializeMarkState();
+    }
+
+    for (let shape of this.shapes) {
+      shape.initializeDom(this);
+    }
+
+    for (let shape of this.shapes) {
+      shape.initializeMarkDom(this);
+    }
+
+    // const boundingBox = new BoundingBox();
+    // for (let shape of this.shapes) {
+      // shape.configure(this.bounds);
+      // boundingBox.encloseBox(shape.boundingBox);
+    // }
+
+    // if (viewProperties.get('autofit').value) {
+      // this.fitBounds = {
+        // x: boundingBox.min[0],
+        // y: boundingBox.min[1],
+        // width: boundingBox.width,
+        // height: boundingBox.height,
+      // };
+      // this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
+      // this.fit();
 
       // TODO: Is this the best way to ensure that the transform gets updated?
-      for (let shape of this.shapes) {
-        for (let transform of shape.transforms) {
-          transform.updateDomCommand(this.bounds);
-        }
-      }
-    }
+      // for (let shape of this.shapes) {
+        // for (let transform of shape.transforms) {
+          // transform.updateDomCommand(this.bounds);
+        // }
+      // }
+    // }
 
     let pageOutline = document.createElementNS(svgNamespace, 'rect');
     pageOutline.setAttributeNS(null, 'id', 'x-outline');
@@ -291,11 +209,11 @@ export class RenderEnvironment extends Environment {
     pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
     pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
     pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
-    pageOutline.classList.add('mark', 'viewport-outline');
+    pageOutline.classList.add('mark', 'view-outline');
     this.sceneMarkGroup.appendChild(pageOutline);
 
     this.state = {};
-    this.drawables = this.shapes.filter(shape => shape.isDrawable);
+    this.drawables = this.shapes;// TODO.filter(shape => shape.isDrawable);
     this.isStarted = true;
   }
 
@@ -311,36 +229,66 @@ export class RenderEnvironment extends Environment {
     this.box.include(box.max);
   }
 
-  flushManipulation() {
-    const matrix = this.svg.getScreenCTM();
-    const factor = matrix.a;
-    for (let shape of this.shapes) {
-      shape.flushManipulation(this.bounds, factor);
-    }
-  }
-
-  ageContent(t) {
-    this.state.t = t;
+  synchronizeState(t) {
     for (let drawable of this.drawables) {
-      if (drawable.activate(t)) {
-        drawable.ageDomWithoutMarks(this.bounds, t);
-      }
+      drawable.synchronizeState(t);
     }
   }
 
-  ageContentAndInteraction(t) {
-    const matrix = this.svg.getScreenCTM();
-    const factor = matrix.a;
-
-    this.state.t = t;
+  synchronizeDom(t) {
     for (let drawable of this.drawables) {
-      if (drawable.activate(t)) {
-        drawable.ageDomWithMarks(this.bounds, t, factor);
-      }
+      drawable.synchronizeDom(t, this.bounds);
     }
-
-    this.rescale();
   }
+
+  synchronizeMarkExpressions(t) {
+    for (let drawable of this.drawables) {
+      drawable.synchronizeMarkExpressions(t);
+    }
+  }
+
+  synchronizeMarkState(t) {
+    for (let drawable of this.drawables) {
+      drawable.synchronizeMarkState(t);
+    }
+  }
+
+  synchronizeMarkDom(t) {
+    for (let drawable of this.drawables) {
+      drawable.synchronizeMarkDom(t, this.bounds);
+    }
+  }
+
+  // flushManipulation() {
+    // const matrix = this.svg.getScreenCTM();
+    // const factor = matrix.a;
+    // for (let shape of this.shapes) {
+      // shape.flushManipulation(this.bounds, factor);
+    // }
+  // }
+
+  // ageContent(t) {
+    // this.state.t = t;
+    // for (let drawable of this.drawables) {
+      // if (drawable.activate(t)) {
+        // drawable.ageDomWithoutMarks(this.bounds, t);
+      // }
+    // }
+  // }
+
+  // ageContentAndInteraction(t) {
+    // const matrix = this.svg.getScreenCTM();
+    // const factor = matrix.a;
+
+    // this.state.t = t;
+    // for (let drawable of this.drawables) {
+      // if (drawable.activate(t)) {
+        // drawable.ageDomWithMarks(this.bounds, t, factor);
+      // }
+    // }
+
+    // this.rescale();
+  // }
 
   hideMarks() {
     this.sceneMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
@@ -422,16 +370,16 @@ export class RenderEnvironment extends Environment {
   select(shape) {
     // Only select the shape if it's not already selected.
     if (shape !== this.selectedShape) {
-      this.deselect();
+      this.selectNothing();
       this.selectedShape = shape;
       this.selectedShape.select();
     }
   }
 
-  deselect() {
+  selectNothing() {
     if (this.selectedShape) {
       this.selectedShape.deselect();
-      this.selectedShape = undefined;
+      this.selectedShape = null;
     }
   }
 
@@ -515,7 +463,7 @@ export class RenderEnvironment extends Environment {
 
   onMouseUp = e => {
     if (this.isMouseDown) {
-      this.deselect();
+      this.selectNothing();
       this.isMouseDown = false;
     }
   };
