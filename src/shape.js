@@ -131,6 +131,35 @@ export class Shape extends ObjectFrame {
     }
   }
 
+  validate(fromTime, toTime) {
+    this.validateProperties(fromTime, toTime);
+    for (let transform of this.transforms) {
+      transform.validate(fromTime, toTime);
+    }
+  }
+
+  initializeState() {
+    super.initializeState();
+    for (let transform of this.transforms) {
+      transform.initializeState();
+    }
+  }
+
+  synchronizeState(t) {
+    for (let transform of this.transforms) {
+      transform.synchronizeState(t);
+    }
+  }
+
+  synchronizeDom(t, bounds) {
+    for (let transform of this.transforms) {
+      transform.synchronizeDom(t, bounds);
+    }
+
+    const commands = this.transforms.map(transform => transform.state.command).join(' ');
+    this.element.setAttributeNS(null, 'transform', commands);
+  }
+
   show() {
     this.element.setAttributeNS(null, 'visibility', 'visible');
   }
@@ -204,11 +233,6 @@ export class Shape extends ObjectFrame {
     // return this.owns('parent') && (this.get('parent') instanceof Cutout || this.get('parent').isCutoutChild);
     return false;
   }
-
-  // select() {
-    // this.isSelected = true;
-    // this.markers[0].select();
-  // }
 
   initializeMarkDom(root) {
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
@@ -289,18 +313,18 @@ export class Shape extends ObjectFrame {
     });
   }
 
-  select() {
+  select(markerId = 0) {
     this.isSelected = true;
-    this.markers[0].select();
+    this.selectMarker(markerId);
   }
 
   deselect() {
     this.isSelected = false;
     this.markers[0].deselect();
-    // if (this.selectedMarker) {
-      // this.selectedMarker.deselect();
-    // }
-    // this.selectedMarker = undefined;
+    if (this.selectedMarkerId) {
+      this.markers[this.selectedMarkerId].deselect();
+    }
+    this.selectedMarkerId = null;
   }
 
   initializeMarks() {
@@ -364,93 +388,52 @@ export class Shape extends ObjectFrame {
   }
 
   selectMarker(id) {
-    if (id >= this.markers.length) return;
-
-    for (let marker of this.markers) {
-      marker.hideMarks();
-    }
-
-    this.selectedMarker = this.markers[id];
-    this.markers[0].showBackgroundMarks();
-    this.markers[id].select();
-  }
-
-  castCursor(column, row) {
-    let isHit = this.castCursorIntoComponents(column, row); 
-    if (!isHit) {
-      isHit = this.sourceSpans.some(span => span.contains(column, row));
-      if (isHit) {
-        if (this.isSelected) {
-          this.selectMarker(0);
-        } else {
-          this.root.select(this);
-        }
+    if (id !== this.selectedMarkerId) {
+      // Deselect any currently selected marker.
+      if (this.selectedMarkerId !== null) {
+        this.markers[this.selectedMarkerId].deselect();
       }
+
+      this.selectedMarkerId = id;
+      this.markers[id].show();
+
+      // Show shape's background marks no matter what. This will show the outline
+      // or skeleton of the shape.
+      this.markers[0].showBackgroundMarks();
     }
-    return isHit;
   }
 
   castCursorIntoComponents(column, row) {
     for (let transform of this.transforms) {
       if (transform.castCursor(column, row)) {
-        return true;
+        return transform;
       }
     }
-
-    return false;
+    return null;
   }
 
-  configureState() {
-  }
-
-  emplaceDom() {
-  }
-
-  configure(bounds) {
-    // this.state = {};
-    // this.updateDoms = [];
-
-    // const enabledTimeline = this.timedProperties.enabled;
-    // this.agers = [];
-    // this.configureState(bounds);
-    // this.configureTransforms(bounds);
-    // this.computeBoundingBox();
-    // this.initializeMarkDom();
-    // this.configureMarks();
-    // this.connect();
-  }
-
-  computeBoundingBox() {
+  castCursor(root, column, row) {
+    let hitComponent = this.castCursorIntoComponents(column, row);
+    if (hitComponent) {
+      root.select(this, hitComponent.marker.id);
+      return true;
+    } else if (this.sourceSpans.some(span => span.contains(column, row))) {
+      root.select(this, 0);
+      return true;
+    } else {
+      return false;
+    }
   }
 
   initializeMarkState() {
     this.markers = [];
     this.addMarker(new Marker(this));
-  }
-
-  configureMarks() {
-    this.markers = [];
-    this.addMarker(new Marker(this));
     for (let transform of this.transforms) {
-      transform.configureMarks();
-    }
-  }
-
-  configureTransforms(bounds) {
-    for (let transform of this.transforms) {
-      transform.configure(bounds);
+      transform.initializeMarkState();
     }
 
-    if (this.transforms.some(transform => transform.isAnimated)) {
-      this.updateDoms.push(this.updateTransformDom.bind(this));
-    }
-
-    if (this.transforms.every(transform => transform.hasAllDefaults)) {
-      for (let transform of this.transforms) {
-        transform.updateDomCommand(bounds);
-      }
-      this.updateTransformDom(bounds);
-    }
+    this.isSelected = false;
+    this.selectedMarkerId = null;
   }
 
   activate(t) {
@@ -587,9 +570,35 @@ export class Shape extends ObjectFrame {
   }
 
   synchronizeMarkState(t) {
+    let matrix = Matrix.identity();
+    for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
+      const transform = this.transforms[i];
+      transform.synchronizeMarkState(t, matrix);
+      matrix = transform.toMatrix().multiplyMatrix(matrix);
+    }
+    this.state.matrix = matrix;
+    // Subclasses should compute centroid.
   }
 
-  synchronizeMarkDom(t, bounds) {
+  synchronizeMarkExpressions(t) {
+    for (let transform of this.transforms) {
+      transform.synchronizeMarkExpressions(t);
+    }
+  }
+
+  synchronizeMarkDom(bounds, zoomFactor) {
+    // The background marks need to be transformed by any transformations that
+    // have been applied. Only the background marks can be transformed in this
+    // way, as they are just scale-invariant stroke lines. The foreground marks
+    // are circular handles that shouldn't scale.
+    const commands = this.transforms.map(transform => transform.state.command).join(' ');
+    this.backgroundMarkGroup.setAttributeNS(null, 'transform', commands);
+
+    this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${this.state.centroid[0]}, ${-this.state.centroid[1]})`);
+
+    for (let transform of this.transforms) {
+      transform.synchronizeMarkDom(bounds, zoomFactor);
+    }
   }
 
   static inflate(object, inflater) {
@@ -789,7 +798,7 @@ export class Rectangle extends Shape {
     return shape;
   }
 
-  validate(fromTime, toTime) {
+  validateProperties(fromTime, toTime) {
     // Assert required properties.
     this.assertProperty('size');
     this.assertProperty('color');
@@ -826,39 +835,22 @@ export class Rectangle extends Shape {
   }
 
   initializeStaticState() {
-    if (this.hasStatic('rounding')) {
-      this.state.rounding = this.getStatic('rounding').value;
-    }
-
-    if (this.hasStatic('corner')) {
-      this.state.corner = this.getStatic('corner').toPrimitiveArray();
-    }
-
-    if (this.hasStatic('size')) {
-      this.state.size = this.getStatic('size').toPrimitiveArray();
-    }
-
-    if (this.hasStatic('center')) {
-      this.state.center = this.getStatic('center').toPrimitiveArray();
-    }
-
-    if (this.hasStatic('color')) {
-      this.state.color = this.getStatic('color').toPrimitiveArray();
-    }
-
-    if (this.hasStatic('opacity')) {
-      this.state.opacity = this.getStatic('opacity').value;
-    }
+    this.initializeStaticScalarProperty('radius');
+    this.initializeStaticVectorProperty('center');
+    this.initializeStaticVectorProperty('corner');
+    this.initializeStaticVectorProperty('size');
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializePropertyAnimation('rounding');
-    this.initializePropertyAnimation('size');
-    this.initializePropertyAnimation('center');
-    this.initializePropertyAnimation('corner');
-    this.initializePropertyAnimation('color');
-    this.initializePropertyAnimation('opacity');
+    this.initializeDynamicProperty('rounding');
+    this.initializeDynamicProperty('size');
+    this.initializeDynamicProperty('center');
+    this.initializeDynamicProperty('corner');
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
   }
 
   initializeDom(root) {
@@ -890,6 +882,7 @@ export class Rectangle extends Shape {
   }
 
   synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
     if (this.hasCenter) {
       this.positionMark.synchronizeExpressions(this.expressionAt('center', t));
     } else {
@@ -901,6 +894,7 @@ export class Rectangle extends Shape {
 
   synchronizeMarkState(t) {
     super.synchronizeMarkState(t);
+
     this.outlineMark.synchronizeState(this.state.corner, this.state.size, this.state.rounding);
     if (this.hasCenter) {
       this.positionMark.synchronizeState(this.state.center);
@@ -923,17 +917,25 @@ export class Rectangle extends Shape {
         this.state.corner[1] + this.state.size[1],
       ]);
     }
+
+    this.state.centroid = [
+      this.state.corner[0] + this.state.size[0] * 0.5,
+      this.state.corner[1] + this.state.size[1] * 0.5,
+    ];
+    this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
   }
  
-  synchronizeMarkDom(t, bounds) {
-    super.synchronizeMarkDom(t, bounds);
+  synchronizeMarkDom(bounds, zoomFactor) {
+    super.synchronizeMarkDom(bounds, zoomFactor);
     this.outlineMark.synchronizeDom(bounds);
-    this.positionMark.synchronizeDom(bounds);
-    this.widthMark.synchronizeDom(bounds);
-    this.heightMark.synchronizeDom(bounds);
+    this.positionMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
+    this.widthMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
+    this.heightMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
   }
 
   synchronizeState(t) {
+    super.synchronizeState(t);
+
     this.synchronizeStateProperty('rounding', t);
     this.synchronizeStateProperty('size', t);
     this.synchronizeStateProperty('center', t);
@@ -958,6 +960,8 @@ export class Rectangle extends Shape {
   }
 
   synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+
     if (this.state.rounding) {
       this.element.setAttributeNS(null, 'rx', this.state.rounding);
       this.element.setAttributeNS(null, 'ry', this.state.rounding);
@@ -1286,7 +1290,7 @@ export class Circle extends Shape {
     return shape;
   }
 
-  validate(fromTime, toTime) {
+  validateProperties(fromTime, toTime) {
     // Assert required properties.
     this.assertProperty('radius');
     this.assertProperty('center');
@@ -1313,33 +1317,18 @@ export class Circle extends Shape {
   }
 
   initializeStaticState() {
-    if (this.hasStatic('radius')) {
-      this.state.radius = this.getStatic('radius').value;
-    }
-
-    if (this.hasStatic('center')) {
-      this.state.center = this.getStatic('center').toPrimitiveArray();
-    }
-
-    if (this.hasStatic('center')) {
-      this.state.center = this.getStatic('center').toPrimitiveArray();
-    }
-
-    if (this.hasStatic('color')) {
-      this.state.color = this.getStatic('color').toPrimitiveArray();
-    }
-
-    if (this.hasStatic('opacity')) {
-      this.state.opacity = this.getStatic('opacity').value;
-    }
+    this.initializeStaticScalarProperty('radius');
+    this.initializeStaticVectorProperty('center');
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializePropertyAnimation('radius');
-    this.initializePropertyAnimation('center');
-    this.initializePropertyAnimation('color');
-    this.initializePropertyAnimation('opacity');
+    this.initializeDynamicProperty('radius');
+    this.initializeDynamicProperty('center');
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
   }
 
   initializeDom(root) {
@@ -1360,6 +1349,7 @@ export class Circle extends Shape {
   }
 
   synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
     this.centerMark.synchronizeExpressions(this.expressionAt('center', t));
     this.radiusMark.synchronizeExpressions(this.expressionAt('radius', t));
   }
@@ -1372,16 +1362,21 @@ export class Circle extends Shape {
       this.state.center[0] + this.state.radius,
       this.state.center[1],
     ]);
+
+    this.state.centroid = this.state.center;
+    this.state.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
   }
  
-  synchronizeMarkDom(t, bounds) {
-    super.synchronizeMarkDom(t, bounds);
+  synchronizeMarkDom(bounds, zoomFactor) {
+    super.synchronizeMarkDom(bounds, zoomFactor);
     this.outlineMark.synchronizeDom(bounds);
-    this.centerMark.synchronizeDom(bounds);
-    this.radiusMark.synchronizeDom(bounds);
+    this.centerMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
+    this.radiusMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
   }
 
   synchronizeState(t) {
+    super.synchronizeState(t);
+
     this.synchronizeStateProperty('radius', t);
     this.synchronizeStateProperty('center', t);
     this.synchronizeStateProperty('color', t);
@@ -1397,6 +1392,8 @@ export class Circle extends Shape {
   }
 
   synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+
     this.element.setAttributeNS(null, 'r', this.state.radius);
 
     this.element.setAttributeNS(null, 'cx', this.state.center[0]);
@@ -2806,75 +2803,75 @@ export class LinearGradient {
 
 // --------------------------------------------------------------------------- 
 
-const FillMixin = {
-  initializeFill: function() {
-    this.untimedProperties.stroke = Stroke.create(this);
-    this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
-  },
+// const FillMixin = {
+  // initializeFill: function() {
+    // this.untimedProperties.stroke = Stroke.create(this);
+    // this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
+  // },
 
-  configureFill: function(bounds) {
+  // configureFill: function(bounds) {
     // this.element.setAttributeNS(null, 'fill', 'none');
-    this.configureColor(bounds);
-    this.configureStroke(this.untimedProperties.stroke, bounds, false);
-  },
+    // this.configureColor(bounds);
+    // this.configureStroke(this.untimedProperties.stroke, bounds, false);
+  // },
 
-  configureColor: function(bounds) {
-    this.configureScalarProperty('opacity', this, this, this.updateOpacityDom.bind(this), bounds, [], timeline => {
-      if (timeline) {
-        try {
-          timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>opacity</code>. ${e.message}`);
-        }
-      }
-      return true;
-    });
+  // configureColor: function(bounds) {
+    // this.configureScalarProperty('opacity', this, this, this.updateOpacityDom.bind(this), bounds, [], timeline => {
+      // if (timeline) {
+        // try {
+          // timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
+        // } catch (e) {
+          // throw new LocatedException(e.where, `I found an illegal value for <code>opacity</code>. ${e.message}`);
+        // }
+      // }
+      // return true;
+    // });
 
-    this.configureVectorProperty('color', this, this, this.updateColorDom.bind(this), bounds, [], timeline => {
-      if (timeline) {
-        try {
-          timeline.assertList({objectFrame: this}, 3, ExpressionInteger, ExpressionReal);
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>color</code>. ${e.message}`);
-        }
-      }
+    // this.configureVectorProperty('color', this, this, this.updateColorDom.bind(this), bounds, [], timeline => {
+      // if (timeline) {
+        // try {
+          // timeline.assertList({objectFrame: this}, 3, ExpressionInteger, ExpressionReal);
+        // } catch (e) {
+          // throw new LocatedException(e.where, `I found an illegal value for <code>color</code>. ${e.message}`);
+        // }
+      // }
 
       // If the opacity is non-zero anywhen, then color is a required property.
-      const opacityTimeline = this.timedProperties.opacity;
-      const needsColor =
-        !this.isCutoutChild && // Color will get assigned to black in connect.
-        ((opacityTimeline.defaultValue && opacityTimeline.defaultValue.value > 0) ||
-         opacityTimeline.intervals.some(interval => (interval.hasFrom() && interval.fromValue.value > 0 || interval.hasTo() && interval.toValue.value > 0)));
+      // const opacityTimeline = this.timedProperties.opacity;
+      // const needsColor =
+        // !this.isCutoutChild && // Color will get assigned to black in connect.
+        // ((opacityTimeline.defaultValue && opacityTimeline.defaultValue.value > 0) ||
+         // opacityTimeline.intervals.some(interval => (interval.hasFrom() && interval.fromValue.value > 0 || interval.hasTo() && interval.toValue.value > 0)));
 
-      if (!needsColor) {
-        return false;
-      } else if (!timeline) {
-        throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>color</code> isn't set.`);
-      } else {
-        return true;
-      }
-    });
-  },
+      // if (!needsColor) {
+        // return false;
+      // } else if (!timeline) {
+        // throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>color</code> isn't set.`);
+      // } else {
+        // return true;
+      // }
+    // });
+  // },
 
-  updateOpacityDom: function(bounds) {
-    this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
-  },
+  // updateOpacityDom: function(bounds) {
+    // this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
+  // },
 
-  updateColorDom: function(bounds) {
-    const r = Math.floor(this.state.color[0] * 255);
-    const g = Math.floor(this.state.color[1] * 255);
-    const b = Math.floor(this.state.color[2] * 255);
-    const rgb = `rgb(${r}, ${g}, ${b})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
-  },
-};
+  // updateColorDom: function(bounds) {
+    // const r = Math.floor(this.state.color[0] * 255);
+    // const g = Math.floor(this.state.color[1] * 255);
+    // const b = Math.floor(this.state.color[2] * 255);
+    // const rgb = `rgb(${r}, ${g}, ${b})`;
+    // this.element.setAttributeNS(null, 'fill', rgb);
+  // },
+// };
 
-Object.assign(Rectangle.prototype, FillMixin);
-Object.assign(Circle.prototype, FillMixin);
-Object.assign(Ungon.prototype, FillMixin);
-Object.assign(Polygon.prototype, FillMixin);
-Object.assign(Path.prototype, FillMixin);
-Object.assign(Text.prototype, FillMixin);
+// Object.assign(Rectangle.prototype, FillMixin);
+// Object.assign(Circle.prototype, FillMixin);
+// Object.assign(Ungon.prototype, FillMixin);
+// Object.assign(Polygon.prototype, FillMixin);
+// Object.assign(Path.prototype, FillMixin);
+// Object.assign(Text.prototype, FillMixin);
 
 // --------------------------------------------------------------------------- 
 

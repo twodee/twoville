@@ -132,7 +132,6 @@ export class Expression {
     } else if (object.type === 'ExpressionString') {
       e = new ExpressionString(object.value, where, unevaluated, prevalues);
     } else if (object.type === 'ExpressionVector') {
-      console.log("where:", where);
       e = new ExpressionVector(object.value.map(element => inflater.inflate(env, element)), where, unevaluated, prevalues);
     } else if (object.type === 'ExpressionDitto') {
       e = new ExpressionDitto(where, unevaluated, prevalues);
@@ -1810,14 +1809,6 @@ export class ExpressionFunction extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionCircle extends ExpressionFunction {
-  evaluate(env) {
-    return Circle.create(env.callExpression.where);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
 export class ExpressionGrid extends ExpressionFunction {
   evaluate(env) {
     return Grid.create(env.callExpression.where);
@@ -1844,6 +1835,14 @@ export class ExpressionRectangle extends ExpressionShapeFunction {
   }
 }
  
+// --------------------------------------------------------------------------- 
+
+export class ExpressionCircle extends ExpressionShapeFunction {
+  createShape(env) {
+    return Circle.create(env.callExpression.where);
+  }
+}
+
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRaster extends ExpressionFunction {

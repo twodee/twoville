@@ -23,7 +23,6 @@ import {Matrix} from './matrix.js';
 // --------------------------------------------------------------------------- 
 
 export class Marker {
-  static HANDLE_SCALE = 8;
   static RADIAL_MAGNITUDE = 100;
 
   constructor(shape) {
@@ -68,18 +67,23 @@ export class Marker {
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
   }
 
-  setForegroundMarks(...foregroundMarks) {
-    this.foregroundMarks = foregroundMarks;
+  setForegroundMarks(...marks) {
+    this.foregroundMarks = marks;
   }
 
-  setBackgroundMarks(...backgroundMarks) {
-    this.backgroundMarks = backgroundMarks;
+  setCenteredForegroundMarks(...marks) {
+    this.centeredForegroundMarks = marks;
+  }
+
+  setBackgroundMarks(...marks) {
+    this.backgroundMarks = marks;
   }
 
   initializeDom(root) {
     // Let marks create their elements first.
-    this.foregroundMarks.forEach(mark => mark.initializeDom(root));
-    this.backgroundMarks.forEach(mark => mark.initializeDom(root));
+    this.foregroundMarks.forEach(mark => mark.initializeDom(root, this.id));
+    this.centeredForegroundMarks.forEach(mark => mark.initializeDom(root, this.id));
+    this.backgroundMarks.forEach(mark => mark.initializeDom(root, this.id));
 
     // Then add background marks' elements into the hierarchy.
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
@@ -162,30 +166,6 @@ export class Marker {
     this.show();
   }
 
-  // updateState(centroid) {
-    // this.centroid = centroid;
-  // }
-
-  // updateDom(bounds, factor) {
-    // this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${this.centroid[0]} ${-this.centroid[1]})`);
-
-    // for (let mark of this.foregroundMarks) {
-      // mark.updateDom(bounds, factor);
-    // }
-
-    // for (let mark of this.centeredForegroundMarks) {
-      // mark.updateDom(bounds, factor);
-    // }
-
-    // for (let mark of this.backgroundMarks) {
-      // mark.updateDom(bounds, factor);
-    // }
-
-    // for (let mark of this.midgroundMarks) {
-      // mark.updateDom(bounds, factor);
-    // }
-  // }
-
   // updateScale(bounds, factor) {
     // for (let mark of this.foregroundMarks) {
       // mark.updateScale(bounds, factor);
@@ -255,7 +235,7 @@ export class RectangleMark extends Mark {
     this.state.rounding = rounding;
   }
 
-  synchronizeDom(bounds, factor) {
+  synchronizeDom(bounds, matrix) {
     this.element.setAttributeNS(null, 'x', this.state.corner[0]);
     this.element.setAttributeNS(null, 'y', bounds.span - this.state.corner[1] - this.state.size[1]);
     this.element.setAttributeNS(null, 'width', this.state.size[0]);
@@ -264,6 +244,7 @@ export class RectangleMark extends Mark {
       this.element.setAttributeNS(null, 'rx', this.state.rounding);
       this.element.setAttributeNS(null, 'ry', this.state.rounding);
     }
+    // this.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${-matrix.elements[5]})`);
   }
 }
 
@@ -279,7 +260,7 @@ export class CircleMark extends Mark {
     this.state.radius = radius;
   }
 
-  synchronizeDom(bounds, factor) {
+  synchronizeDom(bounds, matrix) {
     this.element.setAttributeNS(null, 'cx', this.state.center[0]);
     this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
     this.element.setAttributeNS(null, 'r', this.state.radius);
@@ -440,7 +421,7 @@ export class TweakableMark extends Mark {
     this.mouseDownAt = null;
   }
 
-  initializeDom(root) {
+  initializeDom(root, markerId) {
     this.element = document.createElementNS(svgNamespace, 'g');
 
     this.circle = document.createElementNS(svgNamespace, 'circle');
@@ -454,10 +435,10 @@ export class TweakableMark extends Mark {
 
     this.mouseAtSvg = root.svg.createSVGPoint();
 
-    this.registerListeners(root);
+    this.registerListeners(root, markerId);
   }
 
-  registerListeners(root) {
+  registerListeners(root, markerId) {
     let onMouseDown, onMouseMove, onMouseUp;
 
     onMouseDown = event => {
@@ -465,7 +446,7 @@ export class TweakableMark extends Mark {
 
       // The shape might not be hovered, which makes the marks appear, but not
       // selected. Clicking forces the shape's selection.
-      root.select(this.shape);
+      root.select(this.shape, markerId);
 
       // I need the expression associated with the mark.
       // I need to record where the mouse is at.
@@ -545,22 +526,11 @@ export class PanMark extends TweakableMark {
 		this.rotation = factors.rotation * 180 / Math.PI;
   }
 
-  updateDom(bounds, factor) {
-    this.updatePositionDom(bounds, factor, this.position);
-  }
-
-  synchronizeDom(bounds) {
-    // const transformedPosition = this.matrix.multiplyVector(position);
-    this.commandString = `translate(${this.state.position[0]} ${bounds.span - this.state.position[1]})`;
-    // this.commandString += ` rotate(${-this.rotation})`;
-    this.element.setAttributeNS(null, "transform", `${this.commandString}`);
-  }
-
-  updatePositionDom(bounds, factor, position) {
-    const transformedPosition = this.matrix.multiplyVector(position);
+  synchronizeDom(bounds, matrix, zoomFactor) {
+    const transformedPosition = matrix.multiplyVector(this.state.position);
     this.commandString = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
-    this.commandString += ` rotate(${-this.rotation})`;
-    this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${Marker.HANDLE_SCALE / factor})`);
+    // this.commandString += ` rotate(${-this.rotation})`;
+    this.element.setAttributeNS(null, "transform", `${this.commandString} scale(${zoomFactor})`);
   }
 
   addHorizontal() {
@@ -606,8 +576,8 @@ export class VectorPanMark extends PanMark {
     super(shape, host, tweakShapeState);
   }
 
-  initializeDom(root) {
-    super.initializeDom(root);
+  initializeDom(root, markerId) {
+    super.initializeDom(root, markerId);
     this.addHorizontal();
     this.addVertical();
   }
@@ -645,8 +615,8 @@ export class HorizontalPanMark extends PanMark {
     this.multiplier = multiplier;
   }
 
-  initializeDom(root) {
-    super.initializeDom(root);
+  initializeDom(root, markerId) {
+    super.initializeDom(root, markerId);
     this.addHorizontal();
   }
 
@@ -682,8 +652,8 @@ export class VerticalPanMark extends PanMark {
     this.multiplier = multiplier;
   }
 
-  initializeDom(root) {
-    super.initializeDom(root);
+  initializeDom(root, markerId) {
+    super.initializeDom(root, markerId);
     this.addVertical();
   }
 

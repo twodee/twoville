@@ -609,7 +609,7 @@ a:active, .copy-button:active, .link-button:active {
   justify-self: stretch;
 }
 
-#mouse-precision-spinner {
+#mouse-precision-spinner, #handle-size-spinner {
   align-self: stretch;
   justify-self: stretch;
   min-width: 0;

@@ -27,50 +27,42 @@ import {
 } from './environment.js';
 
 import {
+  ObjectFrame,
+} from './frame.js';
+
+import {
   Matrix
 } from './matrix.js';
 
 // --------------------------------------------------------------------------- 
 
-export class Transform extends TimelinedEnvironment {
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
-    parentEnvironment.transforms.unshift(this);
+export class Transform extends ObjectFrame {
+  initialize(shape, where) {
+    super.initialize(shape, where);
+    shape.transforms.unshift(this);
     this.sourceSpans = [];
   }
 
   deflate() {
-    const pod = super.deflate();
-    pod.sourceSpans = this.sourceSpans;
-    return pod;
+    const object = super.deflate();
+    object.sourceSpans = this.sourceSpans;
+    return object;
   }
 
-  embody(parentEnvironment, pod) {
-    super.embody(parentEnvironment, pod);
-    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.inflate(subpod));
+  embody(shape, object, inflater) {
+    super.embody(shape, object, inflater);
+    this.sourceSpans = object.sourceSpans.map(subobject => SourceLocation.inflate(subobject));
   }
 
-  configureMarks() {
-    this.marker = new Marker(this.parentEnvironment);
-    this.parentEnvironment.addMarker(this.marker);
+  initializeMarkState() {
+    // Shape.addMarker stamps marker with an id that can be used to identify this marker
+    // later.
+    this.marker = new Marker(this.parentFrame);
+    this.parentFrame.addMarker(this.marker);
   }
 
   castCursor(column, row) {
-    const isHit = this.sourceSpans.some(span => span.contains(column, row));
-    if (isHit) {
-      this.parentEnvironment.root.select(this.parentEnvironment);
-      this.parentEnvironment.selectMarker(this.marker.id);
-    }
-    return isHit;
-  }
-
-  configure(bounds) {
-    this.state = {};
-    this.configureState(bounds);
-  }
-
-  updateInteractionState(matrix) {
-    this.state.matrix = matrix;
+    return this.sourceSpans.some(span => span.contains(column, row));
   }
 }
 
@@ -81,58 +73,73 @@ export class Translate extends Transform {
   static article = 'a';
   static timedIds = ['offset'];
 
-  static create(parentEnvironment, where) {
+  static create(parentFrame, where) {
     const node = new Translate();
-    node.initialize(parentEnvironment, where);
+    node.initialize(parentFrame, where);
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentFrame, pod, inflater) {
     const node = new Translate();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentFrame, pod, inflater);
     return node;
   }
-    
-  configureState(bounds) {
-    this.configureVectorProperty('offset', this, this.parentEnvironment, this.updateDomCommand.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>translate</code> node whose <code>offset</code> was not set.');
-      }
 
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>translate</code> node with an illegal value for <code>offset</code>. ${e.message}`);
-      }
-    });
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('offset');
+
+    // Assert types of extent properties.
+    this.assertVectorType('offset', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('offset', fromTime, toTime);
   }
 
-  configureMarks() {
-    super.configureMarks();
-
-    this.offsetMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('offset', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.state.offset[0] = x;
-      this.state.offset[1] = y;
-    });
-
-    this.marker.addMarks([], [], [this.offsetMark]);
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('offset');
   }
 
-  updateDomCommand(bounds) {
-    this.command = `translate(${this.state.offset[0]} ${-this.state.offset[1]})`;
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('offset');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('offset', t);
+  }
+
+  synchronizeDom(t, bounds) {
+    this.state.command = `translate(${this.state.offset[0]} ${-this.state.offset[1]})`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.offsetMark = new VectorPanMark(this.parentFrame, this, value => this.state.offset = value);
+    this.marker.setCenteredForegroundMarks(this.offsetMark);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.offsetMark.synchronizeExpressions(this.expressionAt('offset', t));
+  }
+
+  synchronizeMarkState(t, matrix) {
+    this.offsetMark.synchronizeState(this.state.offset);
+    this.state.matrix = matrix;
+  }
+
+  synchronizeMarkDom(bounds, zoomFactor) {
+    this.offsetMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
   }
 
   toMatrix() {
     return Matrix.translate(this.state.offset[0], this.state.offset[1]);
   }
 
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.offsetMark.updateState(this.state.offset, this.state.matrix);
-  }
+  // updateInteractionState(matrix) {
+    // super.updateInteractionState(matrix);
+    // this.offsetMark.updateState(this.state.offset, this.state.matrix);
+  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -142,20 +149,20 @@ export class Rotate extends Transform {
   static article = 'a';
   static timedIds = ['degrees', 'pivot'];
 
-  static create(parentEnvironment, where) {
+  static create(parentFrame, where) {
     const node = new Rotate();
-    node.initialize(parentEnvironment, where);
+    node.initialize(parentFrame, where);
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentFrame, pod, inflater) {
     const node = new Rotate();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentFrame, pod, inflater);
     return node;
   }
     
   configureState(bounds) {
-    this.configureScalarProperty('degrees', this, this.parentEnvironment, null, bounds, [], timeline => {
+    this.configureScalarProperty('degrees', this, this.parentFrame, null, bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, 'I found a <code>rotate</code> node whose <code>degrees</code> was not set.');
       }
@@ -168,13 +175,13 @@ export class Rotate extends Transform {
       }
     });
 
-    this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
+    this.configureVectorProperty('pivot', this, this.parentFrame, null, bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, `I found a <code>${this.type}</code> node whose <code>pivot</code> was not set.`);
       }
 
       try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentFrame, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
@@ -185,7 +192,7 @@ export class Rotate extends Transform {
     const pivotTimeline = this.timedProperties.pivot;
 
     if (degreesTimeline.isAnimated || pivotTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateDomCommand.bind(this));
+      this.parentFrame.updateDoms.push(this.updateDomCommand.bind(this));
     }
 
     if (degreesTimeline.hasDefault && pivotTimeline.hasDefault) {
@@ -200,14 +207,14 @@ export class Rotate extends Transform {
   configureMarks() {
     super.configureMarks();
 
-    this.degreesMark = new RotationMark(this.parentEnvironment, this, t => {
-      return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
+    this.degreesMark = new RotationMark(this.parentFrame, this, t => {
+      return this.expressionAt('degrees', this.parentFrame.root.state.t);
     }, degrees => {
       this.state.degrees = degrees;
     });
 
-    this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('pivot', this.parentEnvironment.root.state.t);
+    this.pivotMark = new VectorPanMark(this.parentFrame, null, t => {
+      return this.expressionAt('pivot', this.parentFrame.root.state.t);
     }, ([x, y]) => {
       this.state.pivot[0] = x;
       this.state.pivot[1] = y;
@@ -240,15 +247,15 @@ export class Shear extends Transform {
   static article = 'a';
   static timedIds = ['factors', 'pivot'];
 
-  static create(parentEnvironment, where) {
+  static create(parentFrame, where) {
     const node = new Shear();
-    node.initialize(parentEnvironment, where);
+    node.initialize(parentFrame, where);
     return node;
   }
 
-  static inflater(parentEnvironment, pod, inflater) {
+  static inflater(parentFrame, pod, inflater) {
     const node = new Shear();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentFrame, pod, inflater);
     return node;
   }
 
@@ -260,10 +267,10 @@ export class Shear extends Transform {
   // start() {
     // super.start();
     // this.factorMarks = [
-      // new HorizontalPanMark(this.parentEnvironment, this),
-      // new VerticalPanMark(this.parentEnvironment, this),
+      // new HorizontalPanMark(this.parentFrame, this),
+      // new VerticalPanMark(this.parentFrame, this),
     // ];
-    // this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.pivotMark = new VectorPanMark(this.parentFrame, this);
     // this.marker.addMarks(this.factorMarks, []);
   // }
 
@@ -294,26 +301,26 @@ export class Shear extends Transform {
   // }
 
   configureState(bounds) {
-    this.configureVectorProperty('factors', this, this.parentEnvironment, null, bounds, [], timeline => {
+    this.configureVectorProperty('factors', this, this.parentFrame, null, bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>factors</code> was not set.');
       }
 
       try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentFrame, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>factors</code>. ${e.message}`);
       }
     });
 
-    this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
+    this.configureVectorProperty('pivot', this, this.parentFrame, null, bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, `I found a <code>${this.type}</code> node whose <code>pivot</code> was not set.`);
       }
 
       try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentFrame, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
@@ -324,7 +331,7 @@ export class Shear extends Transform {
     const pivotTimeline = this.timedProperties.pivot;
 
     if (factorsTimeline.isAnimated || pivotTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateDomCommand.bind(this));
+      this.parentFrame.updateDoms.push(this.updateDomCommand.bind(this));
     }
 
     if (factorsTimeline.hasDefault && pivotTimeline.hasDefault) {
@@ -344,22 +351,22 @@ export class Scale extends Transform {
   static article = 'a';
   static timedIds = ['factors', 'pivot'];
 
-  static create(parentEnvironment, where) {
+  static create(parentFrame, where) {
     const node = new Scale();
-    node.initialize(parentEnvironment, where);
+    node.initialize(parentFrame, where);
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentFrame, pod, inflater) {
     const node = new Scale();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentFrame, pod, inflater);
     return node;
   }
 
   // start() {
     // this.factorMarks = [
-      // new HorizontalPanMark(this.parentEnvironment, this),
-      // new VerticalPanMark(this.parentEnvironment, this),
+      // new HorizontalPanMark(this.parentFrame, this),
+      // new VerticalPanMark(this.parentFrame, this),
     // ];
 
     // this.lineMarks = [
@@ -367,7 +374,7 @@ export class Scale extends Transform {
       // new LineMark(),
     // ];
 
-    // this.pivotMark = new VectorPanMark(this.parentEnvironment, this);
+    // this.pivotMark = new VectorPanMark(this.parentFrame, this);
     // this.marker.addMarks([...this.factorMarks, this.pivotMark], [], [], this.lineMarks);
   // }
 
@@ -419,26 +426,26 @@ export class Scale extends Transform {
   // }
 
   configureState(bounds) {
-    this.configureVectorProperty('factors', this, this.parentEnvironment, null, bounds, [], timeline => {
+    this.configureVectorProperty('factors', this, this.parentFrame, null, bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>factors</code> was not set.');
       }
 
       try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentFrame, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>factors</code>. ${e.message}`);
       }
     });
 
-    this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
+    this.configureVectorProperty('pivot', this, this.parentFrame, null, bounds, [], timeline => {
       if (!timeline) {
         throw new LocatedException(this.where, `I found a <code>${this.type}</code> node whose <code>pivot</code> was not set.`);
       }
 
       try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
+        timeline.assertList(this.parentFrame, 2, ExpressionInteger, ExpressionReal);
         return true;
       } catch (e) {
         throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
@@ -449,7 +456,7 @@ export class Scale extends Transform {
     const pivotTimeline = this.timedProperties.pivot;
 
     if (factorsTimeline.isAnimated || pivotTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateDomCommand.bind(this));
+      this.parentFrame.updateDoms.push(this.updateDomCommand.bind(this));
     }
 
     if (factorsTimeline.hasDefault && pivotTimeline.hasDefault) {
@@ -460,21 +467,21 @@ export class Scale extends Transform {
   configureMarks() {
     super.configureMarks();
 
-    this.widthFactorMark = new HorizontalPanMark(this.parentEnvironment, null, 1, t => {
-      return this.expressionAt('factors', this.parentEnvironment.root.state.t).get(0);
+    this.widthFactorMark = new HorizontalPanMark(this.parentFrame, null, 1, t => {
+      return this.expressionAt('factors', this.parentFrame.root.state.t).get(0);
     }, factor => {
       this.state.factors[0] = factor;
     });
 
-    this.heightFactorMark = new VerticalPanMark(this.parentEnvironment, null, 1, t => {
-      const f = this.expressionAt('factors', this.parentEnvironment.root.state.t).get(1);
+    this.heightFactorMark = new VerticalPanMark(this.parentFrame, null, 1, t => {
+      const f = this.expressionAt('factors', this.parentFrame.root.state.t).get(1);
       return f;
     }, factor => {
       this.state.factors[1] = factor;
     });
 
-    this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('pivot', this.parentEnvironment.root.state.t);
+    this.pivotMark = new VectorPanMark(this.parentFrame, null, t => {
+      return this.expressionAt('pivot', this.parentFrame.root.state.t);
     }, ([x, y]) => {
       this.state.pivot[0] = x;
       this.state.pivot[1] = y;

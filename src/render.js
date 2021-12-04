@@ -253,42 +253,16 @@ export class RenderEnvironment extends Frame {
     }
   }
 
-  synchronizeMarkDom(t) {
-    for (let drawable of this.drawables) {
-      drawable.synchronizeMarkDom(t, this.bounds);
-    }
+  get handleScale() {
+    return this.settings.handleSize / this.svg.getScreenCTM().a;
   }
 
-  // flushManipulation() {
-    // const matrix = this.svg.getScreenCTM();
-    // const factor = matrix.a;
-    // for (let shape of this.shapes) {
-      // shape.flushManipulation(this.bounds, factor);
-    // }
-  // }
-
-  // ageContent(t) {
-    // this.state.t = t;
-    // for (let drawable of this.drawables) {
-      // if (drawable.activate(t)) {
-        // drawable.ageDomWithoutMarks(this.bounds, t);
-      // }
-    // }
-  // }
-
-  // ageContentAndInteraction(t) {
-    // const matrix = this.svg.getScreenCTM();
-    // const factor = matrix.a;
-
-    // this.state.t = t;
-    // for (let drawable of this.drawables) {
-      // if (drawable.activate(t)) {
-        // drawable.ageDomWithMarks(this.bounds, t, factor);
-      // }
-    // }
-
-    // this.rescale();
-  // }
+  synchronizeMarkDom() {
+    const handleScale = this.handleScale;
+    for (let drawable of this.drawables) {
+      drawable.synchronizeMarkDom(this.bounds, handleScale);
+    }
+  }
 
   hideMarks() {
     this.sceneMarkGroup.setAttributeNS(null, 'visibility', 'hidden');
@@ -300,7 +274,8 @@ export class RenderEnvironment extends Frame {
   updateViewBox() {
     svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${this.bounds.y} ${this.bounds.width} ${this.bounds.height}`);
     if (this.isStarted) {
-      this.rescale();
+      // this.rescale();
+      this.synchronizeMarkDom();
     }
     this.currentTransform = this.svg.getScreenCTM().inverse();
   }
@@ -367,12 +342,15 @@ export class RenderEnvironment extends Frame {
     }
   }
 
-  select(shape) {
-    // Only select the shape if it's not already selected.
-    if (shape !== this.selectedShape) {
+  select(shape, markerId = 0) {
+    // Only select the shape if it's not already selected. Otherwise the
+    // deselection might lose the selected component.
+    if (this.selectedShape !== shape) {
       this.selectNothing();
       this.selectedShape = shape;
-      this.selectedShape.select();
+      this.selectedShape.select(markerId);
+    } else {
+      this.selectedShape.selectMarker(markerId);
     }
   }
 
@@ -388,9 +366,10 @@ export class RenderEnvironment extends Frame {
     // child shapes aren't in drawables.
     const shape = this.shapes.find(shape => shape.id === oldSelectedShape.id);
     if (shape) {
-      this.select(shape);
-      if (oldSelectedShape.selectedMarker) {
-        shape.selectMarker(oldSelectedShape.selectedMarker.id);
+      if (oldSelectedShape.selectedMarkerId) {
+        this.select(shape, oldSelectedShape.selectedMarkerId);
+      } else {
+        this.select(shape, 0);
       }
     }
   }
@@ -398,10 +377,9 @@ export class RenderEnvironment extends Frame {
   castCursor(column, row) {
     if (this.isTweaking) return;
 
-    let selectedDrawable;
     for (let shape of this.shapes) {
-      if (shape.castCursor(column, row)) {
-        break;
+      if (shape.castCursor(this, column, row)) {
+        return;
       }
     }
   }
@@ -428,8 +406,6 @@ export class RenderEnvironment extends Frame {
         this.bounds.width *= factor;
         this.bounds.height *= factor;
         this.updateViewBox();
-
-        // this.rescale();
       }
     }
   };

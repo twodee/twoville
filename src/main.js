@@ -57,6 +57,7 @@ let defaultSettings = {
   warnOnExit: true,
   showTimeScrubber: false,
   mousePrecision: 2,
+  handleSize: 15,
   theme: 'light',
 };
 const settings = {...defaultSettings};
@@ -185,7 +186,7 @@ function scrubTo(t) {
   scene.synchronizeDom(t);
   scene.synchronizeMarkState(t);
   scene.synchronizeMarkExpressions(t);
-  scene.synchronizeMarkDom(t);
+  scene.synchronizeMarkDom();
 }
 
 function animateFrame() {
@@ -242,14 +243,14 @@ function stopInterpreting() {
   editor.focus();
 }
 
-function postInterpret(pod, successCallback) {
+function postInterpret(frame, successCallback) {
   const oldScene = scene;
   if (oldScene) {
     oldScene.stop();
   }
 
-  console.log("pod:", pod);
-  scene = RenderEnvironment.inflate(document.getElementById('svg'), document.getElementById('mouse-status-label'), pod, settings, Inflater);
+  console.log("frame:", frame);
+  scene = RenderEnvironment.inflate(document.getElementById('svg'), document.getElementById('mouse-status-label'), frame, settings, Inflater);
 
   let hasTweak;
 
@@ -287,8 +288,7 @@ function postInterpret(pod, successCallback) {
 
     shape.synchronizeDom(frameIndex, scene.bounds);
     shape.synchronizeMarkState(frameIndex);
-    shape.synchronizeMarkDom(frameIndex, scene.bounds);
-    // scene.flushManipulation();
+    shape.synchronizeMarkDom(scene.bounds, scene.handleScale);
   };
 
   scene.stopTweak = () => {
@@ -635,6 +635,7 @@ function initialize() {
   const backgroundColorPicker = document.getElementById('background-color-picker');
   const backgroundColorPreview = document.getElementById('background-color-preview');
   const mousePrecisionSpinner = document.getElementById('mouse-precision-spinner');
+  const handleSizeSpinner = document.getElementById('handle-size-spinner');
   const themePicker = document.getElementById('theme-picker');
 
   const uiSynchronizers = {
@@ -674,6 +675,9 @@ function initialize() {
     },
     mousePrecision: () => {
       mousePrecisionSpinner.value = settings.mousePrecision;
+    },
+    handleSize: () => {
+      handleSizeSpinner.value = settings.handleSize;
     },
   };
 
@@ -715,6 +719,20 @@ function initialize() {
       saveSettings();
     } else {
       mousePrecisionSpinner.classList.toggle('bad-input', true);
+    }
+  });
+
+  handleSizeSpinner.value = settings.handleSize;
+  handleSizeSpinner.addEventListener('input', () => {
+    if (handleSizeSpinner.value.match(/^\d+$/)) {
+      handleSizeSpinner.classList.toggle('bad-input', false);
+      settings.handleSize = savedSettings.handleSize = parseInt(handleSizeSpinner.value);
+      saveSettings();
+      if (scene) {
+        scene.synchronizeMarkDom();
+      }
+    } else {
+      handleSizeSpinner.classList.toggle('bad-input', true);
     }
   });
 
@@ -1150,7 +1168,7 @@ function initialize() {
   editor.getSession().selection.on('changeCursor', () => {
     if (scene) {
       const cursor = editor.getCursorPosition();
-      // scene.castCursor(cursor.column, cursor.row);
+      scene.castCursor(cursor.column, cursor.row);
     }
   });
 

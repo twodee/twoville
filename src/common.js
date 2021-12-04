@@ -370,6 +370,45 @@ export class BoundingBox {
   toString() {
     return this.min.toString() + ' | ' + this.max.toString();
   }
+
+  static fromCornerSize(corner, size) {
+    const box = new BoundingBox();
+    box.min = corner;
+    box.max = [
+      corner[0] + size[0],
+      corner[1] + size[1],
+    ];
+    box.isEmpty = false;
+    return box;
+  }
+
+  static fromCenterSize(center, size) {
+    const box = new BoundingBox();
+    box.min = [
+      center[0] - 0.5 * size[0],
+      center[1] - 0.5 * size[1],
+    ];
+    box.max = [
+      box.min[0] + size[0],
+      box.min[1] + size[1],
+    ];
+    box.isEmpty = false;
+    return box;
+  }
+
+  static fromCenterRadius(center, radius) {
+    const box = new BoundingBox();
+    box.min = [
+      center[0] - radius,
+      center[1] - radius,
+    ];
+    box.max = [
+      center[0] + radius,
+      center[1] + radius,
+    ];
+    box.isEmpty = false;
+    return box;
+  }
 }
 
 // --------------------------------------------------------------------------- 

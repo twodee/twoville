@@ -272,7 +272,19 @@ export class ObjectFrame extends Frame {
     }
   }
 
-  initializePropertyAnimation(id) {
+  initializeStaticScalarProperty(id) {
+    if (this.hasStatic(id)) {
+      this.state[id] = this.getStatic(id).value;
+    }
+  }
+
+  initializeStaticVectorProperty(id) {
+    if (this.hasStatic(id)) {
+      this.state[id] = this.getStatic(id).toPrimitiveArray();
+    }
+  }
+
+  initializeDynamicProperty(id) {
     if (this.hasDynamic(id)) {
       const timeline = this.getDynamic(id);
       this.state.animation[id] = {
