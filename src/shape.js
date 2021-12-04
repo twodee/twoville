@@ -292,8 +292,9 @@ export class Shape extends ObjectFrame {
       // The cursor is leaving the shape, but it might just be running across a mark. The marks
       // are all tagged with class tag-SHAPE-ID. Don't unhover if we're on the shape or one of
       // its marks.
-      const isStillShape = event.toElement && event.toElement.classList.contains(`tag-${this.id}`);
-      if (!isStillShape && !this.isSelected) {
+      // const isStillShape = event.toElement && event.toElement.classList.contains(`tag-${this.id}`);
+      // if (!isStillShape && !this.isSelected) {
+      if (this.isUnhoverTransition(event)) {
         this.markers[0].unhover();
       }
 
@@ -311,6 +312,11 @@ export class Shape extends ObjectFrame {
       // if (!this.root.isStale) {
       // }
     });
+  }
+
+  isUnhoverTransition(event) {
+    const isStillShape = event.toElement && event.toElement.classList.contains(`tag-${this.id}`);
+    return !this.isSelected && !isStillShape;
   }
 
   select(markerId = 0) {

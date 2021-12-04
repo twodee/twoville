@@ -81,9 +81,9 @@ export class Marker {
 
   initializeDom(root) {
     // Let marks create their elements first.
-    this.foregroundMarks.forEach(mark => mark.initializeDom(root, this.id));
-    this.centeredForegroundMarks.forEach(mark => mark.initializeDom(root, this.id));
-    this.backgroundMarks.forEach(mark => mark.initializeDom(root, this.id));
+    this.foregroundMarks.forEach(mark => mark.initializeDom(root, this));
+    this.centeredForegroundMarks.forEach(mark => mark.initializeDom(root, this));
+    this.backgroundMarks.forEach(mark => mark.initializeDom(root, this));
 
     // Then add background marks' elements into the hierarchy.
     this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
@@ -128,32 +128,6 @@ export class Marker {
     this.hide();
   }
 
-  // addMarks(foregroundMarks, backgroundMarks, centeredForegroundMarks = [], midgroundMarks = []) {
-    // this.backgroundMarks = backgroundMarks;
-    // this.midgroundMarks = midgroundMarks;
-    // this.foregroundMarks = foregroundMarks;
-    // this.centeredForegroundMarks = centeredForegroundMarks;
-
-    // this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    // this.midgroundMarkGroup.classList.add('mark-group');
-    // for (let mark of this.midgroundMarks) {
-      // mark.element.classList.add('mark');
-      // mark.element.classList.add(`tag-${this.shape.id}`);
-      // this.midgroundMarkGroup.appendChild(mark.element);
-    // }
-
-    // this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    // this.centeredForegroundMarkGroup.classList.add('mark-group');
-    // for (let mark of this.centeredForegroundMarks) {
-      // mark.element.classList.add('mark');
-      // mark.element.classList.add(`tag-${this.shape.id}`);
-      // this.centeredForegroundMarkGroup.appendChild(mark.element);
-    // }
-
-    // this.hide();
-    // this.registerListeners();
-  // }
-
   deselect() {
     this.hide();
   }
@@ -165,21 +139,6 @@ export class Marker {
     this.centeredForegroundMarkGroup.classList.remove('hovered');
     this.show();
   }
-
-  // updateScale(bounds, factor) {
-    // for (let mark of this.foregroundMarks) {
-      // mark.updateScale(bounds, factor);
-    // }
-    // for (let mark of this.centeredForegroundMarks) {
-      // mark.updateScale(bounds, factor);
-    // }
-  // }
-
-  // updateManipulability() {
-    // for (let mark of this.foregroundMarks) {
-      // mark.updateManipulability();
-    // }
-  // }
 
   // registerListeners() {
     // for (let mark of [...this.backgroundMarks, ...this.foregroundMarks, ...this.centeredForegroundMarks, ...this.midgroundMarks]) {
@@ -200,14 +159,6 @@ export class Marker {
       // });
     // }
   // }
-
-  isUnhoverTransition(event) {
-    // Only turn off marks if shape wasn't explicitly click-selected and the
-    // mouse is dragged onto to some other entity that isn't the shape or its
-    // marks.
-    const element = event.toElement;
-    return !this.shape.isSelected && (!element || (!element.classList.contains(`tag-${this.shape.id}`) && !element.classList.contains('grid-line')));
-  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -421,7 +372,7 @@ export class TweakableMark extends Mark {
     this.mouseDownAt = null;
   }
 
-  initializeDom(root, markerId) {
+  initializeDom(root, marker) {
     this.element = document.createElementNS(svgNamespace, 'g');
 
     this.circle = document.createElementNS(svgNamespace, 'circle');
@@ -435,10 +386,10 @@ export class TweakableMark extends Mark {
 
     this.mouseAtSvg = root.svg.createSVGPoint();
 
-    this.registerListeners(root, markerId);
+    this.registerListeners(root, marker);
   }
 
-  registerListeners(root, markerId) {
+  registerListeners(root, marker) {
     let onMouseDown, onMouseMove, onMouseUp;
 
     onMouseDown = event => {
@@ -446,7 +397,7 @@ export class TweakableMark extends Mark {
 
       // The shape might not be hovered, which makes the marks appear, but not
       // selected. Clicking forces the shape's selection.
-      root.select(this.shape, markerId);
+      root.select(this.shape, marker.id);
 
       // I need the expression associated with the mark.
       // I need to record where the mouse is at.
@@ -491,6 +442,15 @@ export class TweakableMark extends Mark {
     };
 
     this.element.addEventListener('mousedown', onMouseDown);
+    
+    this.element.addEventListener('mouseleave', event => {
+      if (this.shape.isUnhoverTransition(event)) {
+        marker.unhover();
+      }
+      // if (event.buttons === 0) {
+        // this.shape.root.contextualizeCursor(event.toElement);
+      // }
+    });
   }
 
   transform(root, event) {
@@ -576,8 +536,8 @@ export class VectorPanMark extends PanMark {
     super(shape, host, tweakShapeState);
   }
 
-  initializeDom(root, markerId) {
-    super.initializeDom(root, markerId);
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
     this.addHorizontal();
     this.addVertical();
   }
@@ -615,8 +575,8 @@ export class HorizontalPanMark extends PanMark {
     this.multiplier = multiplier;
   }
 
-  initializeDom(root, markerId) {
-    super.initializeDom(root, markerId);
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
     this.addHorizontal();
   }
 
@@ -652,8 +612,8 @@ export class VerticalPanMark extends PanMark {
     this.multiplier = multiplier;
   }
 
-  initializeDom(root, markerId) {
-    super.initializeDom(root, markerId);
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
     this.addVertical();
   }
 
