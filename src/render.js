@@ -274,7 +274,6 @@ export class RenderEnvironment extends Frame {
   updateViewBox() {
     svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${this.bounds.y} ${this.bounds.width} ${this.bounds.height}`);
     if (this.isStarted) {
-      // this.rescale();
       this.synchronizeMarkDom();
     }
     this.currentTransform = this.svg.getScreenCTM().inverse();

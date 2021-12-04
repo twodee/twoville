@@ -572,9 +572,10 @@ export class Shape extends ObjectFrame {
   synchronizeMarkState(t) {
     let matrix = Matrix.identity();
     for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      const transform = this.transforms[i];
-      transform.synchronizeMarkState(t, matrix);
-      matrix = transform.toMatrix().multiplyMatrix(matrix);
+      matrix = this.transforms[i].toMatrix().multiplyMatrix(matrix);
+    }
+    for (let transform of this.transforms) {
+      transform.synchronizeMarkState(t, Matrix.identity());
     }
     this.state.matrix = matrix;
     // Subclasses should compute centroid.
@@ -1363,7 +1364,7 @@ export class Circle extends Shape {
       this.state.center[1],
     ]);
 
-    this.state.centroid = this.state.center;
+    this.state.centroid = this.state.matrix.multiplyVector(this.state.center);
     this.state.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
   }
  

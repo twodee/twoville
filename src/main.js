@@ -538,6 +538,10 @@ window.addEventListener('beforeunload', event => {
   }
 });
 
+window.addEventListener('resize', () => {
+  handleSvgResize();
+});
+
 function storeTwos(meld) {
   let twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
   twos = meld(twos);
@@ -1446,7 +1450,7 @@ function initialize() {
       if (!isEmbedded) {
         localStorage.setItem('left-width', parentPanel.children[i - 1].style.width);
       }
-      // resizeWindow();
+      handleSvgResize();
       editor.resize();
 
       e.preventDefault();
@@ -1477,7 +1481,6 @@ function initialize() {
       if (!isEmbedded) {
         localStorage.setItem('right-width', parentPanel.children[i + 1].style.width);
       }
-      // resizeWindow();
       editor.resize();
       for (let docEditor of docEditors) {
         docEditor.resize();
@@ -1486,7 +1489,7 @@ function initialize() {
       const newWidth = bounds.right - e.clientX + 4;
       parentPanel.children[i + 1].style['width'] = `${newWidth}px`;
 
-      // resizeWindow();
+      handleSvgResize();
       e.preventDefault();
     };
 
@@ -1584,7 +1587,7 @@ function initialize() {
         closePanelButton.style.display = 'block';
       }
 
-      // resizeWindow();
+      handleSvgResize();
     };
 
     animation();
@@ -1622,7 +1625,7 @@ function initialize() {
         openPanelButton.style.display = 'block';
       }
 
-      // resizeWindow();
+      handleSvgResize();
     };
 
     animation();
@@ -1631,6 +1634,12 @@ function initialize() {
   initializeDocs();
   rasterRows = {};
   rastersList = document.getElementById('rasters-list');
+}
+
+function handleSvgResize() {
+  if (scene) {
+    scene.synchronizeMarkDom();
+  }
 }
 
 function sendToChris() {

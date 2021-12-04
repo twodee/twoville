@@ -124,7 +124,9 @@ export class Translate extends Transform {
   }
 
   synchronizeMarkState(t, matrix) {
-    this.offsetMark.synchronizeState(this.state.offset);
+    // The mark never moves from the origin. It belongs to a group that is
+    // positioned relative to the shape's centroid.
+    this.offsetMark.synchronizeState([0, 0]);
     this.state.matrix = matrix;
   }
 
@@ -135,11 +137,6 @@ export class Translate extends Transform {
   toMatrix() {
     return Matrix.translate(this.state.offset[0], this.state.offset[1]);
   }
-
-  // updateInteractionState(matrix) {
-    // super.updateInteractionState(matrix);
-    // this.offsetMark.updateState(this.state.offset, this.state.matrix);
-  // }
 }
 
 // --------------------------------------------------------------------------- 
