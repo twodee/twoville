@@ -288,7 +288,7 @@ function postInterpret(frame, successCallback) {
 
     shape.synchronizeDom(frameIndex, scene.bounds);
     shape.synchronizeMarkState(frameIndex);
-    shape.synchronizeMarkDom(scene.bounds, scene.handleScale);
+    shape.synchronizeMarkDom(scene.bounds, scene.handleRadius, scene.radialLength);
   };
 
   scene.stopTweak = () => {

@@ -79,9 +79,9 @@ export class Translate extends Transform {
     return node;
   }
 
-  static inflate(parentFrame, pod, inflater) {
+  static inflate(parentFrame, object, inflater) {
     const node = new Translate();
-    node.embody(parentFrame, pod, inflater);
+    node.embody(parentFrame, object, inflater);
     return node;
   }
 
@@ -130,8 +130,8 @@ export class Translate extends Transform {
     this.state.matrix = matrix;
   }
 
-  synchronizeMarkDom(bounds, zoomFactor) {
-    this.offsetMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.offsetMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
   }
 
   toMatrix() {
@@ -152,74 +152,73 @@ export class Rotate extends Transform {
     return node;
   }
 
-  static inflate(parentFrame, pod, inflater) {
+  static inflate(parentFrame, object, inflater) {
     const node = new Rotate();
-    node.embody(parentFrame, pod, inflater);
+    node.embody(parentFrame, object, inflater);
     return node;
   }
-    
-  configureState(bounds) {
-    this.configureScalarProperty('degrees', this, this.parentFrame, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>rotate</code> node whose <code>degrees</code> was not set.');
-      }
 
-      try {
-        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>rotate</code> node with an illegal value for <code>degrees</code>. ${e.message}`);
-      }
-    });
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('pivot');
+    this.assertProperty('degrees');
 
-    this.configureVectorProperty('pivot', this, this.parentFrame, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, `I found a <code>${this.type}</code> node whose <code>pivot</code> was not set.`);
-      }
+    // Assert types of extent properties.
+    this.assertVectorType('pivot', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('degrees', [ExpressionInteger, ExpressionReal]);
 
-      try {
-        timeline.assertList(this.parentFrame, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
-      }
-    });
-
-    const degreesTimeline = this.timedProperties.degrees;
-    const pivotTimeline = this.timedProperties.pivot;
-
-    if (degreesTimeline.isAnimated || pivotTimeline.isAnimated) {
-      this.parentFrame.updateDoms.push(this.updateDomCommand.bind(this));
-    }
-
-    if (degreesTimeline.hasDefault && pivotTimeline.hasDefault) {
-      this.updateDomCommand(bounds);
-    }
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('pivot', fromTime, toTime);
+    this.assertCompleteTimeline('degrees', fromTime, toTime);
   }
 
-  updateDomCommand(bounds) {
-    this.command = `rotate(${-this.state.degrees} ${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]})`;
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('pivot');
+    this.initializeStaticScalarProperty('degrees');
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('pivot');
+    this.initializeDynamicProperty('degrees');
+  }
 
-    this.degreesMark = new RotationMark(this.parentFrame, this, t => {
-      return this.expressionAt('degrees', this.parentFrame.root.state.t);
-    }, degrees => {
-      this.state.degrees = degrees;
-    });
+  synchronizeState(t) {
+    this.synchronizeStateProperty('pivot', t);
+    this.synchronizeStateProperty('degrees', t);
+  }
 
-    this.pivotMark = new VectorPanMark(this.parentFrame, null, t => {
-      return this.expressionAt('pivot', this.parentFrame.root.state.t);
-    }, ([x, y]) => {
-      this.state.pivot[0] = x;
-      this.state.pivot[1] = y;
-    });
+  synchronizeDom(t, bounds) {
+    this.state.command = `rotate(${-this.state.degrees} ${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]})`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+
+    this.degreesMark = new RotationMark(this.parentFrame, this, value => this.state.degrees = value);
+    this.pivotMark = new VectorPanMark(this.parentFrame, this, value => this.state.pivot = value);
+    this.marker.setForegroundMarks(this.degreesMark, this.pivotMark);
 
     this.wedgeMark = new WedgeMark();
+    this.marker.setMidgroundMarks(this.wedgeMark);
+  }
 
-    this.marker.addMarks([this.pivotMark, this.degreesMark], [], [], [this.wedgeMark]);
+  synchronizeMarkExpressions(t) {
+    this.degreesMark.synchronizeExpressions(this.expressionAt('degrees', t));
+    this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
+  }
+
+  synchronizeMarkState(t, matrix) {
+    this.pivotMark.synchronizeState(this.state.pivot, matrix);
+    this.degreesMark.synchronizeState(this.state.pivot, this.state.degrees, matrix);
+    this.wedgeMark.synchronizeState(this.state.pivot, this.state.degrees);
+    this.state.matrix = matrix;
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.pivotMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
+    this.degreesMark.synchronizeDom(bounds, this.state.matrix, handleRadius, radialLength);
+    this.wedgeMark.synchronizeDom(bounds, radialLength);
   }
 
   toMatrix() {
@@ -227,13 +226,6 @@ export class Rotate extends Transform {
     const rotater = Matrix.rotate(this.state.degrees);
     const originToPivot = Matrix.translate(this.state.pivot[0], this.state.pivot[1]);
     return originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
-  }
-
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.pivotMark.updateState(this.state.pivot, this.state.matrix);
-    this.degreesMark.updateState(this.state.pivot, this.state.degrees, 0, this.state.matrix);
-    this.wedgeMark.updateState(this.state.pivot, this.state.degrees, 0, this.state.matrix);
   }
 }
 
@@ -250,9 +242,9 @@ export class Shear extends Transform {
     return node;
   }
 
-  static inflater(parentFrame, pod, inflater) {
+  static inflater(parentFrame, object, inflater) {
     const node = new Shear();
-    node.embody(parentFrame, pod, inflater);
+    node.embody(parentFrame, object, inflater);
     return node;
   }
 
@@ -354,9 +346,9 @@ export class Scale extends Transform {
     return node;
   }
 
-  static inflate(parentFrame, pod, inflater) {
+  static inflate(parentFrame, object, inflater) {
     const node = new Scale();
-    node.embody(parentFrame, pod, inflater);
+    node.embody(parentFrame, object, inflater);
     return node;
   }
 

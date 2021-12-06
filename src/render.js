@@ -131,20 +131,20 @@ export class RenderEnvironment extends Frame {
     this.mainGroup.setAttributeNS(null, 'id', 'main-group');
     this.svg.appendChild(this.mainGroup);
 
-    this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    this.backgroundMarkGroup.setAttributeNS(null, 'id', 'background-mark-group');
-    this.backgroundMarkGroup.classList.add('mark-group');
-    this.svg.appendChild(this.backgroundMarkGroup);
+    this.staticBackgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.staticBackgroundMarkGroup.setAttributeNS(null, 'id', 'static-background-mark-group');
+    this.staticBackgroundMarkGroup.classList.add('mark-group');
+    this.svg.appendChild(this.staticBackgroundMarkGroup);
 
-    this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    this.midgroundMarkGroup.setAttributeNS(null, 'id', 'midground-mark-group');
-    this.midgroundMarkGroup.classList.add('mark-group');
-    this.svg.appendChild(this.midgroundMarkGroup);
+    this.dynamicBackgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.dynamicBackgroundMarkGroup.setAttributeNS(null, 'id', 'dynamic-background-mark-group');
+    this.dynamicBackgroundMarkGroup.classList.add('mark-group');
+    this.svg.appendChild(this.dynamicBackgroundMarkGroup);
 
-    this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    this.foregroundMarkGroup.setAttributeNS(null, 'id', 'foreground-mark-group');
-    this.foregroundMarkGroup.classList.add('mark-group');
-    this.svg.appendChild(this.foregroundMarkGroup);
+    this.situatedForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.situatedForegroundMarkGroup.setAttributeNS(null, 'id', 'situated-foreground-mark-group');
+    this.situatedForegroundMarkGroup.classList.add('mark-group');
+    this.svg.appendChild(this.situatedForegroundMarkGroup);
 
     this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'id', 'centered-foreground-mark-group');
@@ -154,7 +154,7 @@ export class RenderEnvironment extends Frame {
     this.sceneMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.sceneMarkGroup.setAttributeNS(null, 'id', 'scene-mark-group');
     this.sceneMarkGroup.classList.add('mark-group');
-    this.backgroundMarkGroup.appendChild(this.sceneMarkGroup);
+    this.staticBackgroundMarkGroup.appendChild(this.sceneMarkGroup);
 
     const fromTime = this.getStatic('time').get('start').value;
     const toTime = this.getStatic('time').get('stop').value;
@@ -253,14 +253,19 @@ export class RenderEnvironment extends Frame {
     }
   }
 
-  get handleScale() {
+  get handleRadius() {
     return this.settings.handleSize / this.svg.getScreenCTM().a;
   }
 
+  get radialLength() {
+    return 100 / this.svg.getScreenCTM().a;
+  }
+
   synchronizeMarkDom() {
-    const handleScale = this.handleScale;
+    const handleRadius = this.handleRadius;
+    const radialLength = this.radialLength;
     for (let drawable of this.drawables) {
-      drawable.synchronizeMarkDom(this.bounds, handleScale);
+      drawable.synchronizeMarkDom(this.bounds, handleRadius, radialLength);
     }
   }
 
@@ -318,11 +323,11 @@ export class RenderEnvironment extends Frame {
 
   stale() {
     if (!this.isStale && !this.isTweaking) {
-      const circles = this.foregroundMarkGroup.querySelectorAll('.filled-mark');
+      const circles = this.situatedForegroundMarkGroup.querySelectorAll('.filled-mark');
       for (let circle of circles) {
         circle.classList.add('disabled-mark');
       }
-      const marks = this.foregroundMarkGroup.querySelectorAll('.mark');
+      const marks = this.situatedForegroundMarkGroup.querySelectorAll('.mark');
       for (let mark of marks) {
         mark.classList.add('disabled-mark');
       }

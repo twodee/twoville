@@ -235,14 +235,14 @@ export class Shape extends ObjectFrame {
   }
 
   initializeMarkDom(root) {
-    this.backgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    this.backgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-background-marks`);
+    this.staticBackgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.staticBackgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-background-marks`);
 
-    this.midgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    this.midgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-midground-marks`);
+    this.dynamicBackgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.dynamicBackgroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-midground-marks`);
 
-    this.foregroundMarkGroup = document.createElementNS(svgNamespace, 'g');
-    this.foregroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-foreground-marks`);
+    this.situatedForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
+    this.situatedForegroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-foreground-marks`);
 
     this.centeredForegroundMarkGroup = document.createElementNS(svgNamespace, 'g');
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'id', `element-${this.id}-centered-foreground-marks`);
@@ -252,14 +252,14 @@ export class Shape extends ObjectFrame {
 
     // TODO
     // if (this.has('parent')) {
-      // this.getStatic('parent').backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
-      // this.getStatic('parent').midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
-      // this.getStatic('parent').foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+      // this.getStatic('parent').staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
+      // this.getStatic('parent').dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
+      // this.getStatic('parent').situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
       // this.getStatic('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     // } else {
-      root.backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
-      root.midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
-      root.foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+      root.staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
+      root.dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
+      root.situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
       root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     // }
 
@@ -337,14 +337,14 @@ export class Shape extends ObjectFrame {
     if (!this.markers) return;
 
     if (this.owns('parent')) {
-      this.get('parent').backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
-      this.get('parent').midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
-      this.get('parent').foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+      this.get('parent').staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
+      this.get('parent').dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
+      this.get('parent').situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
       this.get('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     } else {
-      this.root.backgroundMarkGroup.appendChild(this.backgroundMarkGroup);
-      this.root.midgroundMarkGroup.appendChild(this.midgroundMarkGroup);
-      this.root.foregroundMarkGroup.appendChild(this.foregroundMarkGroup);
+      this.root.staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
+      this.root.dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
+      this.root.situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
       this.root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     }
 
@@ -386,10 +386,10 @@ export class Shape extends ObjectFrame {
     });
 
     for (let marker of this.markers) {
-      this.backgroundMarkGroup.appendChild(marker.backgroundMarkGroup);
-      this.midgroundMarkGroup.appendChild(marker.midgroundMarkGroup);
-      this.foregroundMarkGroup.appendChild(marker.foregroundMarkGroup);
-      this.centeredForegroundMarkGroup.appendChild(marker.centeredForegroundMarkGroup);
+      this.staticBackgroundMarkGroup.appendChild(marker.staticBackgroundGroup);
+      this.dynamicBackgroundMarkGroup.appendChild(marker.dynamicBackgroundGroup);
+      this.situatedForegroundMarkGroup.appendChild(marker.situatedForegroundGroup);
+      this.centeredForegroundMarkGroup.appendChild(marker.centeredForegroundGroup);
     }
   }
 
@@ -472,56 +472,56 @@ export class Shape extends ObjectFrame {
     }
   }
 
-  updateTransformDom(bounds) {
+  // updateTransformDom(bounds) {
     // for (let transform of this.transforms) {
       // transform.updateDomCommand(bounds);
     // }
-    const commands = this.transforms.map(transform => transform.command).join(' ');
-    this.element.setAttributeNS(null, 'transform', commands);
-    this.updateMatrix();
-  }
+    // const commands = this.transforms.map(transform => transform.command).join(' ');
+    // this.element.setAttributeNS(null, 'transform', commands);
+    // this.updateMatrix();
+  // }
 
-  updateContentState(bounds) {
+  // updateContentState(bounds) {
     // this.updateTransformDom();
-  }
+  // }
 
-  updateContentDom(bounds, factor) {
-    const commands = this.transforms.map(transform => transform.command).join(' ');
-    this.element.setAttributeNS(null, 'transform', commands);
-  }
+  // updateContentDom(bounds, factor) {
+    // const commands = this.transforms.map(transform => transform.command).join(' ');
+    // this.element.setAttributeNS(null, 'transform', commands);
+  // }
 
-  updateInteractionState(bounds) {
-    for (let marker of this.markers) {
-      marker.updateState(this.state.centroid);
-    }
+  // updateInteractionState(bounds) {
+    // for (let marker of this.markers) {
+      // marker.updateState(this.state.centroid);
+    // }
 
     // The transforms need their prior transform for proper interaction.
-    let matrix = Matrix.identity();
-    for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      const transform = this.transforms[i];
-      transform.updateInteractionState(matrix);
-      matrix = transform.toMatrix().multiplyMatrix(matrix);
-    }
-  }
+    // let matrix = Matrix.identity();
+    // for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
+      // const transform = this.transforms[i];
+      // transform.updateInteractionState(matrix);
+      // matrix = transform.toMatrix().multiplyMatrix(matrix);
+    // }
+  // }
 
-  updateMatrix() {
+  // updateMatrix() {
     // The transforms need their prior transform for proper interaction.
-    let matrix = Matrix.identity();
-    for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      const transform = this.transforms[i];
-      matrix = transform.toMatrix().multiplyMatrix(matrix);
-    }
-    this.state.matrix = matrix;
-  }
+    // let matrix = Matrix.identity();
+    // for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
+      // const transform = this.transforms[i];
+      // matrix = transform.toMatrix().multiplyMatrix(matrix);
+    // }
+    // this.state.matrix = matrix;
+  // }
 
-  updateInteractionDom(bounds, factor) {
-    const commands = this.transforms.map(transform => transform.command).join(' ');
-    this.backgroundMarkGroup.setAttributeNS(null, 'transform', commands);
+  // updateInteractionDom(bounds, factor) {
+    // const commands = this.transforms.map(transform => transform.command).join(' ');
+    // this.staticBackgroundMarkGroup.setAttributeNS(null, 'transform', commands);
 
-    for (let marker of this.markers) {
-      marker.updateDom(bounds, factor);
-    }
-  }
+    // for (let marker of this.markers) {
+      // marker.updateDom(bounds, factor);
+    // }
+  // }
 
   flushManipulation(bounds, factor) {
     this.updateContentState(bounds);
@@ -579,10 +579,11 @@ export class Shape extends ObjectFrame {
     let matrix = Matrix.identity();
     for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
       matrix = this.transforms[i].toMatrix().multiplyMatrix(matrix);
+      this.transforms[i].synchronizeMarkState(t, matrix);
     }
-    for (let transform of this.transforms) {
-      transform.synchronizeMarkState(t, Matrix.identity());
-    }
+    // for (let transform of this.transforms) {
+      // transform.synchronizeMarkState(t, Matrix.identity());
+    // }
     this.state.matrix = matrix;
     // Subclasses should compute centroid.
   }
@@ -593,18 +594,18 @@ export class Shape extends ObjectFrame {
     }
   }
 
-  synchronizeMarkDom(bounds, zoomFactor) {
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
     // The background marks need to be transformed by any transformations that
     // have been applied. Only the background marks can be transformed in this
     // way, as they are just scale-invariant stroke lines. The foreground marks
     // are circular handles that shouldn't scale.
     const commands = this.transforms.map(transform => transform.state.command).join(' ');
-    this.backgroundMarkGroup.setAttributeNS(null, 'transform', commands);
+    this.staticBackgroundMarkGroup.setAttributeNS(null, 'transform', commands);
 
     this.centeredForegroundMarkGroup.setAttributeNS(null, 'transform', `translate(${this.state.centroid[0]}, ${-this.state.centroid[1]})`);
 
     for (let transform of this.transforms) {
-      transform.synchronizeMarkDom(bounds, zoomFactor);
+      transform.synchronizeMarkDom(bounds, handleRadius, radialLength);
     }
   }
 
@@ -872,19 +873,31 @@ export class Rectangle extends Shape {
     this.outlineMark = new RectangleMark();
     this.markers[0].setBackgroundMarks(this.outlineMark);
 
-    let tweakPosition;
-    let multiplier;
+    // If the rectangle is positioned by its center rather than its corner,
+    // then the marks behave a bit differently. The computed corner must be
+    // updated. The size must be halved when treated like a radius.
     if (this.hasCenter) {
-      multiplier = 2;
-      tweakPosition = position => this.state.center = position;
+      this.positionMark = new VectorPanMark(this, null, position => {
+        this.state.center = position;
+        this.state.corner[0] = position[0] - this.state.size[0] * 0.5;
+        this.state.corner[1] = position[1] - this.state.size[1] * 0.5;
+      });
+      this.widthMark = new HorizontalPanMark(this, null, 2, value => {
+        this.state.size[0] = value;
+        this.state.corner[0] = this.state.center[0] - value * 0.5;
+      });
+      this.heightMark = new VerticalPanMark(this, null, 2, value => {
+        this.state.size[1] = value;
+        this.state.corner[1] = this.state.center[1] - value * 0.5;
+      });
     } else {
-      multiplier = 1;
-      tweakPosition = position => this.state.corner = position;
+      this.positionMark = new VectorPanMark(this, null, position => {
+        this.state.corner = position;
+      });
+      this.widthMark = new HorizontalPanMark(this, null, 1, value => this.state.size[0] = value);
+      this.heightMark = new VerticalPanMark(this, null, 1, value => this.state.size[1] = value);
     }
 
-    this.positionMark = new VectorPanMark(this, null, tweakPosition);
-    this.widthMark = new HorizontalPanMark(this, null, multiplier, value => this.state.size[0] = value);
-    this.heightMark = new VerticalPanMark(this, null, multiplier, value => this.state.size[1] = value);
     this.markers[0].setForegroundMarks(this.positionMark, this.widthMark, this.heightMark);
   }
 
@@ -903,16 +916,17 @@ export class Rectangle extends Shape {
     super.synchronizeMarkState(t);
 
     this.outlineMark.synchronizeState(this.state.corner, this.state.size, this.state.rounding);
+    console.log("this.state.matrix:", this.state.matrix);
     if (this.hasCenter) {
-      this.positionMark.synchronizeState(this.state.center);
+      this.positionMark.synchronizeState(this.state.center, this.state.matrix);
       this.widthMark.synchronizeState([
         this.state.center[0] + 0.5 * this.state.size[0],
         this.state.center[1],
-      ]);
+      ], this.state.matrix);
       this.heightMark.synchronizeState([
         this.state.center[0],
         this.state.center[1] + 0.5 * this.state.size[1],
-      ]);
+      ], this.state.matrix);
     } else {
       this.positionMark.synchronizeState(this.state.corner);
       this.widthMark.synchronizeState([
@@ -932,12 +946,12 @@ export class Rectangle extends Shape {
     this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
   }
  
-  synchronizeMarkDom(bounds, zoomFactor) {
-    super.synchronizeMarkDom(bounds, zoomFactor);
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
     this.outlineMark.synchronizeDom(bounds);
-    this.positionMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
-    this.widthMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
-    this.heightMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
+    this.positionMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
+    this.widthMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
+    this.heightMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
   }
 
   synchronizeState(t) {
@@ -984,77 +998,6 @@ export class Rectangle extends Shape {
     this.element.setAttributeNS(null, 'fill', rgb);
 
     this.stroke?.synchronizeDom(t, this.element);
-  }
-
-  computeBoundingBox() {
-    let positions;
-
-    if (this.state.size) {
-      if (this.state.center) {
-        positions = [
-          [
-            this.state.center[0] - this.state.size[0] * 0.5,
-            this.state.center[1] - this.state.size[1] * 0.5,
-          ],
-          [
-            this.state.center[0] + this.state.size[0] * 0.5,
-            this.state.center[1] - this.state.size[1] * 0.5,
-          ],
-          [
-            this.state.center[0] - this.state.size[0] * 0.5,
-            this.state.center[1] + this.state.size[1] * 0.5,
-          ],
-          [
-            this.state.center[0] + this.state.size[0] * 0.5,
-            this.state.center[1] + this.state.size[1] * 0.5,
-          ],
-        ];
-      } else if (this.state.corner) {
-        positions = [
-          [
-            this.state.corner[0],
-            this.state.corner[1],
-          ],
-          [
-            this.state.corner[0] + this.state.size[0],
-            this.state.corner[1],
-          ],
-          [
-            this.state.corner[0],
-            this.state.corner[1] + this.state.size[1],
-          ],
-          [
-            this.state.corner[0] + this.state.size[0],
-            this.state.corner[1] + this.state.size[1],
-          ],
-        ];
-      }
-
-      if (this.untimedProperties.stroke.state.size) {
-        const thickness = this.untimedProperties.stroke.state.size * 0.5;
-        positions[0][0] -= thickness;
-        positions[1][0] += thickness;
-        positions[2][0] -= thickness;
-        positions[3][0] += thickness;
-
-        positions[0][1] -= thickness;
-        positions[1][1] -= thickness;
-        positions[2][1] += thickness;
-        positions[3][1] += thickness;
-      }
-    }
-
-    // if (positions) {
-      // for (let position of positions) {
-        // let transformedPosition = this.state.matrix.multiplyVector(position);
-        // this.boundingBox.enclosePoint(transformedPosition);
-      // }
-    // }
-
-    // console.log("this.boundingBox:", this.boundingBox.toString());
-
-    // TODO: add intervals
-    // TODO: handle transforms
   }
 }
 
@@ -1374,11 +1317,11 @@ export class Circle extends Shape {
     this.state.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
   }
  
-  synchronizeMarkDom(bounds, zoomFactor) {
-    super.synchronizeMarkDom(bounds, zoomFactor);
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
     this.outlineMark.synchronizeDom(bounds);
-    this.centerMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
-    this.radiusMark.synchronizeDom(bounds, this.state.matrix, zoomFactor);
+    this.centerMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
+    this.radiusMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
   }
 
   synchronizeState(t) {
