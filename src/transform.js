@@ -126,12 +126,12 @@ export class Translate extends Transform {
   synchronizeMarkState(t, matrix) {
     // The mark never moves from the origin. It belongs to a group that is
     // positioned relative to the shape's centroid.
-    this.offsetMark.synchronizeState([0, 0]);
+    this.offsetMark.synchronizeState([0, 0], matrix);
     this.state.matrix = matrix;
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
-    this.offsetMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
+    this.offsetMark.synchronizeDom(bounds, handleRadius);
   }
 
   toMatrix() {
@@ -216,8 +216,8 @@ export class Rotate extends Transform {
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
-    this.pivotMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
-    this.degreesMark.synchronizeDom(bounds, this.state.matrix, handleRadius, radialLength);
+    this.pivotMark.synchronizeDom(bounds, handleRadius);
+    this.degreesMark.synchronizeDom(bounds, handleRadius, radialLength);
     this.wedgeMark.synchronizeDom(bounds, radialLength);
   }
 
@@ -352,29 +352,75 @@ export class Scale extends Transform {
     return node;
   }
 
-  // start() {
-    // this.factorMarks = [
-      // new HorizontalPanMark(this.parentFrame, this),
-      // new VerticalPanMark(this.parentFrame, this),
-    // ];
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('factors');
+    this.assertProperty('pivot');
 
-    // this.lineMarks = [
-      // new LineMark(),
-      // new LineMark(),
-    // ];
+    // Assert types of extent properties.
+    this.assertVectorType('factors', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('pivot', 2, [ExpressionInteger, ExpressionReal]);
 
-    // this.pivotMark = new VectorPanMark(this.parentFrame, this);
-    // this.marker.addMarks([...this.factorMarks, this.pivotMark], [], [], this.lineMarks);
-  // }
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('factors', fromTime, toTime);
+    this.assertCompleteTimeline('pivot', fromTime, toTime);
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('factors');
+    this.initializeStaticVectorProperty('pivot');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('factors');
+    this.initializeDynamicProperty('pivot');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('factors', t);
+    this.synchronizeStateProperty('pivot', t);
+  }
+
+  synchronizeDom(t, bounds) {
+    this.state.command = `translate(${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]}) scale(${this.state.factors[0]} ${this.state.factors[1]}) translate(${-this.state.pivot[0]} ${-(bounds.span - this.state.pivot[1])})`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.widthFactorMark = new HorizontalPanMark(this.parentFrame, null, 1, value => this.state.factors[0] = value);
+    this.heightFactorMark = new VerticalPanMark(this.parentFrame, null, 1, value => this.state.factors[1] = value);
+    this.pivotMark = new VectorPanMark(this.parentFrame, null, position => {
+      this.state.pivot[0] = position[0];
+      this.state.pivot[1] = position[1];
+    });
+    this.marker.setCenteredForegroundMarks(this.widthFactorMark, this.heightFactorMark, this.pivotMark);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
+    this.widthFactorMark.synchronizeExpressions(this.expressionAt('factors', t).get(0));
+    this.heightFactorMark.synchronizeExpressions(this.expressionAt('factors', t).get(1));
+  }
+
+  synchronizeMarkState(t, matrix) {
+    this.pivotMark.synchronizeState([0, 0], matrix);
+    this.widthFactorMark.synchronizeState([5, 0], matrix);
+    this.heightFactorMark.synchronizeState([0, 5], matrix);
+    this.state.matrix = matrix;
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.pivotMark.synchronizeDom(bounds, handleRadius);
+    this.widthFactorMark.synchronizeDom(bounds, handleRadius);
+    this.heightFactorMark.synchronizeDom(bounds, handleRadius);
+  }
+
+  toMatrix() {
+    return Matrix.scale(this.state.factors[0], this.state.factors[1]);
+  }
 
   // updateProperties(env, t, bounds, matrix) {
-    // let pivot = this.valueAt(env, 'pivot', t);
-    // this.pivotMark.setExpression(pivot);
-
-    // const factors = this.valueAt(env, 'factors', t);
-    // this.factorMarks[0].setExpression(factors.get(0));
-    // this.factorMarks[1].setExpression(factors.get(1));
-
     // const pivotToOrigin = Matrix.translate(-pivot.get(0).value, -pivot.get(1).value);
     // const scaler = Matrix.scale(factors.get(0).value, factors.get(1).value);
     // const originToPivot = Matrix.translate(pivot.get(0).value, pivot.get(1).value);
@@ -395,9 +441,9 @@ export class Scale extends Transform {
     // this.factorMarks[0].updateProperties(positionX, bounds, applied);
     // this.factorMarks[1].updateProperties(positionY, bounds, applied);
 
-    // const transformedPivot = applied.multiplyVector(pivot);
-    // const transformedPositionX = applied.multiplyVector(positionX);
-    // const transformedPositionY = applied.multiplyVector(positionY);
+    // const transformedPivot = applied.multiplyPosition(pivot);
+    // const transformedPositionX = applied.multiplyPosition(positionX);
+    // const transformedPositionY = applied.multiplyPosition(positionY);
 
     // this.lineMarks[0].updateProperties(transformedPivot, transformedPositionX, bounds, matrix);
     // this.lineMarks[1].updateProperties(transformedPivot, transformedPositionY, bounds, matrix);
@@ -412,91 +458,6 @@ export class Scale extends Transform {
         // `translate(${-pivot.get(0).value} ${-(bounds.span - pivot.get(1).value)})`,
       // ],
     // };
-  // }
-
-  configureState(bounds) {
-    this.configureVectorProperty('factors', this, this.parentFrame, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>scale</code> node whose <code>factors</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this.parentFrame, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>factors</code>. ${e.message}`);
-      }
-    });
-
-    this.configureVectorProperty('pivot', this, this.parentFrame, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, `I found a <code>${this.type}</code> node whose <code>pivot</code> was not set.`);
-      }
-
-      try {
-        timeline.assertList(this.parentFrame, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>scale</code> node with an illegal value for <code>pivot</code>. ${e.message}`);
-      }
-    });
-
-    const factorsTimeline = this.timedProperties.factors;
-    const pivotTimeline = this.timedProperties.pivot;
-
-    if (factorsTimeline.isAnimated || pivotTimeline.isAnimated) {
-      this.parentFrame.updateDoms.push(this.updateDomCommand.bind(this));
-    }
-
-    if (factorsTimeline.hasDefault && pivotTimeline.hasDefault) {
-      this.updateDomCommand(bounds);
-    }
-  }
-
-  configureMarks() {
-    super.configureMarks();
-
-    this.widthFactorMark = new HorizontalPanMark(this.parentFrame, null, 1, t => {
-      return this.expressionAt('factors', this.parentFrame.root.state.t).get(0);
-    }, factor => {
-      this.state.factors[0] = factor;
-    });
-
-    this.heightFactorMark = new VerticalPanMark(this.parentFrame, null, 1, t => {
-      const f = this.expressionAt('factors', this.parentFrame.root.state.t).get(1);
-      return f;
-    }, factor => {
-      this.state.factors[1] = factor;
-    });
-
-    this.pivotMark = new VectorPanMark(this.parentFrame, null, t => {
-      return this.expressionAt('pivot', this.parentFrame.root.state.t);
-    }, ([x, y]) => {
-      this.state.pivot[0] = x;
-      this.state.pivot[1] = y;
-    });
-
-    // this.marker.addMarks([this.widthFactorMark, this.heightFactorMark, this.pivotMark], [], [], []);
-    this.marker.addMarks([], [], [], []);
-
-    // this.lineMarks = [
-      // new LineMark(),
-      // new LineMark(),
-    // ];
-  }
-
-  updateDomCommand(bounds) {
-    this.command = `translate(${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]}) scale(${this.state.factors[0]} ${this.state.factors[1]}) translate(${-this.state.pivot[0]} ${-(bounds.span - this.state.pivot[1])})`;
-  }
-
-  toMatrix() {
-    return Matrix.scale(this.state.factors[0], this.state.factors[1]);
-  }
-
-  // updateMarkerDom(bounds, factor, matrix) {
-    // this.pivotMark.updateDom(bounds, this.state.pivot, factor, matrix);
-    // this.widthFactorMark.updateDom(bounds, [this.state.pivot[0] + this.state.factors[0] * 50, this.state.pivot[1]], factor, matrix);
-    // this.heightFactorMark.updateDom(bounds, [this.state.pivot[0], this.state.pivot[1] + this.state.factors[1] * 50], factor, matrix);
   // }
 }
 

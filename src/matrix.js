@@ -3,11 +3,26 @@ export class Matrix {
     this.elements = elements;
   }
 
-  multiplyVector(v) {
+  multiplyPosition(v) {
     return [
       this.elements[0] * v[0] + this.elements[1] * v[1] + this.elements[2],
       this.elements[3] * v[0] + this.elements[4] * v[1] + this.elements[5],
     ];
+  }
+
+  multiplyVector(v) {
+    return [
+      this.elements[0] * v[0] + this.elements[1] * v[1],
+      this.elements[3] * v[0] + this.elements[4] * v[1],
+    ];
+  }
+
+  get(r, c) {
+    return this.elements[r * 3 + c];
+  }
+
+  set(r, c, value) {
+    this.elements[r * 3 + c] = value;
   }
 
   multiplyMatrix(m) {
@@ -24,6 +39,39 @@ export class Matrix {
       this.elements[6] * m.elements[1] + this.elements[7] * m.elements[4] + this.elements[8] * m.elements[7], // row 2, column 1
       this.elements[6] * m.elements[2] + this.elements[7] * m.elements[5] + this.elements[8] * m.elements[8], // row 2, column 1
     ]);
+  }
+  
+  invert() {
+    const determinant =
+      this.get(0, 0) * (this.get(1, 1) * this.get(2, 2) - this.get(2, 1) * this.get(1, 2)) -
+      this.get(0, 1) * (this.get(1, 0) * this.get(2, 2) - this.get(1, 2) * this.get(2, 0)) -
+      this.get(0, 2) * (this.get(1, 0) * this.get(2, 1) - this.get(1, 1) * this.get(2, 0));
+
+    const inverseDeterminant = 1 / determinant;
+
+    return new Matrix([
+      (this.get(1, 1) * this.get(2, 2) - this.get(2, 1) * this.get(1, 2)) * inverseDeterminant,
+      (this.get(0, 2) * this.get(2, 1) - this.get(0, 1) * this.get(2, 2)) * inverseDeterminant,
+      (this.get(0, 1) * this.get(1, 2) - this.get(0, 2) * this.get(1, 1)) * inverseDeterminant,
+      (this.get(1, 2) * this.get(2, 0) - this.get(1, 0) * this.get(2, 2)) * inverseDeterminant,
+      (this.get(0, 0) * this.get(2, 2) - this.get(0, 2) * this.get(2, 0)) * inverseDeterminant,
+      (this.get(1, 0) * this.get(0, 2) - this.get(0, 0) * this.get(1, 2)) * inverseDeterminant,
+      (this.get(1, 0) * this.get(2, 1) - this.get(2, 0) * this.get(1, 1)) * inverseDeterminant,
+      (this.get(2, 0) * this.get(0, 1) - this.get(0, 0) * this.get(2, 1)) * inverseDeterminant,
+      (this.get(0, 0) * this.get(1, 1) - this.get(1, 0) * this.get(0, 1)) * inverseDeterminant,
+    ]);
+  }
+
+  toString() {
+    let s = '';
+    for (let r = 0; r < 3; ++r) {
+      for (let c = 0; c < 3; ++c) {
+        let value = this.get(r, c).toFixed(3);
+        s += value + ' ';
+      }
+      s += '\n';
+    }
+    return s;
   }
 
   static identity() {

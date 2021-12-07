@@ -192,7 +192,7 @@ export class RectangleMark extends Mark {
     this.state.rounding = rounding;
   }
 
-  synchronizeDom(bounds, matrix) {
+  synchronizeDom(bounds) {
     this.element.setAttributeNS(null, 'x', this.state.corner[0]);
     this.element.setAttributeNS(null, 'y', bounds.span - this.state.corner[1] - this.state.size[1]);
     this.element.setAttributeNS(null, 'width', this.state.size[0]);
@@ -217,7 +217,7 @@ export class CircleMark extends Mark {
     this.state.radius = radius;
   }
 
-  synchronizeDom(bounds, matrix) {
+  synchronizeDom(bounds) {
     this.element.setAttributeNS(null, 'cx', this.state.center[0]);
     this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
     this.element.setAttributeNS(null, 'r', this.state.radius);
@@ -322,26 +322,22 @@ export class WedgeMark extends Mark {
   synchronizeDom(bounds, radialLength) {
     const vector = [radialLength, 0];
 
-    const transformedPivot = this.state.pivot; //this.matrix.multiplyVector(this.pivot);
+    const transformedPivot = this.state.pivot; //this.matrix.multiplyPosition(this.pivot);
 
     const fromRotater = Matrix.rotate(0/*this.priorHeading*/);
-    const fromVector = fromRotater.multiplyVector(vector);
+    const fromVector = fromRotater.multiplyPosition(vector);
     const fromPosition = [
       transformedPivot[0] + fromVector[0],
       transformedPivot[1] + fromVector[1]
     ];
 
-    console.log("vector:", vector);
-    console.log("transformedPivot:", transformedPivot);
-
     // TODO priorHeading
     const toRotater = Matrix.rotate(/*this.priorHeading + */this.state.degrees);
-    const toVector = toRotater.multiplyVector(vector);
+    const toVector = toRotater.multiplyPosition(vector);
     const toPosition = [
       transformedPivot[0] + toVector[0],
       transformedPivot[1] + toVector[1]
     ];
-    console.log("toPosition:", toPosition);
 
     const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.degrees));
     const commands =
@@ -483,19 +479,18 @@ export class PanMark extends TweakableMark {
   }
 
   synchronizeState(position, matrix) {
-    console.log("position:", position);
-    console.log("matrix:", matrix);
     this.state.position = position;
     const [a, c, e, b, d, f] = matrix.elements;
 		const factors = decompose_2d_matrix([a, b, c, d, e, f]);
 		this.state.rotation = factors.rotation * 180 / Math.PI;
+    this.state.matrix = matrix;
   }
 
-  synchronizeDom(bounds, matrix, zoomFactor) {
-    const transformedPosition = matrix.multiplyVector(this.state.position);
+  synchronizeDom(bounds, handleRadius) {
+    const transformedPosition = this.state.matrix.multiplyPosition(this.state.position);
     let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
     command += ` rotate(${-this.state.rotation})`;
-    this.element.setAttributeNS(null, "transform", `${command} scale(${zoomFactor})`);
+    this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
   }
 
   addHorizontal() {
@@ -552,8 +547,11 @@ export class VectorPanMark extends PanMark {
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
-    let x = manipulation.formatReal(this.untweakedExpression.get(0).value + delta[0]);
-    let y = manipulation.formatReal(this.untweakedExpression.get(1).value + delta[1]);
+    const inverse = this.state.matrix.invert();
+    const untransformedOffset = inverse.multiplyVector(delta);
+
+    let x = manipulation.formatReal(this.untweakedExpression.get(0).value + untransformedOffset[0]);
+    let y = manipulation.formatReal(this.untweakedExpression.get(1).value + untransformedOffset[1]);
 
     if (isShiftModified) {
       x = Math.round(x);
@@ -587,8 +585,11 @@ export class HorizontalPanMark extends PanMark {
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const oldValue = this.untweakedExpression.value;
+    const inverse = this.state.matrix.invert();
+    const untransformedOffset = inverse.multiplyVector(delta);
+    const horizontalOffset = untransformedOffset[0];
 
-    let newValue = manipulation.formatReal(oldValue + delta[0] * this.multiplier);
+    let newValue = manipulation.formatReal(oldValue + horizontalOffset * this.multiplier);
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
@@ -620,8 +621,11 @@ export class VerticalPanMark extends PanMark {
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const oldValue = this.untweakedExpression.value;
+    const inverse = this.state.matrix.invert();
+    const untransformedOffset = inverse.multiplyVector(delta);
+    const verticalOffset = untransformedOffset[1];
 
-    let newValue = manipulation.formatReal(oldValue + delta[1] * this.multiplier);
+    let newValue = manipulation.formatReal(oldValue + verticalOffset * this.multiplier);
     if (isShiftModified) {
       newValue = Math.round(newValue);
     }
@@ -652,19 +656,19 @@ export class RotationMark extends PanMark {
 
   synchronizeState(pivot, degrees, matrix) {
     super.synchronizeState(null, matrix);
-    // TODO call superclass
     this.state.degrees = degrees;
     this.state.pivot = pivot;
-    this.state.direction = Matrix.rotate(degrees).multiplyVector([1, 0]);
+    this.state.matrix = matrix;
   }
 
-  synchronizeDom(bounds, matrix, handleRadius, radialLength) {
-    const transformedPosition = matrix.multiplyVector([
-      this.state.pivot[0] + this.state.direction[0] * radialLength,
-      this.state.pivot[1] + this.state.direction[1] * radialLength,
+  synchronizeDom(bounds, handleRadius, radialLength) {
+    const transformedPosition = this.state.matrix.multiplyPosition([
+      this.state.pivot[0] + 1 * radialLength,
+      this.state.pivot[1] + 0 * radialLength,
     ]);
-    const command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
-    // command += ` rotate(${-this.rotation})`;
+    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    // Don't rotate the arc as is done with other pan marks. The rotation glyph
+    // looks more like a rotation cue with the hole at the bottom.
     this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
   }
 
