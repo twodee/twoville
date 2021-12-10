@@ -13,12 +13,14 @@ import {
 
 import {
   HorizontalPanMark,
+  HorizontalScaleMark,
   LineMark,
   Marker,
   PathMark,
   RotationMark,
   VectorPanMark,
   VerticalPanMark,
+  VerticalScaleMark,
   WedgeMark,
 } from './mark.js';
 
@@ -63,6 +65,14 @@ export class Transform extends ObjectFrame {
 
   castCursor(column, row) {
     return this.sourceSpans.some(span => span.contains(column, row));
+  }
+
+  // Get a matrix representation of this transform. This matrix will be used by
+  // the marker system to position marks that appear in the transformation
+  // chain. The SVG transform commands can't be used to place the marks,
+  // because they will possibly distort the shapes of the marks.
+  toMatrix() {
+    throw Error('unsupported transformation');
   }
 }
 
@@ -197,10 +207,10 @@ export class Rotate extends Transform {
 
     this.degreesMark = new RotationMark(this.parentFrame, this, value => this.state.degrees = value);
     this.pivotMark = new VectorPanMark(this.parentFrame, this, value => this.state.pivot = value);
-    this.marker.setForegroundMarks(this.degreesMark, this.pivotMark);
+    this.marker.setSituatedForegroundMarks(this.degreesMark, this.pivotMark);
 
     this.wedgeMark = new WedgeMark();
-    this.marker.setMidgroundMarks(this.wedgeMark);
+    this.marker.setDynamicBackgroundMarks(this.wedgeMark);
   }
 
   synchronizeMarkExpressions(t) {
@@ -388,13 +398,13 @@ export class Scale extends Transform {
 
   initializeMarkState() {
     super.initializeMarkState();
-    this.widthFactorMark = new HorizontalPanMark(this.parentFrame, null, 1, value => this.state.factors[0] = value);
-    this.heightFactorMark = new VerticalPanMark(this.parentFrame, null, 1, value => this.state.factors[1] = value);
+    this.widthFactorMark = new HorizontalScaleMark(this.parentFrame, null, value => this.state.factors[0] = value);
+    this.heightFactorMark = new VerticalScaleMark(this.parentFrame, null, value => this.state.factors[1] = value);
     this.pivotMark = new VectorPanMark(this.parentFrame, null, position => {
       this.state.pivot[0] = position[0];
       this.state.pivot[1] = position[1];
     });
-    this.marker.setCenteredForegroundMarks(this.widthFactorMark, this.heightFactorMark, this.pivotMark);
+    this.marker.setSituatedForegroundMarks(this.widthFactorMark, this.heightFactorMark, this.pivotMark);
   }
 
   synchronizeMarkExpressions(t) {
@@ -404,20 +414,20 @@ export class Scale extends Transform {
   }
 
   synchronizeMarkState(t, matrix) {
-    this.pivotMark.synchronizeState([0, 0], matrix);
-    this.widthFactorMark.synchronizeState([5, 0], matrix);
-    this.heightFactorMark.synchronizeState([0, 5], matrix);
+    this.pivotMark.synchronizeState(this.state.pivot, Matrix.identity());
+    this.widthFactorMark.synchronizeState(this.state.pivot, Matrix.identity());
+    this.heightFactorMark.synchronizeState(this.state.pivot, Matrix.identity());
     this.state.matrix = matrix;
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
     this.pivotMark.synchronizeDom(bounds, handleRadius);
-    this.widthFactorMark.synchronizeDom(bounds, handleRadius);
-    this.heightFactorMark.synchronizeDom(bounds, handleRadius);
+    this.widthFactorMark.synchronizeDom(bounds, handleRadius, radialLength);
+    this.heightFactorMark.synchronizeDom(bounds, handleRadius, radialLength);
   }
 
   toMatrix() {
-    return Matrix.scale(this.state.factors[0], this.state.factors[1]);
+    return Matrix.scaleAround(this.state.factors[0], this.state.factors[1], this.state.pivot[0], this.state.pivot[1]);
   }
 
   // updateProperties(env, t, bounds, matrix) {

@@ -99,6 +99,14 @@ export class Matrix {
     ]);
   }
 
+  static scaleAround(sx, sy, dx, dy) {
+    return new Matrix([
+      sx, 0, -sx * dx + dx,
+      0, sy, -sy * dy + dy,
+      0, 0, 1,
+    ]);
+  }
+
   static translate(dx, dy) {
     return new Matrix([
       1, 0, dx,

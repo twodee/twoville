@@ -68,7 +68,7 @@ export class Marker {
     this.centeredForegroundGroup.setAttributeNS(null, 'visibility', 'hidden');
   }
 
-  setForegroundMarks(...marks) {
+  setSituatedForegroundMarks(...marks) {
     this.situatedForegroundMarks = marks;
   }
 
@@ -76,11 +76,11 @@ export class Marker {
     this.centeredForegroundMarks = marks;
   }
 
-  setBackgroundMarks(...marks) {
+  setStaticBackgroundMarks(...marks) {
     this.staticBackgroundMarks = marks;
   }
 
-  setMidgroundMarks(...marks) {
+  setDynamicBackgroundMarks(...marks) {
     this.dynamicBackgroundMarks = marks;
   }
 
@@ -420,6 +420,8 @@ export class TweakableMark extends Mark {
       this.manipulation.shape = this.shape;
       root.isTweaking = true;
 
+      this.startManipulation();
+
       window.addEventListener('mousemove', onMouseMove);
       window.addEventListener('mouseup', onMouseUp);
 
@@ -468,6 +470,9 @@ export class TweakableMark extends Mark {
   updateManipulability() {
     this.expression = this.getExpression();
     this.element.classList.toggle('disabled-mark', !this.expression);
+  }
+
+  startManipulation() {
   }
 }
 
@@ -635,6 +640,134 @@ export class VerticalPanMark extends PanMark {
 
     const newExpression = new ExpressionReal(newValue);
     return this.manipulation.newCode(newExpression);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class HorizontalScaleMark extends PanMark {
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
+  }
+
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
+    this.addHorizontal();
+  }
+
+  synchronizeState(pivot, matrix) {
+    super.synchronizeState(pivot, matrix);
+    this.state.pivot = pivot;
+  }
+
+  synchronizeExpressions(positionExpression) {
+    this.expression = positionExpression;
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.state.delta = [0, 0];
+  }
+
+  synchronizeDom(bounds, handleRadius, radialLength) {
+    const transformedPosition = this.state.matrix.multiplyPosition([
+      this.state.position[0] + radialLength + this.state.delta[0],
+      this.state.position[1],
+    ]);
+    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    command += ` rotate(${-this.state.rotation})`;
+    this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
+  }
+
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
+    // const oldValue = this.untweakedExpression.value;
+    // const inverse = this.state.matrix.invert();
+    // const untransformedOffset = inverse.multiplyVector(delta);
+    // const horizontalOffset = untransformedOffset[0];
+
+    const factor0 = this.untweakedExpression.value;
+    const scale = (mouseAt.x - this.state.pivot[0]) / (this.mouseDownAt.x - this.state.pivot[0]) * factor0;
+    this.state.delta = delta;
+
+    let newValue = manipulation.formatReal(scale);
+    if (isShiftModified) {
+      newValue = Math.round(newValue * 10) / 10;
+    }
+
+    // this.state.scale = newValue / factor0;
+
+    this.expression.value = newValue;
+    this.tweakShapeState(newValue);
+
+    const newExpression = new ExpressionReal(newValue);
+    return this.manipulation.newCode(newExpression);
+  }
+
+  startManipulation() {
+    this.state.delta = [0, 0];
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class VerticalScaleMark extends PanMark {
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
+  }
+
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
+    this.addVertical();
+  }
+
+  synchronizeState(pivot, matrix) {
+    super.synchronizeState(pivot, matrix);
+    this.state.pivot = pivot;
+  }
+
+  synchronizeExpressions(positionExpression) {
+    this.expression = positionExpression;
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.state.delta = [0, 0];
+  }
+
+  synchronizeDom(bounds, handleRadius, radialLength) {
+    const transformedPosition = this.state.matrix.multiplyPosition([
+      this.state.position[0],
+      this.state.position[1] + radialLength + this.state.delta[1],
+    ]);
+    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    command += ` rotate(${-this.state.rotation})`;
+    this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
+  }
+
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
+    // const oldValue = this.untweakedExpression.value;
+    // const inverse = this.state.matrix.invert();
+    // const untransformedOffset = inverse.multiplyVector(delta);
+    // const horizontalOffset = untransformedOffset[0];
+
+    const factor0 = this.untweakedExpression.value;
+    const scale = (mouseAt.y - this.state.pivot[1]) / (this.mouseDownAt.y - this.state.pivot[1]) * factor0;
+    this.state.delta = delta;
+
+    let newValue = manipulation.formatReal(scale);
+    if (isShiftModified) {
+      newValue = Math.round(newValue * 10) / 10;
+    }
+
+    this.expression.value = newValue;
+    this.tweakShapeState(newValue);
+
+    const newExpression = new ExpressionReal(newValue);
+    return this.manipulation.newCode(newExpression);
+  }
+
+  startManipulation() {
+    this.state.delta = [0, 0];
   }
 }
 
