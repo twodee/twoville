@@ -871,7 +871,6 @@ export class Rectangle extends Shape {
     super.initializeMarkState();
 
     this.outlineMark = new RectangleMark();
-    this.markers[0].setStaticBackgroundMarks(this.outlineMark);
 
     // If the rectangle is positioned by its center rather than its corner,
     // then the marks behave a bit differently. The computed corner must be
@@ -898,7 +897,7 @@ export class Rectangle extends Shape {
       this.heightMark = new VerticalPanMark(this, null, 1, value => this.state.size[1] = value);
     }
 
-    this.markers[0].setSituatedForegroundMarks(this.positionMark, this.widthMark, this.heightMark);
+    this.markers[0].setMarks(this.positionMark, this.widthMark, this.heightMark, this.outlineMark);
   }
 
   synchronizeMarkExpressions(t) {
@@ -1290,11 +1289,9 @@ export class Circle extends Shape {
     super.initializeMarkState();
 
     this.outlineMark = new CircleMark();
-    this.markers[0].setStaticBackgroundMarks(this.outlineMark);
-
     this.centerMark = new VectorPanMark(this, null, value => this.state.center = value);
     this.radiusMark = new HorizontalPanMark(this, null, 1, value => this.state.radius = value);
-    this.markers[0].setSituatedForegroundMarks(this.centerMark, this.radiusMark);
+    this.markers[0].setMarks(this.centerMark, this.radiusMark, this.outlineMark);
   }
 
   synchronizeMarkExpressions(t) {

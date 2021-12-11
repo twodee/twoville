@@ -126,7 +126,8 @@ export class Translate extends Transform {
   initializeMarkState() {
     super.initializeMarkState();
     this.offsetMark = new VectorPanMark(this.parentFrame, this, value => this.state.offset = value);
-    this.marker.setCenteredForegroundMarks(this.offsetMark);
+    this.offsetMark.center();
+    this.marker.setMarks(this.offsetMark);
   }
 
   synchronizeMarkExpressions(t) {
@@ -207,10 +208,8 @@ export class Rotate extends Transform {
 
     this.degreesMark = new RotationMark(this.parentFrame, this, value => this.state.degrees = value);
     this.pivotMark = new VectorPanMark(this.parentFrame, this, value => this.state.pivot = value);
-    this.marker.setSituatedForegroundMarks(this.degreesMark, this.pivotMark);
-
     this.wedgeMark = new WedgeMark();
-    this.marker.setDynamicBackgroundMarks(this.wedgeMark);
+    this.marker.setMarks(this.degreesMark, this.pivotMark, this.wedgeMark);
   }
 
   synchronizeMarkExpressions(t) {
@@ -404,7 +403,7 @@ export class Scale extends Transform {
       this.state.pivot[0] = position[0];
       this.state.pivot[1] = position[1];
     });
-    this.marker.setSituatedForegroundMarks(this.widthFactorMark, this.heightFactorMark, this.pivotMark);
+    this.marker.setMarks(this.widthFactorMark, this.heightFactorMark, this.pivotMark);
   }
 
   synchronizeMarkExpressions(t) {
@@ -415,8 +414,8 @@ export class Scale extends Transform {
 
   synchronizeMarkState(t, matrix) {
     this.pivotMark.synchronizeState(this.state.pivot, Matrix.identity());
-    this.widthFactorMark.synchronizeState(this.state.pivot, Matrix.identity());
-    this.heightFactorMark.synchronizeState(this.state.pivot, Matrix.identity());
+    this.widthFactorMark.synchronizeState(this.state.pivot, this.state.factors[0], Matrix.identity());
+    this.heightFactorMark.synchronizeState(this.state.pivot, this.state.factors[1], Matrix.identity());
     this.state.matrix = matrix;
   }
 

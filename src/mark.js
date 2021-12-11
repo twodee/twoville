@@ -68,67 +68,55 @@ export class Marker {
     this.centeredForegroundGroup.setAttributeNS(null, 'visibility', 'hidden');
   }
 
-  setSituatedForegroundMarks(...marks) {
-    this.situatedForegroundMarks = marks;
-  }
-
-  setCenteredForegroundMarks(...marks) {
-    this.centeredForegroundMarks = marks;
-  }
-
-  setStaticBackgroundMarks(...marks) {
-    this.staticBackgroundMarks = marks;
-  }
-
-  setDynamicBackgroundMarks(...marks) {
-    this.dynamicBackgroundMarks = marks;
+  setMarks(...marks) {
+    this.marks = marks;
   }
 
   initializeDom(root) {
     // Let marks create their elements first.
-    this.situatedForegroundMarks.forEach(mark => mark.initializeDom(root, this));
-    this.centeredForegroundMarks.forEach(mark => mark.initializeDom(root, this));
-    this.staticBackgroundMarks.forEach(mark => mark.initializeDom(root, this));
-    this.dynamicBackgroundMarks.forEach(mark => mark.initializeDom(root, this));
+    this.marks.forEach(mark => mark.initializeDom(root, this));
 
     // Then add background marks' elements into the hierarchy.
     this.staticBackgroundGroup = document.createElementNS(svgNamespace, 'g');
     this.staticBackgroundGroup.classList.add('mark-group');
     this.shape.staticBackgroundMarkGroup.appendChild(this.staticBackgroundGroup);
-    for (let mark of this.staticBackgroundMarks) {
-      mark.element.classList.add('mark');
-      mark.element.classList.add(`tag-${this.shape.id}`);
-      this.staticBackgroundGroup.appendChild(mark.element);
-    }
 
     // Then add foreground marks' elements into the hierarchy.
     this.situatedForegroundGroup = document.createElementNS(svgNamespace, 'g');
     this.situatedForegroundGroup.classList.add('mark-group');
     this.shape.situatedForegroundMarkGroup.appendChild(this.situatedForegroundGroup);
-    for (let mark of this.situatedForegroundMarks) {
-      mark.element.classList.add('mark');
-      mark.element.classList.add(`tag-${this.shape.id}`);
-      this.situatedForegroundGroup.appendChild(mark.element);
-    }
 
     // Then add midground marks' elements into the hierarchy.
     this.dynamicBackgroundGroup = document.createElementNS(svgNamespace, 'g');
     this.dynamicBackgroundGroup.classList.add('mark-group');
     this.shape.dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundGroup);
-    for (let mark of this.dynamicBackgroundMarks) {
-      mark.element.classList.add('mark');
-      mark.element.classList.add(`tag-${this.shape.id}`);
-      this.dynamicBackgroundGroup.appendChild(mark.element);
-    }
 
     // Then add centered foreground marks' elements into the hierarchy.
     this.centeredForegroundGroup = document.createElementNS(svgNamespace, 'g');
     this.centeredForegroundGroup.classList.add('mark-group');
     this.shape.centeredForegroundMarkGroup.appendChild(this.centeredForegroundGroup);
-    for (let mark of this.centeredForegroundMarks) {
-      mark.element.classList.add('mark');
-      mark.element.classList.add(`tag-${this.shape.id}`);
-      this.centeredForegroundGroup.appendChild(mark.element);
+
+    for (let mark of this.marks) {
+      for (let element of mark.staticBackgroundElements) {
+        element.classList.add('mark');
+        element.classList.add(`tag-${this.shape.id}`);
+        this.staticBackgroundGroup.appendChild(element);
+      }
+      for (let element of mark.dynamicBackgroundElements) {
+        element.classList.add('mark');
+        element.classList.add(`tag-${this.shape.id}`);
+        this.dynamicBackgroundGroup.appendChild(element);
+      }
+      for (let element of mark.situatedForegroundElements) {
+        element.classList.add('mark');
+        element.classList.add(`tag-${this.shape.id}`);
+        this.situatedForegroundGroup.appendChild(element);
+      }
+      for (let element of mark.centeredForegroundElements) {
+        element.classList.add('mark');
+        element.classList.add(`tag-${this.shape.id}`);
+        this.centeredForegroundGroup.appendChild(element);
+      }
     }
 
     this.hide();
@@ -145,26 +133,6 @@ export class Marker {
     this.centeredForegroundGroup.classList.remove('hovered');
     this.show();
   }
-
-  // registerListeners() {
-    // for (let mark of [...this.staticBackgroundMarks, ...this.situatedForegroundMarks, ...this.centeredForegroundMarks, ...this.dynamicBackgroundMarks]) {
-      // mark.element.addEventListener('mouseenter', event => {
-        // if (event.buttons === 0) {
-          // this.shape.root.contextualizeCursor(event.toElement);
-        // }
-      // });
-
-      // mark.element.addEventListener('mouseleave', event => {
-        // if (this.isUnhoverTransition(event)) {
-          // this.unhoverMarks();
-        // }
-
-        // if (event.buttons === 0) {
-          // this.shape.root.contextualizeCursor(event.toElement);
-        // }
-      // });
-    // }
-  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -172,6 +140,10 @@ export class Marker {
 export class Mark {
   constructor() {
     this.initializeState();
+    this.staticBackgroundElements = [];
+    this.dynamicBackgroundElements = [];
+    this.situatedForegroundElements = [];
+    this.centeredForegroundElements = [];
   }
 
   initializeState() {
@@ -184,6 +156,7 @@ export class Mark {
 export class RectangleMark extends Mark {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'rect');
+    this.staticBackgroundElements.push(this.element);
   }
 
   synchronizeState(corner, size, rounding) {
@@ -210,6 +183,7 @@ export class RectangleMark extends Mark {
 export class CircleMark extends Mark {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'circle');
+    this.staticBackgroundElements.push(this.element);
   }
 
   synchronizeState(center, radius) {
@@ -312,6 +286,7 @@ export class PathMark {
 export class WedgeMark extends Mark {
   initializeDom(root, marker) {
     this.element = document.createElementNS(svgNamespace, 'path');
+    this.dynamicBackgroundElements.push(this.element);
   }
 
   synchronizeState(pivot, degrees) {
@@ -374,10 +349,20 @@ export class TweakableMark extends Mark {
     this.tweakShapeState = tweakShapeState;
     this.host = host ?? shape;
     this.mouseDownAt = null;
+    this.isCentered = false;
+  }
+
+  center() {
+    this.isCentered = true;
   }
 
   initializeDom(root, marker) {
     this.element = document.createElementNS(svgNamespace, 'g');
+    if (this.isCentered) {
+      this.centeredForegroundElements.push(this.element);
+    } else {
+      this.situatedForegroundElements.push(this.element);
+    }
 
     this.circle = document.createElementNS(svgNamespace, 'circle');
     this.circle.classList.add('mark-piece');
@@ -445,6 +430,7 @@ export class TweakableMark extends Mark {
       window.removeEventListener('mouseup', onMouseUp);
       // this.shape.root.contextualizeCursor(event.toElement);
       root.stopTweak();
+      this.stopManipulation();
     };
 
     this.element.addEventListener('mousedown', onMouseDown);
@@ -473,6 +459,9 @@ export class TweakableMark extends Mark {
   }
 
   startManipulation() {
+  }
+  
+  stopManipulation() {
   }
 }
 
@@ -645,18 +634,27 @@ export class VerticalPanMark extends PanMark {
 
 // --------------------------------------------------------------------------- 
 
-export class HorizontalScaleMark extends PanMark {
+export class ScaleMark extends PanMark {
   constructor(shape, host, tweakShapeState) {
     super(shape, host, tweakShapeState);
   }
 
   initializeDom(root, marker) {
     super.initializeDom(root, marker);
-    this.addHorizontal();
+
+    this.pivotToHandleLine = document.createElementNS(svgNamespace, 'line');
+    this.pivotToHandleLine.setAttributeNS(null, 'y1', 0);
+    this.pivotToHandleLine.setAttributeNS(null, 'x1', 0);
+    this.pivotToHandleLine.setAttributeNS(null, 'y2', 0);
+    this.pivotToHandleLine.setAttributeNS(null, 'x2', 10);
+    this.pivotToHandleLine.classList.add(`tag-${this.shape.id}`);
+
+    this.dynamicBackgroundElements.push(this.pivotToHandleLine);
   }
 
-  synchronizeState(pivot, matrix) {
+  synchronizeState(pivot, factor, matrix) {
     super.synchronizeState(pivot, matrix);
+    this.state.factor = factor;
     this.state.pivot = pivot;
   }
 
@@ -669,14 +667,43 @@ export class HorizontalScaleMark extends PanMark {
     this.state.delta = [0, 0];
   }
 
+  startManipulation() {
+    this.state.delta = [0, 0];
+    this.state.initialSign = Math.sign(this.state.factor);
+  }
+
+  stopManipulation() {
+    delete this.state.initialSign;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class HorizontalScaleMark extends ScaleMark {
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
+  }
+
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
+    this.addHorizontal();
+  }
+
   synchronizeDom(bounds, handleRadius, radialLength) {
+    const sign = this.state.initialSign ? this.state.initialSign : Math.sign(this.state.factor);
+    const transformedPivot = this.state.matrix.multiplyPosition(this.state.pivot);
     const transformedPosition = this.state.matrix.multiplyPosition([
-      this.state.position[0] + radialLength + this.state.delta[0],
+      this.state.position[0] + radialLength * sign + this.state.delta[0],
       this.state.position[1],
     ]);
     let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
     command += ` rotate(${-this.state.rotation})`;
     this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
+
+    this.pivotToHandleLine.setAttributeNS(null, 'x1', transformedPivot[0]);
+    this.pivotToHandleLine.setAttributeNS(null, 'y1', bounds.span - transformedPivot[1]);
+    this.pivotToHandleLine.setAttributeNS(null, 'x2', transformedPosition[0]);
+    this.pivotToHandleLine.setAttributeNS(null, 'y2', bounds.span - transformedPosition[1]);
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
@@ -694,23 +721,17 @@ export class HorizontalScaleMark extends PanMark {
       newValue = Math.round(newValue * 10) / 10;
     }
 
-    // this.state.scale = newValue / factor0;
-
     this.expression.value = newValue;
     this.tweakShapeState(newValue);
 
     const newExpression = new ExpressionReal(newValue);
     return this.manipulation.newCode(newExpression);
   }
-
-  startManipulation() {
-    this.state.delta = [0, 0];
-  }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class VerticalScaleMark extends PanMark {
+export class VerticalScaleMark extends ScaleMark {
   constructor(shape, host, tweakShapeState) {
     super(shape, host, tweakShapeState);
   }
@@ -720,28 +741,21 @@ export class VerticalScaleMark extends PanMark {
     this.addVertical();
   }
 
-  synchronizeState(pivot, matrix) {
-    super.synchronizeState(pivot, matrix);
-    this.state.pivot = pivot;
-  }
-
-  synchronizeExpressions(positionExpression) {
-    this.expression = positionExpression;
-  }
-
-  initializeState() {
-    super.initializeState();
-    this.state.delta = [0, 0];
-  }
-
   synchronizeDom(bounds, handleRadius, radialLength) {
+    const sign = this.state.initialSign ? this.state.initialSign : Math.sign(this.state.factor);
+    const transformedPivot = this.state.matrix.multiplyPosition(this.state.pivot);
     const transformedPosition = this.state.matrix.multiplyPosition([
       this.state.position[0],
-      this.state.position[1] + radialLength + this.state.delta[1],
+      this.state.position[1] + radialLength * sign + this.state.delta[1],
     ]);
     let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
     command += ` rotate(${-this.state.rotation})`;
     this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
+
+    this.pivotToHandleLine.setAttributeNS(null, 'x1', transformedPivot[0]);
+    this.pivotToHandleLine.setAttributeNS(null, 'y1', bounds.span - transformedPivot[1]);
+    this.pivotToHandleLine.setAttributeNS(null, 'x2', transformedPosition[0]);
+    this.pivotToHandleLine.setAttributeNS(null, 'y2', bounds.span - transformedPosition[1]);
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
@@ -764,10 +778,6 @@ export class VerticalScaleMark extends PanMark {
 
     const newExpression = new ExpressionReal(newValue);
     return this.manipulation.newCode(newExpression);
-  }
-
-  startManipulation() {
-    this.state.delta = [0, 0];
   }
 }
 
