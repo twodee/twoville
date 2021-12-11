@@ -453,24 +453,24 @@ export class Shape extends ObjectFrame {
     }
   }
 
-  ageDomWithoutMarks(bounds, t) {
-    for (let ager of this.agers) {
-      ager(this, t);
-    }
+  // ageDomWithoutMarks(bounds, t) {
+    // for (let ager of this.agers) {
+      // ager(this, t);
+    // }
 
-    for (let updateDom of this.updateDoms) {
-      updateDom(bounds);
-    }
-  }
+    // for (let updateDom of this.updateDoms) {
+      // updateDom(bounds);
+    // }
+  // }
 
-  ageDomWithMarks(bounds, t, factor) {
-    this.ageDomWithoutMarks(bounds, t);
-    this.updateInteractionState(bounds);
-    this.updateInteractionDom(bounds, factor);
-    for (let marker of this.markers) {
-      marker.updateManipulability();
-    }
-  }
+  // ageDomWithMarks(bounds, t, factor) {
+    // this.ageDomWithoutMarks(bounds, t);
+    // this.updateInteractionState(bounds);
+    // this.updateInteractionDom(bounds, factor);
+    // for (let marker of this.markers) {
+      // marker.updateManipulability();
+    // }
+  // }
 
   // updateTransformDom(bounds) {
     // for (let transform of this.transforms) {
@@ -546,45 +546,46 @@ export class Shape extends ObjectFrame {
     // this.updateMarkerDom(bounds, factor);
   }
 
-  configureStroke(stateHost, bounds, isRequired) {
-    this.strokeStateHost = stateHost;
-    configureStroke(stateHost, this, bounds, isRequired);
-  }
+  // configureStroke(stateHost, bounds, isRequired) {
+    // this.strokeStateHost = stateHost;
+    // configureStroke(stateHost, this, bounds, isRequired);
+  // }
 
-  updateStrokeColorDom(bounds) {
-    const r = Math.floor(this.strokeStateHost.state.color[0] * 255);
-    const g = Math.floor(this.strokeStateHost.state.color[1] * 255);
-    const b = Math.floor(this.strokeStateHost.state.color[2] * 255);
-    const rgb = `rgb(${r}, ${g}, ${b})`;
-    this.element.setAttributeNS(null, 'stroke', rgb);
-  }
+  // updateStrokeColorDom(bounds) {
+    // const r = Math.floor(this.strokeStateHost.state.color[0] * 255);
+    // const g = Math.floor(this.strokeStateHost.state.color[1] * 255);
+    // const b = Math.floor(this.strokeStateHost.state.color[2] * 255);
+    // const rgb = `rgb(${r}, ${g}, ${b})`;
+    // this.element.setAttributeNS(null, 'stroke', rgb);
+  // }
 
-  updateStrokeSizeDom(bounds) {
-    this.element.setAttributeNS(null, 'stroke-width', this.strokeStateHost.state.size);
-  }
+  // updateStrokeSizeDom(bounds) {
+    // this.element.setAttributeNS(null, 'stroke-width', this.strokeStateHost.state.size);
+  // }
 
-  updateStrokeOpacityDom(bounds) {
-    this.element.setAttributeNS(null, 'stroke-opacity', this.strokeStateHost.state.opacity);
-  }
+  // updateStrokeOpacityDom(bounds) {
+    // this.element.setAttributeNS(null, 'stroke-opacity', this.strokeStateHost.state.opacity);
+  // }
   
-  updateStrokeDashDom(sequence) {
-    this.element.setAttributeNS(null, 'stroke-dasharray', sequence);
-  }
+  // updateStrokeDashDom(sequence) {
+    // this.element.setAttributeNS(null, 'stroke-dasharray', sequence);
+  // }
   
-  updateStrokeJoinDom(type) {
-    this.element.setAttributeNS(null, 'stroke-linejoin', type);
-  }
+  // updateStrokeJoinDom(type) {
+    // this.element.setAttributeNS(null, 'stroke-linejoin', type);
+  // }
 
   synchronizeMarkState(t) {
-    let matrix = Matrix.identity();
+    let preMatrix = Matrix.identity();
     for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      matrix = this.transforms[i].toMatrix().multiplyMatrix(matrix);
-      this.transforms[i].synchronizeMarkState(t, matrix);
+      const postMatrix = this.transforms[i].toMatrix().multiplyMatrix(preMatrix);
+      this.transforms[i].synchronizeMarkState(t, preMatrix, postMatrix);
+      preMatrix = postMatrix;
     }
     // for (let transform of this.transforms) {
       // transform.synchronizeMarkState(t, Matrix.identity());
     // }
-    this.state.matrix = matrix;
+    this.state.matrix = preMatrix;
     // Subclasses should compute centroid.
   }
 

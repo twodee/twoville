@@ -90,36 +90,36 @@ export class InterpreterFrame extends Frame {
 
   bindGlobalProperties() {
     // Time properties
-    const timeProperties = StaticContext.create();
-    timeProperties.bind('start', new ExpressionInteger(0));
-    timeProperties.bind('stop', new ExpressionInteger(100));
-    timeProperties.bind('delay', new ExpressionReal(0.02));
+    const timeProperties = Frame.create();
+    timeProperties.bindStatic('start', new ExpressionInteger(0));
+    timeProperties.bindStatic('stop', new ExpressionInteger(100));
+    timeProperties.bindStatic('delay', new ExpressionReal(0.02));
     this.bindStatic('time', timeProperties);
 
-    // Viewport properties
-    const viewProperties = StaticContext.create();
-    viewProperties.bind('autofit', new ExpressionBoolean(false));
-    viewProperties.bind('size', new ExpressionVector([
+    // View properties
+    const viewProperties = Frame.create();
+    viewProperties.bindStatic('autofit', new ExpressionBoolean(false));
+    viewProperties.bindStatic('size', new ExpressionVector([
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));
     this.bindStatic('view', viewProperties);
 
     // Export properties
-    const exportProperties = StaticContext.create();
-    exportProperties.bind('name', new ExpressionString('twoville'));
-    exportProperties.bind('loop', new ExpressionInteger(0));
-    exportProperties.bind('delay', new ExpressionInteger(10));
-    exportProperties.bind('size', new ExpressionVector([
+    const exportProperties = Frame.create();
+    exportProperties.bindStatic('name', new ExpressionString('twoville'));
+    exportProperties.bindStatic('loop', new ExpressionInteger(0));
+    exportProperties.bindStatic('delay', new ExpressionInteger(10));
+    exportProperties.bindStatic('size', new ExpressionVector([
       new ExpressionInteger(100),
       new ExpressionInteger(100)
     ]));
-    exportProperties.bind('transparency', new ExpressionVector([
+    exportProperties.bindStatic('transparency', new ExpressionVector([
       new ExpressionReal(0),
       new ExpressionReal(0),
       new ExpressionReal(0),
     ]));
-    exportProperties.bind('background', new ExpressionVector([
+    exportProperties.bindStatic('background', new ExpressionVector([
       new ExpressionReal(1),
       new ExpressionReal(1),
       new ExpressionReal(1),

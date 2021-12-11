@@ -134,11 +134,10 @@ export class Translate extends Transform {
     this.offsetMark.synchronizeExpressions(this.expressionAt('offset', t));
   }
 
-  synchronizeMarkState(t, matrix) {
+  synchronizeMarkState(t, preMatrix, postMatrix) {
     // The mark never moves from the origin. It belongs to a group that is
     // positioned relative to the shape's centroid.
-    this.offsetMark.synchronizeState([0, 0], matrix);
-    this.state.matrix = matrix;
+    this.offsetMark.synchronizeState([0, 0], postMatrix);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -217,11 +216,10 @@ export class Rotate extends Transform {
     this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
   }
 
-  synchronizeMarkState(t, matrix) {
-    this.pivotMark.synchronizeState(this.state.pivot, matrix);
-    this.degreesMark.synchronizeState(this.state.pivot, this.state.degrees, matrix);
+  synchronizeMarkState(t, preMatrix, postMatrix) {
+    this.pivotMark.synchronizeState(this.state.pivot, preMatrix);
+    this.degreesMark.synchronizeState(this.state.pivot, this.state.degrees, postMatrix);
     this.wedgeMark.synchronizeState(this.state.pivot, this.state.degrees);
-    this.state.matrix = matrix;
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -412,11 +410,10 @@ export class Scale extends Transform {
     this.heightFactorMark.synchronizeExpressions(this.expressionAt('factors', t).get(1));
   }
 
-  synchronizeMarkState(t, matrix) {
-    this.pivotMark.synchronizeState(this.state.pivot, Matrix.identity());
-    this.widthFactorMark.synchronizeState(this.state.pivot, this.state.factors[0], Matrix.identity());
-    this.heightFactorMark.synchronizeState(this.state.pivot, this.state.factors[1], Matrix.identity());
-    this.state.matrix = matrix;
+  synchronizeMarkState(t, preMatrix, postMatrix) {
+    this.pivotMark.synchronizeState(this.state.pivot, preMatrix);
+    this.widthFactorMark.synchronizeState(this.state.pivot, this.state.factors[0], preMatrix);
+    this.heightFactorMark.synchronizeState(this.state.pivot, this.state.factors[1], preMatrix);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {

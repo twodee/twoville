@@ -1777,7 +1777,8 @@ export class ExpressionWith extends Expression {
   evaluate(env) {
     let instance = this.scope.evaluate(env);
 
-    if (!(instance instanceof ObjectFrame || instance instanceof ExpressionVector)) {
+    // TODO is it ObjectFrame or Frame that I want to ensure?
+    if (!(instance instanceof Frame || instance instanceof ExpressionVector)) {
       throw new LocatedException(this.scope.where, `I encountered a <code>with</code> expression whose subject isn't an environment or a vector.`);
     }
 
@@ -1785,7 +1786,7 @@ export class ExpressionWith extends Expression {
       instance.sourceSpans.push(this.where);
     }
 
-    if (instance instanceof ObjectFrame) {
+    if (instance instanceof Frame) {
       this.body.evaluate({...env, frames: [instance, ...env.frames]});
     } else {
       instance.forEach(element => {

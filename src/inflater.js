@@ -49,6 +49,8 @@ export class Inflater {
       // return Environment.inflate(env, object);
     } else if (object.type === 'StaticContext') {
       return StaticContext.inflate(env, object, Inflater);
+    } else if (object.type === 'frame') {
+      return Frame.inflate(env, object, Inflater);
     } else if (object.type === 'function-signature') {
       return FunctionDefinition.inflate(object, Inflater);
     } else if (object.type === 'reference') {
