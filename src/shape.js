@@ -89,6 +89,28 @@ import {
 
 // --------------------------------------------------------------------------- 
 
+/*
+In the source code, the first transform added to the shape is the first one to
+be be applied. The last transform is the last to be applied. These are stored
+in the transforms property of a shape from last-applied to first-applied. This
+order matches the order expected in the SVG transform attribute.
+
+For example, consider this rectangle:
+
+  with rectangle()
+    // ...
+    with translate()
+      offset = [5, 6]
+    with rotate()
+      degrees = 45
+      pivot = :zero2
+
+The transforms property will look like this:
+
+  [rotate(45, :zero2), translate(5, 6)]
+
+*/
+
 export class Shape extends ObjectFrame {
   initialize(where) {
     super.initialize(null, where);
@@ -178,6 +200,10 @@ export class Shape extends ObjectFrame {
   addMarker(marker) {
     marker.id = this.markers.length;
     this.markers.push(marker);
+  }
+
+  addTransform(transform) {
+    this.transforms.unshift(transform);
   }
   
   connectToParent() {
@@ -576,16 +602,56 @@ export class Shape extends ObjectFrame {
   // }
 
   synchronizeMarkState(t) {
-    let preMatrix = Matrix.identity();
-    for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      const postMatrix = this.transforms[i].toMatrix().multiplyMatrix(preMatrix);
-      this.transforms[i].synchronizeMarkState(t, preMatrix, postMatrix);
-      preMatrix = postMatrix;
+    // let preMatrix = Matrix.identity();
+    // let inverse = Matrix.identity();
+
+    let matrices = this.transforms.map(transform => transform.toMatrix());
+    let inverseMatrices = this.transforms.map(transform => transform.toInverseMatrix());
+
+    let f = Matrix.identity();
+    let b = Matrix.identity();
+    let forwardMatrices = [f];
+    let backwardMatrices = [b];
+    let afterMatrices = [Matrix.identity()];
+    for (let i = 0; i < this.transforms.length; ++i) {
+      let ii = this.transforms.length - 1 - i;
+      f = matrices[ii].multiplyMatrix(f);
+      b = b.multiplyMatrix(inverseMatrices[i]);
+      forwardMatrices.push(f);
+      backwardMatrices.push(b);
+      afterMatrices.push(afterMatrices[afterMatrices.length - 1].multiplyMatrix(matrices[i]));
+    }
+    this.state.matrix = forwardMatrices[forwardMatrices.length - 1];
+    this.state.inverseMatrix = backwardMatrices[backwardMatrices.length - 1];
+    // console.log("afterMatrices:", afterMatrices);
+
+    // console.log('---- FM');
+    // forwardMatrices.forEach(f => console.log(f.toString()));
+    // console.log('---- BM');
+    // backwardMatrices.forEach(b => console.log(b.toString()));
+
+    // R T
+    // forwardMatrices: [I T R*T]
+    // backwardMatrices: [I R^-1 R^-1*T^-1]
+
+    // for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
+    for (let i = 0; i < this.transforms.length; i += 1) {
+      const ii = this.transforms.length - 1 - i;
+      // console.log("ii:", ii);
+      const preMatrix = forwardMatrices[i];
+      const postMatrix = forwardMatrices[i + 1];
+      const inverseMatrix = backwardMatrices[ii];
+      // console.log("preMatrix:", preMatrix);
+      // console.log("postMatrix:", postMatrix);
+      // console.log("inverseMatrix:", inverseMatrix);
+      // console.log("afterMatrices[]:", afterMatrices[ii].toString());
+      this.transforms[ii].synchronizeMarkState(t, preMatrix, postMatrix, afterMatrices[ii], afterMatrices[ii].inverse());
+      // preMatrix = postMatrix;
+      // inverse = inverse.multiplyMatrix(this.transforms[this.transforms.length - 1 - i]);
     }
     // for (let transform of this.transforms) {
       // transform.synchronizeMarkState(t, Matrix.identity());
     // }
-    this.state.matrix = preMatrix;
     // Subclasses should compute centroid.
   }
 
@@ -917,7 +983,7 @@ export class Rectangle extends Shape {
 
     this.outlineMark.synchronizeState(this.state.corner, this.state.size, this.state.rounding);
     if (this.hasCenter) {
-      this.positionMark.synchronizeState(this.state.center, this.state.matrix);
+      this.positionMark.synchronizeState(this.state.center, this.state.matrix, this.state.inverseMatrix);
       this.widthMark.synchronizeState([
         this.state.center[0] + 0.5 * this.state.size[0],
         this.state.center[1],
@@ -938,10 +1004,13 @@ export class Rectangle extends Shape {
       ]);
     }
 
+    // console.log(this.state.matrix.toString());
     this.state.centroid = [
       this.state.corner[0] + this.state.size[0] * 0.5,
       this.state.corner[1] + this.state.size[1] * 0.5,
     ];
+    // console.log("this.state.centroid:", this.state.centroid);
+    this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
     this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
   }
  

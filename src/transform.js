@@ -41,7 +41,7 @@ import {
 export class Transform extends ObjectFrame {
   initialize(shape, where) {
     super.initialize(shape, where);
-    shape.transforms.unshift(this);
+    shape.addTransform(this);
     this.sourceSpans = [];
   }
 
@@ -72,6 +72,10 @@ export class Transform extends ObjectFrame {
   // chain. The SVG transform commands can't be used to place the marks,
   // because they will possibly distort the shapes of the marks.
   toMatrix() {
+    throw Error('unsupported transformation');
+  }
+
+  toInverseMatrix() {
     throw Error('unsupported transformation');
   }
 }
@@ -134,10 +138,10 @@ export class Translate extends Transform {
     this.offsetMark.synchronizeExpressions(this.expressionAt('offset', t));
   }
 
-  synchronizeMarkState(t, preMatrix, postMatrix) {
+  synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix, inverseMatrix) {
     // The mark never moves from the origin. It belongs to a group that is
     // positioned relative to the shape's centroid.
-    this.offsetMark.synchronizeState([0, 0], postMatrix);
+    this.offsetMark.synchronizeState([0, 0], Matrix.identity(), inverseMatrix);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -146,6 +150,10 @@ export class Translate extends Transform {
 
   toMatrix() {
     return Matrix.translate(this.state.offset[0], this.state.offset[1]);
+  }
+
+  toInverseMatrix() {
+    return Matrix.untranslate(this.state.offset[0], this.state.offset[1]);
   }
 }
 
@@ -216,10 +224,10 @@ export class Rotate extends Transform {
     this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
   }
 
-  synchronizeMarkState(t, preMatrix, postMatrix) {
-    this.pivotMark.synchronizeState(this.state.pivot, preMatrix);
-    this.degreesMark.synchronizeState(this.state.pivot, this.state.degrees, postMatrix);
-    this.wedgeMark.synchronizeState(this.state.pivot, this.state.degrees);
+  synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix, inverseMatrix) {
+    this.pivotMark.synchronizeState(this.state.pivot, afterMatrix, inverseMatrix);
+    this.degreesMark.synchronizeState(this.state.pivot, this.state.degrees, afterMatrix, inverseMatrix);
+    this.wedgeMark.synchronizeState(this.state.pivot, this.state.degrees, afterMatrix);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -229,10 +237,11 @@ export class Rotate extends Transform {
   }
 
   toMatrix() {
-    const pivotToOrigin = Matrix.translate(-this.state.pivot[0], -this.state.pivot[1]);
-    const rotater = Matrix.rotate(this.state.degrees);
-    const originToPivot = Matrix.translate(this.state.pivot[0], this.state.pivot[1]);
-    return originToPivot.multiplyMatrix(rotater.multiplyMatrix(pivotToOrigin));
+    return Matrix.rotateAround(this.state.degrees, this.state.pivot[0], this.state.pivot[1]);
+  }
+
+  toInverseMatrix() {
+    return Matrix.unrotateAround(this.state.degrees, this.state.pivot[0], this.state.pivot[1]);
   }
 }
 
@@ -410,7 +419,7 @@ export class Scale extends Transform {
     this.heightFactorMark.synchronizeExpressions(this.expressionAt('factors', t).get(1));
   }
 
-  synchronizeMarkState(t, preMatrix, postMatrix) {
+  synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix) {
     this.pivotMark.synchronizeState(this.state.pivot, preMatrix);
     this.widthFactorMark.synchronizeState(this.state.pivot, this.state.factors[0], preMatrix);
     this.heightFactorMark.synchronizeState(this.state.pivot, this.state.factors[1], preMatrix);
@@ -424,6 +433,10 @@ export class Scale extends Transform {
 
   toMatrix() {
     return Matrix.scaleAround(this.state.factors[0], this.state.factors[1], this.state.pivot[0], this.state.pivot[1]);
+  }
+
+  toInverseMatrix() {
+    return Matrix.unscaleAround(this.state.factors[0], this.state.factors[1], this.state.pivot[0], this.state.pivot[1]);
   }
 
   // updateProperties(env, t, bounds, matrix) {

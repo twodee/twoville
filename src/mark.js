@@ -289,29 +289,36 @@ export class WedgeMark extends Mark {
     this.dynamicBackgroundElements.push(this.element);
   }
 
-  synchronizeState(pivot, degrees) {
+  synchronizeState(pivot, degrees, matrix) {
     this.state.pivot = pivot;
     this.state.degrees = degrees;
+    this.state.matrix = matrix;
   }
 
   synchronizeDom(bounds, radialLength) {
     const vector = [radialLength, 0];
 
-    const transformedPivot = this.state.pivot; //this.matrix.multiplyPosition(this.pivot);
+    const transformedPivot = this.state.matrix.multiplyPosition(this.state.pivot);
 
-    const fromRotater = Matrix.rotate(0/*this.priorHeading*/);
-    const fromVector = fromRotater.multiplyPosition(vector);
+    const transformedFrom = this.state.matrix.multiplyVector([1, 0]);
+    let magnitude = Math.sqrt(transformedFrom[0] * transformedFrom[0] + transformedFrom[1] * transformedFrom[1]);
+    transformedFrom[0] = transformedFrom[0] / magnitude * radialLength;
+    transformedFrom[1] = transformedFrom[1] / magnitude * radialLength;
     const fromPosition = [
-      transformedPivot[0] + fromVector[0],
-      transformedPivot[1] + fromVector[1]
+      transformedPivot[0] + transformedFrom[0],
+      transformedPivot[1] + transformedFrom[1],
     ];
 
-    // TODO priorHeading
-    const toRotater = Matrix.rotate(/*this.priorHeading + */this.state.degrees);
-    const toVector = toRotater.multiplyPosition(vector);
+    const transformedTo = this.state.matrix.multiplyVector([
+      Math.cos(this.state.degrees * Math.PI / 180),
+      Math.sin(this.state.degrees * Math.PI / 180),
+    ]);
+    magnitude = Math.sqrt(transformedTo[0] * transformedTo[0] + transformedTo[1] * transformedTo[1]);
+    transformedTo[0] = transformedTo[0] / magnitude * radialLength;
+    transformedTo[1] = transformedTo[1] / magnitude * radialLength;
     const toPosition = [
-      transformedPivot[0] + toVector[0],
-      transformedPivot[1] + toVector[1]
+      transformedPivot[0] + transformedTo[0],
+      transformedPivot[1] + transformedTo[1],
     ];
 
     const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.degrees));
@@ -472,12 +479,13 @@ export class PanMark extends TweakableMark {
     super(shape, host, tweakShapeState);
   }
 
-  synchronizeState(position, matrix) {
+  synchronizeState(position, matrix, markFromMouse) {
     this.state.position = position;
     const [a, c, e, b, d, f] = matrix.elements;
 		const factors = decompose_2d_matrix([a, b, c, d, e, f]);
 		this.state.rotation = factors.rotation * 180 / Math.PI;
     this.state.matrix = matrix;
+    this.state.markFromMouse = markFromMouse;
   }
 
   synchronizeDom(bounds, handleRadius) {
@@ -541,8 +549,7 @@ export class VectorPanMark extends PanMark {
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
-    const inverse = this.state.matrix.invert();
-    const untransformedOffset = inverse.multiplyVector(delta);
+    const untransformedOffset = this.state.markFromMouse.multiplyVector(delta);
 
     let x = manipulation.formatReal(this.untweakedExpression.get(0).value + untransformedOffset[0]);
     let y = manipulation.formatReal(this.untweakedExpression.get(1).value + untransformedOffset[1]);
@@ -579,7 +586,7 @@ export class HorizontalPanMark extends PanMark {
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const oldValue = this.untweakedExpression.value;
-    const inverse = this.state.matrix.invert();
+    const inverse = this.state.matrix.inverse();
     const untransformedOffset = inverse.multiplyVector(delta);
     const horizontalOffset = untransformedOffset[0];
 
@@ -615,7 +622,7 @@ export class VerticalPanMark extends PanMark {
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const oldValue = this.untweakedExpression.value;
-    const inverse = this.state.matrix.invert();
+    const inverse = this.state.matrix.inverse();
     const untransformedOffset = inverse.multiplyVector(delta);
     const verticalOffset = untransformedOffset[1];
 
@@ -708,7 +715,7 @@ export class HorizontalScaleMark extends ScaleMark {
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     // const oldValue = this.untweakedExpression.value;
-    // const inverse = this.state.matrix.invert();
+    // const inverse = this.state.matrix.inverse();
     // const untransformedOffset = inverse.multiplyVector(delta);
     // const horizontalOffset = untransformedOffset[0];
 
@@ -760,7 +767,7 @@ export class VerticalScaleMark extends ScaleMark {
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     // const oldValue = this.untweakedExpression.value;
-    // const inverse = this.state.matrix.invert();
+    // const inverse = this.state.matrix.inverse();
     // const untransformedOffset = inverse.multiplyVector(delta);
     // const horizontalOffset = untransformedOffset[0];
 
@@ -797,18 +804,26 @@ export class RotationMark extends PanMark {
     this.expression = degreesExpression;
   }
 
-  synchronizeState(pivot, degrees, matrix) {
-    super.synchronizeState(null, matrix);
+  synchronizeState(pivot, degrees, matrix, markFromMouse) {
+    super.synchronizeState(null, matrix, markFromMouse);
     this.state.degrees = degrees;
     this.state.pivot = pivot;
     this.state.matrix = matrix;
   }
 
   synchronizeDom(bounds, handleRadius, radialLength) {
-    const transformedPosition = this.state.matrix.multiplyPosition([
-      this.state.pivot[0] + 1 * radialLength,
-      this.state.pivot[1] + 0 * radialLength,
+    const transformedPivot = this.state.matrix.multiplyPosition(this.state.pivot);
+    const transformedVector = this.state.matrix.multiplyVector([
+      Math.cos(this.state.degrees * Math.PI / 180),
+      Math.sin(this.state.degrees * Math.PI / 180),
     ]);
+    const magnitude = Math.sqrt(transformedVector[0] * transformedVector[0] + transformedVector[1] * transformedVector[1]);
+    transformedVector[0] = transformedVector[0] / magnitude * radialLength;
+    transformedVector[1] = transformedVector[1] / magnitude * radialLength;
+    const transformedPosition = [
+      transformedPivot[0] + transformedVector[0],
+      transformedPivot[1] + transformedVector[1],
+    ];
     let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
     // Don't rotate the arc as is done with other pan marks. The rotation glyph
     // looks more like a rotation cue with the hole at the bottom.
@@ -816,9 +831,10 @@ export class RotationMark extends PanMark {
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
+    const untransformedMouse = this.state.markFromMouse.multiplyPosition([mouseAt.x, mouseAt.y]);
     const pivotToMouse = [
-      mouseAt.x - this.state.pivot[0],
-      mouseAt.y - this.state.pivot[1],
+      untransformedMouse[0] - this.state.pivot[0],
+      untransformedMouse[1] - this.state.pivot[1],
     ];
 
     const newRadians = Math.atan2(pivotToMouse[0], -pivotToMouse[1]);

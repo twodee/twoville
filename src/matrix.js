@@ -41,7 +41,7 @@ export class Matrix {
     ]);
   }
   
-  invert() {
+  inverse() {
     const determinant =
       this.get(0, 0) * (this.get(1, 1) * this.get(2, 2) - this.get(2, 1) * this.get(1, 2)) -
       this.get(0, 1) * (this.get(1, 0) * this.get(2, 2) - this.get(1, 2) * this.get(2, 0)) -
@@ -91,6 +91,25 @@ export class Matrix {
     ]);
   }
 
+  static unrotate(degrees) {
+    return Matrix.rotate(-degrees);
+  }
+
+  static rotateAround(degrees, x, y) {
+    const radians = degrees * Math.PI / 180;
+    const c = Math.cos(radians);
+    const s = Math.sin(radians);
+    return new Matrix([
+      c, -s, (1 - c) * x + s * y,
+      s, c, -s * x + (1 - c) * y,
+      0, 0, 1,
+    ]);
+  }
+
+  static unrotateAround(degrees, x, y) {
+    return Matrix.rotateAround(-degrees, x, y);
+  }
+
   static scale(sx, sy) {
     return new Matrix([
       sx, 0, 0,
@@ -101,10 +120,19 @@ export class Matrix {
 
   static scaleAround(sx, sy, dx, dy) {
     return new Matrix([
-      sx, 0, -sx * dx + dx,
-      0, sy, -sy * dy + dy,
+      sx, 0, sx * -dx + dx,
+      0, sy, sy * -dy + dy,
       0, 0, 1,
     ]);
+  }
+
+  static unscaleAround(sx, sy, dx, dy) {
+    return Matrix.scaleAround(1 / sx, 1 / sy, dx, dy);
+    // return new Matrix([
+      // 1 / sx, 0, -dx / sx + dx,
+      // 0, 1 / sy, -dy / sy + dy,
+      // 0, 0, 1,
+    // ]);
   }
 
   static translate(dx, dy) {
@@ -115,8 +143,35 @@ export class Matrix {
     ]);
   }
 
+  static untranslate(dx, dy) {
+    return Matrix.translate(-dx, -dy);
+  }
+
   static skew(sx, sy) {
     return null;
     // TODO
   }
 }
+
+// const a = Matrix.rotateAround(60, -2, 3);
+// const b = Matrix.unrotateAround(60, -2, 3);
+// console.log("a:\n", a.toString());
+// console.log("b:\n", b.toString());
+// const c = a.multiplyMatrix(b);
+// console.log("c:\n", c.toString());
+
+// const a = Matrix.scaleAround(2, 3, 4, 5);
+// const b = Matrix.unscaleAround(2, 3, 4, 5);
+// console.log("a.toString():\n", a.toString());
+// console.log("b.toString():\n", b.toString());
+// const c = a.multiplyMatrix(b);
+// console.log("c.toString():\n", c.toString());
+// console.log("a.inverse().toString():\n", a.inverse().toString());
+
+// const a = Matrix.translate(2, 3);
+// const b = Matrix.untranslate(2, 3);
+// console.log("a.toString():\n", a.toString());
+// console.log("b.toString():\n", b.toString());
+// const c = a.multiplyMatrix(b);
+// console.log("c.toString():\n", c.toString());
+// console.log("a.inverse().toString():\n", a.inverse().toString());
