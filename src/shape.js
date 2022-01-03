@@ -479,76 +479,6 @@ export class Shape extends ObjectFrame {
     }
   }
 
-  // ageDomWithoutMarks(bounds, t) {
-    // for (let ager of this.agers) {
-      // ager(this, t);
-    // }
-
-    // for (let updateDom of this.updateDoms) {
-      // updateDom(bounds);
-    // }
-  // }
-
-  // ageDomWithMarks(bounds, t, factor) {
-    // this.ageDomWithoutMarks(bounds, t);
-    // this.updateInteractionState(bounds);
-    // this.updateInteractionDom(bounds, factor);
-    // for (let marker of this.markers) {
-      // marker.updateManipulability();
-    // }
-  // }
-
-  // updateTransformDom(bounds) {
-    // for (let transform of this.transforms) {
-      // transform.updateDomCommand(bounds);
-    // }
-    // const commands = this.transforms.map(transform => transform.command).join(' ');
-    // this.element.setAttributeNS(null, 'transform', commands);
-    // this.updateMatrix();
-  // }
-
-  // updateContentState(bounds) {
-    // this.updateTransformDom();
-  // }
-
-  // updateContentDom(bounds, factor) {
-    // const commands = this.transforms.map(transform => transform.command).join(' ');
-    // this.element.setAttributeNS(null, 'transform', commands);
-  // }
-
-  // updateInteractionState(bounds) {
-    // for (let marker of this.markers) {
-      // marker.updateState(this.state.centroid);
-    // }
-
-    // The transforms need their prior transform for proper interaction.
-    // let matrix = Matrix.identity();
-    // for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      // const transform = this.transforms[i];
-      // transform.updateInteractionState(matrix);
-      // matrix = transform.toMatrix().multiplyMatrix(matrix);
-    // }
-  // }
-
-  // updateMatrix() {
-    // The transforms need their prior transform for proper interaction.
-    // let matrix = Matrix.identity();
-    // for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
-      // const transform = this.transforms[i];
-      // matrix = transform.toMatrix().multiplyMatrix(matrix);
-    // }
-    // this.state.matrix = matrix;
-  // }
-
-  // updateInteractionDom(bounds, factor) {
-    // const commands = this.transforms.map(transform => transform.command).join(' ');
-    // this.staticBackgroundMarkGroup.setAttributeNS(null, 'transform', commands);
-
-    // for (let marker of this.markers) {
-      // marker.updateDom(bounds, factor);
-    // }
-  // }
-
   flushManipulation(bounds, factor) {
     this.updateContentState(bounds);
     this.updateContentDom(bounds, factor);
@@ -623,7 +553,6 @@ export class Shape extends ObjectFrame {
     }
     this.state.matrix = forwardMatrices[forwardMatrices.length - 1];
     this.state.inverseMatrix = backwardMatrices[backwardMatrices.length - 1];
-    // console.log("afterMatrices:", afterMatrices);
 
     // console.log('---- FM');
     // forwardMatrices.forEach(f => console.log(f.toString()));
@@ -634,24 +563,14 @@ export class Shape extends ObjectFrame {
     // forwardMatrices: [I T R*T]
     // backwardMatrices: [I R^-1 R^-1*T^-1]
 
-    // for (let i = this.transforms.length - 1; i >= 0; i -= 1) {
     for (let i = 0; i < this.transforms.length; i += 1) {
       const ii = this.transforms.length - 1 - i;
-      // console.log("ii:", ii);
       const preMatrix = forwardMatrices[i];
       const postMatrix = forwardMatrices[i + 1];
       const inverseMatrix = backwardMatrices[ii];
-      // console.log("preMatrix:", preMatrix);
-      // console.log("postMatrix:", postMatrix);
-      // console.log("inverseMatrix:", inverseMatrix);
-      // console.log("afterMatrices[]:", afterMatrices[ii].toString());
       this.transforms[ii].synchronizeMarkState(t, preMatrix, postMatrix, afterMatrices[ii], afterMatrices[ii].inverse());
-      // preMatrix = postMatrix;
-      // inverse = inverse.multiplyMatrix(this.transforms[this.transforms.length - 1 - i]);
     }
-    // for (let transform of this.transforms) {
-      // transform.synchronizeMarkState(t, Matrix.identity());
-    // }
+
     // Subclasses should compute centroid.
   }
 
@@ -889,16 +808,16 @@ export class Rectangle extends Shape {
     this.assertVectorType('size', 2, [ExpressionInteger, ExpressionReal]);
     this.assertVectorType('corner', 2, [ExpressionInteger, ExpressionReal]);
     this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
     this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
 
     // Assert completeness of timelines.
     this.assertCompleteTimeline('size', fromTime, toTime);
     this.assertCompleteTimeline('center', fromTime, toTime);
     this.assertCompleteTimeline('corner', fromTime, toTime);
     this.assertCompleteTimeline('rounding', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
     this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
 
     this.stroke?.validate(fromTime, toTime);
   }
@@ -1004,12 +923,10 @@ export class Rectangle extends Shape {
       ]);
     }
 
-    // console.log(this.state.matrix.toString());
     this.state.centroid = [
       this.state.corner[0] + this.state.size[0] * 0.5,
       this.state.corner[1] + this.state.size[1] * 0.5,
     ];
-    // console.log("this.state.centroid:", this.state.centroid);
     this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
     this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
   }
@@ -1744,11 +1661,38 @@ export class NodeShape extends Shape {
     this.mirrors = object.mirrors.map(subobject => inflater.inflate(this, subobject));
   }
 
-  configureNodes(bounds) {
-    for (let [i, node] of this.nodes.entries()) {
+  castCursorIntoComponents(column, row) {
+    for (let node of this.nodes) {
+      if (node.castCursor(column, row)) {
+        return node;
+      }
+    }
 
-      // If we have a tab node, it must be followed by node that produces a
-      // straight line.
+    for (let mirror of this.mirrors) {
+      if (mirror.castCursor(column, row)) {
+        return mirror;
+      }
+    }
+
+    return super.castCursorIntoComponents(column, row);
+  }
+
+  addMirror(mirror) {
+    this.mirrors.push(mirror);
+  }
+
+  validate(fromTime, toTime) {
+    super.validate(fromTime, toTime);
+    for (let node of this.nodes) {
+      node.validate(fromTime, toTime);
+    }
+    for (let mirror of this.mirrors) {
+      mirror.validate(fromTime, toTime);
+    }
+
+    // If we have a tab node, it must be followed by node that produces a
+    // straight line.
+    for (let [i, node] of this.nodes.entries()) {
       if (node instanceof TabNode) {
         if (i === this.nodes.length - 1) {
           throw new LocatedException(node.where, `I found ${node.article} ${node.type} node at the end of a sequence. It must be followed by a node that produces a straight line.`);
@@ -1762,124 +1706,95 @@ export class NodeShape extends Shape {
           }
         }
       }
-
-      node.configure(i > 0 ? this.nodes[i - 1].turtle : null, bounds);
-    }
-
-    for (let mirror of this.mirrors) {
-      mirror.configureState(bounds);
     }
   }
 
-  get isAnimated() {
-    return this.nodes.some(node => node.isAnimated) || this.mirrors.some(mirror => mirror.isAnimated);
+  connectJoins() {
+    // if (this.owns('elbow')) {
+      // let elbow = this.get('elbow');
+      // this.element.setAttributeNS(null, 'marker-mid', 'url(#element-' + elbow.id + ')');
+      // this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + elbow.id + ')');
+      // this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + elbow.id + ')');
+    // }
+
+    // if (this.owns('head')) {
+      // let head = this.get('head');
+      // this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + head.id + ')');
+    // }
+
+    // if (this.owns('tail')) {
+      // let tail = this.get('tail');
+      // this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
+    // }
   }
 
-  get hasAllDefaults() {
-    return this.nodes.every(node => node.hasAllDefaults) && this.mirrors.every(mirror => mirror.hasAllDefaults);
-  }
+  initializeState() {
+    super.initializeState();
 
-  configureState(bounds) {
     this.state.tabSize = 1;
     this.state.tabDegrees = 45;
     this.state.tabInset = 0;
     this.state.tabIsCounterclockwise = true;
     this.state.turtle0 = null;
 
-    this.configureNodes(bounds);
-    this.configureOtherProperties(bounds);
-
-    if (this.isAnimated) {
-      this.updateDoms.push(this.updateContentDom.bind(this));
-    }
-
-    if (this.hasAllDefaults) {
-      this.updateContentDom(bounds);
-    }
-  }
-
-  configureMarks() {
-    super.configureMarks();
-
     for (let node of this.nodes) {
-      node.configureMarks();
+      node.initializeState();
     }
 
     for (let mirror of this.mirrors) {
-      mirror.configureMarks();
+      mirror.initializeState();
     }
+
+    // node.configure(i > 0 ? this.nodes[i - 1].turtle : null, bounds);
   }
 
-  castCursorIntoComponents(column, row) {
+  synchronizeState(t) {
+    super.synchronizeState(t);
     for (let node of this.nodes) {
-      if (node.castCursor(column, row)) {
-        return true;
-      }
+      node.synchronizeState(t);
     }
-
     for (let mirror of this.mirrors) {
-      if (mirror.castCursor(column, row)) {
-        return true;
-      }
-    }
-
-    return super.castCursorIntoComponents(column, row);
-  }
-
-  connect() {
-    super.connect();
-
-    if (this.owns('elbow')) {
-      let elbow = this.get('elbow');
-      this.element.setAttributeNS(null, 'marker-mid', 'url(#element-' + elbow.id + ')');
-      this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + elbow.id + ')');
-      this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + elbow.id + ')');
-    }
-
-    if (this.owns('head')) {
-      let head = this.get('head');
-      this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + head.id + ')');
-    }
-
-    if (this.owns('tail')) {
-      let tail = this.get('tail');
-      this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
+      mirror.synchronizeState(t);
     }
   }
 
-  addMirror(mirror) {
-    this.mirrors.push(mirror);
-  }
-
-  ageDomWithoutMark(env, bounds, t) {
-    for (let ager of this.agers) {
-      ager(this, t);
-    }
-
-    for (let updateDom of this.updateDoms) {
-      updateDom(bounds);
-    }
-  }
-
-  updateContentState(bounds) {
+  initializeMarkState() {
+    super.initializeMarkState();
     for (let node of this.nodes) {
-      node.updateTurtle(bounds);
+      node.initializeMarkState();
     }
-
-    // TODO: anything with mirrors?
-
-    super.updateContentState(bounds);
-  }
-
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-
-    for (let node of this.nodes) {
-      node.updateInteractionState(this.state.matrix);
-    }
-
     for (let mirror of this.mirrors) {
-      mirror.updateInteractionState(this.state.matrix);
+      mirror.initializeMarkState();
+    }
+  }
+
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+    for (let node of this.nodes) {
+      node.synchronizeMarkState(this.state.matrix, this.state.inverseMatrix);
+    }
+    for (let mirror of this.mirrors) {
+      mirror.synchronizeMarkState(this.state.matrix, this.state.inverseMatrix);
+    }
+  }
+
+  synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
+    for (let node of this.nodes) {
+      node.synchronizeMarkExpressions(t);
+    }
+    for (let mirror of this.mirrors) {
+      mirror.synchronizeMarkExpressions(t);
+    }
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    for (let node of this.nodes) {
+      node.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    }
+    for (let mirror of this.mirrors) {
+      mirror.synchronizeMarkDom(bounds, handleRadius, radialLength);
     }
   }
 }
@@ -1888,11 +1803,17 @@ export class NodeShape extends Shape {
 
 export class VertexShape extends NodeShape {
   addNode(node) {
-    if (this.nodes.length === 0 && !(node instanceof VertexNode || node instanceof TurtleNode)) {
-      throw new LocatedException(node.where, `I saw ${this.article} ${this.type} whose first step is ${node.type}. ${sentenceCase(this.article)} ${this.type} must begin with vertex or turtle.`);
-    } else {
-      this.nodes.push(node);
+    this.nodes.push(node);
+  }
+
+  validate(fromTime, toTime) {
+    if (this.nodes.length > 0) {
+      const node = this.nodes[0];
+      if (!(node instanceof VertexNode || node instanceof TurtleNode)) {
+        throw new LocatedException(node.where, `I saw ${this.article} ${this.type} whose first step is <code>${node.type}</code>. ${sentenceCase(this.article)} ${this.type} must begin with <code>vertex</code> or <code>turtle</code>.`);
+      }
     }
+    super.validate(fromTime, toTime);
   }
 
   mirrorPositions(positions) {
@@ -1908,24 +1829,30 @@ export class VertexShape extends NodeShape {
     }
   }
 
-  computeBoundingBox() {
-    for (let node of this.domNodes) {
-      const position = node.turtle.position;
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.turtle.position[0], acc[1] + node.state.turtle.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
+  }
+
+  // computeBoundingBox() {
+    // for (let node of this.domNodes) {
+      // const position = node.turtle.position;
       // let transformedPosition = this.state.matrix.multiplyPosition(position);
       // this.boundingBox.enclosePoint(transformedPosition);
-    }
+    // }
 
-    if (this.untimedProperties.hasOwnProperty('stroke')) {
-      if (this.untimedProperties.stroke.state.hasOwnProperty('size')) {
-        const halfStrokeSize = this.untimedProperties.stroke.state.size * 0.5;
-        this.boundingBox.thicken(halfStrokeSize);
-      }
-    } else if (this.timedProperties.hasOwnProperty('stroke')) {
-      this.boundingBox.thicken(this.state.size * 0.5);
-    }
+    // if (this.untimedProperties.hasOwnProperty('stroke')) {
+      // if (this.untimedProperties.stroke.state.hasOwnProperty('size')) {
+        // const halfStrokeSize = this.untimedProperties.stroke.state.size * 0.5;
+        // this.boundingBox.thicken(halfStrokeSize);
+      // }
+    // } else if (this.timedProperties.hasOwnProperty('stroke')) {
+      // this.boundingBox.thicken(this.state.size * 0.5);
+    // }
 
     // TODO handle stroke
-  }
+  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -1937,15 +1864,14 @@ export class Polygon extends VertexShape {
 
   initialize(where) {
     super.initialize(where);
-    this.initializeFill();
-
-    this.bindFunction('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
-    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
-    this.bindFunction('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
+    this.bindStatic('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
+    this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+    this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
+    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
   }
 
   static create(where) {
@@ -1960,163 +1886,92 @@ export class Polygon extends VertexShape {
     return shape;
   }
 
-  configureOtherProperties(bounds) {
-    this.element = document.createElementNS(svgNamespace, 'polygon');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+  validateProperties(fromTime, toTime) {
+    this.assertProperty('color');
 
-    this.domNodes = this.nodes.filter(node => node.isDom);
-    if (this.domNodes.length < 3) {
-      throw new LocatedException(this.where, `I found a <code>polygon</code> with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+
+    this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+
+    this.stroke?.validate(fromTime, toTime);
+
+    const domNodes = this.nodes.filter(node => node.isDom);
+    if (domNodes.length < 3) {
+      throw new LocatedException(this.where, `I found a <code>polygon</code> with ${domNodes.length} ${domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
     }
-
-    this.state.turtle0 = this.domNodes[0].turtle;
-
-    this.configureFill(bounds);
   }
 
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
+  initializeState() {
+    super.initializeState();
+    this.stroke?.initializeState();
+    this.domNodes = this.nodes.filter(node => node.isDom); // TODO make domNodes part of state?
+    this.state.turtle0 = this.domNodes[0].turtle;
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
+  }
+
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'polygon');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    root.mainGroup.appendChild(this.element);
+  }
+
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
+
+    this.state.colorBytes = [
+      Math.floor(this.state.color[0] * 255),
+      Math.floor(this.state.color[1] * 255),
+      Math.floor(this.state.color[2] * 255),
+    ];
+
+    this.stroke?.synchronizeState(t);
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+
+    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
+
+    this.stroke?.synchronizeDom(t, this.element);
+
     const positions = this.domNodes.flatMap((node, index) => {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
     });
     this.mirrorPositions(positions);
     const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
-    this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeMarkState() {
+    super.initializeMarkState();
     this.outlineMark = new PolygonMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
+    this.markers[0].setMarks(this.outlineMark);
   }
 
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.domNodes.map(node => node.turtle.position));
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class Polyline extends VertexShape {
-  static type = 'polyline';
-  static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'join', 'enabled'];
-
-  initialize(where) {
-    super.initialize(where);
-
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
-    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+  synchronizeMarkState() {
+    super.synchronizeMarkState();
+    this.outlineMark.synchronizeState(this.domNodes.map(node => node.state.turtle.position));
   }
 
-  static create(where) {
-    const shape = new Polyline();
-    shape.initialize(where);
-    return shape;
-  }
-
-  static inflate(object, inflater) {
-    const shape = new Polyline();
-    shape.embody(object, inflater);
-    return shape;
-  }
-
-  configureOtherProperties(bounds) {
-    this.element = document.createElementNS(svgNamespace, 'polyline');
-    this.element.setAttributeNS(null, 'fill', 'none');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.domNodes = this.nodes.filter(node => node.isDom);
-    this.configureStroke(this, bounds, true);
-  }
-
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
-    this.state.centroid = sum.map(value => value / this.domNodes.length);
-    const coordinates = this.domNodes.map(node => `${node.turtle.position[0]},${bounds.span - node.turtle.position[1]}`).join(' ');
-    this.element.setAttributeNS(null, 'points', coordinates);
-  }
-
-  configureMarks() {
-    super.configureMarks();
-    this.outlineMark = new PolylineMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
-  }
-
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.domNodes.map(node => node.turtle.position));
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class Line extends VertexShape {
-  static type = 'line';
-  static article = 'a';
-  static timedIds = ['size', 'color', 'opacity', 'enabled'];
-
-  initialize(where) {
-    super.initialize(where);
-
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
-  }
-
-  static create(where) {
-    const shape = new Line();
-    shape.initialize(where);
-    return shape;
-  }
-
-  static inflate(object, inflater) {
-    const shape = new Line();
-    shape.embody(object, inflater);
-    return shape;
-  }
-
-  configureOtherProperties(bounds) {
-    this.element = document.createElementNS(svgNamespace, 'line');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-
-    this.domNodes = this.nodes.filter(node => node.isDom);
-    if (this.domNodes.length != 2) {
-      throw new LocatedException(this.where, `I found a line with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
-    }
-
-    this.configureStroke(this, bounds, true);
-  }
-
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
-
-    this.element.setAttributeNS(null, 'x1', this.domNodes[0].turtle.position[0]);
-    this.element.setAttributeNS(null, 'y1', bounds.span - this.domNodes[0].turtle.position[1]);
-    this.element.setAttributeNS(null, 'x2', this.domNodes[1].turtle.position[0]);
-    this.element.setAttributeNS(null, 'y2', bounds.span - this.domNodes[1].turtle.position[1]);
-    this.state.centroid = [
-      (this.domNodes[0].state.position[0] + this.domNodes[1].state.position[0]) * 0.5,
-      (this.domNodes[0].state.position[1] + this.domNodes[1].state.position[1]) * 0.5
-    ];
-  }
-
-  configureMarks() {
-    super.configureMarks();
-    this.outlineMark = new LineMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
-  }
-
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.domNodes[0].state.position, this.domNodes[1].state.position, this.state.matrix);
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
   }
 }
 
@@ -2137,14 +1992,13 @@ export class Ungon extends VertexShape {
 
   initialize(where) {
     super.initialize(where);
-    this.initializeFill();
-
-    this.bindFunction('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
-    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
-    this.bindFunction('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
+    this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+    this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
+    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
   }
 
   static create(where) {
@@ -2159,75 +2013,107 @@ export class Ungon extends VertexShape {
     return shape;
   }
 
-  configureOtherProperties(bounds) {
-    this.element = document.createElementNS(svgNamespace, 'path');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+  validateProperties(fromTime, toTime) {
+    this.assertProperty('color');
 
-    if (this.untimedProperties.hasOwnProperty('formula')) {
-      if (this.untimedProperties.formula.value === 0) {
-        this.state.formula = UngonFormula.Absolute;
-      } else if (this.untimedProperties.formula.value === 1) {
-        this.state.formula = UngonFormula.Relative;
-      } else if (this.untimedProperties.formula.value === 2) {
-        this.state.formula = UngonFormula.Symmetric;
-      } else {
-        // TODO locate it better.
-        throw new LocatedException(this.where, `I found an <code>ungon</code> with a bad formula.`);
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+
+    this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+
+    this.stroke?.validate(fromTime, toTime);
+
+    const domNodes = this.nodes.filter(node => node.isDom);
+    if (domNodes.length < 3) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${domNodes.length} ${domNodes.length == 1 ? 'vertex' : 'vertices'}. Ungons must have at least 3 vertices.`);
+    }
+
+    if (this.has('formula')) {
+      const formula = this.getStatic('formula').value;
+
+      if (!(formula === UngonFormula.Absolute || formula === UngonFormula.Relative || formula === UngonFormula.Symmetric)) {
+        throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with a bad formula.`);
       }
-    } else {
+
+      if (formula === UngonFormula.Symmetric) {
+        this.assertScalarType('rounding', [ExpressionInteger, ExpressionReal]);
+        this.assertCompleteTimeline('rounding', fromTime, toTime);
+      }
+    }
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.stroke?.initializeState();
+    this.domNodes = this.nodes.filter(node => node.isDom); // TODO make domNodes part of state?
+    this.state.turtle0 = this.domNodes[0].turtle;
+
+    if (!this.has('formula')) {
       this.state.formula = UngonFormula.Symmetric;
     }
-
-    this.domNodes = this.nodes.filter(node => node.isDom);
-    if (this.domNodes.length < 3) {
-      throw new LocatedException(this.where, `I found an <code>ungon</code> with ${this.domNodes.length} ${this.domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
-    }
-
-    if (this.state.formula !== UngonFormula.Symmetric) {
-      this.configureScalarProperty('rounding', this, this, null, bounds, [], timeline => {
-        if (!timeline) {
-          throw new LocatedException(this.where, `I found an <code>ungon</code> whose <code>rounding</code> was not set.`);
-        }
-
-        try {
-          timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>rounding</code>. ${e.message}`);
-        }
-      });
-    }
-
-    this.configureFill(bounds);
   }
 
-  get isAnimated() {
-    return super.isAnimated || (this.state.formula !== UngonFormula.Symmetric && this.timedProperties.rounding.isAnimated);
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
+    this.initializeStaticScalarProperty('formula');
+    this.initializeStaticScalarProperty('rounding');
   }
 
-  get hasAllDefaults() {
-    return super.hasAllDefaults && (this.state.formula === UngonFormula.Symmetric || this.timedProperties.rounding.hasDefault);
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
+    this.initializeDynamicProperty('rounding');
   }
 
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'path');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    root.mainGroup.appendChild(this.element);
+  }
 
-    const gap = distancePointPoint(this.domNodes[0].turtle.position, this.domNodes[this.domNodes.length - 1].turtle.position);
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
+    this.synchronizeStateProperty('rounding', t);
+
+    this.state.colorBytes = [
+      Math.floor(this.state.color[0] * 255),
+      Math.floor(this.state.color[1] * 255),
+      Math.floor(this.state.color[2] * 255),
+    ];
+
+    this.stroke?.synchronizeState(t);
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+
+    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
+
+    this.stroke?.synchronizeDom(t, this.element);
+
+    const gap = distancePointPoint(this.domNodes[0].state.turtle.position, this.domNodes[this.domNodes.length - 1].state.turtle.position);
     const hasReturn = gap < 1e-6;
     let nnodes = hasReturn ? this.domNodes.length - 1 : this.domNodes.length;
     let pathCommands = [];
 
     if (this.state.formula === UngonFormula.Symmetric) {
       let start = [
-        (this.domNodes[0].turtle.position[0] + this.domNodes[1].turtle.position[0]) * 0.5,
-        (this.domNodes[0].turtle.position[1] + this.domNodes[1].turtle.position[1]) * 0.5
+        (this.domNodes[0].state.turtle.position[0] + this.domNodes[1].state.turtle.position[0]) * 0.5,
+        (this.domNodes[0].state.turtle.position[1] + this.domNodes[1].state.turtle.position[1]) * 0.5
       ];
       pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
 
       let previous = start;
       for (let i = 1; i < nnodes; ++i) {
-        const a = this.domNodes[i].turtle.position;
-        const b = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
+        const a = this.domNodes[i].state.turtle.position;
+        const b = this.domNodes[(i + 1) % this.domNodes.length].state.turtle.position;
         let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
         pathCommands.push(`Q ${a[0]},${bounds.span - a[1]} ${mid[0]},${bounds.span - mid[1]}`);
         previous = mid;
@@ -2239,8 +2125,8 @@ export class Ungon extends VertexShape {
       let rounding = this.state.rounding;
 
       let vectors = this.domNodes.map((node, i) => {
-        const a = node.turtle.position;
-        const b = this.domNodes[(i + 1) % nnodes].turtle.position;
+        const a = node.state.turtle.position;
+        const b = this.domNodes[(i + 1) % nnodes].state.turtle.position;
 
         let vector = [b[0] - a[0], b[1] - a[1]];
         let magnitude = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1]);
@@ -2251,13 +2137,13 @@ export class Ungon extends VertexShape {
       });
 
       let insetA = [
-        this.domNodes[0].turtle.position[0] + rounding * vectors[0][0],
-        this.domNodes[0].turtle.position[1] + rounding * vectors[0][1],
+        this.domNodes[0].state.turtle.position[0] + rounding * vectors[0][0],
+        this.domNodes[0].state.turtle.position[1] + rounding * vectors[0][1],
       ];
       pathCommands.push(`M ${insetA[0]},${bounds.span - insetA[1]}`);
 
       for (let i = 0; i < nnodes; ++i) {
-        const position = this.domNodes[(i + 1) % nnodes].turtle.position;
+        const position = this.domNodes[(i + 1) % nnodes].state.turtle.position;
         const vector = vectors[(i + 1) % nnodes];
 
         let insetB = [
@@ -2274,8 +2160,8 @@ export class Ungon extends VertexShape {
       }
     } else {
       let start = [
-        (this.domNodes[0].turtle.position[0] + this.domNodes[1].turtle.position[0]) * 0.5,
-        (this.domNodes[0].turtle.position[1] + this.domNodes[1].turtle.position[1]) * 0.5
+        (this.domNodes[0].state.turtle.position[0] + this.domNodes[1].state.turtle.position[0]) * 0.5,
+        (this.domNodes[0].state.turtle.position[1] + this.domNodes[1].state.turtle.position[1]) * 0.5
       ];
       pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
 
@@ -2283,8 +2169,8 @@ export class Ungon extends VertexShape {
 
       let previous = start;
       for (let i = 1; i < nnodes; ++i) {
-        const a = this.domNodes[i].turtle.position;
-        const b = this.domNodes[(i + 1) % this.domNodes.length].turtle.position;
+        const a = this.domNodes[i].state.turtle.position;
+        const b = this.domNodes[(i + 1) % this.domNodes.length].state.turtle.position;
 
         let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
 
@@ -2318,19 +2204,256 @@ export class Ungon extends VertexShape {
     pathCommands.push('z');
     this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
 
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.turtle.position[0], acc[1] + node.state.turtle.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeMarkState() {
+    super.initializeMarkState();
     this.outlineMark = new PolygonMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
+    this.markers[0].setMarks(this.outlineMark);
   }
 
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    this.outlineMark.updateState(this.domNodes.map(node => node.turtle.position));
+  synchronizeMarkState() {
+    super.synchronizeMarkState();
+    console.log("sync markmark");
+    this.outlineMark.synchronizeState(this.domNodes.map(node => node.state.turtle.position));
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.turtle.position[0], acc[1] + node.state.turtle.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Polyline extends VertexShape {
+  static type = 'polyline';
+  static article = 'a';
+  static timedIds = ['size', 'color', 'opacity', 'join', 'enabled'];
+
+  initialize(where) {
+    super.initialize(where);
+    this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+  }
+
+  static create(where) {
+    const shape = new Polyline();
+    shape.initialize(where);
+    return shape;
+  }
+
+  static inflate(object, inflater) {
+    const shape = new Polyline();
+    shape.embody(object, inflater);
+    return shape;
+  }
+
+  validateProperties(fromTime, toTime) {
+    this.assertProperty('color');
+
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+
+    this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+
+    const domNodes = this.nodes.filter(node => node.isDom);
+    if (domNodes.length < 2) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${domNodes.length} ${domNodes.length == 1 ? 'vertex' : 'vertices'}. Polylines must have at least 2 vertices.`);
+    }
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.domNodes = this.nodes.filter(node => node.isDom); // TODO make domNodes part of state?
+    this.state.turtle0 = this.domNodes[0].turtle;
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
+  }
+
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'polyline');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+
+    // SVG polylines for some reason are filled black by default. We want true
+    // polylines, which have no fill.
+    this.element.setAttributeNS(null, 'fill', 'none');
+
+    root.mainGroup.appendChild(this.element);
+  }
+
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
+
+    this.state.colorBytes = [
+      Math.floor(this.state.color[0] * 255),
+      Math.floor(this.state.color[1] * 255),
+      Math.floor(this.state.color[2] * 255),
+    ];
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+
+    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+    this.element.setAttributeNS(null, 'stroke', rgb);
+
+    const positions = this.domNodes.flatMap((node, index) => {
+      return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
+    });
+    this.mirrorPositions(positions);
+    const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    this.element.setAttributeNS(null, 'points', coordinates);
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.outlineMark = new PolylineMark();
+    this.markers[0].setMarks(this.outlineMark);
+  }
+
+  synchronizeMarkState() {
+    super.synchronizeMarkState();
+    this.outlineMark.synchronizeState(this.domNodes.map(node => node.state.turtle.position));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Line extends VertexShape {
+  static type = 'line';
+  static article = 'a';
+  static timedIds = ['size', 'color', 'opacity', 'enabled'];
+
+  initialize(where) {
+    super.initialize(where);
+    this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+  }
+
+  static create(where) {
+    const shape = new Line();
+    shape.initialize(where);
+    return shape;
+  }
+
+  static inflate(object, inflater) {
+    const shape = new Line();
+    shape.embody(object, inflater);
+    return shape;
+  }
+
+  validateProperties(fromTime, toTime) {
+    this.assertProperty('color');
+
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+
+    this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+
+    const domNodes = this.nodes.filter(node => node.isDom);
+    if (domNodes.length !== 2) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${domNodes.length} ${domNodes.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
+    }
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.domNodes = this.nodes.filter(node => node.isDom);
+    this.state.turtle0 = this.domNodes[0].turtle;
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
+  }
+
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'line');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'fill', 'none');
+    root.mainGroup.appendChild(this.element);
+  }
+
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
+
+    this.state.colorBytes = [
+      Math.floor(this.state.color[0] * 255),
+      Math.floor(this.state.color[1] * 255),
+      Math.floor(this.state.color[2] * 255),
+    ];
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+
+    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+    this.element.setAttributeNS(null, 'stroke', rgb);
+
+    const positions = this.domNodes.flatMap((node, index) => {
+      return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
+    });
+    // TODO count check doesn't consider mirror!!!!
+    this.mirrorPositions(positions);
+    const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    this.element.setAttributeNS(null, 'x1', positions[0][0]);
+    this.element.setAttributeNS(null, 'y1', bounds.span - positions[0][1]);
+    this.element.setAttributeNS(null, 'x2', positions[1][0]);
+    this.element.setAttributeNS(null, 'y2', bounds.span - positions[1][1]);
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.outlineMark = new LineMark();
+    this.markers[0].setMarks(this.outlineMark);
+  }
+
+  synchronizeMarkState() {
+    super.synchronizeMarkState();
+    this.outlineMark.synchronizeState(this.domNodes[0].state.turtle.position, this.domNodes[1].state.turtle.position);
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
   }
 }
 

@@ -1846,8 +1846,8 @@ export class ExpressionCircle extends ExpressionShapeFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionRaster extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionRaster extends ExpressionShapeFunction {
+  createShape(env) {
     return Raster.create(env.callExpression.where);
   }
 }
@@ -2101,48 +2101,48 @@ export class ExpressionShear extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionLine extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionLine extends ExpressionShapeFunction {
+  createShape(env) {
     return new Line.create(env.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPolygon extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionPolygon extends ExpressionShapeFunction {
+  createShape(env) {
     return Polygon.create(env.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionUngon extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionUngon extends ExpressionShapeFunction {
+  createShape(env) {
     return Ungon.create(env.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPolyline extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionPolyline extends ExpressionShapeFunction {
+  createShape(env) {
     return new Polyline.create(env.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionPath extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionPath extends ExpressionShapeFunction {
+  createShape(env) {
     return Path.create(env.callExpression.where);
   }
 }
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionText extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionText extends ExpressionShapeFunction {
+  createShape(env) {
     return new Text.create(env.callExpression.where);
   }
 }

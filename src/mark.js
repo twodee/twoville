@@ -174,7 +174,6 @@ export class RectangleMark extends Mark {
       this.element.setAttributeNS(null, 'rx', this.state.rounding);
       this.element.setAttributeNS(null, 'ry', this.state.rounding);
     }
-    // this.element.setAttributeNS(null, 'transform', `matrix(${matrix.elements[0]} ${matrix.elements[3]} ${matrix.elements[1]} ${matrix.elements[4]} ${matrix.elements[2]} ${-matrix.elements[5]})`);
   }
 }
 
@@ -200,17 +199,18 @@ export class CircleMark extends Mark {
 
 // --------------------------------------------------------------------------- 
 
-export class LineMark {
-  constructor() {
+export class LineMark extends Mark {
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'line');
+    this.staticBackgroundElements.push(this.element);
   }
 
-  updateState(a, b) {
+  synchronizeState(a, b) {
     this.a = a;
     this.b = b;
   }
 
-  updateDom(bounds, factor) {
+  synchronizeDom(bounds, handleRadius, radialLength) {
     this.element.setAttributeNS(null, 'x1', this.a[0]);
     this.element.setAttributeNS(null, 'y1', bounds.span - this.a[1]);
     this.element.setAttributeNS(null, 'x2', this.b[0]);
@@ -247,17 +247,18 @@ export class RayMark {
 
 // --------------------------------------------------------------------------- 
 
-export class PolygonMark {
-  constructor() {
+export class PolygonMark extends Mark {
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'polygon');
+    this.staticBackgroundElements.push(this.element);
   }
 
-  updateState(coordinates) {
-    this.coordinates = coordinates;
+  synchronizeState(positions) {
+    this.state.positions = positions;
   }
 
-  updateDom(bounds, factor) {
-    this.element.setAttributeNS(null, 'points', this.coordinates.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
+  synchronizeDom(bounds) {
+    this.element.setAttributeNS(null, 'points', this.state.positions.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
   }
 }
 
@@ -321,7 +322,21 @@ export class WedgeMark extends Mark {
       transformedPivot[1] + transformedTo[1],
     ];
 
-    const {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.degrees));
+    let {isLarge, isClockwise} = classifyArc(standardizeDegrees(this.state.degrees));
+
+		const factors = decompose_2d_matrix([
+      this.state.matrix.elements[0],
+      this.state.matrix.elements[3],
+      this.state.matrix.elements[1],
+      this.state.matrix.elements[4],
+      this.state.matrix.elements[2],
+      this.state.matrix.elements[5]
+    ]);
+
+    if (factors.scale[0] < 0 || factors.scale[1] < 0) {
+      isClockwise = isClockwise === 0 ? 1 : 0;
+    }
+
     const commands =
       `M${transformedPivot[0]},${bounds.span - transformedPivot[1]} ` +
       `L${fromPosition[0]},${bounds.span - fromPosition[1]} ` +
@@ -333,17 +348,18 @@ export class WedgeMark extends Mark {
 
 // --------------------------------------------------------------------------- 
 
-export class PolylineMark {
-  constructor() {
+export class PolylineMark extends Mark {
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'polyline');
+    this.staticBackgroundElements.push(this.element);
   }
 
-  updateState(coordinates) {
-    this.coordinates = coordinates;
+  synchronizeState(positions) {
+    this.state.positions = positions;
   }
 
-  updateDom(bounds, factor) {
-    this.element.setAttributeNS(null, 'points', this.coordinates.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
+  synchronizeDom(bounds) {
+    this.element.setAttributeNS(null, 'points', this.state.positions.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
   }
 }
 
@@ -659,8 +675,8 @@ export class ScaleMark extends PanMark {
     this.dynamicBackgroundElements.push(this.pivotToHandleLine);
   }
 
-  synchronizeState(pivot, factor, matrix) {
-    super.synchronizeState(pivot, matrix);
+  synchronizeState(pivot, factor, matrix, markFromMouse) {
+    super.synchronizeState(pivot, matrix, markFromMouse);
     this.state.factor = factor;
     this.state.pivot = pivot;
   }
@@ -714,14 +730,12 @@ export class HorizontalScaleMark extends ScaleMark {
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
-    // const oldValue = this.untweakedExpression.value;
-    // const inverse = this.state.matrix.inverse();
-    // const untransformedOffset = inverse.multiplyVector(delta);
-    // const horizontalOffset = untransformedOffset[0];
+    const untransformedMouseAt = this.state.markFromMouse.multiplyPosition([mouseAt.x, mouseAt.y]);
+    const untransformedMouseDownAt = this.state.markFromMouse.multiplyPosition([this.mouseDownAt.x, this.mouseDownAt.y]);
 
     const factor0 = this.untweakedExpression.value;
-    const scale = (mouseAt.x - this.state.pivot[0]) / (this.mouseDownAt.x - this.state.pivot[0]) * factor0;
-    this.state.delta = delta;
+    const scale = (untransformedMouseAt[0] - this.state.pivot[0]) / (untransformedMouseDownAt[0] - this.state.pivot[0]) * factor0;
+    this.state.delta = this.state.markFromMouse.multiplyVector(delta);
 
     let newValue = manipulation.formatReal(scale);
     if (isShiftModified) {
@@ -766,14 +780,12 @@ export class VerticalScaleMark extends ScaleMark {
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
-    // const oldValue = this.untweakedExpression.value;
-    // const inverse = this.state.matrix.inverse();
-    // const untransformedOffset = inverse.multiplyVector(delta);
-    // const horizontalOffset = untransformedOffset[0];
+    const untransformedMouseAt = this.state.markFromMouse.multiplyPosition([mouseAt.x, mouseAt.y]);
+    const untransformedMouseDownAt = this.state.markFromMouse.multiplyPosition([this.mouseDownAt.x, this.mouseDownAt.y]);
 
     const factor0 = this.untweakedExpression.value;
-    const scale = (mouseAt.y - this.state.pivot[1]) / (this.mouseDownAt.y - this.state.pivot[1]) * factor0;
-    this.state.delta = delta;
+    const scale = (untransformedMouseAt[1] - this.state.pivot[1]) / (untransformedMouseDownAt[1] - this.state.pivot[1]) * factor0;
+    this.state.delta = this.state.markFromMouse.multiplyVector(delta);
 
     let newValue = manipulation.formatReal(scale);
     if (isShiftModified) {

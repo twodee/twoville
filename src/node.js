@@ -39,8 +39,8 @@ import {
 } from './mark.js';
 
 import {
-  TimelinedEnvironment,
-} from './environment.js';
+  ObjectFrame,
+} from './frame.js';
 
 import {
   Matrix,
@@ -48,47 +48,37 @@ import {
 
 // --------------------------------------------------------------------------- 
 
-export class Node extends TimelinedEnvironment {
-  initialize(parentEnvironment, where) {
-    super.initialize(parentEnvironment, where);
-    parentEnvironment.addNode(this);
+export class Node extends ObjectFrame {
+  initialize(shape, where) {
+    super.initialize(shape, where);
+    shape.addNode(this);
     this.sourceSpans = [];
   }
 
   deflate() {
-    const pod = super.deflate();
-    pod.sourceSpans = this.sourceSpans;
-    return pod;
+    const object = super.deflate();
+    object.sourceSpans = this.sourceSpans;
+    return object;
   }
 
-  embody(parentEnvironment, pod) {
-    super.embody(parentEnvironment, pod);
-    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.inflate(subpod));
+  embody(parentEnvironment, object, inflater) {
+    super.embody(parentEnvironment, object, inflater);
+    this.sourceSpans = object.sourceSpans.map(subobject => SourceLocation.inflate(subobject));
   }
 
   castCursor(column, row) {
-    const isHit = this.sourceSpans.some(span => span.contains(column, row));
-    if (isHit) {
-      this.parentEnvironment.root.select(this.parentEnvironment);
-      this.parentEnvironment.selectMarker(this.marker.id);
-    }
-    return isHit;
+    return this.sourceSpans.some(span => span.contains(column, row));
   }
 
-  configure(previousTurtle, bounds) {
-    this.previousTurtle = previousTurtle;
-    this.turtle = new Turtle([0, 0], 0);
-    this.state = {};
-    this.configureState(bounds);
+  initializeMarkState() {
+    this.marker = new Marker(this.parentFrame);
+    this.parentFrame.addMarker(this.marker);
   }
 
-  configureMarks() {
-    this.marker = new Marker(this.parentEnvironment);
-    this.parentEnvironment.addMarker(this.marker);
-  }
-
-  updateInteractionState(matrix) {
-    this.state.matrix = matrix;
+  initializeState() {
+    super.initializeState();
+    // this.previousTurtle = previousTurtle;
+    this.state.turtle = new Turtle([0, 0], 0);
   }
 }
 
@@ -105,9 +95,9 @@ export class TabNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new TabNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -198,9 +188,9 @@ export class TabNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.turtle.position[0] = this.previousTurtle.position[0];
-    this.turtle.position[1] = this.previousTurtle.position[1];
-    this.turtle.heading = this.previousTurtle.heading;
+    this.state.turtle.position[0] = this.previousTurtle.position[0];
+    this.state.turtle.position[1] = this.previousTurtle.position[1];
+    this.state.turtle.heading = this.previousTurtle.heading;
   }
 
   configureMarks() {
@@ -226,9 +216,9 @@ export class VertexNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new VertexNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -236,51 +226,56 @@ export class VertexNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>vertex</code> whose <code>position</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        if (e instanceof LocatedException) {
-          throw new LocatedException(e.where, `I found a <code>vertex</code> with an illegal value for <code>position</code>. ${e.message}`);
-        } else {
-          throw e;
-        }
-      }
-    });
-  }
-
   getPositions() {
-    return [this.turtle.position];
+    return [this.state.turtle.position];
   }
 
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.state.position[0];
-    this.turtle.position[1] = this.state.position[1];
-    this.turtle.heading = 0;
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('position');
+
+    // Assert types of extent properties.
+    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('position', fromTime, toTime);
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('position');
+  }
 
-    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('position', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.turtle.position[0] = this.state.position[0] = x;
-      this.turtle.position[1] = this.state.position[1] = y;
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('position');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('position', t);
+    this.state.turtle.position[0] = this.state.position[0];
+    this.state.turtle.position[1] = this.state.position[1];
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.position = value;
+      this.state.turtle.position[0] = this.state.position[0];
+      this.state.turtle.position[1] = this.state.position[1];
     });
-
-    this.marker.addMarks([this.positionMark], [], []);
+    this.marker.setMarks(this.positionMark);
   }
 
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.positionMark.updateState(this.state.position, this.state.matrix);
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.positionMark.synchronizeDom(bounds, handleRadius);
   }
 }
 
@@ -297,9 +292,9 @@ export class TurtleNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new TurtleNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -408,9 +403,9 @@ export class MoveNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new MoveNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -483,9 +478,9 @@ export class JumpNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new JumpNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -555,9 +550,9 @@ export class CircleNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new CircleNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -655,9 +650,9 @@ export class RectangleNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new RectangleNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -812,9 +807,9 @@ export class TurnNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new TurnNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -878,9 +873,9 @@ export class BackNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new BackNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -938,9 +933,9 @@ export class GoNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new GoNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -1011,9 +1006,9 @@ export class LineNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new LineNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -1083,9 +1078,9 @@ export class QuadraticNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new QuadraticNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -1215,9 +1210,9 @@ export class ArcNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new ArcNode();
-    node.embody(parentEnvironment, pod, inflate);
+    node.embody(parentEnvironment, object, inflate);
     return node;
   }
 
@@ -1429,9 +1424,9 @@ export class CubicNode extends Node {
     return node;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const node = new CubicNode();
-    node.embody(parentEnvironment, pod, inflater);
+    node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
@@ -1705,7 +1700,7 @@ export class ArcSegment {
 
 // --------------------------------------------------------------------------- 
 
-export class Mirror extends TimelinedEnvironment {
+export class Mirror extends ObjectFrame {
   static type = 'mirror';
   static article = 'a';
   static timedIds = ['pivot', 'axis'];
@@ -1716,9 +1711,9 @@ export class Mirror extends TimelinedEnvironment {
     return mirror;
   }
 
-  static inflate(parentEnvironment, pod, inflater) {
+  static inflate(parentEnvironment, object, inflater) {
     const mirror = new Mirror();
-    mirror.embody(parentEnvironment, pod, inflater);
+    mirror.embody(parentEnvironment, object, inflater);
     return mirror;
   }
 
@@ -1729,50 +1724,22 @@ export class Mirror extends TimelinedEnvironment {
   }
 
   deflate() {
-    const pod = super.deflate();
-    pod.sourceSpans = this.sourceSpans;
-    return pod;
+    const object = super.deflate();
+    object.sourceSpans = this.sourceSpans;
+    return object;
   }
 
-  embody(parentEnvironment, pod) {
-    super.embody(parentEnvironment, pod);
-    this.sourceSpans = pod.sourceSpans.map(subpod => SourceLocation.inflate(subpod));
+  embody(parentEnvironment, object) {
+    super.embody(parentEnvironment, object);
+    this.sourceSpans = object.sourceSpans.map(subobject => SourceLocation.inflate(subobject));
   }
 
-  configureState(bounds) {
-    this.state = {};
-
-    this.configureVectorProperty('pivot', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>mirror</code> whose <code>pivot</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>mirror</code> with an illegal value for <code>pivot</code>. ${e.message}`);
-      }
-    });
-
-    this.configureVectorProperty('axis', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>mirror</code> whose <code>axis</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>mirror</code> with an illegal value for <code>axis</code>. ${e.message}`);
-      }
-    });
+  initializeMarkState() {
+    this.marker = new Marker(this.parentFrame);
+    this.parentFrame.addMarker(this.marker);
   }
 
   configureMarks() {
-    this.marker = new Marker(this.parentEnvironment);
-    this.parentEnvironment.addMarker(this.marker);
-
     this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
       return this.expressionAt('pivot', this.parentEnvironment.root.state.t);
     }, ([x, y]) => {

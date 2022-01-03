@@ -1,3 +1,8 @@
+/*
+ | 0 1 2 |
+ | 3 4 5 |
+ | 6 7 8 |
+ */
 export class Matrix {
   constructor(elements) {
     this.elements = elements;
@@ -152,26 +157,3 @@ export class Matrix {
     // TODO
   }
 }
-
-// const a = Matrix.rotateAround(60, -2, 3);
-// const b = Matrix.unrotateAround(60, -2, 3);
-// console.log("a:\n", a.toString());
-// console.log("b:\n", b.toString());
-// const c = a.multiplyMatrix(b);
-// console.log("c:\n", c.toString());
-
-// const a = Matrix.scaleAround(2, 3, 4, 5);
-// const b = Matrix.unscaleAround(2, 3, 4, 5);
-// console.log("a.toString():\n", a.toString());
-// console.log("b.toString():\n", b.toString());
-// const c = a.multiplyMatrix(b);
-// console.log("c.toString():\n", c.toString());
-// console.log("a.inverse().toString():\n", a.inverse().toString());
-
-// const a = Matrix.translate(2, 3);
-// const b = Matrix.untranslate(2, 3);
-// console.log("a.toString():\n", a.toString());
-// console.log("b.toString():\n", b.toString());
-// const c = a.multiplyMatrix(b);
-// console.log("c.toString():\n", c.toString());
-// console.log("a.inverse().toString():\n", a.inverse().toString());

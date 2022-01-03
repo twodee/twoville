@@ -42,7 +42,7 @@ export class StaticContext {
 
   embody(env, object, inflater) {
     this.bindings = objectMap(object.bindings, (subobject, key) => {
-      return inflater.inflate(this, subobject);
+      return inflater.inflate(this, subobject, inflater);
     });
   }
 

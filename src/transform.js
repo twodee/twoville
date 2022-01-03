@@ -56,15 +56,15 @@ export class Transform extends ObjectFrame {
     this.sourceSpans = object.sourceSpans.map(subobject => SourceLocation.inflate(subobject));
   }
 
+  castCursor(column, row) {
+    return this.sourceSpans.some(span => span.contains(column, row));
+  }
+
   initializeMarkState() {
     // Shape.addMarker stamps marker with an id that can be used to identify this marker
     // later.
     this.marker = new Marker(this.parentFrame);
     this.parentFrame.addMarker(this.marker);
-  }
-
-  castCursor(column, row) {
-    return this.sourceSpans.some(span => span.contains(column, row));
   }
 
   // Get a matrix representation of this transform. This matrix will be used by
@@ -419,10 +419,10 @@ export class Scale extends Transform {
     this.heightFactorMark.synchronizeExpressions(this.expressionAt('factors', t).get(1));
   }
 
-  synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix) {
-    this.pivotMark.synchronizeState(this.state.pivot, preMatrix);
-    this.widthFactorMark.synchronizeState(this.state.pivot, this.state.factors[0], preMatrix);
-    this.heightFactorMark.synchronizeState(this.state.pivot, this.state.factors[1], preMatrix);
+  synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix, inverseMatrix) {
+    this.pivotMark.synchronizeState(this.state.pivot, afterMatrix, inverseMatrix);
+    this.widthFactorMark.synchronizeState(this.state.pivot, this.state.factors[0], afterMatrix, inverseMatrix);
+    this.heightFactorMark.synchronizeState(this.state.pivot, this.state.factors[1], afterMatrix, inverseMatrix);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
