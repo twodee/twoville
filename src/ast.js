@@ -1122,7 +1122,7 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
       baseValue.sourceSpans.push(env.whereAssigned);
     }
 
-    baseValue.bind(this.nameToken.source, rhsValue, env.fromTime, env.toTime, env.rhs);
+    baseValue.bind(env, this.nameToken.source, rhsValue);
 
     return rhsValue;
   }
@@ -1779,7 +1779,7 @@ export class ExpressionWith extends Expression {
 
     // TODO is it ObjectFrame or Frame that I want to ensure?
     if (!(instance instanceof Frame || instance instanceof ExpressionVector)) {
-      throw new LocatedException(this.scope.where, `I encountered a <code>with</code> expression whose subject isn't an environment or a vector.`);
+      throw new LocatedException(this.scope.where, `I encountered a <code>with</code> statement on something that isn't an object.`);
     }
 
     if (instance.hasOwnProperty('sourceSpans')) {

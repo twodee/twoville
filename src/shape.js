@@ -1833,6 +1833,7 @@ export class VertexShape extends NodeShape {
     super.synchronizeMarkState(t);
     const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.turtle.position[0], acc[1] + node.state.turtle.position[1]], [0, 0]);
     this.state.centroid = sum.map(value => value / this.domNodes.length);
+    this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
   }
 
   // computeBoundingBox() {
@@ -2216,10 +2217,7 @@ export class Ungon extends VertexShape {
 
   synchronizeMarkState() {
     super.synchronizeMarkState();
-    console.log("sync markmark");
     this.outlineMark.synchronizeState(this.domNodes.map(node => node.state.turtle.position));
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.turtle.position[0], acc[1] + node.state.turtle.position[1]], [0, 0]);
-    this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -2372,12 +2370,15 @@ export class Line extends VertexShape {
 
   validateProperties(fromTime, toTime) {
     this.assertProperty('color');
+    this.assertProperty('size');
 
     this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
     this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('size', [ExpressionInteger, ExpressionReal]);
 
     this.assertCompleteTimeline('color', fromTime, toTime);
     this.assertCompleteTimeline('opacity', fromTime, toTime);
+    this.assertCompleteTimeline('size', fromTime, toTime);
 
     const domNodes = this.nodes.filter(node => node.isDom);
     if (domNodes.length !== 2) {
@@ -2394,12 +2395,14 @@ export class Line extends VertexShape {
   initializeStaticState() {
     this.initializeStaticVectorProperty('color');
     this.initializeStaticScalarProperty('opacity');
+    this.initializeStaticScalarProperty('size');
   }
 
   initializeDynamicState() {
     this.state.animation = {};
     this.initializeDynamicProperty('color');
     this.initializeDynamicProperty('opacity');
+    this.initializeDynamicProperty('size');
   }
 
   initializeDom(root) {
@@ -2414,6 +2417,7 @@ export class Line extends VertexShape {
 
     this.synchronizeStateProperty('color', t);
     this.synchronizeStateProperty('opacity', t);
+    this.synchronizeStateProperty('size', t);
 
     this.state.colorBytes = [
       Math.floor(this.state.color[0] * 255),
@@ -2427,6 +2431,7 @@ export class Line extends VertexShape {
 
     const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
     this.element.setAttributeNS(null, 'stroke', rgb);
+    this.element.setAttributeNS(null, 'stroke-width', this.state.size);
 
     const positions = this.domNodes.flatMap((node, index) => {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
