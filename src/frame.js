@@ -210,7 +210,7 @@ export class Frame {
     return this.staticContext.get(id) ?? this.dynamicContext.get(id);
   }
 
-  static resolveStaticLvalue(id, frames) {
+  static resolveStaticRvalue(id, frames) {
     for (let frame of frames) {
       if (frame.staticContext.has(id)) {
         return frame.staticContext.get(id);

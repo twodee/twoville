@@ -1187,7 +1187,7 @@ export class ExpressionFunctionCall extends Expression {
   }
 
   lookup(env) {
-    let func = Frame.resolveStaticLvalue(this.nameToken.source, env.frames);
+    let func = Frame.resolveStaticRvalue(this.nameToken.source, env.frames);
     if (func) {
       return func;
     } else {
@@ -1462,7 +1462,7 @@ export class ExpressionVectorAdd extends Expression {
   }
 
   evaluate(env) {
-    let item = env.stackFrame.get('item');
+    let item = Frame.resolveStaticRvalue('item', env.frames);
     return this.instance.insert(item);
   }
 }
@@ -1538,7 +1538,7 @@ export class ExpressionVectorRotate extends Expression {
   }
 
   evaluate(env) {
-    let degrees = env.stackFrame.get('degrees');
+    let degrees = Frame.resolveStaticRvalue('degrees', env.frames); // TODO value?
     return this.instance.rotate(degrees);
   }
 }
@@ -1554,8 +1554,8 @@ export class ExpressionVectorRotateAround extends Expression {
   }
 
   evaluate(env) {
-    let pivot = env.stackFrame.get('pivot');
-    let degrees = env.stackFrame.get('degrees');
+    let pivot = Frame.resolveStaticRvalue('pivot', env.frames);
+    let degrees = Frame.resolveStaticRvalue('degrees', env.frames);
     return this.instance.rotateAround(pivot, degrees);
   }
 }
@@ -2151,7 +2151,7 @@ export class ExpressionText extends ExpressionShapeFunction {
 
 export class ExpressionPrint extends ExpressionFunction {
   evaluate(env) {
-    let message = env.stackFrame.get('message').toPretty();
+    let message = Frame.resolveStaticRvalue('message', env.frames).toPretty();
     env.root.log(message);
     return null;
   }
@@ -2171,7 +2171,7 @@ export class ExpressionDebug extends ExpressionFunction {
       pieces.push(lines[i].substring(startIndex, endIndex));
     }
 
-    let message = `${pieces.join("\n")}: ${env.stackFrame.get('expression').toPretty()}`;
+    let message = `${pieces.join("\n")}: ${Frame.resolveStaticRvalue('expression', env.frames).toPretty()}`;
     env.root.log(message);
 
     return null;
@@ -2182,7 +2182,7 @@ export class ExpressionDebug extends ExpressionFunction {
 
 export class ExpressionSeed extends ExpressionFunction {
   evaluate(env) {
-    let seed = env.stackFrame.get('value').value;
+    let seed = Frame.resolveStaticRvalue('value', env.frames).value;
     env.root.prng.seed(seed);
   }
 }
@@ -2191,11 +2191,11 @@ export class ExpressionSeed extends ExpressionFunction {
 
 export class ExpressionRandom extends ExpressionFunction {
   evaluate(env) {
-    let min = env.stackFrame.get('min').value;
-    let max = env.stackFrame.get('max').value;
+    let min = Frame.resolveStaticRvalue('min', env.frames).value;
+    let max = Frame.resolveStaticRvalue('max', env.frames).value;
 
     let x;
-    if (env.stackFrame.get('min') instanceof ExpressionInteger && env.stackFrame.get('max') instanceof ExpressionInteger) {
+    if (Frame.resolveStaticRvalue('min', env.frames) instanceof ExpressionInteger && Frame.resolveStaticRvalue('max', env.frames) instanceof ExpressionInteger) {
       let random = env.root.prng.random01();
       let x = Math.floor(random * (max - min) + min);
       return new ExpressionInteger(x);
@@ -2211,7 +2211,7 @@ export class ExpressionRandom extends ExpressionFunction {
 
 export class ExpressionSine extends ExpressionFunction {
   evaluate(env) {
-    let degrees = env.stackFrame.get('degrees').value;
+    let degrees = Frame.resolveStaticRvalue('degrees', env.frames).value;
     let x = Math.sin(degrees * Math.PI / 180);
     return new ExpressionReal(x);
   }
@@ -2221,8 +2221,8 @@ export class ExpressionSine extends ExpressionFunction {
 
 export class ExpressionPolar extends ExpressionFunction {
   evaluate(env) {
-    let x = env.stackFrame.get('x').value;
-    let y = env.stackFrame.get('y').value;
+    let x = Frame.resolveStaticRvalue('x', env.frames).value;
+    let y = Frame.resolveStaticRvalue('y', env.frames).value;
     let radius = Math.sqrt(x * x + y * y);
     let degrees = Math.atan2(y, x);
     return new ExpressionVector([
@@ -2236,8 +2236,8 @@ export class ExpressionPolar extends ExpressionFunction {
 
 export class ExpressionUnpolar extends ExpressionFunction {
   evaluate(env) {
-    let degrees = env.stackFrame.get('degrees').value;
-    let radius = env.stackFrame.get('radius').value;
+    let degrees = Frame.resolveStaticRvalue('degrees', env.frames).value;
+    let radius = Frame.resolveStaticRvalue('radius', env.frames).value;
     return new ExpressionVector([
       new ExpressionReal(Math.cos(degrees * Math.PI / 180) * radius),
       new ExpressionReal(Math.sin(degrees * Math.PI / 180) * radius),
@@ -2249,7 +2249,7 @@ export class ExpressionUnpolar extends ExpressionFunction {
 
 export class ExpressionCosine extends ExpressionFunction {
   evaluate(env) {
-    let degrees = env.stackFrame.get('degrees').value;
+    let degrees = Frame.resolveStaticRvalue('degrees', env.frames).value;
     let x = Math.cos(degrees * Math.PI / 180);
     return new ExpressionReal(x);
   }
@@ -2259,7 +2259,7 @@ export class ExpressionCosine extends ExpressionFunction {
 
 export class ExpressionTangent extends ExpressionFunction {
   evaluate(env) {
-    let degrees = env.stackFrame.get('degrees').value;
+    let degrees = Frame.resolveStaticRvalue('degrees', env.frames).value;
     let x = Math.tan(degrees * Math.PI / 180);
     return new ExpressionReal(x);
   }
@@ -2269,7 +2269,7 @@ export class ExpressionTangent extends ExpressionFunction {
 
 export class ExpressionArcCosine extends ExpressionFunction {
   evaluate(env) {
-    let ratio = env.stackFrame.get('ratio').value;
+    let ratio = Frame.resolveStaticRvalue('ratio', env.frames).value;
     let angle = Math.acos(ratio) * 180 / Math.PI;
     return new ExpressionReal(angle);
   }
@@ -2279,7 +2279,7 @@ export class ExpressionArcCosine extends ExpressionFunction {
 
 export class ExpressionArcSine extends ExpressionFunction {
   evaluate(env) {
-    let ratio = env.stackFrame.get('ratio').value;
+    let ratio = Frame.resolveStaticRvalue('ratio', env.frames).value;
     let angle = Math.asin(ratio) * 180 / Math.PI;
     return new ExpressionReal(angle);
   }
@@ -2289,8 +2289,8 @@ export class ExpressionArcSine extends ExpressionFunction {
 
 export class ExpressionHypotenuse extends ExpressionFunction {
   evaluate(env) {
-    let a = env.stackFrame.get('a').value;
-    let b = env.stackFrame.get('b').value;
+    let a = Frame.resolveStaticRvalue('a', env.frames).value;
+    let b = Frame.resolveStaticRvalue('b', env.frames).value;
     let hypotenuse = Math.sqrt(a * a + b * b);
     return new ExpressionReal(hypotenuse);
   }
@@ -2300,7 +2300,7 @@ export class ExpressionHypotenuse extends ExpressionFunction {
 
 export class ExpressionArcTangent extends ExpressionFunction {
   evaluate(env) {
-    let ratio = env.stackFrame.get('ratio').value;
+    let ratio = Frame.resolveStaticRvalue('ratio', env.frames).value;
     let angle = Math.atan(ratio) * 180 / Math.PI;
     return new ExpressionReal(angle);
   }
@@ -2310,8 +2310,8 @@ export class ExpressionArcTangent extends ExpressionFunction {
 
 export class ExpressionArcTangent2 extends ExpressionFunction {
   evaluate(env) {
-    let a = env.stackFrame.get('a').value;
-    let b = env.stackFrame.get('b').value;
+    let a = Frame.resolveStaticRvalue('a', env.frames).value;
+    let b = Frame.resolveStaticRvalue('b', env.frames).value;
     let angle = Math.atan2(a, b) * 180 / Math.PI;
     return new ExpressionReal(angle);
   }
@@ -2321,7 +2321,7 @@ export class ExpressionArcTangent2 extends ExpressionFunction {
 
 export class ExpressionSquareRoot extends ExpressionFunction {
   evaluate(env) {
-    let x = env.stackFrame.get('x').value;
+    let x = Frame.resolveStaticRvalue('x', env.frames).value;
     let root = Math.sqrt(x);
     return new ExpressionReal(root);
   }
@@ -2331,7 +2331,7 @@ export class ExpressionSquareRoot extends ExpressionFunction {
 
 export class ExpressionAbsoluteValue extends ExpressionFunction {
   evaluate(env) {
-    let x = env.stackFrame.get('x').value;
+    let x = Frame.resolveStaticRvalue('x', env.frames).value;
     let positive = Math.abs(x);
     return new ExpressionInteger(positive);
     // TODO real vs. integer
@@ -2343,7 +2343,7 @@ export class ExpressionAbsoluteValue extends ExpressionFunction {
 // The casting function.
 export class ExpressionInt extends ExpressionFunction {
   evaluate(env) {
-    let f = env.stackFrame.get('x').value;
+    let f = Frame.resolveStaticRvalue('x', env.frames).value;
     let i = Math.trunc(f);
     return new ExpressionInteger(i);
   }

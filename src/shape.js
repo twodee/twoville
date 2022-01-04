@@ -1290,11 +1290,11 @@ export class Circle extends Shape {
   synchronizeMarkState(t) {
     super.synchronizeMarkState(t);
     this.outlineMark.synchronizeState(this.state.center, this.state.radius);
-    this.centerMark.synchronizeState(this.state.center);
+    this.centerMark.synchronizeState(this.state.center, this.state.matrix, this.state.inverseMatrix);
     this.radiusMark.synchronizeState([
       this.state.center[0] + this.state.radius,
       this.state.center[1],
-    ]);
+    ], this.state.matrix, this.state.inverseMatrix);
 
     this.state.centroid = this.state.matrix.multiplyPosition(this.state.center);
     this.state.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
@@ -1303,8 +1303,8 @@ export class Circle extends Shape {
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
     super.synchronizeMarkDom(bounds, handleRadius, radialLength);
     this.outlineMark.synchronizeDom(bounds);
-    this.centerMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
-    this.radiusMark.synchronizeDom(bounds, this.state.matrix, handleRadius);
+    this.centerMark.synchronizeDom(bounds, handleRadius);
+    this.radiusMark.synchronizeDom(bounds, handleRadius);
   }
 
   synchronizeState(t) {
@@ -1897,11 +1897,6 @@ export class Polygon extends VertexShape {
     this.assertCompleteTimeline('opacity', fromTime, toTime);
 
     this.stroke?.validate(fromTime, toTime);
-
-    const domNodes = this.nodes.filter(node => node.isDom);
-    if (domNodes.length < 3) {
-      throw new LocatedException(this.where, `I found a <code>polygon</code> with ${domNodes.length} ${domNodes.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
-    }
   }
 
   initializeState() {
@@ -1955,6 +1950,11 @@ export class Polygon extends VertexShape {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
     });
     this.mirrorPositions(positions);
+
+    if (positions.length < 3) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
+    }
+
     const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
   }
@@ -1997,7 +1997,8 @@ export class Ungon extends VertexShape {
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
-    this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+    // this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+    // TODO no mirror support yet?
     this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
     this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
   }
@@ -2204,9 +2205,6 @@ export class Ungon extends VertexShape {
 
     pathCommands.push('z');
     this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
-
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.turtle.position[0], acc[1] + node.state.turtle.position[1]], [0, 0]);
-    this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
   initializeMarkState() {
@@ -2262,11 +2260,6 @@ export class Polyline extends VertexShape {
 
     this.assertCompleteTimeline('color', fromTime, toTime);
     this.assertCompleteTimeline('opacity', fromTime, toTime);
-
-    const domNodes = this.nodes.filter(node => node.isDom);
-    if (domNodes.length < 2) {
-      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${domNodes.length} ${domNodes.length == 1 ? 'vertex' : 'vertices'}. Polylines must have at least 2 vertices.`);
-    }
   }
 
   initializeState() {
@@ -2320,6 +2313,11 @@ export class Polyline extends VertexShape {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
     });
     this.mirrorPositions(positions);
+
+    if (positions.length < 2) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Polylines must have at least 2 vertices.`);
+    }
+
     const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
   }
@@ -2379,11 +2377,6 @@ export class Line extends VertexShape {
     this.assertCompleteTimeline('color', fromTime, toTime);
     this.assertCompleteTimeline('opacity', fromTime, toTime);
     this.assertCompleteTimeline('size', fromTime, toTime);
-
-    const domNodes = this.nodes.filter(node => node.isDom);
-    if (domNodes.length !== 2) {
-      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${domNodes.length} ${domNodes.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
-    }
   }
 
   initializeState() {
@@ -2436,8 +2429,12 @@ export class Line extends VertexShape {
     const positions = this.domNodes.flatMap((node, index) => {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
     });
-    // TODO count check doesn't consider mirror!!!!
     this.mirrorPositions(positions);
+
+    if (positions !== 2) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
+    }
+
     const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'x1', positions[0][0]);
     this.element.setAttributeNS(null, 'y1', bounds.span - positions[0][1]);
