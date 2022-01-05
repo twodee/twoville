@@ -1737,15 +1737,15 @@ export class NodeShape extends Shape {
     this.state.tabIsCounterclockwise = true;
     this.state.turtle0 = null;
 
+    let previousNode = null;
     for (let node of this.nodes) {
-      node.initializeState();
+      node.initializeState(previousNode);
+      previousNode = node;
     }
 
     for (let mirror of this.mirrors) {
       mirror.initializeState();
     }
-
-    // node.configure(i > 0 ? this.nodes[i - 1].turtle : null, bounds);
   }
 
   synchronizeState(t) {
@@ -2468,22 +2468,21 @@ export class Path extends NodeShape {
 
   initialize(where) {
     super.initialize(where);
-    this.initializeFill();
-
-    this.bindFunction('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
-    this.bindFunction('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
-    this.bindFunction('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindFunction('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
-    this.bindFunction('jump', new FunctionDefinition('jump', [], new ExpressionJumpNode(this)));
-    this.bindFunction('circle', new FunctionDefinition('circle', [], new ExpressionCircleNode(this)));
-    this.bindFunction('rectangle', new FunctionDefinition('rectangle', [], new ExpressionRectangleNode(this)));
-    this.bindFunction('go', new FunctionDefinition('go', [], new ExpressionGoNode(this)));
-    this.bindFunction('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
-    this.bindFunction('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
-    this.bindFunction('quadratic', new FunctionDefinition('quadratic', [], new ExpressionQuadraticNode(this)));
-    this.bindFunction('cubic', new FunctionDefinition('cubic', [], new ExpressionCubicNode(this)));
-    this.bindFunction('arc', new FunctionDefinition('arc', [], new ExpressionArcNode(this)));
-    this.bindFunction('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+    this.bindStatic('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
+    this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindStatic('jump', new FunctionDefinition('jump', [], new ExpressionJumpNode(this)));
+    this.bindStatic('circle', new FunctionDefinition('circle', [], new ExpressionCircleNode(this)));
+    this.bindStatic('rectangle', new FunctionDefinition('rectangle', [], new ExpressionRectangleNode(this)));
+    this.bindStatic('go', new FunctionDefinition('go', [], new ExpressionGoNode(this)));
+    this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
+    this.bindStatic('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
+    this.bindStatic('quadratic', new FunctionDefinition('quadratic', [], new ExpressionQuadraticNode(this)));
+    this.bindStatic('cubic', new FunctionDefinition('cubic', [], new ExpressionCubicNode(this)));
+    this.bindStatic('arc', new FunctionDefinition('arc', [], new ExpressionArcNode(this)));
+    this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
+    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
   }
 
   static create(where) {
@@ -2499,28 +2498,82 @@ export class Path extends NodeShape {
   }
 
   addNode(node) {
-    if (this.nodes.length === 0 && !(node instanceof GoNode || node instanceof TurtleNode || node instanceof CircleNode || node instanceof RectangleNode)) {
-      throw new LocatedException(node.where, `I saw a path whose first step is ${node.type}. A path must begin with <code>go</code>, <code>turtle</code>, or <code>circle</code>.`);
-    } else {
-      this.nodes.push(node);
+    this.nodes.push(node);
+  }
+
+  validateProperties(fromTime, toTime) {
+    this.assertProperty('color');
+
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+
+    this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+
+    this.stroke?.validate(fromTime, toTime);
+
+    const domNodes = this.nodes.filter(node => node.isDom);
+    if (this.nodes.length > 0) {
+      const node = this.nodes[0];
+      if (!(node instanceof GoNode || node instanceof TurtleNode || node instanceof CircleNode || node instanceof RectangleNode)) {
+        throw new LocatedException(node.where, `I saw ${this.article} ${this.type} whose first step is ${node.type}. A path must begin with <code>go</code>, <code>turtle</code>, <code>rectangle</code>, or <code>circle</code>.`);
+      }
     }
   }
 
-  configureOtherProperties(bounds) {
-    this.element = document.createElementNS(svgNamespace, 'path');
-    this.element.setAttributeNS(null, 'stroke-linecap', 'round');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.element.setAttributeNS(null, 'fill-rule', 'evenodd');
+  initializeState() {
+    super.initializeState();
+    this.stroke?.initializeState();
     this.domNodes = this.nodes.filter(node => node.isDom);
-    this.configureFill(bounds);
+    this.state.turtle0 = this.domNodes[0].turtle;
   }
 
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
+  }
+
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'path');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'stroke-linecap', 'round');
+    this.element.setAttributeNS(null, 'fill-rule', 'evenodd');
+    root.mainGroup.appendChild(this.element);
+  }
+
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
+
+    this.state.colorBytes = [
+      Math.floor(this.state.color[0] * 255),
+      Math.floor(this.state.color[1] * 255),
+      Math.floor(this.state.color[2] * 255),
+    ];
+
+    this.stroke?.synchronizeState(t);
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+
+    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
+
+    this.stroke?.synchronizeDom(t, this.element);
 
     const pathCommands = this.domNodes.map((node, index) => {
-      return node.getPathCommand(bounds, this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
+      return node.pathCommand(bounds, this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
     });
+    console.log("pathCommands:", pathCommands);
 
 	  if (this.mirrors.length > 0) {
       let segments = [];
@@ -2556,22 +2609,29 @@ export class Path extends NodeShape {
       }
 		}
    
+    console.log("pathCommands:", pathCommands);
     this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
-
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.turtle.position[0], acc[1] + node.turtle.position[1]], [0, 0]);
-    this.state.centroid = sum.map(value => value / this.domNodes.length);
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeMarkState() {
+    super.initializeMarkState();
     this.outlineMark = new PathMark();
-    this.markers[0].addMarks([], [this.outlineMark]);
+    this.markers[0].setMarks(this.outlineMark);
   }
 
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    const commands = this.domNodes.map(node => node.pathCommand);
-    this.outlineMark.updateState(commands.join(' '));
+  synchronizeMarkState() {
+    super.synchronizeMarkState();
+    // const commands = this.domNodes.map(node => node.pathCommand);
+    // this.outlineMark.synchronizeState(commands.join(' '));
+
+    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.turtle.position[0], acc[1] + node.state.turtle.position[1]], [0, 0]);
+    this.state.centroid = sum.map(value => value / this.domNodes.length);
+    // TODO
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
   }
 }
 

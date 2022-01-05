@@ -264,17 +264,18 @@ export class PolygonMark extends Mark {
 
 // --------------------------------------------------------------------------- 
 
-export class PathMark {
-  constructor() {
+export class PathMark extends Mark {
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'path');
+    this.staticBackgroundElements.push(this.element);
   }
 
-  updateState(commands) {
+  synchronizeState(commands) {
     this.commands = commands;
   }
 
-  updateDom(bounds, factor) {
-    this.element.setAttributeNS(null, 'd', this.commands);
+  synchronizeDom(bounds) {
+    // this.element.setAttributeNS(null, 'd', this.commands);
   }
 
   // setTransform(matrix, bounds) {

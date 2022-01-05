@@ -75,9 +75,9 @@ export class Node extends ObjectFrame {
     this.parentFrame.addMarker(this.marker);
   }
 
-  initializeState() {
+  initializeState(previousNode) {
     super.initializeState();
-    // this.previousTurtle = previousTurtle;
+    this.previousNode = previousNode;
     this.state.turtle = new Turtle([0, 0], 0);
   }
 }
@@ -947,49 +947,56 @@ export class GoNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>go</code> node whose <code>position</code> was not set.');
-      }
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('position');
 
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>go</code> node with an illegal value for <code>position</code>. ${e.message}`);
-      }
+    // Assert types of extent properties.
+    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('position', fromTime, toTime);
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('position');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('position');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('position', t);
+    this.state.turtle.position[0] = this.state.position[0];
+    this.state.turtle.position[1] = this.state.position[1];
+  }
+
+  pathCommand(bounds) {
+    return `M ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.position = value;
+      this.state.turtle.position[0] = this.state.position[0];
+      this.state.turtle.position[1] = this.state.position[1];
     });
+    this.marker.setMarks(this.positionMark);
   }
 
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.state.position[0];
-    this.turtle.position[1] = this.state.position[1];
-    this.turtle.heading = 0;
-    this.parentEnvironment.state.turtle0 = this.turtle;
-    this.pathCommand = `M ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
   }
 
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
   }
 
-  configureMarks() {
-    super.configureMarks();
-
-    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('position', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.turtle.position[0] = this.state.position[0] = x;
-      this.turtle.position[1] = this.state.position[1] = y;
-    });
-
-    this.marker.addMarks([this.positionMark], [], []);
-  }
-
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.positionMark.updateState(this.state.position, this.state.matrix);
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.positionMark.synchronizeDom(bounds, handleRadius);
   }
 }
 
@@ -1020,48 +1027,60 @@ export class LineNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.configureVectorProperty('position', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>line</code> node whose <code>position</code> was not set.');
-      }
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('position');
 
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>line</code> node with an illegal value for <code>position</code>. ${e.message}`);
-      }
-    });
+    // Assert types of extent properties.
+    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('position', fromTime, toTime);
   }
 
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.state.position[0];
-    this.turtle.position[1] = this.state.position[1];
-    this.turtle.heading = this.previousTurtle.heading;
-    this.pathCommand = `L ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('position');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('position');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('position', t);
+    this.state.turtle.position[0] = this.state.position[0];
+    this.state.turtle.position[1] = this.state.position[1];
+  }
+
+  pathCommand(bounds) {
+    return `L ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.position = value;
+      this.state.turtle.position[0] = this.state.position[0];
+      this.state.turtle.position[1] = this.state.position[1];
+    });
+    this.marker.setMarks(this.positionMark);
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.positionMark.synchronizeDom(bounds, handleRadius);
   }
 
   getPathCommand(bounds, from, to) {
-    return this.pathCommand;
-  }
-
-  configureMarks() {
-    super.configureMarks();
-
-    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('position', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.turtle.position[0] = this.state.position[0] = x;
-      this.turtle.position[1] = this.state.position[1] = y;
-    });
-
-    this.marker.addMarks([this.positionMark], [], []);
-  }
-
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.positionMark.updateState(this.state.position, this.state.matrix);
+    return `L ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
   }
 }
 
@@ -1099,100 +1118,232 @@ export class QuadraticNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>quadratic</code> node whose <code>position</code> was not set.');
-      }
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('position');
 
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>quadratic</code> node with an illegal value for <code>position</code>. ${e.message}`);
-      }
-    });
+    // Assert types of extent properties.
+    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('control', 2, [ExpressionInteger, ExpressionReal]);
 
-    this.configureVectorProperty('control', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (timeline) {
-        try {
-          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found a <code>quadratic</code> node with an illegal value for <code>control</code>. ${e.message}`);
-        }
-      } else if (!this.previousTurtle) { // TODO only allow implicit after previous quadratic
-        throw new LocatedException(this.where, 'I found a <code>quadratic</code> node whose <code>control</code> was not set. Omitting <code>control</code> is legal only when the previous node was also <code>quadratic</code>.');
-      }
-    });
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('position', fromTime, toTime);
+    this.assertCompleteTimeline('control', fromTime, toTime);
 
-    const positionTimeline = this.timedProperties.position;
-    const controlTimeline = this.timedProperties.control;
-
-    if (positionTimeline.isAnimated || controlTimeline?.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
-    }
-
-    if (positionTimeline.hasDefault && (!controlTimeline || controlTimeline.hasDefault)) {
-      this.updateTurtle(bounds);
+    if (!this.has('control') && !(this.previousNode instanceof QuadraticNode)) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> node whose <code>control</code> was not set. Omitting <code>control</code> is legal only when the previous node was also <code>quadratic</code>.`);
     }
   }
 
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.state.position[0];
-    this.turtle.position[1] = this.state.position[1];
-    this.turtle.heading = this.previousTurtle.heading;
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('position');
+    this.initializeStaticVectorProperty('control');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('position');
+    this.initializeDynamicProperty('control');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('position', t);
+    this.synchronizeStateProperty('control', t);
+    this.state.turtle.position[0] = this.state.position[0];
+    this.state.turtle.position[1] = this.state.position[1];
+  }
+
+  pathCommand(bounds) {
     if (this.state.control) {
-      this.pathCommand = `Q ${this.state.control[0]},${bounds.span - this.state.control[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+      return `Q ${this.state.control[0]},${bounds.span - this.state.control[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
     } else {
-      this.pathCommand = `T ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+      return `T ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
     }
   }
 
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
-  }
-
-  configureMarks() {
-    super.configureMarks();
-
-    // TODO do I need to update turtle here since updateTurtle does that?
-    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('position', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.turtle.position[0] = this.state.position[0] = x;
-      this.turtle.position[1] = this.state.position[1] = y;
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.position = value;
+      this.state.turtle.position[0] = this.state.position[0];
+      this.state.turtle.position[1] = this.state.position[1];
+      this.state.turtle.heading = this.previousNode.state.turtle.heading;
     });
 
-    const foregroundMarks = [this.positionMark];
-
-    if (this.state.control) {
-      this.controlMark = new VectorPanMark(this.parentEnvironment, null, t => {
-        return this.expressionAt('control', this.parentEnvironment.root.state.t);
-      }, ([x, y]) => {
-        this.state.control[0] = x;
-        this.state.control[1] = y;
+    if (this.has('control')) {
+      this.controlMark = new VectorPanMark(this.parentFrame, this, value => {
+        this.state.control = value;
       });
-      foregroundMarks.push(this.controlMark);
-
       this.lineMarks = [
         new LineMark(),
         new LineMark(),
-      ]
+      ];
+      this.marker.setMarks(this.positionMark, this.controlMark, this.lineMarks[0], this.lineMarks[1]);
     } else {
-      this.lineMarks = [];
+      this.marker.setMarks(this.positionMark);
     }
-
-    this.marker.addMarks(foregroundMarks, this.lineMarks, []);
   }
 
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.positionMark.updateState(this.state.position, this.state.matrix);
-    if (this.state.control) {
-      this.controlMark.updateState(this.state.control, this.state.matrix);
-      this.lineMarks[0].updateState(this.previousTurtle.position, this.state.control);
-      this.lineMarks[1].updateState(this.state.position, this.state.control);
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+    if (this.has('control')) {
+      this.controlMark.synchronizeState(this.state.control, matrix, inverseMatrix);
+      this.lineMarks[0].synchronizeState(this.state.control, this.previousNode.state.position);
+      this.lineMarks[1].synchronizeState(this.state.control, this.state.position);
+    }
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+    if (this.has('control')) {
+      this.controlMark.synchronizeExpressions(this.expressionAt('control', t));
+    }
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.positionMark.synchronizeDom(bounds, handleRadius);
+    if (this.has('control')) {
+      this.controlMark.synchronizeDom(bounds, handleRadius);
+      this.lineMarks[0].synchronizeDom(bounds, handleRadius);
+      this.lineMarks[1].synchronizeDom(bounds, handleRadius);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class CubicNode extends Node {
+  static type = 'cubic';
+  static article = 'a';
+  static timedIds = ['position', 'control1', 'control2'];
+
+  static create(parentEnvironment, where) {
+    const node = new CubicNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static inflate(parentEnvironment, object, inflater) {
+    const node = new CubicNode();
+    node.embody(parentEnvironment, object, inflater);
+    return node;
+  }
+
+  segment(previousSegment) {
+    if (this.state.control1) {
+      return new CubicSegment(this.previousTurtle.position, this.turtle.position, this.state.control1, this.state.control2, false);
+    } else {
+      return new CubicSegment(this.previousTurtle.position, this.turtle.position, [
+        this.previousTurtle.position[0] + (this.previousTurtle.position[0] - previousSegment.control2[0]),
+        this.previousTurtle.position[1] + (this.previousTurtle.position[1] - previousSegment.control2[1])
+      ], this.state.control2, true);
+    }
+  }
+
+  get isDom() {
+    return true;
+  }
+
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('position');
+    this.assertProperty('control2');
+
+    // Assert types of extent properties.
+    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('control1', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('control2', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('position', fromTime, toTime);
+    this.assertCompleteTimeline('control1', fromTime, toTime);
+    this.assertCompleteTimeline('control2', fromTime, toTime);
+
+    if (!this.has('control1') && !(this.previousNode instanceof CubicNode)) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> node whose <code>control1</code> was not set. Omitting <code>control1</code> is legal only when the previous node was also <code>cubic</code>.`);
+    }
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('position');
+    this.initializeStaticVectorProperty('control1');
+    this.initializeStaticVectorProperty('control2');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('position');
+    this.initializeDynamicProperty('control1');
+    this.initializeDynamicProperty('control2');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('position', t);
+    this.synchronizeStateProperty('control1', t);
+    this.synchronizeStateProperty('control2', t);
+    this.state.turtle.position[0] = this.state.position[0];
+    this.state.turtle.position[1] = this.state.position[1];
+  }
+
+  pathCommand(bounds) {
+    if (this.state.control1) {
+      return `C ${this.state.control1[0]},${bounds.span - this.state.control1[1]} ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+    } else {
+      return `S ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+    }
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.position = value;
+      this.state.turtle.position[0] = this.state.position[0];
+      this.state.turtle.position[1] = this.state.position[1];
+      this.state.turtle.heading = this.previousNode.state.turtle.heading;
+    });
+
+    this.control2Mark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.control2 = value;
+    });
+
+    this.outLineMark = new LineMark();
+
+    if (this.has('control1')) {
+      this.control1Mark = new VectorPanMark(this.parentFrame, this, value => {
+        this.state.control1 = value;
+      });
+      this.inLineMark = new LineMark();
+      this.marker.setMarks(this.positionMark, this.control2Mark, this.control1Mark, this.outLineMark, this.inLineMark);
+    } else {
+      this.marker.setMarks(this.positionMark, this.control2Mark, this.outLineMark);
+    }
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+    this.control2Mark.synchronizeState(this.state.control2, matrix, inverseMatrix);
+    this.outLineMark.synchronizeState(this.state.control2, this.state.position);
+    if (this.has('control1')) {
+      this.control1Mark.synchronizeState(this.state.control1, matrix, inverseMatrix);
+      this.inLineMark.synchronizeState(this.state.control1, this.previousNode.state.position);
+    }
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+    this.control2Mark.synchronizeExpressions(this.expressionAt('control2', t));
+    if (this.has('control1')) {
+      this.control1Mark.synchronizeExpressions(this.expressionAt('control1', t));
+    }
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.positionMark.synchronizeDom(bounds, handleRadius);
+    this.control2Mark.synchronizeDom(bounds, handleRadius);
+    this.outLineMark.synchronizeDom(bounds, handleRadius);
+    if (this.has('control1')) {
+      this.control1Mark.synchronizeDom(bounds, handleRadius);
+      this.inLineMark.synchronizeDom(bounds, handleRadius);
     }
   }
 }
@@ -1408,160 +1559,6 @@ export class ArcNode extends Node {
 
     this.lineMarks[0].updateState(this.state.center, this.turtle.position, this.state.matrix);
     this.lineMarks[1].updateState(this.state.center, this.previousTurtle.position, this.state.matrix);
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
-export class CubicNode extends Node {
-  static type = 'cubic';
-  static article = 'a';
-  static timedIds = ['position', 'control1', 'control2'];
-
-  static create(parentEnvironment, where) {
-    const node = new CubicNode();
-    node.initialize(parentEnvironment, where);
-    return node;
-  }
-
-  static inflate(parentEnvironment, object, inflater) {
-    const node = new CubicNode();
-    node.embody(parentEnvironment, object, inflater);
-    return node;
-  }
-
-  segment(previousSegment) {
-    if (this.state.control1) {
-      return new CubicSegment(this.previousTurtle.position, this.turtle.position, this.state.control1, this.state.control2, false);
-    } else {
-      return new CubicSegment(this.previousTurtle.position, this.turtle.position, [
-        this.previousTurtle.position[0] + (this.previousTurtle.position[0] - previousSegment.control2[0]),
-        this.previousTurtle.position[1] + (this.previousTurtle.position[1] - previousSegment.control2[1])
-      ], this.state.control2, true);
-    }
-  }
-
-  get isDom() {
-    return true;
-  }
-
-  configureState(bounds) {
-    this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>cubic</code> node whose <code>position</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>position</code>. ${e.message}`);
-      }
-    });
-
-    this.configureVectorProperty('control1', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (timeline) {
-        try {
-          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>control1</code>. ${e.message}`);
-        }
-      } else if (!this.previousTurtle) { // TODO only allow implicit after previous quadratic
-        throw new LocatedException(this.where, 'I found a <code>cubic</code> node whose <code>control1</code> was not set. Omitting <code>control1</code> is legal only when the previous node was also <code>cubic</code>.');
-      }
-    });
-
-    this.configureVectorProperty('control2', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>cubic</code> node whose <code>control2</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>cubic</code> node with an illegal value for <code>control2</code>. ${e.message}`);
-      }
-    });
-
-    const positionTimeline = this.timedProperties.position;
-    const control1Timeline = this.timedProperties.control1;
-    const control2Timeline = this.timedProperties.control2;
-
-    if (positionTimeline.isAnimated || control1Timeline?.isAnimated || control2Timeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
-    }
-
-    if (positionTimeline.hasDefault && (!control1Timeline || control1Timeline.hasDefault) && control2Timeline.hasDefault) {
-      this.updateTurtle(bounds);
-    }
-  }
-
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.state.position[0];
-    this.turtle.position[1] = this.state.position[1];
-    this.turtle.heading = this.previousTurtle.heading;
-    if (this.state.control1) {
-      this.pathCommand = `C ${this.state.control1[0]},${bounds.span - this.state.control1[1]} ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
-    } else {
-      this.pathCommand = `S ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
-    }
-  }
-
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
-  }
-
-  configureMarks() {
-    super.configureMarks();
-
-    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('position', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.turtle.position[0] = this.state.position[0] = x;
-      this.turtle.position[1] = this.state.position[1] = y;
-    });
-
-    this.control2Mark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('control2', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.state.control2[0] = x;
-      this.state.control2[1] = y;
-    });
-
-    this.lineMarks = [
-      new LineMark(),
-    ]
-
-    const foregroundMarks = [this.positionMark, this.control2Mark];
-
-    if (this.state.control1) {
-      this.control1Mark = new VectorPanMark(this.parentEnvironment, null, t => {
-        return this.expressionAt('control1', this.parentEnvironment.root.state.t);
-      }, ([x, y]) => {
-        this.state.control1[0] = x;
-        this.state.control1[1] = y;
-      });
-
-      foregroundMarks.push(this.control1Mark);
-      this.lineMarks.push(new LineMark());
-    }
-
-    this.marker.addMarks(foregroundMarks, this.lineMarks, []);
-  }
-
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-
-    this.positionMark.updateState(this.state.position, this.state.matrix);
-    this.control2Mark.updateState(this.state.control2, this.state.matrix);
-    this.lineMarks[0].updateState(this.state.position, this.state.control2);
-
-    if (this.state.control1) {
-      this.control1Mark.updateState(this.state.control1, this.state.matrix);
-      this.lineMarks[1].updateState(this.previousTurtle.position, this.state.control1);
-    }
   }
 }
 
