@@ -31,6 +31,7 @@ export class Marker {
     this.centeredForegroundMarks = [];
     this.staticBackgroundMarks = [];
     this.dynamicBackgroundMarks = [];
+    this.marks = [];
   }
 
   show() {

@@ -1739,7 +1739,7 @@ export class NodeShape extends Shape {
 
     let previousNode = null;
     for (let node of this.nodes) {
-      node.initializeState(previousNode);
+      node.initializeState(previousNode, this.nodes[0]);
       previousNode = node;
     }
 

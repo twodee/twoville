@@ -75,9 +75,10 @@ export class Node extends ObjectFrame {
     this.parentFrame.addMarker(this.marker);
   }
 
-  initializeState(previousNode) {
+  initializeState(previousNode, firstNode) {
     super.initializeState();
     this.previousNode = previousNode;
+    this.firstNode = firstNode;
     this.state.turtle = new Turtle([0, 0], 0);
   }
 }
@@ -888,35 +889,39 @@ export class BackNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.updateTurtle(bounds);
+  validate(fromTime, toTime) {
+  }
+
+  initializeStaticState() {
+  }
+
+  initializeDynamicState() {
+  }
+
+  synchronizeState(t) {
+    this.state.turtle.position[0] = this.firstNode.state.turtle.position[0];
+    this.state.turtle.position[1] = this.firstNode.state.turtle.position[1];
+  }
+
+  pathCommand(bounds) {
+    return `z`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+  }
+
+  synchronizeMarkExpressions(t) {
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
   }
 
   getPositions() {
-    return [this.turtle.position];
-  }
-
-  updateTurtle(bounds) {
-    if (this.parentEnvironment.state.turtle0) {
-      this.turtle.position[0] = this.parentEnvironment.state.turtle0.position[0];
-      this.turtle.position[1] = this.parentEnvironment.state.turtle0.position[1];
-      this.turtle.heading = this.previousTurtle.heading;
-    } else {
-      // I don't like this. Surely there's a better way to determine the starting point of the path.
-      this.turtle.position[0] = this.parentEnvironment.nodes[0].turtle.position[0];
-      this.turtle.position[1] = this.parentEnvironment.nodes[0].turtle.position[1];
-      this.turtle.heading = this.previousTurtle.heading;
-    }
-    this.pathCommand = `z`;
-  }
-
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
-  }
-
-  configureMarks() {
-    super.configureMarks();
-    this.marker.addMarks([], [], []);
+    return [this.state.position];
   }
 }
 
