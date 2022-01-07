@@ -1040,7 +1040,7 @@ export class ExpressionIdentifier extends Expression {
   }
 
   evaluate(env) {
-    let value = env.frames[0].get(this.nameToken.source);
+    let value = Frame.resolveStaticRvalue(this.nameToken.source, env.frames);
     if (value) {
       return value;
     } else {
@@ -1048,7 +1048,6 @@ export class ExpressionIdentifier extends Expression {
     }
   }
 
-  // TODO use context
   assign(env) {
     let value;
     if (env.rhs.isTimeSensitive(env)) {
@@ -1069,6 +1068,7 @@ export class ExpressionIdentifier extends Expression {
     // TODO rhs as last parameter
     // console.log("env:", env);
     env.frames[0].bind(env, this.nameToken.source, value);
+    // TODO don't necessarily bind to immediate s cope
 
     return value;
   }

@@ -975,20 +975,28 @@ export class DistanceMark extends PanMark {
 export class WedgeDegreesMark extends PanMark {
   constructor(shape, host, tweakShapeState) {
     super(shape, host, tweakShapeState);
+  }
+
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
     this.addArc();
   }
 
-  updateState(position, from, center, matrix) {
-    super.updateState(position, matrix);
-    this.from = from;
-    this.center = center;
+  synchronizeExpressions(degreesExpression) {
+    this.expression = degreesExpression;
+  }
+
+  synchronizeState(position, from, center, matrix, markFromMouse) {
+    super.synchronizeState(position, matrix, markFromMouse);
+    this.state.from = from;
+    this.state.center = center;
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     // Find vector from center to root position.
     let centerToFrom = [
-      this.from[0] - this.center[0],
-      this.from[1] - this.center[1]
+      this.state.from[0] - this.state.center[0],
+      this.state.from[1] - this.state.center[1]
     ];
     let length = Math.sqrt(centerToFrom[0] * centerToFrom[0] + centerToFrom[1] * centerToFrom[1]);
     centerToFrom[0] /= length;
@@ -996,8 +1004,8 @@ export class WedgeDegreesMark extends PanMark {
 
     // Find vector from center to mouse.
     let centerToMouse = [
-      mouseAt.x - this.center[0],
-      mouseAt.y - this.center[1],
+      mouseAt.x - this.state.center[0],
+      mouseAt.y - this.state.center[1],
     ];
     length = Math.sqrt(centerToMouse[0] * centerToMouse[0] + centerToMouse[1] * centerToMouse[1]);
     centerToMouse[0] /= length;
@@ -1009,12 +1017,12 @@ export class WedgeDegreesMark extends PanMark {
 
     // Because dot is ambiguous, find signed area and adjust angle to be > 180.
     let fromToCenter = [
-      this.center[0] - this.from[0],
-      this.center[1] - this.from[1]
+      this.state.center[0] - this.state.from[0],
+      this.state.center[1] - this.state.from[1]
     ];
     let fromToMouse = [
-      mouseAt.x - this.from[0],
-      mouseAt.y - this.from[1],
+      mouseAt.x - this.state.from[0],
+      mouseAt.y - this.state.from[1],
     ];
     const signedArea = fromToCenter[0] * fromToMouse[1] - fromToCenter[1] * fromToMouse[0];
 
@@ -1026,7 +1034,7 @@ export class WedgeDegreesMark extends PanMark {
       degrees -= 360;
     }
 
-    degrees = parseFloat(degrees.toShortFloat(this.shape.root.settings.mousePrecision))
+    degrees = manipulation.formatReal(degrees);
 
     if (isShiftModified) {
       degrees = Math.round(degrees);
@@ -1045,11 +1053,19 @@ export class WedgeDegreesMark extends PanMark {
 export class BumpDegreesMark extends PanMark {
   constructor(shape, host, tweakShapeState) {
     super(shape, host, tweakShapeState);
+  }
+
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
     this.addHorizontal();
   }
 
-  updateState(to, from, center, degrees, matrix) {
-    super.updateState(center, matrix);
+  synchronizeExpressions(degreesExpression) {
+    this.expression = degreesExpression;
+  }
+
+  synchronizeState(degrees, to, from, center, matrix, markFromMouse) {
+    super.synchronizeState(center, matrix, markFromMouse);
 
     const fromVector = [
       from[0] - center[0],
@@ -1058,23 +1074,23 @@ export class BumpDegreesMark extends PanMark {
     const radians = Math.atan2(fromVector[0], -fromVector[1]);
     let fromDegrees = radians * 180 / Math.PI - 90;
 
-    this.rotation = fromDegrees + degrees * 0.5;
-    this.to = to;
-    this.from = from;
-    this.center = center;
+    this.state.rotation = fromDegrees + degrees * 0.5;
+    this.state.to = to;
+    this.state.from = from;
+    this.state.center = center;
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     let centerToMouse = [
-      mouseAt.x - this.center[0],
-      mouseAt.y - this.center[1],
+      mouseAt.x - this.state.center[0],
+      mouseAt.y - this.state.center[1],
     ];
 
     // The new center will be on a line perpendicular to the vector from
     // the starting point to ending point.
     let fromToVector = [
-      this.to[0] - this.from[0],
-      this.to[1] - this.from[1],
+      this.state.to[0] - this.state.from[0],
+      this.state.to[1] - this.state.from[1],
     ]
     let length = Math.sqrt(fromToVector[0] * fromToVector[0] + fromToVector[1] * fromToVector[1]);
     fromToVector[0] /= length;
@@ -1088,8 +1104,8 @@ export class BumpDegreesMark extends PanMark {
     // Project the mouse point onto the perpendicular.
     let dot = centerToMouse[0] * direction[0] + centerToMouse[1] * direction[1];
     let newCenter = [
-      this.center[0] + dot * direction[0],
-      this.center[1] + dot * direction[1]
+      this.state.center[0] + dot * direction[0],
+      this.state.center[1] + dot * direction[1]
     ];
 
     // We've figured out the new center. Now we need to figure out how many
@@ -1097,16 +1113,16 @@ export class BumpDegreesMark extends PanMark {
     // the original expression to make sure the arc travels the same winding.
 
     const centerFromVector = [
-      this.from[0] - newCenter[0],
-      this.from[1] - newCenter[1],
+      this.state.from[0] - newCenter[0],
+      this.state.from[1] - newCenter[1],
     ];
     length = Math.sqrt(centerFromVector[0] * centerFromVector[0] + centerFromVector[1] * centerFromVector[1]);
     centerFromVector[0] /= length;
     centerFromVector[1] /= length;
 
     const centerToVector = [
-      this.to[0] - newCenter[0],
-      this.to[1] - newCenter[1],
+      this.state.to[0] - newCenter[0],
+      this.state.to[1] - newCenter[1],
     ];
     length = Math.sqrt(centerToVector[0] * centerToVector[0] + centerToVector[1] * centerToVector[1]);
     centerToVector[0] /= length;
@@ -1117,12 +1133,12 @@ export class BumpDegreesMark extends PanMark {
 
     // Because dot is ambiguous, find signed area and adjust angle to be > 180.
     const fromCenterVector = [
-      newCenter[0] - this.from[0],
-      newCenter[1] - this.from[1],
+      newCenter[0] - this.state.from[0],
+      newCenter[1] - this.state.from[1],
     ];
     fromToVector = [
-      this.to[0] - this.from[0],
-      this.to[1] - this.from[1],
+      this.state.to[0] - this.state.from[0],
+      this.state.to[1] - this.state.from[1],
     ]
     const signedArea = fromCenterVector[0] * fromToVector[1] - fromCenterVector[1] * fromToVector[0];
 
@@ -1139,7 +1155,7 @@ export class BumpDegreesMark extends PanMark {
       degrees = 360 - degrees;
     }
 
-    degrees = parseFloat(degrees.toShortFloat(this.shape.root.settings.mousePrecision));
+    degrees = manipulation.formatReal(degrees);
 
     if (isShiftModified) {
       degrees = Math.round(degrees);

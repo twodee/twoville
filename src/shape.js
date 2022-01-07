@@ -2516,7 +2516,7 @@ export class Path extends NodeShape {
     if (this.nodes.length > 0) {
       const node = this.nodes[0];
       if (!(node instanceof GoNode || node instanceof TurtleNode || node instanceof CircleNode || node instanceof RectangleNode)) {
-        throw new LocatedException(node.where, `I saw ${this.article} ${this.type} whose first step is ${node.type}. A path must begin with <code>go</code>, <code>turtle</code>, <code>rectangle</code>, or <code>circle</code>.`);
+        throw new LocatedException(node.where, `I saw ${this.article} ${this.type} whose first step is <code>${node.type}</code>. A path must begin with <code>go</code>, <code>turtle</code>, <code>rectangle</code>, or <code>circle</code>.`);
       }
     }
   }
@@ -2573,7 +2573,6 @@ export class Path extends NodeShape {
     const pathCommands = this.domNodes.map((node, index) => {
       return node.pathCommand(bounds, this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
     });
-    console.log("pathCommands:", pathCommands);
 
 	  if (this.mirrors.length > 0) {
       let segments = [];
@@ -2609,7 +2608,6 @@ export class Path extends NodeShape {
       }
 		}
    
-    console.log("pathCommands:", pathCommands);
     this.element.setAttributeNS(null, 'd', pathCommands.join(' '));
   }
 
