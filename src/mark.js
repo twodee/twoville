@@ -934,30 +934,38 @@ export class AxisMark extends PanMark {
 export class DistanceMark extends PanMark {
   constructor(shape, host, tweakShapeState) {
     super(shape, host, tweakShapeState);
+  }
+
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
     this.addHorizontal();
   }
 
-  updateState(position, heading, matrix) {
-    this.position = position;
-    this.matrix = matrix;
-    this.updateMatrixState();
-    this.rotation -= heading;
+  synchronizeExpressions(positionExpression) {
+    this.expression = positionExpression;
+  }
+
+  synchronizeState(position, from, heading, matrix, markFromMouse) {
+    super.synchronizeState(position, matrix, markFromMouse);
+    this.state.from = from;
+    this.state.heading = heading;
+    this.state.rotation += heading;
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const headingVector = [
-      Math.cos(this.host.heading * Math.PI / 180),
-      Math.sin(this.host.heading * Math.PI / 180),
+      Math.cos(this.state.heading * Math.PI / 180),
+      Math.sin(this.state.heading * Math.PI / 180),
     ];
 
     const mouseVector = [
-      mouseAt.x - this.host.position[0],
-      mouseAt.y - this.host.position[1],
+      mouseAt.x - this.state.from[0],
+      mouseAt.y - this.state.from[1],
     ];
 
     const dot = headingVector[0] * mouseVector[0] + headingVector[1] * mouseVector[1];
 
-    let newDistance = parseFloat(dot.toShortFloat(this.shape.root.settings.mousePrecision));
+    let newDistance = manipulation.formatReal(dot);
     if (isShiftModified) {
       newDistance = Math.round(newDistance);
     }

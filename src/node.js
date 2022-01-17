@@ -307,87 +307,78 @@ export class TurtleNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.configureVectorProperty('position', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>turtle</code> whose <code>position</code> was not set.');
-      }
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('position');
+    this.assertProperty('heading');
 
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>turtle</code> with an illegal value for <code>position</code>. ${e.message}`);
-      }
-    });
+    // Assert types of extent properties.
+    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('heading', [ExpressionInteger, ExpressionReal]);
 
-    this.configureScalarProperty('heading', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>turtle</code> whose <code>heading</code> was not set.');
-      }
-
-      try {
-        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>turtle</code> with an illegal value for <code>heading</code>. ${e.message}`);
-      }
-    });
-
-    const positionTimeline = this.timedProperties.position;
-    const headingTimeline = this.timedProperties.heading;
-
-    if (positionTimeline.isAnimated || headingTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
-    }
-
-    if (positionTimeline.hasDefault && headingTimeline.hasDefault) {
-      this.updateTurtle(bounds);
-    }
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('position', fromTime, toTime);
+    this.assertCompleteTimeline('heading', fromTime, toTime);
   }
 
-  getPositions() {
-    return [this.turtle.position];
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('position');
+    this.initializeStaticScalarProperty('heading');
   }
 
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.state.position[0];
-    this.turtle.position[1] = this.state.position[1];
-    this.turtle.heading = this.state.heading;
-    this.parentEnvironment.state.turtle0 = this.turtle;
-    this.pathCommand = `M ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('position');
+    this.initializeDynamicProperty('heading');
   }
 
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
+  synchronizeState(t) {
+    this.synchronizeStateProperty('position', t);
+    this.synchronizeStateProperty('heading', t);
+    this.state.turtle.position[0] = this.state.position[0];
+    this.state.turtle.position[1] = this.state.position[1];
+    this.state.turtle.heading = this.state.heading;
   }
 
-  configureMarks() {
-    super.configureMarks();
+  pathCommand(bounds) {
+    return `M ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+  }
 
-    this.positionMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('position', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.turtle.position[0] = this.state.position[0] = x;
-      this.turtle.position[1] = this.state.position[1] = y;
+  configureTurtle() {
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.position = value;
+      this.state.turtle.position[0] = this.state.position[0];
+      this.state.turtle.position[1] = this.state.position[1];
+      this.nextNode?.configureTurtle();
     });
-
-    this.headingMark = new RotationMark(this.parentEnvironment, this, t => {
-      return this.expressionAt('heading', this.parentEnvironment.root.state.t);
-    }, heading => {
-      this.state.heading = heading;
+    this.headingMark = new RotationMark(this.parentFrame, this, value => {
+      this.state.heading = value;
+      this.state.turtle.heading = value;
+      this.nextNode?.configureTurtle();
     });
-
     this.wedgeMark = new WedgeMark();
-
-    this.marker.addMarks([this.positionMark, this.headingMark], [this.wedgeMark], []);
+    this.marker.setMarks(this.positionMark, this.headingMark, this.wedgeMark);
   }
 
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.positionMark.updateState(this.state.position, this.state.matrix);
-    this.headingMark.updateState(this.state.position, this.state.heading, 0, this.state.matrix);
-    this.wedgeMark.updateState(this.state.position, this.state.heading, 0, this.state.matrix);
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+    this.headingMark.synchronizeState(this.state.position, this.state.heading, matrix, inverseMatrix);
+    this.wedgeMark.synchronizeState(this.state.position, this.state.heading, matrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+    this.headingMark.synchronizeExpressions(this.expressionAt('heading', t));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.positionMark.synchronizeDom(bounds, handleRadius);
+    this.headingMark.synchronizeDom(bounds, handleRadius, radialLength);
+    this.wedgeMark.synchronizeDom(bounds, radialLength);
   }
 }
 
@@ -414,55 +405,66 @@ export class MoveNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.configureScalarProperty('distance', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>move</code> node whose <code>distance</code> was not set.');
-      }
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('distance');
 
-      try {
-        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>move</code> node with an illegal value for <code>distance</code>. ${e.message}`);
-      }
+    // Assert types of extent properties.
+    this.assertScalarType('distance', [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('distance', fromTime, toTime);
+  }
+
+  initializeState(previousNode, firstNode) {
+    super.initializeState(previousNode, firstNode);
+    this.previousNode.nextNode = this;
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('distance');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('distance');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('distance', t);
+    this.configureTurtle();
+  }
+
+  configureTurtle() {
+    this.state.turtle.position[0] = this.previousNode.state.turtle.position[0] + this.state.distance * Math.cos(this.previousNode.state.turtle.heading * Math.PI / 180);
+    this.state.turtle.position[1] = this.previousNode.state.turtle.position[1] + this.state.distance * Math.sin(this.previousNode.state.turtle.heading * Math.PI / 180);
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
+  }
+
+  pathCommand(bounds) {
+    return `L ${this.state.turtle.position[0]},${bounds.span - this.state.turtle.position[1]}`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.distanceMark = new DistanceMark(this.parentFrame, null, value => {
+      this.state.distance = value;
+      this.configureTurtle();
+      this.nextNode?.configureTurtle();
     });
+    this.marker.setMarks(this.distanceMark);
   }
 
-  getPositions() {
-    return [this.turtle.position];
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.distanceMark.synchronizeState(this.state.turtle.position, this.previousNode.state.turtle.position, this.previousNode.state.turtle.heading, matrix, inverseMatrix);
   }
 
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.previousTurtle.position[0] + this.state.distance * Math.cos(this.previousTurtle.heading * Math.PI / 180);
-    this.turtle.position[1] = this.previousTurtle.position[1] + this.state.distance * Math.sin(this.previousTurtle.heading * Math.PI / 180);
-    this.turtle.heading = this.previousTurtle.heading;
-    this.pathCommand = `L ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
+  synchronizeMarkExpressions(t) {
+    this.distanceMark.synchronizeExpressions(this.expressionAt('distance', t));
   }
 
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
-  }
-
-  configureMarks() {
-    super.configureMarks();
-
-    this.distanceMark = new DistanceMark(this.parentEnvironment, this.previousTurtle, t => {
-      return this.expressionAt('distance', this.parentEnvironment.root.state.t);
-    }, distance => {
-      this.state.distance = distance;
-    });
-
-    this.marker.addMarks([this.distanceMark], [], []);
-  }
-
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    const to = [
-      this.previousTurtle.position[0] + this.state.distance * Math.cos(this.turtle.heading * Math.PI / 180),
-      this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
-    ];
-    this.distanceMark.updateState(to, -this.turtle.heading, this.state.matrix);
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.distanceMark.synchronizeDom(bounds, handleRadius);
   }
 }
 

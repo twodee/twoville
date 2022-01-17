@@ -377,7 +377,7 @@ export class ObjectFrame extends Frame {
 export class StrokeFrame extends ObjectFrame {
   static type = 'stroke';
   static article = 'a';
-  static timedIds = ['color', 'opacity', 'width'];
+  static timedIds = ['color', 'opacity', 'size'];
 
   static create(parentFrame, where) {
     const frame = new StrokeFrame();
@@ -395,15 +395,15 @@ export class StrokeFrame extends ObjectFrame {
   validate(fromTime, toTime) {
     // Assert required properties.
     this.assertProperty('color');
-    this.assertProperty('width');
+    this.assertProperty('size');
 
     this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
     this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('width', [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('size', [ExpressionInteger, ExpressionReal]);
 
     this.assertCompleteTimeline('color', fromTime, toTime);
     this.assertCompleteTimeline('opacity', fromTime, toTime);
-    this.assertCompleteTimeline('width', fromTime, toTime);
+    this.assertCompleteTimeline('size', fromTime, toTime);
   }
 
   initializeStaticState() {
@@ -415,8 +415,8 @@ export class StrokeFrame extends ObjectFrame {
       this.state.opacity = this.getStatic('opacity').value;
     }
 
-    if (this.hasStatic('width')) {
-      this.state.width = this.getStatic('width').value;
+    if (this.hasStatic('size')) {
+      this.state.size = this.getStatic('size').value;
     }
   }
 
@@ -439,11 +439,11 @@ export class StrokeFrame extends ObjectFrame {
       };
     }
 
-    if (this.hasDynamic('width')) {
-      const timeline = this.getDynamic('width');
-      this.state.animation.width = {
+    if (this.hasDynamic('size')) {
+      const timeline = this.getDynamic('size');
+      this.state.animation.size = {
         animators: timeline.intervals.map(interval => interval.toAnimator()),
-        defaultValue: this.state.width,
+        defaultValue: this.state.size,
       };
     }
   }
@@ -451,7 +451,7 @@ export class StrokeFrame extends ObjectFrame {
   synchronizeState(t) {
     this.synchronizeStateProperty('color', t);
     this.synchronizeStateProperty('opacity', t);
-    this.synchronizeStateProperty('width', t);
+    this.synchronizeStateProperty('size', t);
 
     this.state.colorBytes = [
       Math.floor(this.state.color[0] * 255),
@@ -463,7 +463,7 @@ export class StrokeFrame extends ObjectFrame {
   synchronizeDom(t, element) {
     const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
     element.setAttributeNS(null, 'stroke', rgb);
-    element.setAttributeNS(null, 'stroke-width', this.state.width);
+    element.setAttributeNS(null, 'stroke-width', this.state.size);
     element.setAttributeNS(null, 'stroke-opacity', this.state.opacity);
   }
 }

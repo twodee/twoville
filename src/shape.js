@@ -829,7 +829,7 @@ export class Rectangle extends Shape {
   }
 
   initializeStaticState() {
-    this.initializeStaticScalarProperty('radius');
+    this.initializeStaticScalarProperty('rounding');
     this.initializeStaticVectorProperty('center');
     this.initializeStaticVectorProperty('corner');
     this.initializeStaticVectorProperty('size');
@@ -912,15 +912,15 @@ export class Rectangle extends Shape {
         this.state.center[1] + 0.5 * this.state.size[1],
       ], this.state.matrix);
     } else {
-      this.positionMark.synchronizeState(this.state.corner);
+      this.positionMark.synchronizeState(this.state.corner, this.state.matrix, this.state.inverseMatrix);
       this.widthMark.synchronizeState([
         this.state.corner[0] + this.state.size[0],
         this.state.corner[1],
-      ]);
+      ], this.state.matrix, this.state.inverseMatrix);
       this.heightMark.synchronizeState([
         this.state.corner[0],
         this.state.corner[1] + this.state.size[1],
-      ]);
+      ], this.state.matrix, this.state.inverseMatrix);
     }
 
     this.state.centroid = [
@@ -968,6 +968,7 @@ export class Rectangle extends Shape {
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
 
+    console.log("this.state.rounding:", this.state.rounding);
     if (this.state.rounding) {
       this.element.setAttributeNS(null, 'rx', this.state.rounding);
       this.element.setAttributeNS(null, 'ry', this.state.rounding);
