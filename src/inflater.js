@@ -20,10 +20,10 @@ import {
   CubicNode,
   CircleNode,
   GoNode,
-  JumpNode,
+  FlyNode,
   LineNode,
   Mirror,
-  MoveNode,
+  WalkNode,
   QuadraticNode,
   RectangleNode,
   TabNode,
@@ -68,16 +68,16 @@ export class Inflater {
       return TabNode.inflate(env, object, Inflater);
     } else if (object.type === 'turtle') {
       return TurtleNode.inflate(env, object, Inflater);
-    } else if (object.type === 'move') {
-      return MoveNode.inflate(env, object, Inflater);
+    } else if (object.type === 'walk') {
+      return WalkNode.inflate(env, object, Inflater);
     } else if (object.type === 'turn') {
       return TurnNode.inflate(env, object, Inflater);
     } else if (object.type === 'back') {
       return BackNode.inflate(env, object, Inflater);
     } else if (object.type === 'go') {
       return GoNode.inflate(env, object, Inflater);
-    } else if (object.type === 'jump') {
-      return JumpNode.inflate(env, object, Inflater);
+    } else if (object.type === 'fly') {
+      return FlyNode.inflate(env, object, Inflater);
     } else if (object.type === 'circle') {
       return CircleNode.inflate(env, object, Inflater);
     } else if (object.type === 'rectangle') {

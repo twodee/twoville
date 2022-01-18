@@ -47,12 +47,12 @@ import {
   BackNode,
   CubicNode,
   LineNode,
-  JumpNode,
+  FlyNode,
   CircleNode,
   RectangleNode,
   GoNode,
   Mirror,
-  MoveNode,
+  WalkNode,
   QuadraticNode,
   TabNode,
   TurnNode,
@@ -1906,14 +1906,14 @@ export class ExpressionTurnNode extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionMoveNode extends ExpressionFunction {
+export class ExpressionWalkNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env) {
-    return MoveNode.create(this.instance, env.callExpression.where);
+    return WalkNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -1932,14 +1932,14 @@ export class ExpressionArcNode extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionJumpNode extends ExpressionFunction {
+export class ExpressionFlyNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env) {
-    return new JumpNode.create(this.instance, env.callExpression.where);
+    return new FlyNode.create(this.instance, env.callExpression.where);
   }
 }
 

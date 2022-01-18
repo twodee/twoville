@@ -389,19 +389,19 @@ export class TurtleNode extends Node {
 
 // --------------------------------------------------------------------------- 
 
-export class MoveNode extends Node {
-  static type = 'move';
+export class WalkNode extends Node {
+  static type = 'walk';
   static article = 'a';
   static timedIds = ['distance'];
 
   static create(parentEnvironment, where) {
-    const node = new MoveNode();
+    const node = new WalkNode();
     node.initialize(parentEnvironment, where);
     return node;
   }
 
   static inflate(parentEnvironment, object, inflater) {
-    const node = new MoveNode();
+    const node = new WalkNode();
     node.embody(parentEnvironment, object, inflater);
     return node;
   }
@@ -474,73 +474,25 @@ export class MoveNode extends Node {
 
 // --------------------------------------------------------------------------- 
 
-export class JumpNode extends Node {
-  static type = 'jump';
+export class FlyNode extends WalkNode {
+  static type = 'fly';
   static article = 'a';
   static timedIds = ['distance'];
 
   static create(parentEnvironment, where) {
-    const node = new JumpNode();
+    const node = new FlyNode();
     node.initialize(parentEnvironment, where);
     return node;
   }
 
   static inflate(parentEnvironment, object, inflater) {
-    const node = new JumpNode();
+    const node = new FlyNode();
     node.embody(parentEnvironment, object, inflater);
     return node;
   }
 
-  get isDom() {
-    return true;
-  }
-
-  configureState(bounds) {
-    this.configureScalarProperty('distance', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>jump</code> node whose <code>distance</code> was not set.');
-      }
-
-      try {
-        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>jump</code> node with an illegal value for <code>distance</code>. ${e.message}`);
-      }
-    });
-  }
-
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.previousTurtle.position[0] + this.state.distance * Math.cos(this.previousTurtle.heading * Math.PI / 180);
-    this.turtle.position[1] = this.previousTurtle.position[1] + this.state.distance * Math.sin(this.previousTurtle.heading * Math.PI / 180);
-    this.turtle.heading = this.previousTurtle.heading;
-    this.parentEnvironment.state.turtle0 = this.turtle;
-    this.pathCommand = `M ${this.turtle.position[0]},${bounds.span - this.turtle.position[1]}`;
-  }
-
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
-  }
-
-  configureMarks() {
-    super.configureMarks();
-
-    this.distanceMark = new DistanceMark(this.parentEnvironment, this.previousTurtle, t => {
-      return this.expressionAt('distance', this.parentEnvironment.root.state.t);
-    }, distance => {
-      this.state.distance = distance;
-    });
-
-    this.marker.addMarks([this.distanceMark], [], []);
-  }
-
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    const to = [
-      this.previousTurtle.position[0] + this.state.distance * Math.cos(this.turtle.heading * Math.PI / 180),
-      this.previousTurtle.position[1] + this.state.distance * Math.sin(this.turtle.heading * Math.PI / 180)
-    ];
-    this.distanceMark.updateState(to, -this.turtle.heading, this.state.matrix);
+  pathCommand(bounds) {
+    return `M ${this.state.turtle.position[0]},${bounds.span - this.state.turtle.position[1]}`;
   }
 }
 

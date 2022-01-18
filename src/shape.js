@@ -48,11 +48,11 @@ import {
   BackNode,
   CircleNode,
   GoNode,
-  JumpNode,
+  FlyNode,
   Mirror,
   RectangleNode,
   TabNode,
-  MoveNode,
+  WalkNode,
   LineNode,
   TurtleNode,
   VertexNode,
@@ -67,9 +67,9 @@ import {
   ExpressionCubicNode,
   ExpressionGoNode,
   ExpressionLineNode,
-  ExpressionMoveNode,
+  ExpressionWalkNode,
   ExpressionInteger,
-  ExpressionJumpNode,
+  ExpressionFlyNode,
   ExpressionMirror,
   ExpressionQuadraticNode,
   ExpressionReal,
@@ -640,7 +640,6 @@ export class Text extends Shape {
 
   initialize(where) {
     super.initialize(where);
-    this.initializeFill();
   }
 
   static create(where) {
@@ -655,47 +654,56 @@ export class Text extends Shape {
     return shape;
   }
 
-  configureState(bounds) {
+  validateProperties(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('size');
+    this.assertProperty('position');
+    this.assertProperty('color');
+
+    // Assert types of extent properties.
+    this.assertScalarType('size', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('anchor', 2, [ExpressionString]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('size', fromTime, toTime);
+    this.assertCompleteTimeline('position', fromTime, toTime);
+    this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+  }
+
+  initializeState() {
+    super.initializeState();
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('size');
+    this.initializeStaticVectorProperty('position');
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('size');
+    this.initializeDynamicProperty('position');
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
+  }
+
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'text');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    root.mainGroup.appendChild(this.element);
+
     this.element.appendChild(document.createTextNode('...'));
-
-    this.configureFill(bounds);
-
-    this.state.fontSize = 8;
-    this.updateSize(bounds);
-
-    this.configureScalarProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        return false;
-      }
-
-      try {
-        timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
-      }
-    });
-
-    this.configureVectorProperty('position', this, this, this.updatePosition.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>text</code> whose <code>position</code> was not set.');
-      }
-
-      try {
-        timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>position</code>. ${e.message}`);
-      }
-    });
-
-    this.element.childNodes[0].nodeValue = this.timedProperties.message.defaultValue.value;
+    this.element.childNodes[0].nodeValue = this.getStatic('message').value;
 
     let anchor = ['middle', 'center'];
-    if (this.untimedProperties.hasOwnProperty('anchor')) {
-      anchor[0] = this.untimedProperties.anchor.get(0).value;
+    if (this.hasStatic('anchor')) {
+      anchor[0] = this.getStatic('anchor').get(0).value;
       if (anchor[0] === 'west') {
         anchor[0] = 'start';
       } else if (anchor[0] === 'center') {
@@ -704,7 +712,7 @@ export class Text extends Shape {
         anchor[0] = 'end';
       }
 
-      anchor[1] = this.untimedProperties.anchor.get(1).value;
+      anchor[1] = this.getStatic('anchor').get(1).value;
       if (anchor[1] === 'north') {
         anchor[1] = 'hanging';
       } else if (anchor[1] === 'south') {
@@ -718,53 +726,67 @@ export class Text extends Shape {
     this.element.setAttributeNS(null, 'dominant-baseline', anchor[1]);
   }
 
-  updatePosition(bounds) {
-    this.element.setAttributeNS(null, 'x', this.state.position[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.position[1]);
-    this.updateCentroid(bounds);
-  }
+  synchronizeState(t) {
+    super.synchronizeState(t);
+    this.synchronizeStateProperty('size', t);
+    this.synchronizeStateProperty('position', t);
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
 
-  updateSize(bounds) {
-    this.element.setAttributeNS(null, 'font-size', this.state.size);
-    this.updateCentroid(bounds);
-  }
-
-  updateCentroid(bounds) {
-    const box = this.element.getBBox();
-    this.state.centroid = [
-      box.x + box.width * 0.5,
-      box.y + box.height * 0.5,
+    this.state.colorBytes = [
+      Math.floor(this.state.color[0] * 255),
+      Math.floor(this.state.color[1] * 255),
+      Math.floor(this.state.color[2] * 255),
     ];
   }
 
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
-    this.updatePosition(bounds);
-    this.updateSize(bounds);
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+    this.element.setAttributeNS(null, 'x', this.state.position[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.state.position[1]);
+
+    this.element.setAttributeNS(null, 'font-size', this.state.size);
+
+    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+    this.element.setAttributeNS(null, 'fill', rgb);
+
+    if (this.has('opacity')) {
+      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
+    }
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeMarkState() {
+    super.initializeMarkState();
     this.outlineMark = new RectangleMark();
-
-    this.positionMark = new VectorPanMark(this, null, t => {
-      return this.expressionAt('position', this.root.state.t);
-    }, ([x, y]) => {
-      this.state.position[0] = x;
-      this.state.position[1] = y;
+    this.positionMark = new VectorPanMark(this, null, value => {
+      this.state.position = value;
     });
+    this.markers[0].setMarks(this.positionMark, this.outlineMark);
+  }
 
-    this.markers[0].addMarks([this.positionMark], [this.outlineMark]);
+  synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
+    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+  }
+
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+    this.positionMark.synchronizeState(this.state.position, this.state.matrix, this.state.inverseMatrix);
+
+    const box = this.element.getBBox();
+    // TODO this bounding box is in SVG coordinates; it's not flipped
+    this.state.centroid = this.state.matrix.multiplyPosition([
+      box.x + box.width * 0.5,
+      box.y + box.height * 0.5,
+    ]);
+    this.state.boundingBox = BoundingBox.fromCornerSize([box.x, box.y], [box.width, box.height]);
+    this.outlineMark.synchronizeState([box.x, box.y], [box.width, box.height], 0);
   }
  
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-
-    // I have to query the SVG element to determine the bounding box of the
-    // text.
-    const box = this.element.getBBox();
-    this.outlineMark.updateState([box.x, bounds.span - box.y - box.height], [box.width, box.height], 0, this.state.matrix);
-    this.positionMark.updateState(this.state.position, this.state.matrix);
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
+    this.positionMark.synchronizeDom(bounds, handleRadius);
   }
 }
 
@@ -968,7 +990,6 @@ export class Rectangle extends Shape {
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
 
-    console.log("this.state.rounding:", this.state.rounding);
     if (this.state.rounding) {
       this.element.setAttributeNS(null, 'rx', this.state.rounding);
       this.element.setAttributeNS(null, 'ry', this.state.rounding);
@@ -982,6 +1003,10 @@ export class Rectangle extends Shape {
 
     const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
     this.element.setAttributeNS(null, 'fill', rgb);
+
+    if (this.has('opacity')) {
+      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
+    }
 
     this.stroke?.synchronizeDom(t, this.element);
   }
@@ -1335,6 +1360,10 @@ export class Circle extends Shape {
 
     const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
     this.element.setAttributeNS(null, 'fill', rgb);
+
+    if (this.has('opacity')) {
+      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
+    }
 
     this.stroke?.synchronizeDom(t, this.element);
   }
@@ -1700,7 +1729,7 @@ export class NodeShape extends Shape {
         } else {
           const nextNode = this.nodes[i + 1];
           if (!(nextNode instanceof VertexNode ||
-                nextNode instanceof MoveNode ||
+                nextNode instanceof WalkNode ||
                 nextNode instanceof BackNode ||
                 nextNode instanceof LineNode)) {
             throw new LocatedException(node.where, `I found ${node.article} ${node.type} node that was followed by ${nextNode.article} ${nextNode.type} node. It must be followed by a node that produces a straight line.`);
@@ -1870,7 +1899,7 @@ export class Polygon extends VertexShape {
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionWalkNode(this)));
     this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
     this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
     this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
@@ -1945,6 +1974,10 @@ export class Polygon extends VertexShape {
     const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
     this.element.setAttributeNS(null, 'fill', rgb);
 
+    if (this.has('opacity')) {
+      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
+    }
+
     this.stroke?.synchronizeDom(t, this.element);
 
     const positions = this.domNodes.flatMap((node, index) => {
@@ -1997,7 +2030,7 @@ export class Ungon extends VertexShape {
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionWalkNode(this)));
     // this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
     // TODO no mirror support yet?
     this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
@@ -2098,6 +2131,10 @@ export class Ungon extends VertexShape {
 
     const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
     this.element.setAttributeNS(null, 'fill', rgb);
+
+    if (this.has('opacity')) {
+      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
+    }
 
     this.stroke?.synchronizeDom(t, this.element);
 
@@ -2237,7 +2274,7 @@ export class Polyline extends VertexShape {
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionWalkNode(this)));
     this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
@@ -2352,7 +2389,7 @@ export class Line extends VertexShape {
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
+    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionWalkNode(this)));
   }
 
   static create(where) {
@@ -2472,8 +2509,8 @@ export class Path extends NodeShape {
     this.bindStatic('tab', new FunctionDefinition('tab', [], new ExpressionTabNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionMoveNode(this)));
-    this.bindStatic('jump', new FunctionDefinition('jump', [], new ExpressionJumpNode(this)));
+    this.bindStatic('walk', new FunctionDefinition('walk', [], new ExpressionWalkNode(this)));
+    this.bindStatic('fly', new FunctionDefinition('fly', [], new ExpressionFlyNode(this)));
     this.bindStatic('circle', new FunctionDefinition('circle', [], new ExpressionCircleNode(this)));
     this.bindStatic('rectangle', new FunctionDefinition('rectangle', [], new ExpressionRectangleNode(this)));
     this.bindStatic('go', new FunctionDefinition('go', [], new ExpressionGoNode(this)));
@@ -2568,6 +2605,10 @@ export class Path extends NodeShape {
 
     const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
     this.element.setAttributeNS(null, 'fill', rgb);
+
+    if (this.has('opacity')) {
+      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
+    }
 
     this.stroke?.synchronizeDom(t, this.element);
 
