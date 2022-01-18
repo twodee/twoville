@@ -81,6 +81,11 @@ export class Node extends ObjectFrame {
     this.firstNode = firstNode;
     this.state.turtle = new Turtle([0, 0], 0);
   }
+
+  configureTurtleAndDependents() {
+    this.configureTurtle();
+    this.nextNode?.configureTurtleAndDependents();
+  }
 }
 
 // --------------------------------------------------------------------------- 
@@ -345,20 +350,20 @@ export class TurtleNode extends Node {
   }
 
   configureTurtle() {
+    this.state.turtle.position[0] = this.state.position[0];
+    this.state.turtle.position[1] = this.state.position[1];
+    this.state.turtle.heading = this.state.heading;
   }
 
   initializeMarkState() {
     super.initializeMarkState();
     this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
       this.state.position = value;
-      this.state.turtle.position[0] = this.state.position[0];
-      this.state.turtle.position[1] = this.state.position[1];
-      this.nextNode?.configureTurtle();
+      this.configureTurtleAndDependents();
     });
     this.headingMark = new RotationMark(this.parentFrame, this, value => {
       this.state.heading = value;
-      this.state.turtle.heading = value;
-      this.nextNode?.configureTurtle();
+      this.configureTurtleAndDependents();
     });
     this.wedgeMark = new WedgeMark();
     this.marker.setMarks(this.positionMark, this.headingMark, this.wedgeMark);
@@ -366,8 +371,8 @@ export class TurtleNode extends Node {
 
   synchronizeMarkState(matrix, inverseMatrix) {
     this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
-    this.headingMark.synchronizeState(this.state.position, this.state.heading, matrix, inverseMatrix);
-    this.wedgeMark.synchronizeState(this.state.position, this.state.heading, matrix);
+    this.headingMark.synchronizeState(this.state.position, this.state.heading, 0 /* TODO*/, matrix, inverseMatrix);
+    this.wedgeMark.synchronizeState(this.state.position, this.state.heading, 0, matrix);
   }
 
   synchronizeMarkExpressions(t) {
@@ -449,8 +454,7 @@ export class MoveNode extends Node {
     super.initializeMarkState();
     this.distanceMark = new DistanceMark(this.parentFrame, null, value => {
       this.state.distance = value;
-      this.configureTurtle();
-      this.nextNode?.configureTurtle();
+      this.configureTurtleAndDependents();
     });
     this.marker.setMarks(this.distanceMark);
   }
@@ -820,46 +824,64 @@ export class TurnNode extends Node {
     return false;
   }
 
-  configureState(bounds) {
-    this.configureScalarProperty('degrees', this, this.parentEnvironment, this.updateTurtle.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>turn</code> node whose <code>degrees</code> was not set.');
-      }
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('degrees');
 
-      try {
-        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found a <code>turn</code> node with an illegal value for <code>degrees</code>. ${e.message}`);
-      }
-    });
+    // Assert types of extent properties.
+    this.assertScalarType('degrees', [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('degrees', fromTime, toTime);
   }
 
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.previousTurtle.position[0];
-    this.turtle.position[1] = this.previousTurtle.position[1];
-    this.turtle.heading = this.previousTurtle.heading + this.state.degrees;
+  initializeState(previousNode, firstNode) {
+    super.initializeState(previousNode, firstNode);
+    this.previousNode.nextNode = this;
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('degrees');
+  }
 
-    this.degreesMark = new RotationMark(this.parentEnvironment, this, t => {
-      return this.expressionAt('degrees', this.parentEnvironment.root.state.t);
-    }, degrees => {
-      this.state.degrees = degrees;
-      this.turtle.heading = this.previousTurtle.heading + this.degrees;
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('degrees');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('degrees', t);
+    this.configureTurtle();
+  }
+
+  configureTurtle() {
+    this.state.turtle.position[0] = this.previousNode.state.turtle.position[0];
+    this.state.turtle.position[1] = this.previousNode.state.turtle.position[1];
+    this.state.turtle.heading = this.previousNode.state.turtle.heading + this.state.degrees;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.degreesMark = new RotationMark(this.parentFrame, null, value => {
+      this.state.degrees = value;
+      this.configureTurtleAndDependents();
     });
-
     this.wedgeMark = new WedgeMark();
-
-    this.marker.addMarks([this.degreesMark], [this.wedgeMark], []);
+    this.marker.setMarks(this.degreesMark, this.wedgeMark);
   }
 
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.degreesMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading, this.state.matrix);
-    this.wedgeMark.updateState(this.previousTurtle.position, this.state.degrees, this.previousTurtle.heading, this.state.matrix);
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.degreesMark.synchronizeState(this.state.turtle.position, this.state.degrees, this.previousNode.state.turtle.heading, matrix, inverseMatrix);
+    this.wedgeMark.synchronizeState(this.state.turtle.position, this.state.degrees, this.previousNode.state.turtle.heading, matrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.degreesMark.synchronizeExpressions(this.expressionAt('degrees', t));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.degreesMark.synchronizeDom(bounds, handleRadius, radialLength);
+    this.wedgeMark.synchronizeDom(bounds, radialLength);
   }
 }
 
@@ -984,14 +1006,16 @@ export class GoNode extends Node {
     return `M ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
   }
 
+  configureTurtle() {
+    this.state.turtle.position[0] = this.state.position[0];
+    this.state.turtle.position[1] = this.state.position[1];
+  }
+
   initializeMarkState() {
     super.initializeMarkState();
     this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
       this.state.position = value;
-      this.state.turtle.position[0] = this.state.position[0];
-      this.state.turtle.position[1] = this.state.position[1];
-      // TODO other nodes need this too.
-      this.nextNode?.configureTurtle();
+      this.configureTurtleAndDependents();
     });
     this.marker.setMarks(this.positionMark);
   }
@@ -1514,22 +1538,22 @@ export class ArcNode extends Node {
     if (this.state.isWedge) {
       this.centerMark = new VectorPanMark(this.parentFrame, this, value => {
         this.state.center = value;
-        this.configureTurtle();
+        this.configureTurtleAndDependents();
       });
 
       this.positionMark = new WedgeDegreesMark(this.parentFrame, this, value => {
         this.state.degrees = value;
-        this.configureTurtle();
+        this.configureTurtleAndDependents();
       });
     } else {
       this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
         this.state.position = value;
-        this.configureTurtle();
+        this.configureTurtleAndDependents();
       });
 
       this.centerMark = new BumpDegreesMark(this.parentFrame, this, value => {
         this.state.degrees = value;
-        this.configureTurtle();
+        this.configureTurtleAndDependents();
       });
     }
 

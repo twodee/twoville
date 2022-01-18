@@ -292,9 +292,13 @@ export class WedgeMark extends Mark {
     this.dynamicBackgroundElements.push(this.element);
   }
 
-  synchronizeState(pivot, degrees, matrix) {
+  synchronizeState(pivot, degrees, degrees0, matrix) {
+    // degrees0 is the number of degrees that the entire wedge should be rotated. It represents
+    // a prior rotation, such as might exist in a turtle sequence. degrees on the other hand
+    // represents just one step of a sequence.
     this.state.pivot = pivot;
     this.state.degrees = degrees;
+    this.state.degrees0 = degrees0;
     this.state.matrix = matrix;
   }
 
@@ -303,7 +307,10 @@ export class WedgeMark extends Mark {
 
     const transformedPivot = this.state.matrix.multiplyPosition(this.state.pivot);
 
-    const transformedFrom = this.state.matrix.multiplyVector([1, 0]);
+    const transformedFrom = this.state.matrix.multiplyVector([
+      Math.cos(this.state.degrees0 * Math.PI / 180),
+      Math.sin(this.state.degrees0 * Math.PI / 180),
+    ]);
     let magnitude = Math.sqrt(transformedFrom[0] * transformedFrom[0] + transformedFrom[1] * transformedFrom[1]);
     transformedFrom[0] = transformedFrom[0] / magnitude * radialLength;
     transformedFrom[1] = transformedFrom[1] / magnitude * radialLength;
@@ -313,8 +320,8 @@ export class WedgeMark extends Mark {
     ];
 
     const transformedTo = this.state.matrix.multiplyVector([
-      Math.cos(this.state.degrees * Math.PI / 180),
-      Math.sin(this.state.degrees * Math.PI / 180),
+      Math.cos((this.state.degrees0 + this.state.degrees) * Math.PI / 180),
+      Math.sin((this.state.degrees0 + this.state.degrees) * Math.PI / 180),
     ]);
     magnitude = Math.sqrt(transformedTo[0] * transformedTo[0] + transformedTo[1] * transformedTo[1]);
     transformedTo[0] = transformedTo[0] / magnitude * radialLength;
@@ -818,9 +825,10 @@ export class RotationMark extends PanMark {
     this.expression = degreesExpression;
   }
 
-  synchronizeState(pivot, degrees, matrix, markFromMouse) {
+  synchronizeState(pivot, degrees, degrees0, matrix, markFromMouse) {
     super.synchronizeState(null, matrix, markFromMouse);
     this.state.degrees = degrees;
+    this.state.degrees0 = degrees0;
     this.state.pivot = pivot;
     this.state.matrix = matrix;
   }
@@ -828,8 +836,8 @@ export class RotationMark extends PanMark {
   synchronizeDom(bounds, handleRadius, radialLength) {
     const transformedPivot = this.state.matrix.multiplyPosition(this.state.pivot);
     const transformedVector = this.state.matrix.multiplyVector([
-      Math.cos(this.state.degrees * Math.PI / 180),
-      Math.sin(this.state.degrees * Math.PI / 180),
+      Math.cos((this.state.degrees0 + this.state.degrees) * Math.PI / 180),
+      Math.sin((this.state.degrees0 + this.state.degrees) * Math.PI / 180),
     ]);
     const magnitude = Math.sqrt(transformedVector[0] * transformedVector[0] + transformedVector[1] * transformedVector[1]);
     transformedVector[0] = transformedVector[0] / magnitude * radialLength;
@@ -852,7 +860,7 @@ export class RotationMark extends PanMark {
     ];
 
     const newRadians = Math.atan2(pivotToMouse[0], -pivotToMouse[1]);
-    let newDegrees = newRadians * 180 / Math.PI - 90;// - this.priorHeading;
+    let newDegrees = newRadians * 180 / Math.PI - 90 - this.state.degrees0;
 
     if (this.untweakedExpression.value < 0) {
       // We were negative and we want to stay that way. 
