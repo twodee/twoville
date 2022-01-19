@@ -1025,7 +1025,7 @@ export class ExpressionFunctionDefinition extends Expression {
   }
 
   evaluate(env) {
-    env.stackFrame.functions[this.name] = new FunctionDefinition(this.name, this.formals, this.body);
+    env.frames[env.frames.length - 1].bindStatic(this.name, new FunctionDefinition(this.name, this.formals, this.body));
   }
 }
 

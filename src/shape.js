@@ -2469,7 +2469,7 @@ export class Line extends VertexShape {
     });
     this.mirrorPositions(positions);
 
-    if (positions !== 2) {
+    if (positions.length !== 2) {
       throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
     }
 

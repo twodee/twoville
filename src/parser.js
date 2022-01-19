@@ -275,7 +275,15 @@ export function parse(tokens, source) {
       let e = expression();
       if (has(Tokens.Linebreak)) {
         consume();
-        return e;
+
+        // If it has more indentation, read it as a block and make a with.
+        if (has(Tokens.Indentation) && tokens[i].source.length > indents[indents.length - 1]) {
+          const scope = e;
+          const body = block();
+          return new ExpressionWith(scope, body, SourceLocation.span(scope.where, body.where));
+        } else {
+          return e;
+        }
       } else if (has(Tokens.EOF) || has(Tokens.Indentation)) { // Check for indentation because some expressions end in blocks, which have eaten their linebreak already
         return e;
       } else if (has(Tokens.Comma)) {
