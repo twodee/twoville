@@ -249,7 +249,7 @@ export class RenderEnvironment extends Frame {
 
   synchronizeMarkState(t) {
     for (let drawable of this.drawables) {
-      drawable.synchronizeMarkState(t);
+      drawable.synchronizeMarkState(t, this.bounds);
     }
   }
 

@@ -769,18 +769,18 @@ export class Text extends Shape {
     this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
   }
 
-  synchronizeMarkState(t) {
+  synchronizeMarkState(t, bounds) {
     super.synchronizeMarkState(t);
     this.positionMark.synchronizeState(this.state.position, this.state.matrix, this.state.inverseMatrix);
 
     const box = this.element.getBBox();
-    // TODO this bounding box is in SVG coordinates; it's not flipped
     this.state.centroid = this.state.matrix.multiplyPosition([
       box.x + box.width * 0.5,
-      box.y + box.height * 0.5,
+      bounds.span - box.y - box.height + box.height * 0.5,
     ]);
-    this.state.boundingBox = BoundingBox.fromCornerSize([box.x, box.y], [box.width, box.height]);
-    this.outlineMark.synchronizeState([box.x, box.y], [box.width, box.height], 0);
+
+    this.state.boundingBox = BoundingBox.fromCornerSize([box.x, bounds.span - box.y], [box.width, box.height]);
+    this.outlineMark.synchronizeState([box.x, bounds.span - box.y - box.height], [box.width, box.height], 0);
   }
  
   synchronizeMarkDom(bounds, handleRadius, radialLength) {

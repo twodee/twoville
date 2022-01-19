@@ -167,7 +167,7 @@ function animateTo(t) {
   scrubber.value = t;
   scene.synchronizeState(t);
   scene.synchronizeDom(t);
-  scene.synchronizeMarkState(t);
+  scene.synchronizeMarkState(t, scene.bounds);
   scene.synchronizeMarkExpressions(t);
   scene.synchronizeMarkDom();
 }
@@ -184,7 +184,7 @@ function scrubTo(t) {
   scrubber.value = t;
   scene.synchronizeState(t);
   scene.synchronizeDom(t);
-  scene.synchronizeMarkState(t);
+  scene.synchronizeMarkState(t, scene.bounds);
   scene.synchronizeMarkExpressions(t);
   scene.synchronizeMarkDom();
 }
@@ -287,7 +287,7 @@ function postInterpret(frame, successCallback) {
     editor.getSelection().setSelectionRange(range);
 
     shape.synchronizeDom(frameIndex, scene.bounds);
-    shape.synchronizeMarkState(frameIndex);
+    shape.synchronizeMarkState(frameIndex, scene.bounds);
     shape.synchronizeMarkDom(scene.bounds, scene.handleRadius, scene.radialLength);
   };
 
