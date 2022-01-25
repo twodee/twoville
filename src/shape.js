@@ -1899,7 +1899,7 @@ export class Polygon extends VertexShape {
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionWalkNode(this)));
+    this.bindStatic('walk', new FunctionDefinition('walk', [], new ExpressionWalkNode(this)));
     this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
     this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
     this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
@@ -2030,7 +2030,7 @@ export class Ungon extends VertexShape {
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionWalkNode(this)));
+    this.bindStatic('walk', new FunctionDefinition('walk', [], new ExpressionWalkNode(this)));
     // this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
     // TODO no mirror support yet?
     this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
@@ -2274,7 +2274,7 @@ export class Polyline extends VertexShape {
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionWalkNode(this)));
+    this.bindStatic('walk', new FunctionDefinition('walk', [], new ExpressionWalkNode(this)));
     this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
   }
 
@@ -2389,7 +2389,7 @@ export class Line extends VertexShape {
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
-    this.bindStatic('move', new FunctionDefinition('move', [], new ExpressionWalkNode(this)));
+    this.bindStatic('walk', new FunctionDefinition('walk', [], new ExpressionWalkNode(this)));
   }
 
   static create(where) {

@@ -312,6 +312,10 @@ export class TurtleNode extends Node {
     return true;
   }
 
+  getPositions() {
+    return [this.state.turtle.position];
+  }
+
   validate(fromTime, toTime) {
     // Assert required properties.
     this.assertProperty('position');
@@ -408,6 +412,10 @@ export class WalkNode extends Node {
 
   get isDom() {
     return true;
+  }
+
+  getPositions() {
+    return [this.state.turtle.position];
   }
 
   validate(fromTime, toTime) {
@@ -897,7 +905,7 @@ export class BackNode extends Node {
   }
 
   getPositions() {
-    return [this.state.position];
+    return [this.state.turtle.position];
   }
 }
 
@@ -926,6 +934,10 @@ export class GoNode extends Node {
 
   get isDom() {
     return true;
+  }
+
+  getPositions() {
+    return [this.state.turtle.position];
   }
 
   validate(fromTime, toTime) {
@@ -1010,6 +1022,10 @@ export class LineNode extends Node {
 
   get isDom() {
     return true;
+  }
+
+  getPositions() {
+    return [this.state.turtle.position];
   }
 
   validate(fromTime, toTime) {
@@ -1101,6 +1117,10 @@ export class QuadraticNode extends Node {
 
   get isDom() {
     return true;
+  }
+
+  getPositions() {
+    return [this.state.turtle.position];
   }
 
   validate(fromTime, toTime) {
@@ -1227,6 +1247,10 @@ export class CubicNode extends Node {
 
   get isDom() {
     return true;
+  }
+
+  getPositions() {
+    return [this.state.turtle.position];
   }
 
   validate(fromTime, toTime) {
@@ -1358,6 +1382,10 @@ export class ArcNode extends Node {
 
   get isDom() {
     return true;
+  }
+
+  getPositions() {
+    return [this.state.turtle.position];
   }
 
   validate(fromTime, toTime) {
