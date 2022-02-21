@@ -249,7 +249,7 @@ function postInterpret(frame, successCallback) {
     oldScene.stop();
   }
 
-  console.log("frame:", frame);
+  // console.log("frame:", frame);
   scene = RenderEnvironment.inflate(document.getElementById('svg'), document.getElementById('mouse-status-label'), frame, settings, Inflater);
 
   let hasTweak;
@@ -1637,6 +1637,7 @@ function initialize() {
 }
 
 function handleSvgResize() {
+  scene.synchronizeToSize();
   if (scene) {
     scene.synchronizeMarkDom();
   }

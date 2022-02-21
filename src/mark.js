@@ -221,28 +221,22 @@ export class LineMark extends Mark {
 
 // --------------------------------------------------------------------------- 
 
-export class RayMark {
-  constructor() {
+export class RayMark extends Mark {
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'line');
+    this.staticBackgroundElements.push(this.element);
   }
 
-  updateState(axis, pivot) {
+  synchronizeState(axis, pivot) {
     this.axis = axis;
     this.pivot = pivot;
   }
 
-  updateDom(bounds, factor) {
-    const length = Marker.RADIAL_MAGNITUDE / factor;
-
-    this.endpoint = [
-      this.pivot[0] + this.axis[0] * length,
-      this.pivot[1] + this.axis[1] * length
-    ];
-
+  synchronizeDom(bounds, handleRadius, radialLength) {
     this.element.setAttributeNS(null, 'x1', this.pivot[0]);
     this.element.setAttributeNS(null, 'y1', bounds.span - this.pivot[1]);
-    this.element.setAttributeNS(null, 'x2', this.endpoint[0]);
-    this.element.setAttributeNS(null, 'y2', bounds.span - this.endpoint[1]);
+    this.element.setAttributeNS(null, 'x2', this.pivot[0] + radialLength * this.axis[0]);
+    this.element.setAttributeNS(null, 'y2', bounds.span - (this.pivot[1] + radialLength * this.axis[1]));
   }
 }
 
@@ -896,38 +890,42 @@ export class RotationMark extends PanMark {
 // --------------------------------------------------------------------------- 
 
 export class AxisMark extends PanMark {
-  constructor(shape, host, tweakShapeState) {
-    super(shape, host, tweakShapeState);
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
     this.addArc();
   }
 
-  updateState(axis, pivot, matrix) {
-    this.axis = axis;
-    this.pivot = pivot;
-    this.matrix = matrix;
-    this.updateMatrixState();
+  synchronizeExpressions(positionExpression) {
+    this.expression = positionExpression;
   }
 
-  updateDom(bounds, factor, matrix) {
-    const length = Marker.RADIAL_MAGNITUDE / factor;
+  synchronizeState(position, from, matrix, markFromMouse) {
+    super.synchronizeState(position, matrix, markFromMouse);
+    this.state.from = from;
+  }
 
-    this.axisPosition = [
-      this.pivot[0] + this.axis[0] * length,
-      this.pivot[1] + this.axis[1] * length
+  synchronizeDom(bounds, handleRadius, radialLength) {
+    super.synchronizeDom(bounds, handleRadius, radialLength);
+    const position = [
+      this.state.from[0] + this.state.position[0] * radialLength,
+      this.state.from[1] + this.state.position[1] * radialLength
     ];
 
-    super.updatePositionDom(bounds, factor, this.axisPosition);
+    const transformedPosition = this.state.matrix.multiplyPosition(position);
+    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    command += ` rotate(${-this.state.rotation})`;
+    this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
     const diff = [
-      mouseAt.x - this.pivot[0],
-      mouseAt.y - this.pivot[1]
+      mouseAt.x - this.state.from[0],
+      mouseAt.y - this.state.from[1]
     ];
 
     const magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
-    diff[0] = (diff[0] / magnitude).toShortFloat(this.shape.root.settings.mousePrecision);
-    diff[1] = (diff[1] / magnitude).toShortFloat(this.shape.root.settings.mousePrecision);
+    diff[0] = manipulation.formatReal(diff[0] / magnitude);
+    diff[1] = manipulation.formatReal(diff[1] / magnitude);
 
     this.expression.set(0, new ExpressionReal(diff[0]));
     this.expression.set(1, new ExpressionReal(diff[1]));

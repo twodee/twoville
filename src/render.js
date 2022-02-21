@@ -281,6 +281,10 @@ export class RenderEnvironment extends Frame {
     if (this.isStarted) {
       this.synchronizeMarkDom();
     }
+    this.synchronizeToSize();
+  }
+
+  synchronizeToSize() {
     this.currentTransform = this.svg.getScreenCTM().inverse();
   }
 

@@ -1041,7 +1041,19 @@ export class ExpressionIdentifier extends Expression {
 
   evaluate(env) {
     let value = Frame.resolveStaticRvalue(this.nameToken.source, env.frames);
-    if (value) {
+    if (value instanceof FunctionDefinition) {
+      if (value.formals.length !== 0) {
+        throw new LocatedException(this.where, `I expected function ${this.nameToken.source} to be called with ${f.formals.length} parameter${f.formals.length == 1 ? '' : 's'}.`);
+      }
+
+      let callFrame = Frame.create();
+      let returnValue = value.body.evaluate({
+        ...env,
+        frames: [callFrame, ...env.frames],
+        callExpression: this,
+      });
+      return returnValue;
+    } else if (value) {
       return value;
     } else {
       throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of <code>${this.nameToken.source}</code> before.`);

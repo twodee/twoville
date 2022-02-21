@@ -420,7 +420,7 @@ export class Shape extends ObjectFrame {
   }
 
   selectMarker(id) {
-    if (id !== this.selectedMarkerId) {
+    if (id !== this.selectedMarkerId && id < this.markers.length) {
       // Deselect any currently selected marker.
       if (this.selectedMarkerId !== null) {
         this.markers[this.selectedMarkerId].deselect();
@@ -2580,7 +2580,7 @@ export class Path extends NodeShape {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.element.setAttributeNS(null, 'stroke-linecap', 'round');
+    // this.element.setAttributeNS(null, 'stroke-linecap', 'round');
     this.element.setAttributeNS(null, 'fill-rule', 'evenodd');
     root.mainGroup.appendChild(this.element);
   }
@@ -2628,6 +2628,7 @@ export class Path extends NodeShape {
 
 			for (let mirror of this.mirrors) {
 				let {pivot, axis} = mirror.state;
+        console.log("mirror.state:", mirror.state);
 				let line = {point: pivot, axis};
 
 				const mirroredSegments = segments.slice().reverse();

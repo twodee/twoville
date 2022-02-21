@@ -194,9 +194,9 @@ export class TabNode extends Node {
   }
 
   updateTurtle(bounds) {
-    this.state.turtle.position[0] = this.previousTurtle.position[0];
-    this.state.turtle.position[1] = this.previousTurtle.position[1];
-    this.state.turtle.heading = this.previousTurtle.heading;
+    this.state.turtle.position[0] = this.previousNode.state.turtle.position[0];
+    this.state.turtle.position[1] = this.previousNode.state.turtle.position[1];
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
   }
 
   configureMarks() {
@@ -305,7 +305,7 @@ export class TurtleNode extends Node {
   }
 
   segment(previousSegment) {
-    return new GapSegment(this.previousTurtle?.position, this.turtle.position);
+    return new GapSegment(this.previousNode?.state.turtle.position, this.state.turtle.position);
   }
 
   get isDom() {
@@ -566,10 +566,11 @@ export class CircleNode extends Node {
     }
   }
 
+  // TODO
   updateTurtle(bounds) {
     this.turtle.position[0] = this.state.center[0];
     this.turtle.position[1] = this.state.center[1];
-    this.turtle.heading = this.previousTurtle?.heading ?? 0;
+    this.turtle.heading = this.previousNode?.state.turtle.heading ?? 0;
     this.parentEnvironment.state.turtle0 = this.turtle;
     this.pathCommand = `M ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] - this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]}`;
   }
@@ -677,6 +678,7 @@ export class RectangleNode extends Node {
     }
   }
 
+  // TODO
   updateTurtle(bounds) {
     let corner;
     if (this.state.center) {
@@ -691,7 +693,7 @@ export class RectangleNode extends Node {
       this.turtle.position[1] = this.state.corner[1];
       corner = this.state.corner;
     }
-    this.turtle.heading = this.previousTurtle?.heading ?? 0;
+    this.turtle.heading = this.previousNode?.state.turtle.heading ?? 0;
     this.pathCommand = `
 M ${corner[0]},${bounds.span - corner[1]}
 L ${corner[0] + this.state.size[0]},${bounds.span - corner[1]}
@@ -866,7 +868,7 @@ export class BackNode extends Node {
 
   segment(previousSegment) {
     // TODO what's supposed to happen here?
-    return new GapSegment(this.previousTurtle?.position, this.turtle.position);
+    return new GapSegment(this.previousNode?.state.turtle.position, this.state.turtle.position);
   }
 
   get isDom() {
@@ -929,7 +931,7 @@ export class GoNode extends Node {
   }
 
   segment(previousSegment) {
-    return new GapSegment(this.previousTurtle?.position, this.turtle.position);
+    return new GapSegment(this.previousNode?.state.turtle.position, this.state.turtle.position);
   }
 
   get isDom() {
@@ -1017,7 +1019,7 @@ export class LineNode extends Node {
   }
 
   segment(previousSegment) {
-    return new LineSegment(this.previousTurtle.position, this.turtle.position);
+    return new LineSegment(this.previousNode.state.turtle.position, this.state.turtle.position);
   }
 
   get isDom() {
@@ -1106,11 +1108,11 @@ export class QuadraticNode extends Node {
 
   segment(previousSegment) {
     if (this.state.control) {
-      return new QuadraticSegment(this.previousTurtle.position, this.turtle.position, this.state.control, false);
+      return new QuadraticSegment(this.previousNode.state.turtle.position, this.state.turtle.position, this.state.control, false);
     } else {
-      return new QuadraticSegment(this.previousTurtle.position, this.turtle.position, [
-        this.previousTurtle.position[0] + (this.previousTurtle.position[0] - previousSegment.control[0]),
-        this.previousTurtle.position[1] + (this.previousTurtle.position[1] - previousSegment.control[1])
+      return new QuadraticSegment(this.previousNode.state.turtle.position, this.state.turtle.position, [
+        this.previousNode.state.turtle.position[0] + (this.previousNode.state.turtle.position[0] - previousSegment.control[0]),
+        this.previousNode.state.turtle.position[1] + (this.previousNode.state.turtle.position[1] - previousSegment.control[1])
       ], true);
     }
   }
@@ -1236,11 +1238,11 @@ export class CubicNode extends Node {
 
   segment(previousSegment) {
     if (this.state.control1) {
-      return new CubicSegment(this.previousTurtle.position, this.turtle.position, this.state.control1, this.state.control2, false);
+      return new CubicSegment(this.previousNode.state.turtle.position, this.state.turtle.position, this.state.control1, this.state.control2, false);
     } else {
-      return new CubicSegment(this.previousTurtle.position, this.turtle.position, [
-        this.previousTurtle.position[0] + (this.previousTurtle.position[0] - previousSegment.control2[0]),
-        this.previousTurtle.position[1] + (this.previousTurtle.position[1] - previousSegment.control2[1])
+      return new CubicSegment(this.previousNode.state.turtle.position, this.state.turtle.position, [
+        this.previousNode.state.turtle.position[0] + (this.previousNode.state.turtle.position[0] - previousSegment.control2[0]),
+        this.previousNode.state.turtle.position[1] + (this.previousNode.state.turtle.position[1] - previousSegment.control2[1])
       ], this.state.control2, true);
     }
   }
@@ -1377,7 +1379,7 @@ export class ArcNode extends Node {
   }
 
   segment(previousSegment) {
-    return new ArcSegment(this.previousTurtle.position, this.turtle.position, this.state.radius, this.state.isLarge, this.state.isClockwise);
+    return new ArcSegment(this.previousNode.state.turtle.position, this.state.turtle.position, this.state.radius, this.state.isLarge, this.state.isClockwise);
   }
 
   get isDom() {
@@ -1739,50 +1741,81 @@ export class Mirror extends ObjectFrame {
     return object;
   }
 
-  embody(parentEnvironment, object) {
-    super.embody(parentEnvironment, object);
+  embody(parentEnvironment, object, inflater) {
+    super.embody(parentEnvironment, object, inflater);
     this.sourceSpans = object.sourceSpans.map(subobject => SourceLocation.inflate(subobject));
+  }
+
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('pivot');
+    this.assertProperty('axis');
+
+    // Assert types of extent properties.
+    this.assertVectorType('pivot', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('axis', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('pivot', fromTime, toTime);
+    this.assertCompleteTimeline('axis', fromTime, toTime);
+  }
+
+  initializeState(previousNode, firstNode) {
+    super.initializeState(previousNode, firstNode);
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('pivot');
+    this.initializeStaticVectorProperty('axis');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('pivot');
+    this.initializeDynamicProperty('axis');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('pivot', t);
+    this.synchronizeStateProperty('axis', t);
   }
 
   initializeMarkState() {
     this.marker = new Marker(this.parentFrame);
     this.parentFrame.addMarker(this.marker);
-  }
 
-  configureMarks() {
-    this.pivotMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('pivot', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.state.pivot[0] = x;
-      this.state.pivot[1] = y;
+    this.pivotMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.pivot = value;
     });
 
-    this.axisMark = new AxisMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('axis', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.state.axis[0] = x;
-      this.state.axis[1] = y;
+    this.axisMark = new AxisMark(this.parentFrame, this, value => {
+      this.state.axis = value;
     });
 
     this.lineMark = new RayMark();
 
-    this.marker.addMarks([this.pivotMark, this.axisMark], [this.lineMark]);
+    this.marker.setMarks(this.pivotMark, this.axisMark, this.lineMark);
   }
 
-  updateInteractionState(matrix) {
-    this.state.matrix = matrix;
-    this.pivotMark.updateState(this.state.pivot, matrix);
-    this.axisMark.updateState(this.state.axis, this.state.pivot, matrix);
-    this.lineMark.updateState(this.state.axis, this.state.pivot, matrix);
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.pivotMark.synchronizeState(this.state.pivot, matrix, inverseMatrix);
+    this.axisMark.synchronizeState(this.state.axis, this.state.pivot, matrix, inverseMatrix);
+    this.lineMark.synchronizeState(this.state.axis, this.state.pivot, matrix, inverseMatrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
+    this.axisMark.synchronizeExpressions(this.expressionAt('axis', t));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.pivotMark.synchronizeDom(bounds, handleRadius);
+    this.axisMark.synchronizeDom(bounds, handleRadius, radialLength);
+    this.lineMark.synchronizeDom(bounds, handleRadius, radialLength);
   }
 
   castCursor(column, row) {
-    const isHit = this.sourceSpans.some(span => span.contains(column, row));
-    if (isHit) {
-      this.parentEnvironment.root.select(this.parentEnvironment);
-      this.parentEnvironment.selectMarker(this.marker.id);
-    }
-    return isHit;
+    return this.sourceSpans.some(span => span.contains(column, row));
   }
 }
 
