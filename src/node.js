@@ -527,81 +527,86 @@ export class CircleNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.configureScalarProperty('radius', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>circle</code> node whose <code>radius</code> was not set.');
-      }
-
-      try {
-        timeline.assertScalar(this.parentEnvironment, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>radius</code>. ${e.message}`);
-      }
-    });
-
-    this.configureVectorProperty('center', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>circle</code> node whose <code>center</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
-      }
-    });
-
-    const centerTimeline = this.timedProperties.center;
-    const radiusTimeline = this.timedProperties.radius;
-
-    if (centerTimeline.isAnimated || radiusTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
-    }
-
-    if (centerTimeline.hasDefault && radiusTimeline.hasDefault) {
-      this.updateTurtle(bounds);
-    }
+  // TODO what is getPositions used for?
+  getPositions() {
+    return [this.state.turtle.position];
   }
 
-  // TODO
-  updateTurtle(bounds) {
-    this.turtle.position[0] = this.state.center[0];
-    this.turtle.position[1] = this.state.center[1];
-    this.turtle.heading = this.previousNode?.state.turtle.heading ?? 0;
-    this.parentEnvironment.state.turtle0 = this.turtle;
-    this.pathCommand = `M ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] - this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]}`;
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('center');
+    this.assertProperty('radius');
+
+    // Assert types of extent properties.
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('radius', [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('center', fromTime, toTime);
+    this.assertCompleteTimeline('radius', fromTime, toTime);
   }
 
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
+  initializeState(previousNode, firstNode) {
+    super.initializeState(previousNode, firstNode);
+    this.previousNode.nextNode = this;
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('center');
+    this.initializeStaticScalarProperty('radius');
+  }
 
-    this.centerMark = new VectorPanMark(this.parentEnvironment, null, t => {
-      return this.expressionAt('center', this.parentEnvironment.root.state.t);
-    }, ([x, y]) => {
-      this.state.center[0] = x;
-      this.state.center[1] = y;
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('center');
+    this.initializeDynamicProperty('radius');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('center', t);
+    this.synchronizeStateProperty('radius', t);
+    this.configureTurtle();
+  }
+
+  configureTurtle() {
+    this.state.turtle.position[0] = this.state.center[0];
+    this.state.turtle.position[1] = this.state.center[1];
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
+  }
+
+  pathCommand(bounds) {
+    return `M ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] - this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]}`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.centerMark = new VectorPanMark(this.parentFrame, null, value => {
+      this.state.center = value;
+      this.configureTurtleAndDependents();
     });
-
-    this.radiusMark = new HorizontalPanMark(this.parentEnvironment, null, 1, t => {
-      return this.expressionAt('radius', this.parentEnvironment.root.state.t);
-    }, newValue => {
-      this.state.radius = newValue;
+    this.radiusMark = new HorizontalPanMark(this.parentFrame, null, 1, value => {
+      this.state.radius = value;
+      this.configureTurtleAndDependents();
     });
-
-    this.marker.addMarks([this.centerMark, this.radiusMark], []);
+    this.marker.setMarks(this.centerMark, this.radiusMark);
   }
 
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    this.centerMark.updateState(this.state.center, this.state.matrix);
-    this.radiusMark.updateState([this.state.center[0] + this.state.radius, this.state.center[1]], this.state.matrix);
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.centerMark.synchronizeState(this.state.center, matrix, inverseMatrix);
+    this.radiusMark.synchronizeState([
+      this.state.center[0] + this.state.radius,
+      this.state.center[1],
+    ], matrix, inverseMatrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.centerMark.synchronizeExpressions(this.expressionAt('center', t));
+    this.radiusMark.synchronizeExpressions(this.expressionAt('radius', t));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.centerMark.synchronizeDom(bounds, handleRadius);
+    this.radiusMark.synchronizeDom(bounds, handleRadius);
   }
 }
 
@@ -628,138 +633,151 @@ export class RectangleNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    this.configureVectorProperty('size', this, this.parentEnvironment, null, bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a <code>rectangle</code> node whose <code>size</code> was not set.');
-      }
-
-      try {
-        timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
-      }
-    });
-
-    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
-      throw new LocatedException(this.where, 'I found a <code>rectangle</code> node whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
-    } else if (this.timedProperties.hasOwnProperty('corner')) {
-      this.configureVectorProperty('corner', this, this.parentEnvironment, null, bounds, [], timeline => {
-        try {
-          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
-        }
-      });
-    } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureVectorProperty('center', this, this.parentEnvironment, null, bounds, [], timeline => {
-        try {
-          timeline.assertList(this.parentEnvironment, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
-        }
-      });
-    } else {
-      throw new LocatedException(this.where, "I found a <code>rectangle</code> node whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
-    }
-
-    const sizeTimeline = this.timedProperties.size;
-    const positionTimeline = this.timedProperties.corner ?? this.timedProperties.center;
-
-    if (sizeTimeline.isAnimated || positionTimeline.isAnimated) {
-      this.parentEnvironment.updateDoms.push(this.updateTurtle.bind(this));
-    }
-
-    if (sizeTimeline.hasDefault && positionTimeline.hasDefault) {
-      this.updateTurtle(bounds);
-    }
+  getPositions() {
+    return [this.state.turtle.position];
   }
 
-  // TODO
-  updateTurtle(bounds) {
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('size');
+
+    if (this.has('corner') && this.has('center')) {
+      throw new LocatedException(this.where, 'I found a rectangle node whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
+    } else if (!this.has('corner') && !this.has('center')) {
+      throw new LocatedException(this.where, "I found a rectangle node whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    }
+
+    // Assert types of extent properties.
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('corner', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('size', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('center', fromTime, toTime);
+    this.assertCompleteTimeline('corner', fromTime, toTime);
+    this.assertCompleteTimeline('size', fromTime, toTime);
+  }
+
+  initializeState(previousNode, firstNode) {
+    super.initializeState(previousNode, firstNode);
+    this.previousNode.nextNode = this;
+    this.hasCenter = this.has('center');
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('center');
+    this.initializeStaticVectorProperty('corner');
+    this.initializeStaticVectorProperty('size');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('center');
+    this.initializeDynamicProperty('corner');
+    this.initializeDynamicProperty('size');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('center', t);
+    this.synchronizeStateProperty('corner', t);
+    this.synchronizeStateProperty('size', t);
+    this.configureTurtle();
+  }
+
+  configureTurtle() {
+    this.state.turtle.position = this.previousNode.state.turtle.position;
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
+  }
+
+  pathCommand(bounds) {
     let corner;
     if (this.state.center) {
-      this.turtle.position[0] = this.state.center[0];
-      this.turtle.position[1] = this.state.center[1];
+      this.state.turtle.position[0] = this.state.center[0];
+      this.state.turtle.position[1] = this.state.center[1];
       corner = [
         this.state.center[0] - this.state.size[0] * 0.5,
         this.state.center[1] - this.state.size[1] * 0.5
       ];
     } else {
-      this.turtle.position[0] = this.state.corner[0];
-      this.turtle.position[1] = this.state.corner[1];
+      this.state.turtle.position[0] = this.state.corner[0];
+      this.state.turtle.position[1] = this.state.corner[1];
       corner = this.state.corner;
     }
-    this.turtle.heading = this.previousNode?.state.turtle.heading ?? 0;
-    this.pathCommand = `
+
+    return `
 M ${corner[0]},${bounds.span - corner[1]}
 L ${corner[0] + this.state.size[0]},${bounds.span - corner[1]}
 L ${corner[0] + this.state.size[0]},${bounds.span - (corner[1] + this.state.size[1])}
 L ${corner[0]},${bounds.span - (corner[1] + this.state.size[1])}
 z
     `;
-    this.parentEnvironment.state.turtle0 = this.turtle;
   }
 
-  getPathCommand(bounds, from, to) {
-    return this.pathCommand;
-  }
+  initializeMarkState() {
+    super.initializeMarkState();
 
-  configureMarks() {
-    super.configureMarks();
-
-    let multiplier;
-    let getPositionExpression;
-    let updatePositionState;
-
-    if (this.timedProperties.hasOwnProperty('center')) {
-      getPositionExpression = t => this.expressionAt('center', this.root.state.t);
-      updatePositionState = ([x, y]) => {
-        this.state.center[0] = x;
-        this.state.center[1] = y;
-      };
-      multiplier = 2;
+    if (this.hasCenter) {
+      this.positionMark = new VectorPanMark(this.parentFrame, null, position => {
+        this.state.center = position;
+        this.state.corner[0] = position[0] - this.state.size[0] * 0.5;
+        this.state.corner[1] = position[1] - this.state.size[1] * 0.5;
+      });
+      this.widthMark = new HorizontalPanMark(this.parentFrame, null, 2, value => {
+        this.state.size[0] = value;
+        this.state.corner[0] = this.state.center[0] - value * 0.5;
+      });
+      this.heightMark = new VerticalPanMark(this.parentFrame, null, 2, value => {
+        this.state.size[1] = value;
+        this.state.corner[1] = this.state.center[1] - value * 0.5;
+      });
     } else {
-      getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
-      updatePositionState = ([x, y]) => {
-        this.state.corner[0] = x;
-        this.state.corner[1] = y;
-      };
-      multiplier = 1;
+      this.positionMark = new VectorPanMark(this.parentFrame, null, position => {
+        this.state.corner = position;
+      });
+      this.widthMark = new HorizontalPanMark(this.parentFrame, null, 1, value => this.state.size[0] = value);
+      this.heightMark = new VerticalPanMark(this.parentFrame, null, 1, value => this.state.size[1] = value);
     }
-
-    this.positionMark = new VectorPanMark(this.parentEnvironment, null, getPositionExpression, updatePositionState);
-
-    this.widthMark = new HorizontalPanMark(this.parentEnvironment, this, multiplier, t => {
-      return this.expressionAt('size', this.root.state.t).get(0);
-    }, newValue => {
-      this.state.size[0] = newValue;
-    });
-
-    this.heightMark = new VerticalPanMark(this.parentEnvironment, this, multiplier, t => {
-      return this.expressionAt('size', this.root.state.t).get(1);
-    }, newValue => {
-      this.state.size[1] = newValue;
-    });
-
-    this.marker.addMarks([this.positionMark, this.widthMark, this.heightMark], []);
+    this.marker.setMarks(this.positionMark, this.widthMark, this.heightMark);
   }
 
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
-    if (this.state.center) {
-      const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
-      this.positionMark.updateState(this.state.center, this.state.matrix);
-      this.widthMark.updateState([this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], this.state.matrix);
-      this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], this.state.matrix);
+  synchronizeMarkState(matrix, inverseMatrix) {
+    if (this.hasCenter) {
+      this.positionMark.synchronizeState(this.state.center, matrix, inverseMatrix);
+      this.widthMark.synchronizeState([
+        this.state.center[0] + 0.5 * this.state.size[0],
+        this.state.center[1],
+      ], matrix, inverseMatrix);
+      this.heightMark.synchronizeState([
+        this.state.center[0],
+        this.state.center[1] + 0.5 * this.state.size[1],
+      ], matrix, inverseMatrix); // TODO inverse matrix
     } else {
-      this.positionMark.updateState(this.state.corner, this.state.matrix);
-      this.widthMark.updateState([this.state.corner[0] + this.state.size[0], this.state.corner[1]], this.state.matrix);
-      this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
+      this.positionMark.synchronizeState(this.state.corner, matrix, inverseMatrix);
+      this.widthMark.synchronizeState([
+        this.state.corner[0] + this.state.size[0],
+        this.state.corner[1],
+      ], matrix, inverseMatrix);
+      this.heightMark.synchronizeState([
+        this.state.corner[0],
+        this.state.corner[1] + this.state.size[1],
+      ], matrix, inverseMatrix);
     }
+  }
+
+  synchronizeMarkExpressions(t) {
+    if (this.hasCenter) {
+      this.positionMark.synchronizeExpressions(this.expressionAt('center', t));
+    } else {
+      this.positionMark.synchronizeExpressions(this.expressionAt('corner', t));
+    }
+    this.widthMark.synchronizeExpressions(this.expressionAt('size', t).get(0));
+    this.heightMark.synchronizeExpressions(this.expressionAt('size', t).get(1));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.positionMark.synchronizeDom(bounds, handleRadius);
+    this.widthMark.synchronizeDom(bounds, handleRadius);
+    this.heightMark.synchronizeDom(bounds, handleRadius);
   }
 }
 

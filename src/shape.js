@@ -2628,7 +2628,6 @@ export class Path extends NodeShape {
 
 			for (let mirror of this.mirrors) {
 				let {pivot, axis} = mirror.state;
-        console.log("mirror.state:", mirror.state);
 				let line = {point: pivot, axis};
 
 				const mirroredSegments = segments.slice().reverse();

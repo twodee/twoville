@@ -2,6 +2,7 @@
 
 :root {
   --shadow-radius: 20px;
+  --hilite-color: darkorange;
 }
 
 .light {
@@ -284,7 +285,7 @@ html.grabbing {
   stroke-width: 3;
   stroke-opacity: 1;
   /* stroke: rgb(66, 135, 245); */
-  stroke: darkorange;
+  stroke: var(--hilite-color);
   vector-effect: non-scaling-stroke;
   fill: none;
   stroke-dasharray: 6 3;
@@ -601,7 +602,7 @@ a:active, .copy-button:active, .link-button:active {
   font-weight: bold;
 }
 
-#background-color-preview {
+#background-color-preview, #hilite-color-preview {
   height: 20px;
   cursor: pointer;
   border: 1px solid white;

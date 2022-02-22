@@ -51,6 +51,7 @@ let delay;
 let isLoop;
 
 let defaultSettings = {
+  hiliteColor: 'darkorange',
   showCopyLinks: true,
   showPageOutline: true,
   backgroundColor: '#E6E6E6',
@@ -638,6 +639,8 @@ function initialize() {
   const showPageOutlineToggle = document.getElementById('show-page-outline-toggle');
   const backgroundColorPicker = document.getElementById('background-color-picker');
   const backgroundColorPreview = document.getElementById('background-color-preview');
+  const hiliteColorPicker = document.getElementById('hilite-color-picker');
+  const hiliteColorPreview = document.getElementById('hilite-color-preview');
   const mousePrecisionSpinner = document.getElementById('mouse-precision-spinner');
   const handleSizeSpinner = document.getElementById('handle-size-spinner');
   const themePicker = document.getElementById('theme-picker');
@@ -646,6 +649,10 @@ function initialize() {
     backgroundColor: () => {
       backgroundColorPreview.style['background-color'] = settings.backgroundColor;
       svg.style.backgroundColor = settings.backgroundColor; 
+    },
+    hiliteColor: () => {
+      hiliteColorPreview.style['background-color'] = settings.hiliteColor;
+      document.documentElement.style.setProperty('--hilite-color', settings.hiliteColor);
     },
     showCopyLinks: () => {
       // showCopyLinksToggle.checked = settings.showCopyLinks;
@@ -761,6 +768,16 @@ function initialize() {
   backgroundColorPicker.addEventListener('input', () => {
     settings.backgroundColor = savedSettings.backgroundColor = backgroundColorPicker.value;
     uiSynchronizers.backgroundColor();
+    saveSettings();
+  });
+
+  // Handle hilite color picking.
+  hiliteColorPicker.value = settings.hiliteColor;
+  document.documentElement.style.setProperty('--hilite-color', settings.hiliteColor);
+  hiliteColorPreview.style['background-color'] = settings.hiliteColor;
+  hiliteColorPicker.addEventListener('input', () => {
+    settings.hiliteColor = savedSettings.hiliteColor = hiliteColorPicker.value;
+    uiSynchronizers.hiliteColor();
     saveSettings();
   });
 
