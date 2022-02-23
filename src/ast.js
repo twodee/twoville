@@ -2173,7 +2173,7 @@ export class ExpressionPrint extends ExpressionFunction {
 
 export class ExpressionDebug extends ExpressionFunction {
   evaluate(env) {
-    const where = callExpression.actuals[0].where;
+    const where = env.callExpression.actuals[0].where;
 
     const lines = env.root.source.split('\n');
     const pieces = [];
