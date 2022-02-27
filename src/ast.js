@@ -1822,14 +1822,6 @@ export class ExpressionFunction extends Expression {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionGrid extends ExpressionFunction {
-  evaluate(env) {
-    return Grid.create(env.callExpression.where);
-  }
-}
- 
-// --------------------------------------------------------------------------- 
-
 export class ExpressionShapeFunction extends ExpressionFunction {
   evaluate(env) {
     const shape = this.createShape(env);
@@ -1840,6 +1832,14 @@ export class ExpressionShapeFunction extends ExpressionFunction {
   }
 }
 
+// --------------------------------------------------------------------------- 
+
+export class ExpressionGrid extends ExpressionShapeFunction {
+  createShape(env) {
+    return Grid.create(env.callExpression.where);
+  }
+}
+ 
 // --------------------------------------------------------------------------- 
 
 export class ExpressionRectangle extends ExpressionShapeFunction {

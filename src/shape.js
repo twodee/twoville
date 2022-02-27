@@ -1393,14 +1393,15 @@ export class Grid extends Shape {
 
   initialize(where) {
     super.initialize(where);
-    this.untimedProperties.stroke = Stroke.create(this);
-    this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
-    this.untimedProperties.stroke.bind('color', new ExpressionVector([
-      new ExpressionReal(180 / 255),
-      new ExpressionReal(180 / 255),
-      new ExpressionReal(180 / 255)
+    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
+    const stroke = new StrokeFrame.create(this, null);
+    this.stroke.bindStatic('color', new ExpressionVector([
+      new ExpressionReal(0.75),
+      new ExpressionReal(0.75),
+      new ExpressionReal(0.75)
     ]));
-    this.untimedProperties.stroke.bind('size', new ExpressionReal(1));
+    this.stroke.bindStatic('size', new ExpressionReal(1));
+    this.stroke.bindStatic('opacity', new ExpressionReal(1));
   }
 
   static create(where) {
@@ -1415,255 +1416,209 @@ export class Grid extends Shape {
     return shape;
   }
 
-  configureState(bounds) {
+  validateProperties(fromTime, toTime) {
+    if ((this.has('corner') || this.has('center')) && !this.has('size')) {
+      this.assertProperty('size');
+    } else if (!(this.has('corner') || this.has('center')) && this.has('size')) {
+      throw new LocatedException(this.where, "I found a grid whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+    }
+
+    this.assertVectorType('corner', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('ticks', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('size', 2, [ExpressionInteger, ExpressionReal]);
+
+    this.assertCompleteTimeline('center', fromTime, toTime);
+    this.assertCompleteTimeline('corner', fromTime, toTime);
+    this.assertCompleteTimeline('ticks', fromTime, toTime);
+    this.assertCompleteTimeline('size', fromTime, toTime);
+
+    this.stroke?.validate(fromTime, toTime);
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.stroke.initializeState();
+    this.hasCenter = this.has('center');
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('center');
+    this.initializeStaticVectorProperty('corner');
+    this.initializeStaticVectorProperty('ticks');
+    this.initializeStaticVectorProperty('size');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('center');
+    this.initializeDynamicProperty('corner');
+    this.initializeDynamicProperty('ticks');
+    this.initializeDynamicProperty('size');
+  }
+
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'g');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'fill', 'none');
+    root.mainGroup.appendChild(this.element);
+  }
 
-    this.state.ticks = [1, 1];
-    this.state.size = [bounds.width, bounds.height];
-    this.state.corner = [bounds.x, bounds.y];
-    this.updateCorner(bounds);
+  initializeMarkState() {
+    super.initializeMarkState();
 
-    this.configureVectorProperty('ticks', this, this, this.updateTicks.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        return false;
-      }
+    this.outlineMark = new RectangleMark();
 
-      try {
-        timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>ticks</code>. ${e.message}`);
-      }
-    });
-
-    this.configureVectorProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        return false;
-      }
-
-      try {
-        timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
-      }
-    });
-
-    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
-      throw new LocatedException(this.where, 'I found a grid whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
-    } else if (this.timedProperties.hasOwnProperty('corner')) {
-      this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
-        try {
-          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
-        }
+    if (this.hasCenter) {
+      this.positionMark = new VectorPanMark(this, null, position => {
+        this.state.center = position;
+        this.state.corner[0] = position[0] - this.state.size[0] * 0.5;
+        this.state.corner[1] = position[1] - this.state.size[1] * 0.5;
       });
-    } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
-        try {
-          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
-        }
+      this.widthMark = new HorizontalPanMark(this, null, 2, value => {
+        this.state.size[0] = value;
+        this.state.corner[0] = this.state.center[0] - value * 0.5;
       });
-    // } else {
-      // throw new LocatedException(this.where, "I found a grid whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
-    }
-
-    this.configureStroke(this.untimedProperties.stroke, bounds, false);
-  }
-
-  updateTicks(bounds) {
-  }
-
-  updateSize(bounds) {
-    // this.element.setAttributeNS(null, 'width', this.state.size[0]);
-    // this.element.setAttributeNS(null, 'height', this.state.size[1]);
-  }
-
-  updateCenter(bounds) {
-    this.state.centroid = this.state.center;
-    // this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
-    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
-  }
-
-  updateCorner(bounds) {
-    this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
-    // this.element.setAttributeNS(null, 'x', this.state.corner[0]);
-    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
-  }
-
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
-
-    this.updateSize(bounds);
-    if (this.timedProperties.hasOwnProperty('center')) {
-      this.updateCenter(bounds);
+      this.heightMark = new VerticalPanMark(this, null, 2, value => {
+        this.state.size[1] = value;
+        this.state.corner[1] = this.state.center[1] - value * 0.5;
+      });
+      this.markers[0].setMarks(this.positionMark, this.widthMark, this.heightMark, this.outlineMark);
+    } else if (this.has('corner')) {
+      this.positionMark = new VectorPanMark(this, null, position => {
+        this.state.corner = position;
+      });
+      this.widthMark = new HorizontalPanMark(this, null, 1, value => this.state.size[0] = value);
+      this.heightMark = new VerticalPanMark(this, null, 1, value => this.state.size[1] = value);
+      this.markers[0].setMarks(this.positionMark, this.widthMark, this.heightMark, this.outlineMark);
     } else {
-      this.updateCorner(bounds);
+      this.markers[0].setMarks(this.outlineMark);
     }
+  }
+
+  synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
+    if (this.has('center')) {
+      this.positionMark.synchronizeExpressions(this.expressionAt('center', t));
+    } else if (this.has('corner')) {
+      this.positionMark.synchronizeExpressions(this.expressionAt('corner', t));
+    }
+    if (this.has('center') || this.has('corner')) {
+      this.widthMark.synchronizeExpressions(this.expressionAt('size', t).get(0));
+      this.heightMark.synchronizeExpressions(this.expressionAt('size', t).get(1));
+    }
+  }
+
+  synchronizeMarkState(t, bounds) {
+    super.synchronizeMarkState(t);
+
+    if (this.has('center')) {
+      this.positionMark.synchronizeState(this.state.center, this.state.matrix, this.state.inverseMatrix);
+      this.widthMark.synchronizeState([
+        this.state.center[0] + 0.5 * this.state.size[0],
+        this.state.center[1],
+      ], this.state.matrix);
+      this.heightMark.synchronizeState([
+        this.state.center[0],
+        this.state.center[1] + 0.5 * this.state.size[1],
+      ], this.state.matrix);
+    } else if (this.has('corner')) {
+      this.positionMark.synchronizeState(this.state.corner, this.state.matrix, this.state.inverseMatrix);
+      this.widthMark.synchronizeState([
+        this.state.corner[0] + this.state.size[0],
+        this.state.corner[1],
+      ], this.state.matrix, this.state.inverseMatrix);
+      this.heightMark.synchronizeState([
+        this.state.corner[0],
+        this.state.corner[1] + this.state.size[1],
+      ], this.state.matrix, this.state.inverseMatrix);
+    }
+
+    if (this.has('center') || this.has('corner')) {
+      this.outlineMark.synchronizeState(this.state.corner, this.state.size, 0);
+      this.state.centroid = [
+        this.state.corner[0] + this.state.size[0] * 0.5,
+        this.state.corner[1] + this.state.size[1] * 0.5,
+      ];
+      this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
+      this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
+    } else {
+      this.outlineMark.synchronizeState([bounds.x, bounds.y], [bounds.width, bounds.height], 0);
+      this.state.centroid = [
+        bounds.x + 0.5 * bounds.width,
+        bounds.y + 0.5 * bounds.height
+      ];
+      this.state.boundingBox = BoundingBox.fromCornerSize([bounds.x, bounds.y], [bounds.width, bounds.height]);
+    }
+  }
+ 
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
+    if (this.has('center') || this.has('corner')) {
+      this.positionMark.synchronizeDom(bounds, handleRadius);
+      this.widthMark.synchronizeDom(bounds, handleRadius);
+      this.heightMark.synchronizeDom(bounds, handleRadius);
+    }
+  }
+
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('size', t);
+    this.synchronizeStateProperty('ticks', t);
+    this.synchronizeStateProperty('center', t);
+    this.synchronizeStateProperty('corner', t);
+
+    if (this.hasCenter) {
+      this.state.corner = [
+        this.state.center[0] - 0.5 * this.state.size[0],
+        this.state.center[1] - 0.5 * this.state.size[1],
+      ];
+    }
+
+    this.stroke?.synchronizeState(t);
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+    this.stroke?.synchronizeDom(t, this.element);
+
+    const ticks = this.state.ticks ?? [1, 1];
+    const size = this.state.size ?? [bounds.width, bounds.height];
+    const corner = this.state.corner ?? [bounds.x, bounds.y];
 
     clearChildren(this.element);
 
-    if (this.state.ticks[0] > 0) {
-      const gap = this.state.ticks[0];
-      const first = Math.ceil(this.state.corner[0] / gap) * gap;
-      const last = this.state.corner[0] + this.state.size[0];
+    if (ticks[0] > 0) {
+      const gap = ticks[0];
+      const first = Math.ceil(corner[0] / gap) * gap;
+      const last = corner[0] + size[0];
       for (let tick = first; tick <= last; tick += gap) {
         const line = document.createElementNS(svgNamespace, 'line');
         line.setAttributeNS(null, 'visibility', 'visible');
         line.setAttributeNS(null, 'x1', tick);
         line.setAttributeNS(null, 'x2', tick);
-        line.setAttributeNS(null, 'y1', bounds.span - this.state.corner[1]);
-        line.setAttributeNS(null, 'y2', bounds.span - (this.state.corner[1] + this.state.size[1]));
+        line.setAttributeNS(null, 'y1', bounds.span - corner[1]);
+        line.setAttributeNS(null, 'y2', bounds.span - (corner[1] + size[1]));
         line.classList.add('grid-line');
         this.element.appendChild(line);
       }
     }
 
-    if (this.state.ticks[1] > 0) {
-      const gap = this.state.ticks[1];
-      const first = Math.ceil(this.state.corner[1] / gap) * gap;
-      const last = this.state.corner[1] + this.state.size[1];
+    if (ticks[1] > 0) {
+      const gap = ticks[1];
+      const first = Math.ceil(corner[1] / gap) * gap;
+      const last = corner[1] + size[1];
       for (let tick = first; tick <= last; tick += gap) {
         const line = document.createElementNS(svgNamespace, 'line');
         line.setAttributeNS(null, 'visibility', 'visible');
         line.setAttributeNS(null, 'y1', bounds.span - tick);
         line.setAttributeNS(null, 'y2', bounds.span - tick);
-        line.setAttributeNS(null, 'x1', this.state.corner[0]);
-        line.setAttributeNS(null, 'x2', this.state.corner[0] + this.state.size[0]);
+        line.setAttributeNS(null, 'x1', corner[0]);
+        line.setAttributeNS(null, 'x2', corner[0] + size[0]);
         line.classList.add('grid-line');
         this.element.appendChild(line);
-      }
-    }
-  }
-
-  configureMarks() {
-    super.configureMarks();
-    this.outlineMark = new RectangleMark();
-
-    let multiplier;
-    const interactiveMarks = [];
-
-    if (this.timedProperties.hasOwnProperty('center') || this.timedProperties.hasOwnProperty('center')) {
-      let getPositionExpression;
-      let updatePositionState;
-      if (this.timedProperties.hasOwnProperty('center')) {
-        getPositionExpression = t => this.expressionAt('center', this.root.state.t);
-        updatePositionState = ([x, y]) => {
-          this.state.center[0] = x;
-          this.state.center[1] = y;
-        };
-        multiplier = 2;
-      } else if (this.timedProperties.hasOwnProperty('corner')) {
-        getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
-        updatePositionState = ([x, y]) => {
-          this.state.corner[0] = x;
-          this.state.corner[1] = y;
-        };
-        multiplier = 1;
-      }
-
-      this.positionMark = new VectorPanMark(this, null, getPositionExpression, updatePositionState);
-      interactiveMarks.push(this.positionMark);
-    }
-
-    if (this.timedProperties.hasOwnProperty('size')) {
-      this.widthMark = new HorizontalPanMark(this, this, multiplier, t => {
-        return this.expressionAt('size', this.root.state.t).get(0);
-      }, newValue => {
-        this.state.size[0] = newValue;
-      });
-
-      this.heightMark = new VerticalPanMark(this, this, multiplier, t => {
-        return this.expressionAt('size', this.root.state.t).get(1);
-      }, newValue => {
-        this.state.size[1] = newValue;
-      });
-
-      interactiveMarks.push(this.widthMark, this.heightMark);
-    }
-
-    this.markers[0].addMarks(interactiveMarks, [this.outlineMark]);
-  }
- 
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    if (this.state.center) {
-      const corner = [this.state.center[0] - this.state.size[0] * 0.5, this.state.center[1] - this.state.size[1] * 0.5];
-      this.outlineMark.updateState(corner, this.state.size, this.state.rounding);
-      if (this.positionMark) {
-        this.positionMark.updateState(this.state.center, this.state.matrix);
-      }
-      if (this.widthMark) {
-        this.widthMark.updateState([this.state.center[0] + this.state.size[0] * 0.5, this.state.center[1]], this.state.matrix);
-        this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.size[1] * 0.5], this.state.matrix);
-      }
-    } else {
-      this.outlineMark.updateState(this.state.corner, this.state.size, this.state.rounding);
-      if (this.positionMark) {
-        this.positionMark.updateState(this.state.corner, this.state.matrix);
-      }
-      if (this.widthMark) {
-        this.widthMark.updateState([this.state.corner[0] + this.state.size[0], this.state.corner[1]], this.state.matrix);
-        this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.size[1]], this.state.matrix);
-      }
-    }
-  }
-
-  computeBoundingBox() {
-    let positions;
-
-    if (this.state.size) {
-      if (this.state.center) {
-        positions = [
-          [
-            this.state.center[0] - this.state.size[0] * 0.5,
-            this.state.center[1] - this.state.size[1] * 0.5,
-          ],
-          [
-            this.state.center[0] + this.state.size[0] * 0.5,
-            this.state.center[1] - this.state.size[1] * 0.5,
-          ],
-          [
-            this.state.center[0] - this.state.size[0] * 0.5,
-            this.state.center[1] + this.state.size[1] * 0.5,
-          ],
-          [
-            this.state.center[0] + this.state.size[0] * 0.5,
-            this.state.center[1] + this.state.size[1] * 0.5,
-          ],
-        ];
-      } else if (this.state.corner) {
-        positions = [
-          [
-            this.state.corner[0],
-            this.state.corner[1],
-          ],
-          [
-            this.state.corner[0] + this.state.size[0],
-            this.state.corner[1],
-          ],
-          [
-            this.state.corner[0],
-            this.state.corner[1] + this.state.size[1],
-          ],
-          [
-            this.state.corner[0] + this.state.size[0],
-            this.state.corner[1] + this.state.size[1],
-          ],
-        ];
-      }
-    }
-
-    if (positions) {
-      for (let position of positions) {
-        let transformedPosition = this.state.matrix.multiplyPosition(position);
-        this.boundingBox.enclosePoint(transformedPosition);
       }
     }
   }
@@ -1686,6 +1641,7 @@ export class NodeShape extends Shape {
   }
 
   embody(object, inflater) {
+    console.log("Node object:", object);
     super.embody(object, inflater);
     this.nodes = object.nodes.map(subobject => inflater.inflate(this, subobject));
     this.mirrors = object.mirrors.map(subobject => inflater.inflate(this, subobject));
@@ -1933,7 +1889,9 @@ export class Polygon extends VertexShape {
     super.initializeState();
     this.stroke?.initializeState();
     this.domNodes = this.nodes.filter(node => node.isDom); // TODO make domNodes part of state?
-    this.state.turtle0 = this.domNodes[0].turtle;
+    if (this.domNodes.length > 0) {
+      this.state.turtle0 = this.domNodes[0].turtle;
+    }
   }
 
   initializeStaticState() {
@@ -2271,6 +2229,7 @@ export class Polyline extends VertexShape {
 
   initialize(where) {
     super.initialize(where);
+    console.log("whereA:", where);
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
@@ -2280,11 +2239,13 @@ export class Polyline extends VertexShape {
 
   static create(where) {
     const shape = new Polyline();
+    console.log("whereB:", where);
     shape.initialize(where);
     return shape;
   }
 
   static inflate(object, inflater) {
+    console.log("object:", object);
     const shape = new Polyline();
     shape.embody(object, inflater);
     return shape;
@@ -2303,7 +2264,9 @@ export class Polyline extends VertexShape {
   initializeState() {
     super.initializeState();
     this.domNodes = this.nodes.filter(node => node.isDom); // TODO make domNodes part of state?
-    this.state.turtle0 = this.domNodes[0].turtle;
+    if (this.domNodes.length > 0) {
+      this.state.turtle0 = this.domNodes[0].turtle;
+    }
   }
 
   initializeStaticState() {
@@ -2353,6 +2316,8 @@ export class Polyline extends VertexShape {
     this.mirrorPositions(positions);
 
     if (positions.length < 2) {
+      console.log("this:", this);
+      console.log("this.where:", this.where);
       throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Polylines must have at least 2 vertices.`);
     }
 
@@ -2420,7 +2385,9 @@ export class Line extends VertexShape {
   initializeState() {
     super.initializeState();
     this.domNodes = this.nodes.filter(node => node.isDom);
-    this.state.turtle0 = this.domNodes[0].turtle;
+    if (this.domNodes.length > 0) {
+      this.state.turtle0 = this.domNodes[0].turtle;
+    }
   }
 
   initializeStaticState() {
@@ -2563,7 +2530,9 @@ export class Path extends NodeShape {
     super.initializeState();
     this.stroke?.initializeState();
     this.domNodes = this.nodes.filter(node => node.isDom);
-    this.state.turtle0 = this.domNodes[0].turtle;
+    if (this.domNodes.length > 0) {
+      this.state.turtle0 = this.domNodes[0].turtle;
+    }
   }
 
   initializeStaticState() {

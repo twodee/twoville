@@ -236,7 +236,7 @@ export class ObjectFrame extends Frame {
 
   embody(env, object, inflater) {
     super.embody(env, object, inflater);
-    this.where = SourceLocation.inflate(object.where);
+    this.where = object.where ? SourceLocation.inflate(object.where) : null;
   }
 
   get type() {
@@ -250,7 +250,7 @@ export class ObjectFrame extends Frame {
   deflate() {
     const object = super.deflate();
     object.type = this.type;
-    object.where = this.where.deflate();
+    object.where = this.where?.deflate();
     return object;
   }
 

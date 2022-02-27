@@ -227,7 +227,7 @@ export class Rotate extends Transform {
   synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix, inverseMatrix) {
     this.pivotMark.synchronizeState(this.state.pivot, afterMatrix, inverseMatrix);
     this.degreesMark.synchronizeState(this.state.pivot, this.state.degrees, 0, afterMatrix, inverseMatrix);
-    this.wedgeMark.synchronizeState(this.state.pivot, this.state.degrees, afterMatrix);
+    this.wedgeMark.synchronizeState(this.state.pivot, this.state.degrees, 0, afterMatrix);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {

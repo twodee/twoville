@@ -95,8 +95,8 @@ export class SourceLocation {
     return new SourceLocation(a.lineStart, b.lineEnd, a.columnStart, b.columnEnd);
   }
 
-  static inflate(pod) {
-    return new SourceLocation(pod.lineStart, pod.lineEnd, pod.columnStart, pod.columnEnd);
+  static inflate(object) {
+    return new SourceLocation(object.lineStart, object.lineEnd, object.columnStart, object.columnEnd);
   }
 }
 
@@ -109,8 +109,8 @@ export class Token {
     this.where = where;
   }
 
-  static inflate(pod) {
-    return new Token(pod.type, pod.source, SourceLocation.inflate(pod.where));
+  static inflate(object) {
+    return new Token(object.type, object.source, SourceLocation.inflate(object.where));
   }
 }
 
