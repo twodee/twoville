@@ -480,7 +480,6 @@ export class WalkNode extends Node {
 
   initializeState(firstNode, previousNode, nextNode) {
     super.initializeState(firstNode, previousNode, nextNode);
-    this.previousNode.nextNode = this;
   }
 
   initializeStaticState() {
@@ -569,7 +568,6 @@ export class FlyNode extends Node {
 
   initializeState(firstNode, previousNode, nextNode) {
     super.initializeState(firstNode, previousNode, nextNode);
-    this.previousNode.nextNode = this;
   }
 
   initializeStaticState() {
@@ -662,7 +660,6 @@ export class CircleNode extends Node {
 
   initializeState(firstNode, previousNode, nextNode) {
     super.initializeState(firstNode, previousNode, nextNode);
-    this.previousNode.nextNode = this;
   }
 
   initializeStaticState() {
@@ -1540,9 +1537,6 @@ export class ArcNode extends Node {
   initializeState(firstNode, previousNode, nextNode) {
     super.initializeState(firstNode, previousNode, nextNode);
     this.state.isWedge = this.has('center');
-    if (this.state.isWedge) {
-      this.previousNode.nextNode = this;
-    }
   }
 
   initializeStaticState() {
