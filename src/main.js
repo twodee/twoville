@@ -1654,8 +1654,8 @@ function initialize() {
 }
 
 function handleSvgResize() {
-  scene.synchronizeToSize();
   if (scene) {
+    scene.synchronizeToSize();
     scene.synchronizeMarkDom();
   }
 }

@@ -315,11 +315,6 @@ export class Shape extends ObjectFrame {
     this.element.addEventListener('mouseleave', event => {
       event.stopPropagation();
 
-      // The cursor is leaving the shape, but it might just be running across a mark. The marks
-      // are all tagged with class tag-SHAPE-ID. Don't unhover if we're on the shape or one of
-      // its marks.
-      // const isStillShape = event.toElement && event.toElement.classList.contains(`tag-${this.id}`);
-      // if (!isStillShape && !this.isSelected) {
       if (this.isUnhoverTransition(event)) {
         this.markers[0].unhover();
       }
@@ -329,18 +324,65 @@ export class Shape extends ObjectFrame {
       // }
     });
 
+    // If the mouse exits through the outline mark, then the shape's leave
+    // listener won't fire. The marker itself needs a leave listener.
+    this.staticBackgroundMarkGroup.addEventListener('mouseleave', event => {
+      if (this.isUnhoverTransition(event)) {
+        this.markers[0].unhover();
+      }
+    });
+
     this.element.addEventListener('click', event => {
       // If the event bubbles up to the parent SVG, that means no shape was
       // clicked on, and everything will be deselected. We don't want that.
       event.stopPropagation();
       root.select(this);
-      
-      // if (!this.root.isStale) {
-      // }
     });
+
+    // this.element.addEventListener('click', event => {
+      // If the event bubbles up to the parent SVG, that means no shape was
+      // clicked on, and everything will be deselected. We don't want that.
+      // event.stopPropagation();
+
+      // if (!this.root.isStale) {
+        // this.root.select(this);
+      // }
+    // });
+
+    // this.element.addEventListener('mouseenter', event => {
+      // if (this.root.isTweaking) return;
+
+      // event.stopPropagation();
+
+      // Only show the marks if the source code is evaluated and fresh.
+      // if (!this.isSelected && !this.root.isStale) {
+        // this.markers[0].hoverMarks();
+      // }
+
+      // if (event.buttons === 0) {
+        // this.root.contextualizeCursor(event.toElement);
+      // }
+    // });
+
+    // this.element.addEventListener('mouseleave', event => {
+      // event.stopPropagation();
+
+      // if (this.markers[0].isUnhoverTransition(event)) {
+        // this.markers[0].unhoverMarks();
+      // }
+
+      // if (event.buttons === 0) {
+        // this.root.contextualizeCursor(event.toElement);
+      // }
+    // });
   }
 
   isUnhoverTransition(event) {
+    // The cursor is leaving the shape, but it might just be running across a mark. The marks
+    // are all tagged with class tag-SHAPE-ID. Don't unhover if we're on the shape or one of
+    // its marks.
+    // console.log("event.toElement:", event.toElement);
+    // console.log("event.toElement.classList:", event.toElement?.classList);
     const isStillShape = event.toElement && event.toElement.classList.contains(`tag-${this.id}`);
     return !this.isSelected && !isStillShape;
   }
@@ -373,43 +415,6 @@ export class Shape extends ObjectFrame {
       this.root.situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
       this.root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
     }
-
-    this.element.addEventListener('click', event => {
-      // If the event bubbles up to the parent SVG, that means no shape was
-      // clicked on, and everything will be deselected. We don't want that.
-      event.stopPropagation();
-
-      if (!this.root.isStale) {
-        this.root.select(this);
-      }
-    });
-
-    this.element.addEventListener('mouseenter', event => {
-      if (this.root.isTweaking) return;
-
-      event.stopPropagation();
-
-      // Only show the marks if the source code is evaluated and fresh.
-      if (!this.isSelected && !this.root.isStale) {
-        this.markers[0].hoverMarks();
-      }
-
-      if (event.buttons === 0) {
-        this.root.contextualizeCursor(event.toElement);
-      }
-    });
-
-    this.element.addEventListener('mouseleave', event => {
-      event.stopPropagation();
-
-      if (this.markers[0].isUnhoverTransition(event)) {
-        this.markers[0].unhoverMarks();
-      }
-
-      if (event.buttons === 0) {
-        this.root.contextualizeCursor(event.toElement);
-      }
-    });
 
     for (let marker of this.markers) {
       this.staticBackgroundMarkGroup.appendChild(marker.staticBackgroundGroup);
@@ -486,50 +491,12 @@ export class Shape extends ObjectFrame {
     this.updateInteractionState(bounds);
     this.updateInteractionDom(bounds, factor);
 
-    // for (let transform of this.transforms) {
-      // transform.updateContentDom();
-    // }
-
     // First get all the model state in order.
     // A drag on a transform marker will have changed the state.
     for (let transform of this.transforms) {
       transform.updateDomCommand(bounds);
     }
-    // this.updateMarkerState();
-
-    // Now update DOM.
-    // this.updateShapeDom(bounds);
-    // this.updateMarkerDom(bounds, factor);
   }
-
-  // configureStroke(stateHost, bounds, isRequired) {
-    // this.strokeStateHost = stateHost;
-    // configureStroke(stateHost, this, bounds, isRequired);
-  // }
-
-  // updateStrokeColorDom(bounds) {
-    // const r = Math.floor(this.strokeStateHost.state.color[0] * 255);
-    // const g = Math.floor(this.strokeStateHost.state.color[1] * 255);
-    // const b = Math.floor(this.strokeStateHost.state.color[2] * 255);
-    // const rgb = `rgb(${r}, ${g}, ${b})`;
-    // this.element.setAttributeNS(null, 'stroke', rgb);
-  // }
-
-  // updateStrokeSizeDom(bounds) {
-    // this.element.setAttributeNS(null, 'stroke-width', this.strokeStateHost.state.size);
-  // }
-
-  // updateStrokeOpacityDom(bounds) {
-    // this.element.setAttributeNS(null, 'stroke-opacity', this.strokeStateHost.state.opacity);
-  // }
-  
-  // updateStrokeDashDom(sequence) {
-    // this.element.setAttributeNS(null, 'stroke-dasharray', sequence);
-  // }
-  
-  // updateStrokeJoinDom(type) {
-    // this.element.setAttributeNS(null, 'stroke-linejoin', type);
-  // }
 
   synchronizeMarkState(t) {
     // let preMatrix = Matrix.identity();
