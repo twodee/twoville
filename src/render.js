@@ -356,7 +356,6 @@ export class RenderEnvironment extends Frame {
     if (this.selectedShape !== shape) {
       this.selectNothing();
       this.selectedShape = shape;
-      console.log("this.selectedShape:", this.selectedShape);
       this.selectedShape.select(markerId);
     } else {
       this.selectedShape.selectMarker(markerId);

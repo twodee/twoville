@@ -75,10 +75,11 @@ export class Node extends ObjectFrame {
     this.parentFrame.addMarker(this.marker);
   }
 
-  initializeState(previousNode, firstNode) {
+  initializeState(firstNode, previousNode, nextNode) {
     super.initializeState();
-    this.previousNode = previousNode;
     this.firstNode = firstNode;
+    this.previousNode = previousNode;
+    this.nextNode = nextNode;
     this.state.turtle = new Turtle([0, 0], 0);
   }
 
@@ -111,46 +112,10 @@ export class TabNode extends Node {
     return true;
   }
 
-  configureState(bounds) {
-    // TODO check types
+  getPositions() {
+    const from = this.previousNode.state.turtle;
+    const to = this.nextNode.state.turtle;
 
-    if (this.owns('size')) {
-      this.state.size = this.untimedProperties.size.value;
-      this.parentEnvironment.state.tabSize = this.state.size;
-    } else {
-      this.state.size = this.parentEnvironment.state.tabSize;
-    }
-
-    if (this.owns('degrees')) {
-      this.state.degrees = this.untimedProperties.degrees.value;
-      this.parentEnvironment.state.tabDegrees = this.state.degrees;
-    } else {
-      this.state.degrees = this.parentEnvironment.state.tabDegrees;
-    }
-
-    if (this.owns('inset')) {
-      this.state.inset = this.untimedProperties.inset.value;
-      this.parentEnvironment.state.tabInset = this.state.inset;
-    } else {
-      this.state.inset = this.parentEnvironment.state.tabInset;
-    }
-
-    if (this.owns('winding')) {
-      this.state.isCounterclockwise = this.untimedProperties.winding.value === 1;
-      this.parentEnvironment.state.tabIsCounterclockwise = this.state.isCounterclockwise;
-    } else {
-      this.state.isCounterclockwise = this.parentEnvironment.state.tabIsCounterclockwise;
-    }
-
-    this.updateTurtle(bounds);
-  }
-
-  getPathCommand(bounds, from, to) {
-    const positions = this.getPositions(from, to);
-    return positions.map(position => `L${position[0]},${bounds.span - position[1]}`).join(' ');
-  }
-
-  getPositions(from, to) {
     const scale = this.state.size / Math.sin(this.state.degrees * Math.PI / 180);
     let v = unitVectorBetween(from.position, to.position);
     const sign = this.state.isCounterclockwise ? -1 : 1;
@@ -193,19 +158,103 @@ export class TabNode extends Node {
     return positions;
   }
 
-  updateTurtle(bounds) {
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    // none
+
+    // Assert types of extent properties.
+    this.assertScalarType('inset', [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('degrees', [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('size', [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('inset', fromTime, toTime);
+    this.assertCompleteTimeline('degrees', fromTime, toTime);
+    this.assertCompleteTimeline('size', fromTime, toTime);
+
+  }
+
+  initializeState(firstNode, previousNode, nextNode) {
+    super.initializeState(firstNode, previousNode, nextNode);
+
+    if (!this.has('inset')) {
+      this.state.inset = this.parentFrame.state.tabDefaults.inset;
+    }
+
+    if (!this.has('size')) {
+      this.state.size = this.parentFrame.state.tabDefaults.size;
+    }
+
+    if (!this.has('degrees')) {
+      this.state.degrees = this.parentFrame.state.tabDefaults.degrees;
+    }
+
+    if (!this.has('order')) {
+      this.state.isCounterclockwise = this.parentFrame.state.tabDefaults.isCounterclockwise;
+    }
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('inset');
+    this.initializeStaticScalarProperty('degrees');
+    this.initializeStaticScalarProperty('size');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('inset');
+    this.initializeDynamicProperty('degrees');
+    this.initializeDynamicProperty('size');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('inset', t);
+    this.synchronizeStateProperty('degrees', t);
+    this.synchronizeStateProperty('size', t);
+    this.configureTurtle();
+
+    if (this.has('inset')) {
+      this.parentFrame.state.tabDefaults.inset = this.state.inset;
+    }
+
+    if (this.has('size')) {
+      this.parentFrame.state.tabDefaults.size = this.state.size;
+    }
+
+    if (this.has('degrees')) {
+      this.parentFrame.state.tabDefaults.degrees = this.state.degrees;
+    }
+
+    if (this.has('order')) {
+      this.parentFrame.state.tabDefaults.isCounterclockwise = this.state.isCounterclockwise;
+    }
+  }
+
+  configureTurtle() {
+    // We keep the turtle where it was because the tab is a fake node. Its successor
+    // will pick up from where the predecessor left off.
     this.state.turtle.position[0] = this.previousNode.state.turtle.position[0];
     this.state.turtle.position[1] = this.previousNode.state.turtle.position[1];
     this.state.turtle.heading = this.previousNode.state.turtle.heading;
   }
 
-  configureMarks() {
-    super.configureMarks();
-    this.marker.addMarks([], [], []);
+  pathCommand(bounds) {
+    const positions = this.getPositions();
+    return positions.map(position => `L${position[0]},${bounds.span - position[1]}`).join(' ');
   }
 
-  updateInteractionState(matrix) {
-    super.updateInteractionState(matrix);
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.marker.setMarks();
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+  }
+
+  synchronizeMarkExpressions(t) {
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
   }
 }
 
@@ -429,8 +478,8 @@ export class WalkNode extends Node {
     this.assertCompleteTimeline('distance', fromTime, toTime);
   }
 
-  initializeState(previousNode, firstNode) {
-    super.initializeState(previousNode, firstNode);
+  initializeState(firstNode, previousNode, nextNode) {
+    super.initializeState(firstNode, previousNode, nextNode);
     this.previousNode.nextNode = this;
   }
 
@@ -482,7 +531,7 @@ export class WalkNode extends Node {
 
 // --------------------------------------------------------------------------- 
 
-export class FlyNode extends WalkNode {
+export class FlyNode extends Node {
   static type = 'fly';
   static article = 'a';
   static timedIds = ['distance'];
@@ -499,8 +548,73 @@ export class FlyNode extends WalkNode {
     return node;
   }
 
+  get isDom() {
+    return true;
+  }
+
+  getPositions() {
+    return [this.state.turtle.position];
+  }
+
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('distance');
+
+    // Assert types of extent properties.
+    this.assertScalarType('distance', [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('distance', fromTime, toTime);
+  }
+
+  initializeState(firstNode, previousNode, nextNode) {
+    super.initializeState(firstNode, previousNode, nextNode);
+    this.previousNode.nextNode = this;
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('distance');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('distance');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('distance', t);
+    this.configureTurtle();
+  }
+
+  configureTurtle() {
+    this.state.turtle.position[0] = this.previousNode.state.turtle.position[0] + this.state.distance * Math.cos(this.previousNode.state.turtle.heading * Math.PI / 180);
+    this.state.turtle.position[1] = this.previousNode.state.turtle.position[1] + this.state.distance * Math.sin(this.previousNode.state.turtle.heading * Math.PI / 180);
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
+  }
+
   pathCommand(bounds) {
     return `M ${this.state.turtle.position[0]},${bounds.span - this.state.turtle.position[1]}`;
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    this.distanceMark = new DistanceMark(this.parentFrame, null, value => {
+      this.state.distance = value;
+      this.configureTurtleAndDependents();
+    });
+    this.marker.setMarks(this.distanceMark);
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.distanceMark.synchronizeState(this.state.turtle.position, this.previousNode.state.turtle.position, this.previousNode.state.turtle.heading, matrix, inverseMatrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.distanceMark.synchronizeExpressions(this.expressionAt('distance', t));
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    this.distanceMark.synchronizeDom(bounds, handleRadius);
   }
 }
 
@@ -546,8 +660,8 @@ export class CircleNode extends Node {
     this.assertCompleteTimeline('radius', fromTime, toTime);
   }
 
-  initializeState(previousNode, firstNode) {
-    super.initializeState(previousNode, firstNode);
+  initializeState(firstNode, previousNode, nextNode) {
+    super.initializeState(firstNode, previousNode, nextNode);
     this.previousNode.nextNode = this;
   }
 
@@ -658,9 +772,8 @@ export class RectangleNode extends Node {
     this.assertCompleteTimeline('size', fromTime, toTime);
   }
 
-  initializeState(previousNode, firstNode) {
-    super.initializeState(previousNode, firstNode);
-    this.previousNode.nextNode = this;
+  initializeState(firstNode, previousNode, nextNode) {
+    super.initializeState(firstNode, previousNode, nextNode);
     this.hasCenter = this.has('center');
   }
 
@@ -813,11 +926,6 @@ export class TurnNode extends Node {
 
     // Assert completeness of timelines.
     this.assertCompleteTimeline('degrees', fromTime, toTime);
-  }
-
-  initializeState(previousNode, firstNode) {
-    super.initializeState(previousNode, firstNode);
-    this.previousNode.nextNode = this;
   }
 
   initializeStaticState() {
@@ -1429,8 +1537,8 @@ export class ArcNode extends Node {
     }
   }
 
-  initializeState(previousNode, firstNode) {
-    super.initializeState(previousNode, firstNode);
+  initializeState(firstNode, previousNode, nextNode) {
+    super.initializeState(firstNode, previousNode, nextNode);
     this.state.isWedge = this.has('center');
     if (this.state.isWedge) {
       this.previousNode.nextNode = this;
@@ -1778,8 +1886,8 @@ export class Mirror extends ObjectFrame {
     this.assertCompleteTimeline('axis', fromTime, toTime);
   }
 
-  initializeState(previousNode, firstNode) {
-    super.initializeState(previousNode, firstNode);
+  initializeState(firstNode, previousNode, nextNode) {
+    super.initializeState(firstNode, previousNode, nextNode);
   }
 
   initializeStaticState() {

@@ -1641,7 +1641,6 @@ export class NodeShape extends Shape {
   }
 
   embody(object, inflater) {
-    console.log("Node object:", object);
     super.embody(object, inflater);
     this.nodes = object.nodes.map(subobject => inflater.inflate(this, subobject));
     this.mirrors = object.mirrors.map(subobject => inflater.inflate(this, subobject));
@@ -1681,14 +1680,14 @@ export class NodeShape extends Shape {
     for (let [i, node] of this.nodes.entries()) {
       if (node instanceof TabNode) {
         if (i === this.nodes.length - 1) {
-          throw new LocatedException(node.where, `I found ${node.article} ${node.type} node at the end of a sequence. It must be followed by a node that produces a straight line.`);
+          throw new LocatedException(node.where, `I found ${node.article} <code>${node.type}</code> node at the end of a sequence. It must be followed by a node that produces a straight line.`);
         } else {
           const nextNode = this.nodes[i + 1];
           if (!(nextNode instanceof VertexNode ||
                 nextNode instanceof WalkNode ||
                 nextNode instanceof BackNode ||
                 nextNode instanceof LineNode)) {
-            throw new LocatedException(node.where, `I found ${node.article} ${node.type} node that was followed by ${nextNode.article} ${nextNode.type} node. It must be followed by a node that produces a straight line.`);
+            throw new LocatedException(node.where, `I found ${node.article} <code>${node.type}</code> node that was followed by ${nextNode.article} <code>${nextNode.type}</code> node. It must be followed by a node that produces a straight line, like <code>vertex</code>, <code>walk</code>, <code>line</code>, or <code>back</code>.`);
           }
         }
       }
@@ -1717,15 +1716,12 @@ export class NodeShape extends Shape {
   initializeState() {
     super.initializeState();
 
-    this.state.tabSize = 1;
-    this.state.tabDegrees = 45;
-    this.state.tabInset = 0;
-    this.state.tabIsCounterclockwise = true;
+    this.state.tabDefaults = {size: 1, degrees: 45, inset: 0, isCounterclockwise: true};
     this.state.turtle0 = null;
 
     let previousNode = null;
-    for (let node of this.nodes) {
-      node.initializeState(previousNode, this.nodes[0]);
+    for (let [i, node] of this.nodes.entries()) {
+      node.initializeState(previousNode, this.nodes[0], i + 1 < this.nodes.length ? this.nodes[i + 1] : null);
       previousNode = node;
     }
 
@@ -1856,6 +1852,7 @@ export class Polygon extends VertexShape {
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
     this.bindStatic('walk', new FunctionDefinition('walk', [], new ExpressionWalkNode(this)));
+    this.bindStatic('fly', new FunctionDefinition('fly', [], new ExpressionFlyNode(this)));
     this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
     this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
     this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
@@ -2229,7 +2226,6 @@ export class Polyline extends VertexShape {
 
   initialize(where) {
     super.initialize(where);
-    console.log("whereA:", where);
     this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
     this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
     this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
@@ -2239,13 +2235,11 @@ export class Polyline extends VertexShape {
 
   static create(where) {
     const shape = new Polyline();
-    console.log("whereB:", where);
     shape.initialize(where);
     return shape;
   }
 
   static inflate(object, inflater) {
-    console.log("object:", object);
     const shape = new Polyline();
     shape.embody(object, inflater);
     return shape;
@@ -2316,8 +2310,6 @@ export class Polyline extends VertexShape {
     this.mirrorPositions(positions);
 
     if (positions.length < 2) {
-      console.log("this:", this);
-      console.log("this.where:", this.where);
       throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Polylines must have at least 2 vertices.`);
     }
 
