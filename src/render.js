@@ -34,10 +34,12 @@ export class RenderEnvironment extends Frame {
     super.embody(null, object, inflater);
     this.shapes = object.shapes.map(shape => Shape.inflate(shape, Inflater));
 
-    // this.resolveReferences();
-    // for (let shape of this.shapes) {
-      // shape.resolveReferences();
-    // }
+    // After inflating, shapes may contain symbolic references to other shapes.
+    // We resolve those symbolic references into real references.
+    for (let shape of this.shapes) {
+      shape.resolveReferences(this.shapes);
+    }
+    // this.resolveReferences(); TODO is this needed?
 
     this.bounds = {
       x: 0,
@@ -156,25 +158,28 @@ export class RenderEnvironment extends Frame {
     this.sceneMarkGroup.classList.add('mark-group');
     this.staticBackgroundMarkGroup.appendChild(this.sceneMarkGroup);
 
+    this.drawables = this.shapes.filter(shape => !shape.isChild);
     const fromTime = this.getStatic('time').get('start').value;
     const toTime = this.getStatic('time').get('stop').value;
-    for (let shape of this.shapes) {
+    for (let shape of this.drawables) {
       shape.validate(fromTime, toTime);
     }
 
-    for (let shape of this.shapes) {
+    for (let shape of this.drawables) {
       shape.initializeState();
     }
 
-    for (let shape of this.shapes) {
+    for (let shape of this.drawables) {
       shape.initializeMarkState();
     }
 
-    for (let shape of this.shapes) {
+    console.log("hi");
+    for (let shape of this.drawables) {
+      console.log("shape:", shape);
       shape.initializeDom(this);
     }
 
-    for (let shape of this.shapes) {
+    for (let shape of this.drawables) {
       shape.initializeMarkDom(this);
     }
 
@@ -213,7 +218,6 @@ export class RenderEnvironment extends Frame {
     this.sceneMarkGroup.appendChild(pageOutline);
 
     this.state = {};
-    this.drawables = this.shapes;// TODO.filter(shape => shape.isDrawable);
     this.isStarted = true;
   }
 

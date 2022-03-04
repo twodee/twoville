@@ -153,6 +153,17 @@ export class Shape extends ObjectFrame {
     }
   }
 
+  resolveReferences(root) {
+    super.resolveReferences(root);
+    if (this.hasStatic('parent')) {
+      // TODO assert that parent is a group
+      this.getStatic('parent').children.push(this);
+      this.isChild = true;
+    } else {
+      this.isChild = false;
+    }
+  }
+
   validate(fromTime, toTime) {
     this.validateProperties(fromTime, toTime);
     for (let transform of this.transforms) {
@@ -205,8 +216,18 @@ export class Shape extends ObjectFrame {
   addTransform(transform) {
     this.transforms.unshift(transform);
   }
+
+  connectToParent(root) {
+    // If shape has a parent shape, nest under its element. Otherwise, nest
+    // under the main group.
+    if (this.isChild) {
+      this.getStatic('parent').element.appendChild(this.element);
+    } else {
+      root.mainGroup.appendChild(this.element);
+    }
+  }
   
-  connectToParent() {
+  // connectToParent() {
     // if (this.owns('parent')) {
       // this.get('parent').children.push(this);
       // this.isDrawable = false;
@@ -230,7 +251,7 @@ export class Shape extends ObjectFrame {
     // } else {
       // this.root.mainGroup.appendChild(elementToConnect);
     // }
-  }
+  // }
 
   connect() {
     // this.connectToParent();
@@ -251,8 +272,6 @@ export class Shape extends ObjectFrame {
       // this.root.defines.appendChild(clipPath);
       // this.element.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
     // }
-
-    // this.initializeMarks();
   }
 
   get isCutoutChild() {
@@ -401,28 +420,29 @@ export class Shape extends ObjectFrame {
     this.selectedMarkerId = null;
   }
 
-  initializeMarks() {
-    if (!this.markers) return;
+  // initializeMarks() {
+    // console.log("AAAAAAAAAAAAAAAAAAA!!!!");
+    // if (!this.markers) return;
 
-    if (this.owns('parent')) {
-      this.get('parent').staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
-      this.get('parent').dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
-      this.get('parent').situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
-      this.get('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
-    } else {
-      this.root.staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
-      this.root.dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
-      this.root.situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
-      this.root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
-    }
+    // if (this.owns('parent')) {
+      // this.get('parent').staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
+      // this.get('parent').dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
+      // this.get('parent').situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
+      // this.get('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
+    // } else {
+      // this.root.staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
+      // this.root.dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
+      // this.root.situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
+      // this.root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
+    // }
 
-    for (let marker of this.markers) {
-      this.staticBackgroundMarkGroup.appendChild(marker.staticBackgroundGroup);
-      this.dynamicBackgroundMarkGroup.appendChild(marker.dynamicBackgroundGroup);
-      this.situatedForegroundMarkGroup.appendChild(marker.situatedForegroundGroup);
-      this.centeredForegroundMarkGroup.appendChild(marker.centeredForegroundGroup);
-    }
-  }
+    // for (let marker of this.markers) {
+      // this.staticBackgroundMarkGroup.appendChild(marker.staticBackgroundGroup);
+      // this.dynamicBackgroundMarkGroup.appendChild(marker.dynamicBackgroundGroup);
+      // this.situatedForegroundMarkGroup.appendChild(marker.situatedForegroundGroup);
+      // this.centeredForegroundMarkGroup.appendChild(marker.centeredForegroundGroup);
+    // }
+  // }
 
   selectMarker(id) {
     if (id !== this.selectedMarkerId && id < this.markers.length) {
@@ -663,7 +683,7 @@ export class Text extends Shape {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'text');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
 
     this.element.appendChild(document.createTextNode('...'));
     this.element.childNodes[0].nodeValue = this.getStatic('message').value;
@@ -839,7 +859,7 @@ export class Rectangle extends Shape {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'rect');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
   }
 
   initializeMarkState() {
@@ -1262,7 +1282,7 @@ export class Circle extends Shape {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'circle');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
   }
 
   initializeMarkState() {
@@ -1428,7 +1448,7 @@ export class Grid extends Shape {
     this.element = document.createElementNS(svgNamespace, 'g');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.setAttributeNS(null, 'fill', 'none');
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
   }
 
   initializeMarkState() {
@@ -1872,7 +1892,7 @@ export class Polygon extends VertexShape {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'polygon');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
   }
 
   synchronizeState(t) {
@@ -2029,7 +2049,7 @@ export class Ungon extends VertexShape {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
   }
 
   synchronizeState(t) {
@@ -2249,7 +2269,7 @@ export class Polyline extends VertexShape {
     // polylines, which have no fill.
     this.element.setAttributeNS(null, 'fill', 'none');
 
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
   }
 
   synchronizeState(t) {
@@ -2366,7 +2386,7 @@ export class Line extends VertexShape {
     this.element = document.createElementNS(svgNamespace, 'line');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.setAttributeNS(null, 'fill', 'none');
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
   }
 
   synchronizeState(t) {
@@ -2510,7 +2530,7 @@ export class Path extends NodeShape {
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     // this.element.setAttributeNS(null, 'stroke-linecap', 'round');
     this.element.setAttributeNS(null, 'fill-rule', 'evenodd');
-    root.mainGroup.appendChild(this.element);
+    this.connectToParent(root);
   }
 
   synchronizeState(t) {
@@ -2615,17 +2635,6 @@ export class Group extends Shape {
     this.children = [];
   }
 
-  deflateReferent() {
-    const object = super.deflateReferent();
-    object.children = this.children.map(child => child.deflateReferent());
-    return object;
-  }
-
-  embody(object, inflater) {
-    super.embody(object, inflater);
-    this.children = object.children.map(subobject => Shape.inflate(this, subobject));
-  }
-
   static create(where) {
     const shape = new Group();
     shape.initialize(where);
@@ -2638,67 +2647,116 @@ export class Group extends Shape {
     return shape;
   }
 
-  // start() {
-    // super.start();
-    // this.createHierarchy();
-    // this.markers[0].addMarks([], []);
-    // this.connect();
-  // }
+  deflateReferent() {
+    const object = super.deflateReferent();
+    object.children = this.children.map(child => child.deflateReferent());
+    return object;
+  }
 
-  createHierarchy() {
+  embody(object, inflater) {
+    super.embody(object, inflater);
+    this.children = [];
+    object.children.map(subobject => Shape.inflate(this, subobject));
+  }
+
+  // TODO cast cursor into children?
+  validate(fromTime, toTime) {
+    super.validate(fromTime, toTime);
+    for (let child of this.children) {
+      child.validate(fromTime, toTime);
+    }
+  }
+
+  validateProperties(fromTime, toTime) {
+    for (let child of this.children) {
+      child.validateProperties(fromTime, toTime);
+    }
+  }
+
+  initializeState() {
+    super.initializeState();
+    for (let child of this.children) {
+      child.initializeState();
+    }
+  }
+
+  initializeStaticState() {
+  }
+
+  initializeDynamicState() {
+  }
+
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'g');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.connectToParent(root);
+
+    for (let child of this.children) {
+      child.initializeDom(root);
+    }
   }
 
-  configureState(bounds) {
-    this.createHierarchy();
+  synchronizeState(t) {
+    super.synchronizeState(t);
+    for (let child of this.children) {
+      child.synchronizeState(t);
+    }
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t);
+    for (let child of this.children) {
+      child.synchronizeDom(t, bounds);
+    }
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+    // this.outlineMark = new RectangleMark();
+    this.markers[0].setMarks();
+
+    for (let child of this.children) {
+      child.initializeMarkState();
+    }
+  }
+
+  initializeMarkDom(root) {
+    super.initializeMarkDom(root);
+    for (let child of this.children) {
+      child.initializeMarkDom(root);
+    }
+  }
+
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+
+    for (let child of this.children) {
+      child.synchronizeMarkState(t);
+    }
+
     this.state.centroid = [0, 0];
+
+    // TODO build out of children
+    // this.state.centroid = [
+      // this.state.corner[0] + this.state.size[0] * 0.5,
+      // this.state.corner[1] + this.state.size[1] * 0.5,
+    // ];
+    // this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
+    // this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
+  }
+
+  synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
     for (let child of this.children) {
-      child.configureState(bounds);
+      child.synchronizeMarkExpressions(t);
     }
   }
-
-  configureTransforms(bounds) {
-    super.configureTransforms(bounds);
+ 
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    // this.outlineMark.synchronizeDom(bounds);
     for (let child of this.children) {
-      child.configureTransforms(bounds);
-    }
-  }
-
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
-    for (let child of this.children) {
-      child.updateContentDom(bounds);
-    }
-  }
-
-  configureMarks() {
-    super.configureMarks();
-    this.markers[0].addMarks([], []);
-  }
-
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    for (let child of this.children) {
-      child.updateInteractionState(bounds);
-    }
-  }
-
-  ageDomWithoutMarks(bounds, t) {
-    super.ageDomWithoutMarks(bounds, t);
-    for (let child of this.children) {
-      if (child.activate(t)) {
-        child.ageDomWithoutMarks(bounds, t);
-      }
-    }
-  }
-
-  ageDomWithMarks(bounds, t, factor) {
-    super.ageDomWithMarks(bounds, t, factor);
-    for (let child of this.children) {
-      if (child.activate(t)) {
-        child.ageDomWithMarks(bounds, t, factor);
-      }
+      child.synchronizeMarkDom(bounds, handleRadius, radialLength);
     }
   }
 }

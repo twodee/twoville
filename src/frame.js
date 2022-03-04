@@ -8,6 +8,7 @@ import {
   Expression,
   ExpressionInteger,
   ExpressionReal,
+  ExpressionVector,
 } from './ast.js';
 
 /*
@@ -62,6 +63,16 @@ export class StaticContext {
 
   get(id) {
     return this.bindings[id];
+  }
+
+  resolveReferences(shapes) {
+    for (let [property, value] of Object.entries(this.bindings)) {
+      if (value.hasOwnProperty('type') && value.type === 'reference') {
+        this.bind(property, shapes.find(shape => shape.id === value.id));
+      } else if (value instanceof ExpressionVector) {
+        value.resolveReferences(shapes);
+      }
+    }
   }
 }
 
@@ -208,6 +219,10 @@ export class Frame {
 
   get(id) {
     return this.staticContext.get(id) ?? this.dynamicContext.get(id);
+  }
+
+  resolveReferences(shapes) {
+    this.staticContext.resolveReferences(shapes);
   }
 
   static resolveStaticRvalue(id, frames) {

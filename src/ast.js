@@ -2363,8 +2363,8 @@ export class ExpressionInt extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionGroup extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionGroup extends ExpressionShapeFunction {
+  createShape(env) {
     return Group.create(env.callExpression.where);
   }
 }
