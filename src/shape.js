@@ -766,7 +766,7 @@ export class Text extends Shape {
       bounds.span - box.y - box.height + box.height * 0.5,
     ]);
 
-    this.state.boundingBox = BoundingBox.fromCornerSize([box.x, bounds.span - box.y], [box.width, box.height]);
+    this.boundingBox = BoundingBox.fromCornerSize([box.x, bounds.span - box.y], [box.width, box.height]);
     this.outlineMark.synchronizeState([box.x, bounds.span - box.y - box.height], [box.width, box.height], 0);
   }
  
@@ -937,7 +937,7 @@ export class Rectangle extends Shape {
       this.state.corner[1] + this.state.size[1] * 0.5,
     ];
     this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
-    this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
+    this.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
   }
  
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -1310,7 +1310,7 @@ export class Circle extends Shape {
     ], this.state.matrix, this.state.inverseMatrix);
 
     this.state.centroid = this.state.matrix.multiplyPosition(this.state.center);
-    this.state.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
+    this.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
   }
  
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -1528,14 +1528,14 @@ export class Grid extends Shape {
         this.state.corner[1] + this.state.size[1] * 0.5,
       ];
       this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
-      this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
+      this.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
     } else {
       this.outlineMark.synchronizeState([bounds.x, bounds.y], [bounds.width, bounds.height], 0);
       this.state.centroid = [
         bounds.x + 0.5 * bounds.width,
         bounds.y + 0.5 * bounds.height
       ];
-      this.state.boundingBox = BoundingBox.fromCornerSize([bounds.x, bounds.y], [bounds.width, bounds.height]);
+      this.boundingBox = BoundingBox.fromCornerSize([bounds.x, bounds.y], [bounds.width, bounds.height]);
     }
   }
  
@@ -1800,9 +1800,11 @@ export class VertexShape extends NodeShape {
 
   synchronizeMarkState(t) {
     super.synchronizeMarkState(t);
-    const sum = this.domNodes.reduce((acc, node) => [acc[0] + node.state.turtle.position[0], acc[1] + node.state.turtle.position[1]], [0, 0]);
-    this.state.centroid = sum.map(value => value / this.domNodes.length);
-    this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
+
+    for (let node of this.domNodes) {
+      this.boundingBox.enclosePoint(node.state.turtle.position);
+    }
+    this.state.centroid = this.state.matrix.multiplyPosition(this.boundingBox.centroid());
   }
 
   // computeBoundingBox() {
@@ -2734,15 +2736,10 @@ export class Group extends Shape {
       child.synchronizeMarkState(t);
     }
 
-    this.state.centroid = [0, 0];
-
-    // TODO build out of children
-    // this.state.centroid = [
-      // this.state.corner[0] + this.state.size[0] * 0.5,
-      // this.state.corner[1] + this.state.size[1] * 0.5,
-    // ];
-    // this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
-    // this.state.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
+    for (let child of this.children) {
+      this.boundingBox.encloseBox(child.boundingBox);
+    }
+    this.state.centroid = this.boundingBox.centroid();
   }
 
   synchronizeMarkExpressions(t) {

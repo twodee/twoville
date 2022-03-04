@@ -360,6 +360,13 @@ export class BoundingBox {
     return this.max[1] - this.min[1];
   }
 
+  centroid() {
+    return [
+      (this.min[0] + this.max[0]) * 0.5,
+      (this.min[1] + this.max[1]) * 0.5
+    ];
+  }
+
   thicken(width) {
     this.min[0] -= width;
     this.min[1] -= width;

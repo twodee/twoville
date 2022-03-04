@@ -173,9 +173,7 @@ export class RenderEnvironment extends Frame {
       shape.initializeMarkState();
     }
 
-    console.log("hi");
     for (let shape of this.drawables) {
-      console.log("shape:", shape);
       shape.initializeDom(this);
     }
 
