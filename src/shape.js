@@ -228,13 +228,6 @@ export class Shape extends ObjectFrame {
   }
   
   // connectToParent() {
-    // if (this.owns('parent')) {
-      // this.get('parent').children.push(this);
-      // this.isDrawable = false;
-    // } else {
-      // this.isDrawable = true;
-    // }
-
     // let elementToConnect;
     // if (this.owns('mask')) {
       // const mask = this.get('mask');
@@ -245,17 +238,9 @@ export class Shape extends ObjectFrame {
     // } else {
       // elementToConnect = this.element;
     // }
-
-    // if (this.owns('parent')) {
-      // this.get('parent').element.appendChild(elementToConnect);
-    // } else {
-      // this.root.mainGroup.appendChild(elementToConnect);
-    // }
   // }
 
-  connect() {
-    // this.connectToParent();
-
+  // connect() {
     // if (this.isCutoutChild) {
       // this.bind('color', new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]));
     // }
@@ -272,12 +257,12 @@ export class Shape extends ObjectFrame {
       // this.root.defines.appendChild(clipPath);
       // this.element.setAttributeNS(null, 'clip-path', 'url(#clip-' + this.id + ')');
     // }
-  }
+  // }
 
-  get isCutoutChild() {
+  // get isCutoutChild() {
     // return this.owns('parent') && (this.get('parent') instanceof Cutout || this.get('parent').isCutoutChild);
-    return false;
-  }
+    // return false;
+  // }
 
   initializeMarkDom(root) {
     this.staticBackgroundMarkGroup = document.createElementNS(svgNamespace, 'g');
@@ -295,18 +280,17 @@ export class Shape extends ObjectFrame {
     this.element.classList.add('cursor-selectable');
     this.element.classList.add(`tag-${this.id}`);
 
-    // TODO
-    // if (this.has('parent')) {
-      // this.getStatic('parent').staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
-      // this.getStatic('parent').dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
-      // this.getStatic('parent').situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
-      // this.getStatic('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
-    // } else {
+    if (this.isChild) {
+      this.getStatic('parent').staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
+      this.getStatic('parent').dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
+      this.getStatic('parent').situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
+      this.getStatic('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
+    } else {
       root.staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
       root.dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
       root.situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
       root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
-    // }
+    }
 
     for (let marker of this.markers) {
       marker.initializeDom(root);
@@ -400,8 +384,6 @@ export class Shape extends ObjectFrame {
     // The cursor is leaving the shape, but it might just be running across a mark. The marks
     // are all tagged with class tag-SHAPE-ID. Don't unhover if we're on the shape or one of
     // its marks.
-    // console.log("event.toElement:", event.toElement);
-    // console.log("event.toElement.classList:", event.toElement?.classList);
     const isStillShape = event.toElement && event.toElement.classList.contains(`tag-${this.id}`);
     return !this.isSelected && !isStillShape;
   }
@@ -419,30 +401,6 @@ export class Shape extends ObjectFrame {
     }
     this.selectedMarkerId = null;
   }
-
-  // initializeMarks() {
-    // console.log("AAAAAAAAAAAAAAAAAAA!!!!");
-    // if (!this.markers) return;
-
-    // if (this.owns('parent')) {
-      // this.get('parent').staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
-      // this.get('parent').dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
-      // this.get('parent').situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
-      // this.get('parent').centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
-    // } else {
-      // this.root.staticBackgroundMarkGroup.appendChild(this.staticBackgroundMarkGroup);
-      // this.root.dynamicBackgroundMarkGroup.appendChild(this.dynamicBackgroundMarkGroup);
-      // this.root.situatedForegroundMarkGroup.appendChild(this.situatedForegroundMarkGroup);
-      // this.root.centeredForegroundMarkGroup.appendChild(this.centeredForegroundMarkGroup);
-    // }
-
-    // for (let marker of this.markers) {
-      // this.staticBackgroundMarkGroup.appendChild(marker.staticBackgroundGroup);
-      // this.dynamicBackgroundMarkGroup.appendChild(marker.dynamicBackgroundGroup);
-      // this.situatedForegroundMarkGroup.appendChild(marker.situatedForegroundGroup);
-      // this.centeredForegroundMarkGroup.appendChild(marker.centeredForegroundGroup);
-    // }
-  // }
 
   selectMarker(id) {
     if (id !== this.selectedMarkerId && id < this.markers.length) {
@@ -504,19 +462,19 @@ export class Shape extends ObjectFrame {
     }
   }
 
-  flushManipulation(bounds, factor) {
-    this.updateContentState(bounds);
-    this.updateContentDom(bounds, factor);
+  // flushManipulation(bounds, factor) {
+    // this.updateContentState(bounds);
+    // this.updateContentDom(bounds, factor);
 
-    this.updateInteractionState(bounds);
-    this.updateInteractionDom(bounds, factor);
+    // this.updateInteractionState(bounds);
+    // this.updateInteractionDom(bounds, factor);
 
     // First get all the model state in order.
     // A drag on a transform marker will have changed the state.
-    for (let transform of this.transforms) {
-      transform.updateDomCommand(bounds);
-    }
-  }
+    // for (let transform of this.transforms) {
+      // transform.updateDomCommand(bounds);
+    // }
+  // }
 
   synchronizeMarkState(t) {
     // let preMatrix = Matrix.identity();
@@ -525,7 +483,7 @@ export class Shape extends ObjectFrame {
     let matrices = this.transforms.map(transform => transform.toMatrix());
     let inverseMatrices = this.transforms.map(transform => transform.toInverseMatrix());
 
-    let f = Matrix.identity();
+    let f = this.isChild ? this.getStatic('parent').state.matrix : Matrix.identity();
     let b = Matrix.identity();
     let forwardMatrices = [f];
     let backwardMatrices = [b];
@@ -541,21 +499,14 @@ export class Shape extends ObjectFrame {
     this.state.matrix = forwardMatrices[forwardMatrices.length - 1];
     this.state.inverseMatrix = backwardMatrices[backwardMatrices.length - 1];
 
-    // console.log('---- FM');
-    // forwardMatrices.forEach(f => console.log(f.toString()));
-    // console.log('---- BM');
-    // backwardMatrices.forEach(b => console.log(b.toString()));
-
     // R T
     // forwardMatrices: [I T R*T]
     // backwardMatrices: [I R^-1 R^-1*T^-1]
 
     for (let i = 0; i < this.transforms.length; i += 1) {
       const ii = this.transforms.length - 1 - i;
-      const preMatrix = forwardMatrices[i];
-      const postMatrix = forwardMatrices[i + 1];
-      const inverseMatrix = backwardMatrices[ii];
-      this.transforms[ii].synchronizeMarkState(t, preMatrix, postMatrix, afterMatrices[ii], afterMatrices[ii].inverse());
+      const m = afterMatrices[ii];
+      this.transforms[ii].synchronizeMarkState(t, m, m.inverse());
     }
 
     // Subclasses should compute centroid.
@@ -2739,7 +2690,8 @@ export class Group extends Shape {
     for (let child of this.children) {
       this.boundingBox.encloseBox(child.boundingBox);
     }
-    this.state.centroid = this.boundingBox.centroid();
+
+    this.state.centroid = this.state.matrix.multiplyPosition(this.boundingBox.centroid());
   }
 
   synchronizeMarkExpressions(t) {

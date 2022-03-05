@@ -138,7 +138,7 @@ export class Translate extends Transform {
     this.offsetMark.synchronizeExpressions(this.expressionAt('offset', t));
   }
 
-  synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix, inverseMatrix) {
+  synchronizeMarkState(t, afterMatrix, inverseMatrix) {
     // The mark never moves from the origin. It belongs to a group that is
     // positioned relative to the shape's centroid.
     this.offsetMark.synchronizeState([0, 0], Matrix.identity(), inverseMatrix);
@@ -224,7 +224,7 @@ export class Rotate extends Transform {
     this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
   }
 
-  synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix, inverseMatrix) {
+  synchronizeMarkState(t, afterMatrix, inverseMatrix) {
     this.pivotMark.synchronizeState(this.state.pivot, afterMatrix, inverseMatrix);
     this.degreesMark.synchronizeState(this.state.pivot, this.state.degrees, 0, afterMatrix, inverseMatrix);
     this.wedgeMark.synchronizeState(this.state.pivot, this.state.degrees, 0, afterMatrix);
@@ -419,7 +419,7 @@ export class Scale extends Transform {
     this.heightFactorMark.synchronizeExpressions(this.expressionAt('factors', t).get(1));
   }
 
-  synchronizeMarkState(t, preMatrix, postMatrix, afterMatrix, inverseMatrix) {
+  synchronizeMarkState(t, afterMatrix, inverseMatrix) {
     this.pivotMark.synchronizeState(this.state.pivot, afterMatrix, inverseMatrix);
     this.widthFactorMark.synchronizeState(this.state.pivot, this.state.factors[0], afterMatrix, inverseMatrix);
     this.heightFactorMark.synchronizeState(this.state.pivot, this.state.factors[1], afterMatrix, inverseMatrix);
