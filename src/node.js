@@ -1008,8 +1008,12 @@ export class BackNode extends Node {
   }
 
   synchronizeState(t) {
+  }
+
+  configureTurtle() {
     this.state.turtle.position[0] = this.firstNode.state.turtle.position[0];
     this.state.turtle.position[1] = this.firstNode.state.turtle.position[1];
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
   }
 
   pathCommand(bounds) {
@@ -1175,8 +1179,13 @@ export class LineNode extends Node {
 
   synchronizeState(t) {
     this.synchronizeStateProperty('position', t);
+    this.configureTurtle();
+  }
+
+  configureTurtle() {
     this.state.turtle.position[0] = this.state.position[0];
     this.state.turtle.position[1] = this.state.position[1];
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
   }
 
   pathCommand(bounds) {
@@ -1279,8 +1288,13 @@ export class QuadraticNode extends Node {
   synchronizeState(t) {
     this.synchronizeStateProperty('position', t);
     this.synchronizeStateProperty('control', t);
+    this.configureTurtle();
+  }
+
+  configureTurtle() {
     this.state.turtle.position[0] = this.state.position[0];
     this.state.turtle.position[1] = this.state.position[1];
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
   }
 
   pathCommand(bounds) {
@@ -1415,8 +1429,13 @@ export class CubicNode extends Node {
     this.synchronizeStateProperty('position', t);
     this.synchronizeStateProperty('control1', t);
     this.synchronizeStateProperty('control2', t);
+    this.configureTurtle();
+  }
+
+  configureTurtle() {
     this.state.turtle.position[0] = this.state.position[0];
     this.state.turtle.position[1] = this.state.position[1];
+    this.state.turtle.heading = this.previousNode.state.turtle.heading;
   }
 
   pathCommand(bounds) {
