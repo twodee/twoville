@@ -218,8 +218,6 @@ export class Shape extends ObjectFrame {
   }
 
   connectToParent(root) {
-    // If shape has a parent shape, nest under its element. Otherwise, nest
-    // under the main group.
     if (this.isChild) {
       this.getStatic('parent').element.appendChild(this.element);
     } else {
@@ -533,6 +531,64 @@ export class Shape extends ObjectFrame {
     }
   }
 
+  validateFillProperties(fromTime, toTime) {
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+
+    // If the opacity of the shape is a constant 0, then color is optional.
+    this.hasFill = this.hasDynamic('opacity') || !this.hasStatic('opacity') || this.getStatic('opacity').value !== 0;
+    if (this.hasFill) {
+      this.assertProperty('color');
+    }
+
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+  }
+
+  validateStrokeProperties(fromTime, toTime) {
+    this.assertProperty('color');
+
+    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+
+    this.assertCompleteTimeline('color', fromTime, toTime);
+    this.assertCompleteTimeline('opacity', fromTime, toTime);
+  }
+
+  initializeStaticColorState() {
+    this.initializeStaticVectorProperty('color');
+    this.initializeStaticScalarProperty('opacity');
+  }
+
+  initializeDynamicColorState() {
+    this.initializeDynamicProperty('color');
+    this.initializeDynamicProperty('opacity');
+  }
+
+  synchronizeColorState(t) {
+    this.synchronizeStateProperty('color', t);
+    this.synchronizeStateProperty('opacity', t);
+
+    if (this.has('color')) {
+      this.state.colorBytes = [
+        Math.floor(this.state.color[0] * 255),
+        Math.floor(this.state.color[1] * 255),
+        Math.floor(this.state.color[2] * 255),
+      ];
+    }
+  }
+
+  synchronizeFillDom(t, bounds) {
+    if (this.hasFill) {
+      const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
+      this.element.setAttributeNS(null, 'fill', rgb);
+    }
+
+    if (this.has('opacity')) {
+      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
+    }
+  }
+
   static inflate(object, inflater) {
     if (object.type === 'rectangle') {
       return Rectangle.inflate(object, inflater);
@@ -596,20 +652,17 @@ export class Text extends Shape {
     // Assert required properties.
     this.assertProperty('size');
     this.assertProperty('position');
-    this.assertProperty('color');
 
     // Assert types of extent properties.
     this.assertScalarType('size', [ExpressionInteger, ExpressionReal]);
     this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
     this.assertVectorType('anchor', 2, [ExpressionString]);
 
     // Assert completeness of timelines.
     this.assertCompleteTimeline('size', fromTime, toTime);
     this.assertCompleteTimeline('position', fromTime, toTime);
-    this.assertCompleteTimeline('color', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
+
+    this.validateFillProperties(fromTime, toTime);
   }
 
   initializeState() {
@@ -619,16 +672,14 @@ export class Text extends Shape {
   initializeStaticState() {
     this.initializeStaticScalarProperty('size');
     this.initializeStaticVectorProperty('position');
-    this.initializeStaticVectorProperty('color');
-    this.initializeStaticScalarProperty('opacity');
+    this.initializeStaticColorState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
     this.initializeDynamicProperty('size');
     this.initializeDynamicProperty('position');
-    this.initializeDynamicProperty('color');
-    this.initializeDynamicProperty('opacity');
+    this.initializeDynamicColorState();
   }
 
   initializeDom(root) {
@@ -668,29 +719,15 @@ export class Text extends Shape {
     super.synchronizeState(t);
     this.synchronizeStateProperty('size', t);
     this.synchronizeStateProperty('position', t);
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
+    this.synchronizeColorState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
     this.element.setAttributeNS(null, 'x', this.state.position[0]);
     this.element.setAttributeNS(null, 'y', bounds.span - this.state.position[1]);
-
     this.element.setAttributeNS(null, 'font-size', this.state.size);
-
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
-
-    if (this.has('opacity')) {
-      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
-    }
+    this.synchronizeFillDom(t, bounds);
   }
 
   initializeMarkState() {
@@ -755,7 +792,6 @@ export class Rectangle extends Shape {
   validateProperties(fromTime, toTime) {
     // Assert required properties.
     this.assertProperty('size');
-    this.assertProperty('color');
 
     if (this.has('corner') && this.has('center')) {
       throw new LocatedException(this.where, 'I found a rectangle whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
@@ -768,17 +804,14 @@ export class Rectangle extends Shape {
     this.assertVectorType('size', 2, [ExpressionInteger, ExpressionReal]);
     this.assertVectorType('corner', 2, [ExpressionInteger, ExpressionReal]);
     this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
 
     // Assert completeness of timelines.
     this.assertCompleteTimeline('size', fromTime, toTime);
     this.assertCompleteTimeline('center', fromTime, toTime);
     this.assertCompleteTimeline('corner', fromTime, toTime);
     this.assertCompleteTimeline('rounding', fromTime, toTime);
-    this.assertCompleteTimeline('color', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
 
+    this.validateFillProperties(fromTime, toTime);
     this.stroke?.validate(fromTime, toTime);
   }
 
@@ -789,22 +822,20 @@ export class Rectangle extends Shape {
   }
 
   initializeStaticState() {
-    this.initializeStaticScalarProperty('rounding');
     this.initializeStaticVectorProperty('center');
     this.initializeStaticVectorProperty('corner');
+    this.initializeStaticScalarProperty('rounding');
     this.initializeStaticVectorProperty('size');
-    this.initializeStaticVectorProperty('color');
-    this.initializeStaticScalarProperty('opacity');
+    this.initializeStaticColorState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializeDynamicProperty('rounding');
-    this.initializeDynamicProperty('size');
     this.initializeDynamicProperty('center');
     this.initializeDynamicProperty('corner');
-    this.initializeDynamicProperty('color');
-    this.initializeDynamicProperty('opacity');
+    this.initializeDynamicProperty('rounding');
+    this.initializeDynamicProperty('size');
+    this.initializeDynamicColorState();
   }
 
   initializeDom(root) {
@@ -906,14 +937,6 @@ export class Rectangle extends Shape {
     this.synchronizeStateProperty('size', t);
     this.synchronizeStateProperty('center', t);
     this.synchronizeStateProperty('corner', t);
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
 
     if (this.hasCenter) {
       this.state.corner = [
@@ -922,6 +945,7 @@ export class Rectangle extends Shape {
       ];
     }
 
+    this.synchronizeColorState();
     this.stroke?.synchronizeState(t);
   }
 
@@ -939,13 +963,7 @@ export class Rectangle extends Shape {
     this.element.setAttributeNS(null, 'x', this.state.corner[0]);
     this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
 
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
-
-    if (this.has('opacity')) {
-      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
-    }
-
+    this.synchronizeFillDom(t, bounds);
     this.stroke?.synchronizeDom(t, this.element);
   }
 }
@@ -1193,20 +1211,16 @@ export class Circle extends Shape {
     // Assert required properties.
     this.assertProperty('radius');
     this.assertProperty('center');
-    this.assertProperty('color');
 
     // Assert types of extent properties.
     this.assertScalarType('radius', [ExpressionInteger, ExpressionReal]);
     this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
 
     // Assert completeness of timelines.
     this.assertCompleteTimeline('radius', fromTime, toTime);
     this.assertCompleteTimeline('center', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
-    this.assertCompleteTimeline('color', fromTime, toTime);
 
+    this.validateFillProperties(fromTime, toTime);
     this.stroke?.validate(fromTime, toTime);
   }
 
@@ -1218,16 +1232,14 @@ export class Circle extends Shape {
   initializeStaticState() {
     this.initializeStaticScalarProperty('radius');
     this.initializeStaticVectorProperty('center');
-    this.initializeStaticVectorProperty('color');
-    this.initializeStaticScalarProperty('opacity');
+    this.initializeStaticColorState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
     this.initializeDynamicProperty('radius');
     this.initializeDynamicProperty('center');
-    this.initializeDynamicProperty('color');
-    this.initializeDynamicProperty('opacity');
+    this.initializeDynamicColorState();
   }
 
   initializeDom(root) {
@@ -1276,33 +1288,16 @@ export class Circle extends Shape {
 
     this.synchronizeStateProperty('radius', t);
     this.synchronizeStateProperty('center', t);
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
-
+    this.synchronizeColorState(t);
     this.stroke?.synchronizeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
-
     this.element.setAttributeNS(null, 'r', this.state.radius);
-
     this.element.setAttributeNS(null, 'cx', this.state.center[0]);
     this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
-
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
-
-    if (this.has('opacity')) {
-      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
-    }
-
+    this.synchronizeFillDom(t, bounds);
     this.stroke?.synchronizeDom(t, this.element);
   }
 
@@ -1633,22 +1628,22 @@ export class NodeShape extends Shape {
   }
 
   connectJoins() {
-    // if (this.owns('elbow')) {
-      // let elbow = this.get('elbow');
-      // this.element.setAttributeNS(null, 'marker-mid', 'url(#element-' + elbow.id + ')');
-      // this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + elbow.id + ')');
-      // this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + elbow.id + ')');
-    // }
+    if (this.hasStatic('elbow')) {
+      let elbow = this.get('elbow');
+      this.element.setAttributeNS(null, 'marker-mid', 'url(#element-' + elbow.id + ')');
+      this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + elbow.id + ')');
+      this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + elbow.id + ')');
+    }
 
-    // if (this.owns('head')) {
-      // let head = this.get('head');
-      // this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + head.id + ')');
-    // }
+    if (this.hasStatic('head')) {
+      let head = this.get('head');
+      this.element.setAttributeNS(null, 'marker-end', 'url(#element-' + head.id + ')');
+    }
 
-    // if (this.owns('tail')) {
-      // let tail = this.get('tail');
-      // this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
-    // }
+    if (this.hasStatic('tail')) {
+      let tail = this.get('tail');
+      this.element.setAttributeNS(null, 'marker-start', 'url(#element-' + tail.id + ')');
+    }
   }
 
   initializeState() {
@@ -1811,14 +1806,7 @@ export class Polygon extends VertexShape {
   }
 
   validateProperties(fromTime, toTime) {
-    this.assertProperty('color');
-
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
-
-    this.assertCompleteTimeline('color', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
-
+    this.validateFillProperties(fromTime, toTime);
     this.stroke?.validate(fromTime, toTime);
   }
 
@@ -1832,47 +1820,30 @@ export class Polygon extends VertexShape {
   }
 
   initializeStaticState() {
-    this.initializeStaticVectorProperty('color');
-    this.initializeStaticScalarProperty('opacity');
+    this.initializeStaticColorState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializeDynamicProperty('color');
-    this.initializeDynamicProperty('opacity');
+    this.initializeDynamicColorState();
   }
 
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'polygon');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.connectToParent(root);
+    this.connectJoins();
   }
 
   synchronizeState(t) {
     super.synchronizeState(t);
-
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
-
+    this.synchronizeColorState(t);
     this.stroke?.synchronizeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
-
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
-
-    if (this.has('opacity')) {
-      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
-    }
-
+    this.synchronizeFillDom(t, bounds);
     this.stroke?.synchronizeDom(t, this.element);
 
     const positions = this.domNodes.flatMap((node, index) => {
@@ -1945,14 +1916,7 @@ export class Ungon extends VertexShape {
   }
 
   validateProperties(fromTime, toTime) {
-    this.assertProperty('color');
-
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
-
-    this.assertCompleteTimeline('color', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
-
+    this.validateFillProperties(fromTime, toTime);
     this.stroke?.validate(fromTime, toTime);
 
     const domNodes = this.nodes.filter(node => node.isDom);
@@ -1986,51 +1950,34 @@ export class Ungon extends VertexShape {
   }
 
   initializeStaticState() {
-    this.initializeStaticVectorProperty('color');
-    this.initializeStaticScalarProperty('opacity');
     this.initializeStaticScalarProperty('formula');
     this.initializeStaticScalarProperty('rounding');
+    this.initializeStaticColorState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializeDynamicProperty('color');
-    this.initializeDynamicProperty('opacity');
     this.initializeDynamicProperty('rounding');
+    this.initializeDynamicColorState();
   }
 
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.connectToParent(root);
+    this.connectJoins();
   }
 
   synchronizeState(t) {
     super.synchronizeState(t);
-
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
+    this.synchronizeColorState(t);
     this.synchronizeStateProperty('rounding', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
-
     this.stroke?.synchronizeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
-
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
-
-    if (this.has('opacity')) {
-      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
-    }
-
+    this.synchronizeFillDom(t, bounds);
     this.stroke?.synchronizeDom(t, this.element);
 
     const gap = distancePointPoint(this.domNodes[0].state.turtle.position, this.domNodes[this.domNodes.length - 1].state.turtle.position);
@@ -2204,14 +2151,13 @@ export class Polyline extends VertexShape {
   }
 
   initializeStaticState() {
-    this.initializeStaticVectorProperty('color');
-    this.initializeStaticScalarProperty('opacity');
+    // TODO size?
+    this.initializeStaticColorState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializeDynamicProperty('color');
-    this.initializeDynamicProperty('opacity');
+    this.initializeDynamicColorState();
   }
 
   initializeDom(root) {
@@ -2223,19 +2169,12 @@ export class Polyline extends VertexShape {
     this.element.setAttributeNS(null, 'fill', 'none');
 
     this.connectToParent(root);
+    this.connectJoins();
   }
 
   synchronizeState(t) {
     super.synchronizeState(t);
-
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
+    this.synchronizeColorState(t);
   }
 
   synchronizeDom(t, bounds) {
@@ -2323,16 +2262,14 @@ export class Line extends VertexShape {
   }
 
   initializeStaticState() {
-    this.initializeStaticVectorProperty('color');
-    this.initializeStaticScalarProperty('opacity');
     this.initializeStaticScalarProperty('size');
+    this.initializeStaticColorState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializeDynamicProperty('color');
-    this.initializeDynamicProperty('opacity');
     this.initializeDynamicProperty('size');
+    this.initializeDynamicColorState();
   }
 
   initializeDom(root) {
@@ -2340,20 +2277,13 @@ export class Line extends VertexShape {
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.setAttributeNS(null, 'fill', 'none');
     this.connectToParent(root);
+    this.connectJoins();
   }
 
   synchronizeState(t) {
     super.synchronizeState(t);
-
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
+    this.synchronizeColorState(t);
     this.synchronizeStateProperty('size', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
   }
 
   synchronizeDom(t, bounds) {
@@ -2439,14 +2369,7 @@ export class Path extends NodeShape {
   }
 
   validateProperties(fromTime, toTime) {
-    this.assertProperty('color');
-
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
-
-    this.assertCompleteTimeline('color', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
-
+    this.validateFillProperties(fromTime, toTime);
     this.stroke?.validate(fromTime, toTime);
 
     const domNodes = this.nodes.filter(node => node.isDom);
@@ -2468,49 +2391,32 @@ export class Path extends NodeShape {
   }
 
   initializeStaticState() {
-    this.initializeStaticVectorProperty('color');
-    this.initializeStaticScalarProperty('opacity');
+    this.initializeStaticColorState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializeDynamicProperty('color');
-    this.initializeDynamicProperty('opacity');
+    this.initializeDynamicColorState();
   }
 
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    // this.element.setAttributeNS(null, 'stroke-linecap', 'round');
+    // this.element.setAttributeNS(null, 'stroke-linecap', 'round'); TODO
     this.element.setAttributeNS(null, 'fill-rule', 'evenodd');
     this.connectToParent(root);
+    this.connectJoins();
   }
 
   synchronizeState(t) {
     super.synchronizeState(t);
-
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
-
+    this.synchronizeColorState(t);
     this.stroke?.synchronizeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
-
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    this.element.setAttributeNS(null, 'fill', rgb);
-
-    if (this.has('opacity')) {
-      this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
-    }
-
+    this.synchronizeFillDom(t, bounds);
     this.stroke?.synchronizeDom(t, this.element);
 
     const pathCommands = this.domNodes.map((node, index) => {
@@ -2612,7 +2518,6 @@ export class Group extends Shape {
     object.children.map(subobject => Shape.inflate(this, subobject));
   }
 
-  // TODO cast cursor into children?
   validate(fromTime, toTime) {
     super.validate(fromTime, toTime);
     for (let child of this.children) {
@@ -2703,10 +2608,123 @@ export class Group extends Shape {
  
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
     super.synchronizeMarkDom(bounds, handleRadius, radialLength);
-    // this.outlineMark.synchronizeDom(bounds);
+    // this.outlineMark.synchronizeDom(bounds); TODO
     for (let child of this.children) {
       child.synchronizeMarkDom(bounds, handleRadius, radialLength);
     }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Tip extends Group {
+  static type = 'tip';
+  static article = 'a';
+  static timedIds = ['size', 'anchor', 'corner', 'center', 'enabled'];
+
+  static create(where) {
+    const shape = new Tip();
+    shape.initialize(where);
+    return shape;
+  }
+
+  static inflate(object, inflater) {
+    const shape = new Tip();
+    shape.embody(object, inflater);
+    return shape;
+  }
+
+  validateProperties(fromTime, toTime) {
+    // Assert required properties.
+    if (this.has('corner') && this.has('center')) {
+      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>corner</code> and <code>center</code> were both set. Define only one of these.`);
+    } else if (!this.has('corner') && !this.has('center')) {
+      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.`);
+    }
+
+    // Assert types of extent properties.
+    this.assertVectorType('size', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('corner', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('size', fromTime, toTime);
+    this.assertCompleteTimeline('center', fromTime, toTime);
+    this.assertCompleteTimeline('corner', fromTime, toTime);
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.hasCenter = this.has('center');
+  }
+
+  initializeStaticState() {
+    this.initializeStaticVectorProperty('size');
+    this.initializeStaticVectorProperty('center');
+    this.initializeStaticVectorProperty('corner');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('size');
+    this.initializeDynamicProperty('center');
+    this.initializeDynamicProperty('corner');
+  }
+
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('size', t);
+    this.synchronizeStateProperty('center', t);
+    this.synchronizeStateProperty('corner', t);
+
+    if (this.hasCenter) {
+      this.state.corner = [
+        this.state.center[0] - 0.5 * this.state.size[0],
+        this.state.center[1] - 0.5 * this.state.size[1],
+      ];
+    }
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+    this.element.setAttributeNS(null, 'markerWidth', this.state.size[0]);
+    this.element.setAttributeNS(null, 'markerHeight', this.state.size[1]);
+    this.element.setAttributeNS(null, 'viewBox', `${this.state.corner[0]} ${this.state.corner[1]} ${this.state.size[0]} ${this.state.size[1]}`);
+  }
+
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'marker');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.element.setAttributeNS(null, 'orient', 'auto-start-reverse');
+    this.element.setAttributeNS(null, 'markerUnits', 'strokeWidth');
+    this.element.setAttributeNS(null, 'refX', 0);
+    this.element.setAttributeNS(null, 'refY', 0);
+    this.connectToParent(root);
+
+    for (let child of this.children) {
+      child.initializeDom(root);
+    }
+  }
+
+  connectToParent(root) {
+    root.defines.appendChild(this.element);
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+  }
+
+  synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
+  }
+
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+  }
+ 
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
   }
 }
 
@@ -2781,171 +2799,6 @@ export class Cutout extends Mask {
 
 // --------------------------------------------------------------------------- 
 
-export class Tip extends Group {
-  static type = 'tip';
-  static article = 'a';
-  static timedIds = ['size', 'anchor', 'corner', 'center', 'enabled'];
-
-  static create(where) {
-    const shape = new Tip();
-    shape.initialize(where);
-    return shape;
-  }
-
-  static inflate(object, inflater) {
-    const shape = new Tip();
-    shape.embody(object, inflater);
-    return shape;
-  }
-
-  connectToParent() {
-    this.isDrawable = true;
-    this.root.defines.appendChild(this.element);
-  }
-
-  configureMarks() {
-    super.configureMarks();
-    this.markers[0].addMarks([], [], [], []);
-  }
-
-  configureState(bounds) {
-    this.state.centroid = [0, 0];
-
-    this.element = document.createElementNS(svgNamespace, 'marker');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.element.setAttributeNS(null, 'orient', 'auto-start-reverse');
-    this.element.setAttributeNS(null, 'markerUnits', 'strokeWidth');
-
-    // Without this, the marker gets clipped.
-    this.element.setAttributeNS(null, 'overflow', 'visible');
-
-    this.configureVectorProperty('size', this, this, this.updateSize.bind(this), bounds, [], timeline => {
-      if (!timeline) {
-        throw new LocatedException(this.where, 'I found a tip whose <code>size</code> was not set.');
-      }
-
-      try {
-        timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-        return true;
-      } catch (e) {
-        throw new LocatedException(e.where, `I found an illegal value for <code>size</code>. ${e.message}`);
-      }
-    });
-
-    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
-      throw new LocatedException(this.where, 'I found a tip whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
-    } else if (this.timedProperties.hasOwnProperty('corner')) {
-      this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, ['size'], timeline => {
-        try {
-          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
-        }
-      });
-    } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, ['size'], timeline => {
-        try {
-          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
-        }
-      });
-    } else {
-      throw new LocatedException(this.where, "I found a tip whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
-    }
-  }
-
-  updateSize(bounds) {
-    // this.element.setAttributeNS(null, 'width', this.state.size[0]);
-    // this.element.setAttributeNS(null, 'height', this.state.size[1]);
-    // this.state.corner = [
-      // this.state.center[0] - this.state.size[0] * 0.5,
-      // this.state.center[1] - this.state.size[1] * 0.5,
-    // ];
-  }
-
-  updateCenter(bounds) {
-    this.state.centroid = this.state.center;
-    this.state.corner = [
-      this.state.center[0] - this.state.size[0] * 0.5,
-      this.state.center[1] - this.state.size[1] * 0.5,
-    ];
-    // this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
-    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
-  }
-
-  updateCorner(bounds) {
-    this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
-    // this.element.setAttributeNS(null, 'x', this.state.corner[0]);
-    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
-  }
-
-  // updateProperties(env, t, bounds, matrix) {
-    // console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    // const anchor = this.valueAt(env, 'anchor', t);
-    // const size = this.valueAt(env, 'size', t);
-
-    // let corner;
-    // if (this.owns('corner')) {
-      // corner = this.valueAt(env, 'corner', t);
-    // } else {
-      // let center = this.valueAt(env, 'center', t);
-      // corner = new ExpressionVector([
-        // new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
-        // new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
-      // ]);
-    // }
-
-    // const markerBounds = {
-      // x: corner.get(0).value,
-      // y: corner.get(1).value,
-      // width: size.get(0).value,
-      // height: size.get(1).value,
-    // };
-    // markerBounds.span = markerBounds.y + (markerBounds.y + markerBounds.height);
-
-    // this.element.setAttributeNS(null, 'viewBox', `${markerBounds.x} ${markerBounds.y} ${markerBounds.width} ${markerBounds.height}`);
-
-    // console.log("anchor:", anchor.toString());
-
-    // matrix = this.transform(env, t, bounds, matrix);
-    // const childCentroids = this.children.map(child => child.updateProperties(env, t, markerBounds, matrix));
-    // const total = childCentroids.reduce((acc, centroid) => acc.add(centroid), new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]));
-    // const centroid = this.children.length == 0 ? total : total.divide(new ExpressionReal(this.children.length));
-    // this.updateCentroid(matrix, centroid, bounds);
-
-    // return centroid;
-  // }
-
-  updateContentDom(bounds) {
-    this.element.setAttributeNS(null, 'markerWidth', this.state.size[0]);
-    this.element.setAttributeNS(null, 'markerHeight', this.state.size[1]);
-    this.element.setAttributeNS(null, 'refX', 0);
-    this.element.setAttributeNS(null, 'refY', 0);
-    this.element.setAttributeNS(null, 'viewBox', `${this.state.corner[0]} ${this.state.corner[1]} ${this.state.size[0]} ${this.state.size[1]}`);
-
-    const markerBounds = {
-      x: this.state.corner[0],
-      y: this.state.corner[1],
-      width: this.state.size[0],
-      height: this.state.size[1],
-    };
-    markerBounds.span = markerBounds.y + (markerBounds.y + markerBounds.height);
-    for (let child of this.children) {
-      child.updateContentDom(markerBounds);
-    }
-  }
-
-  // updateInteractionState(bounds) {
-    // super.updateInteractionState(bounds);
-  // }
-
-}
-
-// --------------------------------------------------------------------------- 
-
 export class LinearGradient {
   static type = 'mask';
   static article = 'a';
@@ -2976,78 +2829,6 @@ export class LinearGradient {
     this.root.defines.appendChild(this.maskElement);
   }
 }
-
-// --------------------------------------------------------------------------- 
-
-// const FillMixin = {
-  // initializeFill: function() {
-    // this.untimedProperties.stroke = Stroke.create(this);
-    // this.untimedProperties.stroke.bind('opacity', new ExpressionReal(1));
-  // },
-
-  // configureFill: function(bounds) {
-    // this.element.setAttributeNS(null, 'fill', 'none');
-    // this.configureColor(bounds);
-    // this.configureStroke(this.untimedProperties.stroke, bounds, false);
-  // },
-
-  // configureColor: function(bounds) {
-    // this.configureScalarProperty('opacity', this, this, this.updateOpacityDom.bind(this), bounds, [], timeline => {
-      // if (timeline) {
-        // try {
-          // timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-        // } catch (e) {
-          // throw new LocatedException(e.where, `I found an illegal value for <code>opacity</code>. ${e.message}`);
-        // }
-      // }
-      // return true;
-    // });
-
-    // this.configureVectorProperty('color', this, this, this.updateColorDom.bind(this), bounds, [], timeline => {
-      // if (timeline) {
-        // try {
-          // timeline.assertList({objectFrame: this}, 3, ExpressionInteger, ExpressionReal);
-        // } catch (e) {
-          // throw new LocatedException(e.where, `I found an illegal value for <code>color</code>. ${e.message}`);
-        // }
-      // }
-
-      // If the opacity is non-zero anywhen, then color is a required property.
-      // const opacityTimeline = this.timedProperties.opacity;
-      // const needsColor =
-        // !this.isCutoutChild && // Color will get assigned to black in connect.
-        // ((opacityTimeline.defaultValue && opacityTimeline.defaultValue.value > 0) ||
-         // opacityTimeline.intervals.some(interval => (interval.hasFrom() && interval.fromValue.value > 0 || interval.hasTo() && interval.toValue.value > 0)));
-
-      // if (!needsColor) {
-        // return false;
-      // } else if (!timeline) {
-        // throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>color</code> isn't set.`);
-      // } else {
-        // return true;
-      // }
-    // });
-  // },
-
-  // updateOpacityDom: function(bounds) {
-    // this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
-  // },
-
-  // updateColorDom: function(bounds) {
-    // const r = Math.floor(this.state.color[0] * 255);
-    // const g = Math.floor(this.state.color[1] * 255);
-    // const b = Math.floor(this.state.color[2] * 255);
-    // const rgb = `rgb(${r}, ${g}, ${b})`;
-    // this.element.setAttributeNS(null, 'fill', rgb);
-  // },
-// };
-
-// Object.assign(Rectangle.prototype, FillMixin);
-// Object.assign(Circle.prototype, FillMixin);
-// Object.assign(Ungon.prototype, FillMixin);
-// Object.assign(Polygon.prototype, FillMixin);
-// Object.assign(Path.prototype, FillMixin);
-// Object.assign(Text.prototype, FillMixin);
 
 // --------------------------------------------------------------------------- 
 

@@ -2371,8 +2371,8 @@ export class ExpressionGroup extends ExpressionShapeFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionTip extends ExpressionFunction {
-  evaluate(env) {
+export class ExpressionTip extends ExpressionShapeFunction {
+  createShape(env) {
     return Tip.create(env.callExpression.where);
   }
 }

@@ -2,40 +2,40 @@
 
 <p>Here is one way to create the flower-ish design.</p>
 
-<div class="docs-source">with circle()
+<div class="docs-source">circle
   center = [50, 75]
   radius = 25
   color = :orange
 
-with circle()
+circle
   center = [75, 50]
   radius = 25
   color = :orange
 
-with circle()
+circle
   center = [50, 25]
   radius = 25
   color = :orange
 
-with circle()
+circle
   center = [25, 50]
   radius = 25
   color = :orange</div>
 
 <p>Notice how there is a lot of repetition? All four circles have the same <code>radius</code> and <code>color</code>. Only the <code>center</code> property changes.</p>
 
-<p>If you name all the circles with assignment statements, you can use another form of the <code>with</code> command to set the shared properties on all four circles at the same time. For the subject of this <code>with</code> command, provide a list of all the circles, like so:</p>
+<p>If you name all the circles with assignment statements, you can use a block to set the shared properties on all four circles at the same time. The subject of the block is a list of all the circles.</p>
 
-<div class="docs-source">n = with circle()
+<div class="docs-source">n = circle
   center = [50, 75]
-e = with circle()
+e = circle
   center = [75, 50]
-s = with circle()
+s = circle
   center = [50, 25]
-w = with circle()
+w = circle
   center = [25, 50]
 
-with [n, e, s, w]
+[n, e, s, w]
   radius = 25
   color = :orange</div>
 

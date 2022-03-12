@@ -30,6 +30,7 @@ export const Symbol = Object.freeze({
   ':forever': new ExpressionInteger(0),
 
   // Vectors
+  ':zero': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]),
   ':zero2': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0)]),
   ':zero3': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(0), new ExpressionReal(0)]),
   ':up': new ExpressionVector([new ExpressionReal(0), new ExpressionReal(1)]),

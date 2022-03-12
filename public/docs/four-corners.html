@@ -1,10 +1,10 @@
 <h2>Four Corners</h2>
 
-<p>Sometimes people talk of the "four corners" of the world. Worlds generally don't have corners. But you can make one that satisfies these confused people.</p>
+<p>Sometimes people talk of the "four corners" of the world. Worlds generally don't have corners. But you can make one that satisfies these people.</p>
 
 <p>Use the <code>rectangle</code> command to make a four-corner world. Type this code into the editor and run it.</p>
 
-<div class="docs-source">with rectangle()
+<div class="docs-source">rectangle
   size = [20, 10]
   corner = [0, 0]
   color = :crimson</div>
@@ -13,7 +13,7 @@
 
 <p>Wait. That last sentence stretches the truth. Try switching <code>corner</code> to <code>center</code>.
 
-<div class="docs-source">with rectangle()
+<div class="docs-source">rectangle
   size = [20, 10]
   center = [0, 0]
   color = :crimson</div>
@@ -22,6 +22,6 @@
 
 <p>The whole truth is that you can use either <code>center</code> or <code>corner</code> for rectangles&mdash;but you can't use both.</p>
 
-<p>Here's a challenge for you. Try changing the coordinates of <code>center</code> so that the rectangle sits right in the middle of the viewport.</p>
+<p>Here's a challenge for you. Try changing the coordinates of <code>center</code> so that the rectangle sits right in the middle of the view.</p>
 
 <p>What coordinates did you use? What coordinates would you use to center the rectangle if you were using <code>corner</code>?</p>

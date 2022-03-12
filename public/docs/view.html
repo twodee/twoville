@@ -1,0 +1,42 @@
+<h2>View</h2>
+
+<p>Delete any code in the code editor, run your blank program, hit the fit button, and zoom out a bit. Do you see that faint rectangular outline? That rectangular outline marks the <i>view</i>.</p>
+
+<p>Anything inside the view will be visible when you bring your design into other programs. Anything outside the view will be cut off.</p>
+
+<p>For example, consider this Twoville program:</p>
+
+<div class="docs-source">circle
+  color = :yellow
+  center = [0, 50]
+  radius = 50</div>
+
+<p>Half the circle lies outside the view. When you export the SVG file and embed it in a web page, it looks like this:</p>
+
+<img src="/docs/images/viewport_clip.svg" class="docs-image">
+
+<p>Within Twoville itself, you can see both inside and outside the view.</p>
+
+<p>By default, the view's bottom-left corner is (0, 0) and its top-right corner is (100, 100). If you want a shape to be visible, it must reside in this coordinate system&mdash;or you must change the coordinate system.</p>
+
+<p>To change the coordinate system, you set properties of the builtin <code>view</code> object. It has properties <code>corner</code>, <code>center</code>, and <code>size</code>, just like rectangles.</p>
+
+<p>In the following code we set the size of the view to fit around the magenta rectangle.</p>
+
+<div class="docs-source">view.size = [40, 30]
+
+rectangle
+  corner = [5, 5]
+  size = [30, 20]
+  color = :magenta</div>
+
+<p>If you want to set multiple properties, the <code>view</code> object can be used with a block:</p>
+
+<div class="docs-source">view
+  size = [40, 30]
+  center = [20, 15]
+
+rectangle
+  corner = [5, 5]
+  size = [30, 20]
+  color = :magenta</div>

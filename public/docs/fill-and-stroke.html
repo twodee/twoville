@@ -2,18 +2,20 @@
 
 <p>A shape's <code>color</code> property sets the shape's <i>fill color</i>, which is the color that appears within the shape's perimeter. To set the color of the shape's perimeter itself, you set the <i>stroke color</i>. You also need to set the stroke size, which is 0 by default. Here's an orange circle with a black outline.</p>
 
-<div class="docs-source">with circle()
+<div class="docs-source">circle
   radius = 40
   center = [50, 50]
   color = [1, 0.5, 0]
-  stroke.color = :black
-  stroke.size = 1</div>
+  stroke
+    color = :black
+    size = 1</div>
 
 <p>Suppose you want the circle to be hollow. That is, you want the stroke, but not the fill. Set the shape's <code>opacity</code> to 0, as shown in the following code. The <code>color</code> property need not be set if <code>opacity</code> is 0.</p>
 
-<div class="docs-source">with circle()
+<div class="docs-source">circle
   radius = 40
   center = [50, 50]
   opacity = 0
-  stroke.color = :black
-  stroke.size = 1</div>
+  stroke
+    color = :black
+    size = 1</div>
