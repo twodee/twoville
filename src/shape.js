@@ -553,6 +553,8 @@ export class Shape extends ObjectFrame {
 
     this.assertCompleteTimeline('color', fromTime, toTime);
     this.assertCompleteTimeline('opacity', fromTime, toTime);
+
+    // size?
   }
 
   initializeStaticColorState() {
@@ -587,6 +589,121 @@ export class Shape extends ObjectFrame {
     if (this.has('opacity')) {
       this.element.setAttributeNS(null, 'fill-opacity', this.state.opacity);
     }
+  }
+
+  validateStrokeProperties(fromTime, toTime) {
+    if (!this.strokeFrame) return;
+
+    // Assert required properties.
+    this.strokeFrame.assertProperty('color');
+    this.strokeFrame.assertProperty('weight');
+
+    this.strokeFrame.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
+    this.strokeFrame.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
+    this.strokeFrame.assertScalarType('weight', [ExpressionInteger, ExpressionReal]);
+    // TODO: assert join is round, miter, or bevel
+
+    this.strokeFrame.assertCompleteTimeline('color', fromTime, toTime);
+    this.strokeFrame.assertCompleteTimeline('opacity', fromTime, toTime);
+    this.strokeFrame.assertCompleteTimeline('weight', fromTime, toTime);
+  }
+
+  initializeStaticStrokeState() {
+    if (!this.strokeFrame) return;
+
+    if (!this.strokeFrame.hasOwnProperty('state')) {
+      this.strokeFrame.state = {};
+    }
+
+    if (this.strokeFrame.hasStatic('color')) {
+      this.strokeFrame.state.color = this.strokeFrame.getStatic('color').toPrimitiveArray();
+    }
+
+    if (this.strokeFrame.hasStatic('opacity')) {
+      this.strokeFrame.state.opacity = this.strokeFrame.getStatic('opacity').value;
+    }
+
+    if (this.strokeFrame.hasStatic('weight')) {
+      this.strokeFrame.state.weight = this.strokeFrame.getStatic('weight').value;
+    }
+
+    if (this.strokeFrame.hasStatic('join')) {
+      this.strokeFrame.state.join = this.strokeFrame.getStatic('join').value;
+    } else {
+      this.strokeFrame.state.join = 'miter';
+    }
+
+    if (this.strokeFrame.hasStatic('cap')) {
+      this.strokeFrame.state.cap = this.strokeFrame.getStatic('cap').value;
+    } else {
+      this.strokeFrame.state.cap = 'butt';
+    }
+
+    if (this.strokeFrame.hasStatic('dashes')) {
+      this.strokeFrame.state.dashes = this.strokeFrame.getStatic('dashes').toSpacedString();
+    } else {
+      this.strokeFrame.state.dashes = 'none';
+    }
+  }
+
+  initializeDynamicStrokeState() {
+    if (!this.strokeFrame) return;
+
+    if (!this.strokeFrame.state.hasOwnProperty('animation')) {
+      this.strokeFrame.state.animation = {};
+    }
+
+    if (this.strokeFrame.hasDynamic('color')) {
+      const timeline = this.strokeFrame.getDynamic('color');
+      this.strokeFrame.state.animation.color = {
+        animators: timeline.intervals.map(interval => interval.toAnimator()),
+        defaultValue: this.strokeFrame.state.color,
+      };
+    }
+
+    if (this.strokeFrame.hasDynamic('opacity')) {
+      const timeline = this.strokeFrame.getDynamic('opacity');
+      this.strokeFrame.state.animation.opacity = {
+        animators: timeline.intervals.map(interval => interval.toAnimator()),
+        defaultValue: this.state.opacity,
+      };
+    }
+
+    if (this.strokeFrame.hasDynamic('weight')) {
+      const timeline = this.strokeFrame.getDynamic('weight');
+      this.strokeFrame.state.animation.weight = {
+        animators: timeline.intervals.map(interval => interval.toAnimator()),
+        defaultValue: this.state.weight,
+      };
+    }
+  }
+
+  synchronizeStrokeState(t) {
+    if (!this.strokeFrame) return;
+
+    this.strokeFrame.synchronizeStateProperty('color', t);
+    this.strokeFrame.synchronizeStateProperty('opacity', t);
+    this.strokeFrame.synchronizeStateProperty('weight', t);
+    this.strokeFrame.synchronizeStateProperty('join', t);
+    this.strokeFrame.synchronizeStateProperty('cap', t);
+
+    this.strokeFrame.state.colorBytes = [
+      Math.floor(this.strokeFrame.state.color[0] * 255),
+      Math.floor(this.strokeFrame.state.color[1] * 255),
+      Math.floor(this.strokeFrame.state.color[2] * 255),
+    ];
+  }
+
+  synchronizeStrokeDom(t, bounds, element) {
+    if (!this.strokeFrame) return;
+
+    const rgb = `rgb(${this.strokeFrame.state.colorBytes[0]}, ${this.strokeFrame.state.colorBytes[1]}, ${this.strokeFrame.state.colorBytes[2]})`;
+    element.setAttributeNS(null, 'stroke', rgb);
+    element.setAttributeNS(null, 'stroke-width', this.strokeFrame.state.weight);
+    element.setAttributeNS(null, 'stroke-opacity', this.strokeFrame.state.opacity);
+    element.setAttributeNS(null, 'stroke-linejoin', this.strokeFrame.state.join);
+    element.setAttributeNS(null, 'stroke-linecap', this.strokeFrame.state.cap);
+    element.setAttributeNS(null, 'stroke-dasharray', this.strokeFrame.state.dashes);
   }
 
   static inflate(object, inflater) {
@@ -649,6 +766,8 @@ export class Text extends Shape {
   }
 
   validateProperties(fromTime, toTime) {
+    this.strokeFrame = this.stroke;
+
     // Assert required properties.
     this.assertProperty('size');
     this.assertProperty('position');
@@ -663,16 +782,14 @@ export class Text extends Shape {
     this.assertCompleteTimeline('position', fromTime, toTime);
 
     this.validateFillProperties(fromTime, toTime);
-  }
-
-  initializeState() {
-    super.initializeState();
+    this.validateStrokeProperties(fromTime, toTime);
   }
 
   initializeStaticState() {
     this.initializeStaticScalarProperty('size');
     this.initializeStaticVectorProperty('position');
     this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
@@ -680,6 +797,7 @@ export class Text extends Shape {
     this.initializeDynamicProperty('size');
     this.initializeDynamicProperty('position');
     this.initializeDynamicColorState();
+    this.initializeDynamicStrokeState();
   }
 
   initializeDom(root) {
@@ -720,6 +838,7 @@ export class Text extends Shape {
     this.synchronizeStateProperty('size', t);
     this.synchronizeStateProperty('position', t);
     this.synchronizeColorState(t);
+    this.synchronizeStrokeState(t);
   }
 
   synchronizeDom(t, bounds) {
@@ -728,6 +847,7 @@ export class Text extends Shape {
     this.element.setAttributeNS(null, 'y', bounds.span - this.state.position[1]);
     this.element.setAttributeNS(null, 'font-size', this.state.size);
     this.synchronizeFillDom(t, bounds);
+    this.synchronizeStrokeDom(t, bounds);
   }
 
   initializeMarkState() {
@@ -790,6 +910,8 @@ export class Rectangle extends Shape {
   }
 
   validateProperties(fromTime, toTime) {
+    this.strokeFrame = this.stroke;
+
     // Assert required properties.
     this.assertProperty('size');
 
@@ -812,12 +934,11 @@ export class Rectangle extends Shape {
     this.assertCompleteTimeline('rounding', fromTime, toTime);
 
     this.validateFillProperties(fromTime, toTime);
-    this.stroke?.validate(fromTime, toTime);
+    this.validateStrokeProperties(fromTime, toTime);
   }
 
   initializeState() {
     super.initializeState();
-    this.stroke?.initializeState();
     this.hasCenter = this.has('center');
   }
 
@@ -827,6 +948,7 @@ export class Rectangle extends Shape {
     this.initializeStaticScalarProperty('rounding');
     this.initializeStaticVectorProperty('size');
     this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
@@ -836,12 +958,50 @@ export class Rectangle extends Shape {
     this.initializeDynamicProperty('rounding');
     this.initializeDynamicProperty('size');
     this.initializeDynamicColorState();
+    this.initializeDynamicStrokeState();
   }
 
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'rect');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.connectToParent(root);
+  }
+
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('rounding', t);
+    this.synchronizeStateProperty('size', t);
+    this.synchronizeStateProperty('center', t);
+    this.synchronizeStateProperty('corner', t);
+
+    if (this.hasCenter) {
+      this.state.corner = [
+        this.state.center[0] - 0.5 * this.state.size[0],
+        this.state.center[1] - 0.5 * this.state.size[1],
+      ];
+    }
+
+    this.synchronizeColorState();
+    this.synchronizeStrokeState(t);
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+
+    if (this.state.rounding) {
+      this.element.setAttributeNS(null, 'rx', this.state.rounding);
+      this.element.setAttributeNS(null, 'ry', this.state.rounding);
+    }
+
+    this.element.setAttributeNS(null, 'width', this.state.size[0]);
+    this.element.setAttributeNS(null, 'height', this.state.size[1]);
+
+    this.element.setAttributeNS(null, 'x', this.state.corner[0]);
+    this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
+
+    this.synchronizeFillDom(t, bounds);
+    this.synchronizeStrokeDom(t, bounds, this.element);
   }
 
   initializeMarkState() {
@@ -929,42 +1089,142 @@ export class Rectangle extends Shape {
     this.widthMark.synchronizeDom(bounds, handleRadius);
     this.heightMark.synchronizeDom(bounds, handleRadius);
   }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Circle extends Shape {
+  static type = 'circle';
+  static article = 'a';
+  static timedIds = ['center', 'radius', 'color', 'opacity', 'enabled'];
+
+  initialize(where) {
+    super.initialize(where);
+    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
+  }
+
+  static create(where) {
+    const shape = new Circle();
+    shape.initialize(where);
+    return shape;
+  }
+
+  static inflate(object, inflater) {
+    const shape = new Circle();
+    shape.embody(object, inflater);
+    return shape;
+  }
+
+  validateProperties(fromTime, toTime) {
+    this.strokeFrame = this.stroke;
+
+    // Assert required properties.
+    this.assertProperty('radius');
+    this.assertProperty('center');
+
+    // Assert types of extent properties.
+    this.assertScalarType('radius', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('radius', fromTime, toTime);
+    this.assertCompleteTimeline('center', fromTime, toTime);
+
+    this.validateFillProperties(fromTime, toTime);
+    this.validateStrokeProperties(fromTime, toTime);
+  }
+
+  initializeState() {
+    super.initializeState();
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('radius');
+    this.initializeStaticVectorProperty('center');
+    this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('radius');
+    this.initializeDynamicProperty('center');
+    this.initializeDynamicColorState();
+    this.initializeDynamicStrokeState();
+  }
+
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'circle');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.connectToParent(root);
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+
+    this.outlineMark = new CircleMark();
+    this.centerMark = new VectorPanMark(this, null, value => this.state.center = value);
+    this.radiusMark = new HorizontalPanMark(this, null, 1, value => this.state.radius = value);
+    this.markers[0].setMarks(this.centerMark, this.radiusMark, this.outlineMark);
+  }
 
   synchronizeState(t) {
     super.synchronizeState(t);
 
-    this.synchronizeStateProperty('rounding', t);
-    this.synchronizeStateProperty('size', t);
+    this.synchronizeStateProperty('radius', t);
     this.synchronizeStateProperty('center', t);
-    this.synchronizeStateProperty('corner', t);
-
-    if (this.hasCenter) {
-      this.state.corner = [
-        this.state.center[0] - 0.5 * this.state.size[0],
-        this.state.center[1] - 0.5 * this.state.size[1],
-      ];
-    }
-
-    this.synchronizeColorState();
-    this.stroke?.synchronizeState(t);
+    this.synchronizeColorState(t);
+    this.synchronizeStrokeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
+    this.element.setAttributeNS(null, 'r', this.state.radius);
+    this.element.setAttributeNS(null, 'cx', this.state.center[0]);
+    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
+    this.synchronizeFillDom(t, bounds);
+    this.synchronizeStrokeDom(t, bounds, this.element);
+  }
 
-    if (this.state.rounding) {
-      this.element.setAttributeNS(null, 'rx', this.state.rounding);
-      this.element.setAttributeNS(null, 'ry', this.state.rounding);
+  synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
+    this.centerMark.synchronizeExpressions(this.expressionAt('center', t));
+    this.radiusMark.synchronizeExpressions(this.expressionAt('radius', t));
+  }
+
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+    this.outlineMark.synchronizeState(this.state.center, this.state.radius);
+    this.centerMark.synchronizeState(this.state.center, this.state.matrix, this.state.inverseMatrix);
+    this.radiusMark.synchronizeState([
+      this.state.center[0] + this.state.radius,
+      this.state.center[1],
+    ], this.state.matrix, this.state.inverseMatrix);
+
+    this.state.centroid = this.state.matrix.multiplyPosition(this.state.center);
+    this.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
+  }
+ 
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
+    this.centerMark.synchronizeDom(bounds, handleRadius);
+    this.radiusMark.synchronizeDom(bounds, handleRadius);
+  }
+
+  computeBoundingBox() {
+    if (this.state.center && this.state.radius) {
+      this.boundingBox.enclosePoint([
+        this.state.center[0] - this.state.radius,
+        this.state.center[1] - this.state.radius,
+      ]);
+      this.boundingBox.enclosePoint([
+        this.state.center[0] + this.state.radius,
+        this.state.center[1] + this.state.radius,
+      ]);
     }
 
-    this.element.setAttributeNS(null, 'width', this.state.size[0]);
-    this.element.setAttributeNS(null, 'height', this.state.size[1]);
-
-    this.element.setAttributeNS(null, 'x', this.state.corner[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
-
-    this.synchronizeFillDom(t, bounds);
-    this.stroke?.synchronizeDom(t, this.element);
+    // add intervals
   }
 }
 
@@ -1185,140 +1445,6 @@ export class Raster extends Shape {
 
 // --------------------------------------------------------------------------- 
 
-export class Circle extends Shape {
-  static type = 'circle';
-  static article = 'a';
-  static timedIds = ['center', 'radius', 'color', 'opacity', 'enabled'];
-
-  initialize(where) {
-    super.initialize(where);
-    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
-  }
-
-  static create(where) {
-    const shape = new Circle();
-    shape.initialize(where);
-    return shape;
-  }
-
-  static inflate(object, inflater) {
-    const shape = new Circle();
-    shape.embody(object, inflater);
-    return shape;
-  }
-
-  validateProperties(fromTime, toTime) {
-    // Assert required properties.
-    this.assertProperty('radius');
-    this.assertProperty('center');
-
-    // Assert types of extent properties.
-    this.assertScalarType('radius', [ExpressionInteger, ExpressionReal]);
-    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
-
-    // Assert completeness of timelines.
-    this.assertCompleteTimeline('radius', fromTime, toTime);
-    this.assertCompleteTimeline('center', fromTime, toTime);
-
-    this.validateFillProperties(fromTime, toTime);
-    this.stroke?.validate(fromTime, toTime);
-  }
-
-  initializeState() {
-    super.initializeState();
-    this.stroke?.initializeState();
-  }
-
-  initializeStaticState() {
-    this.initializeStaticScalarProperty('radius');
-    this.initializeStaticVectorProperty('center');
-    this.initializeStaticColorState();
-  }
-
-  initializeDynamicState() {
-    this.state.animation = {};
-    this.initializeDynamicProperty('radius');
-    this.initializeDynamicProperty('center');
-    this.initializeDynamicColorState();
-  }
-
-  initializeDom(root) {
-    this.element = document.createElementNS(svgNamespace, 'circle');
-    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    this.connectToParent(root);
-  }
-
-  initializeMarkState() {
-    super.initializeMarkState();
-
-    this.outlineMark = new CircleMark();
-    this.centerMark = new VectorPanMark(this, null, value => this.state.center = value);
-    this.radiusMark = new HorizontalPanMark(this, null, 1, value => this.state.radius = value);
-    this.markers[0].setMarks(this.centerMark, this.radiusMark, this.outlineMark);
-  }
-
-  synchronizeMarkExpressions(t) {
-    super.synchronizeMarkExpressions(t);
-    this.centerMark.synchronizeExpressions(this.expressionAt('center', t));
-    this.radiusMark.synchronizeExpressions(this.expressionAt('radius', t));
-  }
-
-  synchronizeMarkState(t) {
-    super.synchronizeMarkState(t);
-    this.outlineMark.synchronizeState(this.state.center, this.state.radius);
-    this.centerMark.synchronizeState(this.state.center, this.state.matrix, this.state.inverseMatrix);
-    this.radiusMark.synchronizeState([
-      this.state.center[0] + this.state.radius,
-      this.state.center[1],
-    ], this.state.matrix, this.state.inverseMatrix);
-
-    this.state.centroid = this.state.matrix.multiplyPosition(this.state.center);
-    this.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
-  }
- 
-  synchronizeMarkDom(bounds, handleRadius, radialLength) {
-    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
-    this.outlineMark.synchronizeDom(bounds);
-    this.centerMark.synchronizeDom(bounds, handleRadius);
-    this.radiusMark.synchronizeDom(bounds, handleRadius);
-  }
-
-  synchronizeState(t) {
-    super.synchronizeState(t);
-
-    this.synchronizeStateProperty('radius', t);
-    this.synchronizeStateProperty('center', t);
-    this.synchronizeColorState(t);
-    this.stroke?.synchronizeState(t);
-  }
-
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
-    this.element.setAttributeNS(null, 'r', this.state.radius);
-    this.element.setAttributeNS(null, 'cx', this.state.center[0]);
-    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
-    this.synchronizeFillDom(t, bounds);
-    this.stroke?.synchronizeDom(t, this.element);
-  }
-
-  computeBoundingBox() {
-    if (this.state.center && this.state.radius) {
-      this.boundingBox.enclosePoint([
-        this.state.center[0] - this.state.radius,
-        this.state.center[1] - this.state.radius,
-      ]);
-      this.boundingBox.enclosePoint([
-        this.state.center[0] + this.state.radius,
-        this.state.center[1] + this.state.radius,
-      ]);
-    }
-
-    // add intervals
-  }
-}
-
-// --------------------------------------------------------------------------- 
-
 export class Grid extends Shape {
   static type = 'grid';
   static article = 'a';
@@ -1326,15 +1452,13 @@ export class Grid extends Shape {
 
   initialize(where) {
     super.initialize(where);
-    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
-    const stroke = new StrokeFrame.create(this, null);
-    this.stroke.bindStatic('color', new ExpressionVector([
+    this.bindStatic('color', new ExpressionVector([
       new ExpressionReal(0.75),
       new ExpressionReal(0.75),
       new ExpressionReal(0.75)
     ]));
-    this.stroke.bindStatic('size', new ExpressionReal(1));
-    this.stroke.bindStatic('opacity', new ExpressionReal(1));
+    this.bindStatic('weight', new ExpressionReal(1));
+    this.bindStatic('opacity', new ExpressionReal(1));
   }
 
   static create(where) {
@@ -1350,6 +1474,9 @@ export class Grid extends Shape {
   }
 
   validateProperties(fromTime, toTime) {
+    this.strokeFrame = this;
+
+    // TODO not size and then assert size?
     if ((this.has('corner') || this.has('center')) && !this.has('size')) {
       this.assertProperty('size');
     } else if (!(this.has('corner') || this.has('center')) && this.has('size')) {
@@ -1366,12 +1493,11 @@ export class Grid extends Shape {
     this.assertCompleteTimeline('ticks', fromTime, toTime);
     this.assertCompleteTimeline('size', fromTime, toTime);
 
-    this.stroke?.validate(fromTime, toTime);
+    this.validateStrokeProperties(fromTime, toTime);
   }
 
   initializeState() {
     super.initializeState();
-    this.stroke.initializeState();
     this.hasCenter = this.has('center');
   }
 
@@ -1380,6 +1506,7 @@ export class Grid extends Shape {
     this.initializeStaticVectorProperty('corner');
     this.initializeStaticVectorProperty('ticks');
     this.initializeStaticVectorProperty('size');
+    this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
@@ -1388,6 +1515,7 @@ export class Grid extends Shape {
     this.initializeDynamicProperty('corner');
     this.initializeDynamicProperty('ticks');
     this.initializeDynamicProperty('size');
+    this.initializeDynamicStrokeState();
   }
 
   initializeDom(root) {
@@ -1395,6 +1523,69 @@ export class Grid extends Shape {
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
     this.element.setAttributeNS(null, 'fill', 'none');
     this.connectToParent(root);
+  }
+
+  synchronizeState(t) {
+    super.synchronizeState(t);
+
+    this.synchronizeStateProperty('size', t);
+    this.synchronizeStateProperty('ticks', t);
+    this.synchronizeStateProperty('center', t);
+    this.synchronizeStateProperty('corner', t);
+
+    if (this.hasCenter) {
+      this.state.corner = [
+        this.state.center[0] - 0.5 * this.state.size[0],
+        this.state.center[1] - 0.5 * this.state.size[1],
+      ];
+    }
+
+    this.synchronizeStrokeState(t);
+  }
+
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
+    this.stroke?.synchronizeDom(t, this.element);
+
+    const ticks = this.state.ticks ?? [1, 1];
+    const size = this.state.size ?? [bounds.width, bounds.height];
+    const corner = this.state.corner ?? [bounds.x, bounds.y];
+
+    clearChildren(this.element);
+
+    if (ticks[0] > 0) {
+      const gap = ticks[0];
+      const first = Math.ceil(corner[0] / gap) * gap;
+      const last = corner[0] + size[0];
+      for (let tick = first; tick <= last; tick += gap) {
+        const line = document.createElementNS(svgNamespace, 'line');
+        line.setAttributeNS(null, 'visibility', 'visible');
+        line.setAttributeNS(null, 'x1', tick);
+        line.setAttributeNS(null, 'x2', tick);
+        line.setAttributeNS(null, 'y1', bounds.span - corner[1]);
+        line.setAttributeNS(null, 'y2', bounds.span - (corner[1] + size[1]));
+        line.classList.add('grid-line');
+        this.element.appendChild(line);
+      }
+    }
+
+    if (ticks[1] > 0) {
+      const gap = ticks[1];
+      const first = Math.ceil(corner[1] / gap) * gap;
+      const last = corner[1] + size[1];
+      for (let tick = first; tick <= last; tick += gap) {
+        const line = document.createElementNS(svgNamespace, 'line');
+        line.setAttributeNS(null, 'visibility', 'visible');
+        line.setAttributeNS(null, 'y1', bounds.span - tick);
+        line.setAttributeNS(null, 'y2', bounds.span - tick);
+        line.setAttributeNS(null, 'x1', corner[0]);
+        line.setAttributeNS(null, 'x2', corner[0] + size[0]);
+        line.classList.add('grid-line');
+        this.element.appendChild(line);
+      }
+    }
+
+    this.synchronizeStrokeDom(t, bounds, this.element);
   }
 
   initializeMarkState() {
@@ -1492,67 +1683,6 @@ export class Grid extends Shape {
       this.positionMark.synchronizeDom(bounds, handleRadius);
       this.widthMark.synchronizeDom(bounds, handleRadius);
       this.heightMark.synchronizeDom(bounds, handleRadius);
-    }
-  }
-
-  synchronizeState(t) {
-    super.synchronizeState(t);
-
-    this.synchronizeStateProperty('size', t);
-    this.synchronizeStateProperty('ticks', t);
-    this.synchronizeStateProperty('center', t);
-    this.synchronizeStateProperty('corner', t);
-
-    if (this.hasCenter) {
-      this.state.corner = [
-        this.state.center[0] - 0.5 * this.state.size[0],
-        this.state.center[1] - 0.5 * this.state.size[1],
-      ];
-    }
-
-    this.stroke?.synchronizeState(t);
-  }
-
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
-    this.stroke?.synchronizeDom(t, this.element);
-
-    const ticks = this.state.ticks ?? [1, 1];
-    const size = this.state.size ?? [bounds.width, bounds.height];
-    const corner = this.state.corner ?? [bounds.x, bounds.y];
-
-    clearChildren(this.element);
-
-    if (ticks[0] > 0) {
-      const gap = ticks[0];
-      const first = Math.ceil(corner[0] / gap) * gap;
-      const last = corner[0] + size[0];
-      for (let tick = first; tick <= last; tick += gap) {
-        const line = document.createElementNS(svgNamespace, 'line');
-        line.setAttributeNS(null, 'visibility', 'visible');
-        line.setAttributeNS(null, 'x1', tick);
-        line.setAttributeNS(null, 'x2', tick);
-        line.setAttributeNS(null, 'y1', bounds.span - corner[1]);
-        line.setAttributeNS(null, 'y2', bounds.span - (corner[1] + size[1]));
-        line.classList.add('grid-line');
-        this.element.appendChild(line);
-      }
-    }
-
-    if (ticks[1] > 0) {
-      const gap = ticks[1];
-      const first = Math.ceil(corner[1] / gap) * gap;
-      const last = corner[1] + size[1];
-      for (let tick = first; tick <= last; tick += gap) {
-        const line = document.createElementNS(svgNamespace, 'line');
-        line.setAttributeNS(null, 'visibility', 'visible');
-        line.setAttributeNS(null, 'y1', bounds.span - tick);
-        line.setAttributeNS(null, 'y2', bounds.span - tick);
-        line.setAttributeNS(null, 'x1', corner[0]);
-        line.setAttributeNS(null, 'x2', corner[0] + size[0]);
-        line.classList.add('grid-line');
-        this.element.appendChild(line);
-      }
     }
   }
 }
@@ -1756,25 +1886,6 @@ export class VertexShape extends NodeShape {
     }
     this.state.centroid = this.state.matrix.multiplyPosition(this.boundingBox.centroid());
   }
-
-  // computeBoundingBox() {
-    // for (let node of this.domNodes) {
-      // const position = node.turtle.position;
-      // let transformedPosition = this.state.matrix.multiplyPosition(position);
-      // this.boundingBox.enclosePoint(transformedPosition);
-    // }
-
-    // if (this.untimedProperties.hasOwnProperty('stroke')) {
-      // if (this.untimedProperties.stroke.state.hasOwnProperty('size')) {
-        // const halfStrokeSize = this.untimedProperties.stroke.state.size * 0.5;
-        // this.boundingBox.thicken(halfStrokeSize);
-      // }
-    // } else if (this.timedProperties.hasOwnProperty('stroke')) {
-      // this.boundingBox.thicken(this.state.size * 0.5);
-    // }
-
-    // TODO handle stroke
-  // }
 }
 
 // --------------------------------------------------------------------------- 
@@ -1810,13 +1921,13 @@ export class Polygon extends VertexShape {
   }
 
   validateProperties(fromTime, toTime) {
+    this.strokeFrame = this.stroke;
     this.validateFillProperties(fromTime, toTime);
-    this.stroke?.validate(fromTime, toTime);
+    this.validateStrokeProperties(fromTime, toTime);
   }
 
   initializeState() {
     super.initializeState();
-    this.stroke?.initializeState();
     this.domNodes = this.nodes.filter(node => node.isDom); // TODO make domNodes part of state?
     if (this.domNodes.length > 0) {
       this.state.turtle0 = this.domNodes[0].turtle;
@@ -1825,11 +1936,13 @@ export class Polygon extends VertexShape {
 
   initializeStaticState() {
     this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
     this.initializeDynamicColorState();
+    this.initializeDynamicStrokeState();
   }
 
   initializeDom(root) {
@@ -1842,13 +1955,13 @@ export class Polygon extends VertexShape {
   synchronizeState(t) {
     super.synchronizeState(t);
     this.synchronizeColorState(t);
-    this.stroke?.synchronizeState(t);
+    this.synchronizeStrokeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
     this.synchronizeFillDom(t, bounds);
-    this.stroke?.synchronizeDom(t, this.element);
+    this.synchronizeStrokeDom(t, bounds, this.element);
 
     const positions = this.domNodes.flatMap((node, index) => {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
@@ -1920,8 +2033,9 @@ export class Ungon extends VertexShape {
   }
 
   validateProperties(fromTime, toTime) {
+    this.strokeFrame = this.stroke;
     this.validateFillProperties(fromTime, toTime);
-    this.stroke?.validate(fromTime, toTime);
+    this.validateStrokeProperties(fromTime, toTime);
 
     const domNodes = this.nodes.filter(node => node.isDom);
     if (domNodes.length < 3) {
@@ -1944,7 +2058,6 @@ export class Ungon extends VertexShape {
 
   initializeState() {
     super.initializeState();
-    this.stroke?.initializeState();
     this.domNodes = this.nodes.filter(node => node.isDom); // TODO make domNodes part of state?
     this.state.turtle0 = this.domNodes[0].turtle;
 
@@ -1957,12 +2070,14 @@ export class Ungon extends VertexShape {
     this.initializeStaticScalarProperty('formula');
     this.initializeStaticScalarProperty('rounding');
     this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
     this.initializeDynamicProperty('rounding');
     this.initializeDynamicColorState();
+    this.initializeDynamicStrokeState();
   }
 
   initializeDom(root) {
@@ -1976,13 +2091,13 @@ export class Ungon extends VertexShape {
     super.synchronizeState(t);
     this.synchronizeColorState(t);
     this.synchronizeStateProperty('rounding', t);
-    this.stroke?.synchronizeState(t);
+    this.synchronizeStrokeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
     this.synchronizeFillDom(t, bounds);
-    this.stroke?.synchronizeDom(t, this.element);
+    this.synchronizeStrokeDom(t, bounds, this.element);
 
     const gap = distancePointPoint(this.domNodes[0].state.turtle.position, this.domNodes[this.domNodes.length - 1].state.turtle.position);
     const hasReturn = gap < 1e-6;
@@ -2137,13 +2252,8 @@ export class Polyline extends VertexShape {
   }
 
   validateProperties(fromTime, toTime) {
-    this.assertProperty('color');
-
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
-
-    this.assertCompleteTimeline('color', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
+    this.strokeFrame = this;
+    this.validateStrokeProperties(fromTime, toTime);
   }
 
   initializeState() {
@@ -2155,13 +2265,12 @@ export class Polyline extends VertexShape {
   }
 
   initializeStaticState() {
-    // TODO size?
-    this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializeDynamicColorState();
+    this.initializeDynamicStrokeState();
   }
 
   initializeDom(root) {
@@ -2178,14 +2287,12 @@ export class Polyline extends VertexShape {
 
   synchronizeState(t) {
     super.synchronizeState(t);
-    this.synchronizeColorState(t);
+    this.synchronizeStrokeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
-
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    this.element.setAttributeNS(null, 'stroke', rgb);
+    this.synchronizeStrokeDom(t, bounds, this.element);
 
     const positions = this.domNodes.flatMap((node, index) => {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
@@ -2245,16 +2352,8 @@ export class Line extends VertexShape {
   }
 
   validateProperties(fromTime, toTime) {
-    this.assertProperty('color');
-    this.assertProperty('size');
-
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('size', [ExpressionInteger, ExpressionReal]);
-
-    this.assertCompleteTimeline('color', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
-    this.assertCompleteTimeline('size', fromTime, toTime);
+    this.strokeFrame = this;
+    this.validateStrokeProperties(fromTime, toTime);
   }
 
   initializeState() {
@@ -2266,13 +2365,11 @@ export class Line extends VertexShape {
   }
 
   initializeStaticState() {
-    this.initializeStaticScalarProperty('size');
-    this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
-    this.initializeDynamicProperty('size');
     this.initializeDynamicColorState();
   }
 
@@ -2286,16 +2383,12 @@ export class Line extends VertexShape {
 
   synchronizeState(t) {
     super.synchronizeState(t);
-    this.synchronizeColorState(t);
-    this.synchronizeStateProperty('size', t);
+    this.synchronizeStrokeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
-
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    this.element.setAttributeNS(null, 'stroke', rgb);
-    this.element.setAttributeNS(null, 'stroke-width', this.state.size);
+    this.synchronizeStrokeDom(t, bounds, this.element);
 
     const positions = this.domNodes.flatMap((node, index) => {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
@@ -2373,8 +2466,9 @@ export class Path extends NodeShape {
   }
 
   validateProperties(fromTime, toTime) {
+    this.strokeFrame = this.stroke;
     this.validateFillProperties(fromTime, toTime);
-    this.stroke?.validate(fromTime, toTime);
+    this.validateStrokeProperties(fromTime, toTime);
 
     const domNodes = this.nodes.filter(node => node.isDom);
     if (this.nodes.length > 0) {
@@ -2387,7 +2481,6 @@ export class Path extends NodeShape {
 
   initializeState() {
     super.initializeState();
-    this.stroke?.initializeState();
     this.domNodes = this.nodes.filter(node => node.isDom);
     if (this.domNodes.length > 0) {
       this.state.turtle0 = this.domNodes[0].turtle;
@@ -2396,11 +2489,13 @@ export class Path extends NodeShape {
 
   initializeStaticState() {
     this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
     this.state.animation = {};
     this.initializeDynamicColorState();
+    this.initializeDynamicStrokeState();
   }
 
   initializeDom(root) {
@@ -2415,13 +2510,13 @@ export class Path extends NodeShape {
   synchronizeState(t) {
     super.synchronizeState(t);
     this.synchronizeColorState(t);
-    this.stroke?.synchronizeState(t);
+    this.synchronizeStrokeState(t);
   }
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
     this.synchronizeFillDom(t, bounds);
-    this.stroke?.synchronizeDom(t, this.element);
+    this.synchronizeStrokeDom(t, bounds, this.element);
 
     const pathCommands = this.domNodes.map((node, index) => {
       return node.pathCommand(bounds, this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);

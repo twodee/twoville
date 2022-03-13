@@ -392,7 +392,7 @@ export class ObjectFrame extends Frame {
 export class StrokeFrame extends ObjectFrame {
   static type = 'stroke';
   static article = 'a';
-  static timedIds = ['color', 'opacity', 'size'];
+  static timedIds = ['color', 'opacity', 'weight'];
 
   static create(parentFrame, where) {
     const frame = new StrokeFrame();
@@ -405,81 +405,6 @@ export class StrokeFrame extends ObjectFrame {
     const frame = new StrokeFrame();
     frame.embody(parentFrame, object, inflater);
     return frame;
-  }
-
-  validate(fromTime, toTime) {
-    // Assert required properties.
-    this.assertProperty('color');
-    this.assertProperty('size');
-
-    this.assertVectorType('color', 3, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('size', [ExpressionInteger, ExpressionReal]);
-
-    this.assertCompleteTimeline('color', fromTime, toTime);
-    this.assertCompleteTimeline('opacity', fromTime, toTime);
-    this.assertCompleteTimeline('size', fromTime, toTime);
-  }
-
-  initializeStaticState() {
-    if (this.hasStatic('color')) {
-      this.state.color = this.getStatic('color').toPrimitiveArray();
-    }
-
-    if (this.hasStatic('opacity')) {
-      this.state.opacity = this.getStatic('opacity').value;
-    }
-
-    if (this.hasStatic('size')) {
-      this.state.size = this.getStatic('size').value;
-    }
-  }
-
-  initializeDynamicState() {
-    this.state.animation = {};
-
-    if (this.hasDynamic('color')) {
-      const timeline = this.getDynamic('color');
-      this.state.animation.color = {
-        animators: timeline.intervals.map(interval => interval.toAnimator()),
-        defaultValue: this.state.color,
-      };
-    }
-
-    if (this.hasDynamic('opacity')) {
-      const timeline = this.getDynamic('opacity');
-      this.state.animation.opacity = {
-        animators: timeline.intervals.map(interval => interval.toAnimator()),
-        defaultValue: this.state.opacity,
-      };
-    }
-
-    if (this.hasDynamic('size')) {
-      const timeline = this.getDynamic('size');
-      this.state.animation.size = {
-        animators: timeline.intervals.map(interval => interval.toAnimator()),
-        defaultValue: this.state.size,
-      };
-    }
-  }
-
-  synchronizeState(t) {
-    this.synchronizeStateProperty('color', t);
-    this.synchronizeStateProperty('opacity', t);
-    this.synchronizeStateProperty('size', t);
-
-    this.state.colorBytes = [
-      Math.floor(this.state.color[0] * 255),
-      Math.floor(this.state.color[1] * 255),
-      Math.floor(this.state.color[2] * 255),
-    ];
-  }
-
-  synchronizeDom(t, element) {
-    const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
-    element.setAttributeNS(null, 'stroke', rgb);
-    element.setAttributeNS(null, 'stroke-width', this.state.size);
-    element.setAttributeNS(null, 'stroke-opacity', this.state.opacity);
   }
 }
 
