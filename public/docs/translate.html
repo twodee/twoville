@@ -4,20 +4,20 @@
 
 <p>Consider this square, whose <code>center</code> is shifted right and down by <code>translate</code>:</p>
 
-<div class="docs-source">with rectangle()
+<div class="docs-source">rectangle
   center = [50, 50]
   size = [30, 30]
   color = :tomato
-  with translate()
+  translate
     offset = [10, -20]</div>
 
 <p>The <code>translate</code> modifier can be used to animate a shape that slides around:</p>
 
-<div class="docs-source">with rectangle()
+<div class="docs-source">rectangle
   center = [50, 50]
   size = [30, 30]
   color = :tomato
-  with translate()
+  translate
     0 -> t
     t -> 100
       offset = [10, -20]

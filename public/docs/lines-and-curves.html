@@ -6,76 +6,82 @@
 
 <p>To start tracing out a path, you issue a <code>go</code> node and set its <code>position</code> property, like this:</p>
 
-<div class="docs-source">with path()
-  go().position = :zero</div>
+<div class="docs-source">path
+  go.position = :zero</div>
 
 <p>If you run this code, you'll see errors. Let's add some color and stroke:</p>
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = :soggy
-  stroke.color = :black
-  stroke.size = 2
-  go().position = :zero</div>
+  stroke
+    color = :black
+    size = 2
+  go.position = :zero</div>
 
-<p>Run this code, and you'll see no errors and no nothing. We need at least two nodes in a path before we see any stroke. We need at least three before we see any of its fill color. To create a straight edge, issue a <code>line</code> node:</p>
+<p>Run this code, and you'll see no errors and no nothing. You need at least two nodes in a path before we see any stroke. You need at least three before we see any of its fill color. To create a straight edge, issue a <code>line</code> node:</p>
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = :soggy
-  stroke.color = :black
-  stroke.size = 2
-  go().position = :zero
-  line().position = [100, 0]</div>
+  stroke
+    color = :black
+    size = 2
+  go.position = :zero
+  line.position = [100, 0]</div>
 
 <p>Do you see a line? I hope so. Let's make another line segment:</p>
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = :soggy
-  stroke.color = :black
-  stroke.size = 2
-  go().position = :zero
-  line().position = [100, 0]
-  line().position = [100, 50]</div>
+  stroke
+    color = :black
+    size = 2
+  go.position = :zero
+  line.position = [100, 0]
+  line.position = [100, 50]</div>
 
-<p>Do you see two edges and a filled triangle? If so, let's proceed by adding a semi-circular curve across the top. Issue an <code>arc</code> command preferably using a <code>with</code> command because it has several properties that need to be set. The <code>arc</code> command in this code draws a semi-circle starting from [100, 50] and going 180 degrees around a circle centered at [50, 50]:</p>
+<p>Do you see two edges and a filled triangle? If so, let's proceed by adding a semi-circular curve across the top. The <code>arc</code> draws a curve defined by several properties. This code draws an arc starting from [100, 50] and going 180 degrees around a circle centered at [50, 50]:</p>
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = :soggy
-  stroke.color = :black
-  stroke.size = 2
-  go().position = :zero
-  line().position = [100, 0]
-  line().position = [100, 50]
-  with arc()
+  stroke
+    color = :black
+    size = 2
+  go.position = :zero
+  line.position = [100, 0]
+  line.position = [100, 50]
+  arc
     center = [50, 50]
     degrees = 180</div>
 
-<p>This <code>arc</code> has its center pinned down. There may come a day where you find it easier to think about where you want to curve to end rather than where its center is. You can use the <code>position</code> property on that day, like this:
+<p>The <code>arc</code> has its center pinned down. There may come a day where you find it easier to think about where the curve ends rather than its center. You can use the <code>position</code> property on that day, like this:
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = :soggy
-  stroke.color = :black
-  stroke.size = 2
-  go().position = :zero
-  line().position = [100, 0]
-  line().position = [100, 50]
-  with arc()
+  stroke
+    color = :black
+    size = 2
+  go.position = :zero
+  line.position = [100, 0]
+  line.position = [100, 50]
+  arc
     position = [0, 50]
     degrees = 180</div>
 
-<p>The result is the same. Just a heads-up. You can't set both <code>position</code> and <code>center</code>. That would be wrong.</p>
+<p>The result is the same. Just a heads-up. You can't set both <code>position</code> and <code>center</code>.</p>
 
-<p>How does the shape look now? There's a piece of stroke missing on the left side, you say? Let's fix that. Set the <code>closed</code> property of the path to <code>true</code> to automatically insert a line segment from the last node to the first:</p>
+<p>How does the shape look now? There's a piece of stroke missing on the left side, you say? Let's fix that. Add a <code>back</code> node to the path automatically insert a line segment connect the last node to the first:</p>
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = :soggy
-  stroke.color = :black
-  stroke.size = 1
-  closed = true
-  go().position = :zero
-  line().position = [100, 0]
-  line().position = [100, 50]
-  with arc()
+  stroke
+    color = :black
+    size = 1
+  go.position = :zero
+  line.position = [100, 0]
+  line.position = [100, 50]
+  arc
     center = [50, 50]
-    degrees = 180</div>
+    degrees = 180
+  back</div>
 
-<p>There's our half-square, half-circle. Oh, wait. Maybe it does have a name. I think they call it a tombstone.</p> 
+<p>There's our half-square, half-circle. You could call it a tombstone, maybe.</p> 

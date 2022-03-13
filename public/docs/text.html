@@ -3,28 +3,28 @@
 <p>Sooner or later, you will need to make a treasure map. Treasure maps are full of pictures of trees and piranhas and rocks, but they also have text labels. To draw text in Twoville, use the <code>text</code> command. There are several properties that you need to set on a <code>text</code> object:</p>
 
 <ul>
-	<li>the <code>message</code> containing the letters, numbers, and other symbols of text</li>
-	<li>the <code>color</code> of the text</li>
-	<li>the <code>size</code> of the text</li>
-	<li>the <code>position</code> of the text</li>
+  <li>the <code>message</code> containing the letters, numbers, and other symbols of text</li>
+  <li>the <code>color</code> of the text</li>
+  <li>the <code>size</code> of the text</li>
+  <li>the <code>position</code> of the text</li>
 </ul>
 
 <p>In this program we mark the location of some gold using the <code>text</code> command and a black dot:</p>
 
-<div class="docs-source">with viewport
+<div class="docs-source">view
   size = [100, 40]
   corner = [0, 30]
 
 position = [50, 50]
 
-with circle()
+circle
   center = position
   radius = 3
   color = :black
 
-with text()
+text
   message = "gold"
-	size = 16
+  size = 16
   position = position
   color = :orange</div>
 
@@ -33,42 +33,42 @@ with text()
 <p>All told, there are these nine possible anchorings:</p>
 
 <ul>
-	<li>
-		<code>anchor = [:west, :north]</code>
-		<img src="/docs/images/text-west-north.svg" class="docs-image docs-li-image over-white">
-	</li>
-	<li>
-		<code>anchor = [:center, :north]</code>
-		<img src="/docs/images/text-center-north.svg" class="docs-image docs-li-image over-white">
-	</li>
-	<li>
-		<code>anchor = [:east, :north]</code>
-		<img src="/docs/images/text-east-north.svg" class="docs-image docs-li-image over-white">
-	</li>
-	<li>
-		<code>anchor = [:west, :center]</code>
-		<img src="/docs/images/text-west-center.svg" class="docs-image docs-li-image over-white">
-	</li>
-	<li>
-		<code>anchor = [:center, :center]</code>
-		<img src="/docs/images/text-center-center.svg" class="docs-image docs-li-image over-white">
-	</li>
-	<li>
-		<code>anchor = [:east, :center]</code>
-		<img src="/docs/images/text-east-center.svg" class="docs-image docs-li-image over-white">
-	</li>
-	<li>
-		<code>anchor = [:west, :south]</code>
-		<img src="/docs/images/text-west-south.svg" class="docs-image docs-li-image over-white">
-	</li>
-	<li>
-		<code>anchor = [:center, :south]</code>
-		<img src="/docs/images/text-center-south.svg" class="docs-image docs-li-image over-white">
-	</li>
-	<li>
-		<code>anchor = [:east, :south]</code>
-		<img src="/docs/images/text-east-south.svg" class="docs-image docs-li-image over-white">
-	</li>
+  <li>
+    <code>anchor = [:west, :north]</code>
+    <img src="/docs/images/text-west-north.svg" class="docs-image docs-li-image over-white">
+  </li>
+  <li>
+    <code>anchor = [:center, :north]</code>
+    <img src="/docs/images/text-center-north.svg" class="docs-image docs-li-image over-white">
+  </li>
+  <li>
+    <code>anchor = [:east, :north]</code>
+    <img src="/docs/images/text-east-north.svg" class="docs-image docs-li-image over-white">
+  </li>
+  <li>
+    <code>anchor = [:west, :center]</code>
+    <img src="/docs/images/text-west-center.svg" class="docs-image docs-li-image over-white">
+  </li>
+  <li>
+    <code>anchor = [:center, :center]</code>
+    <img src="/docs/images/text-center-center.svg" class="docs-image docs-li-image over-white">
+  </li>
+  <li>
+    <code>anchor = [:east, :center]</code>
+    <img src="/docs/images/text-east-center.svg" class="docs-image docs-li-image over-white">
+  </li>
+  <li>
+    <code>anchor = [:west, :south]</code>
+    <img src="/docs/images/text-west-south.svg" class="docs-image docs-li-image over-white">
+  </li>
+  <li>
+    <code>anchor = [:center, :south]</code>
+    <img src="/docs/images/text-center-south.svg" class="docs-image docs-li-image over-white">
+  </li>
+  <li>
+    <code>anchor = [:east, :south]</code>
+    <img src="/docs/images/text-east-south.svg" class="docs-image docs-li-image over-white">
+  </li>
 </ul>
 
 <p>The <code>text</code> command also works on drawings that aren't treasure maps.</p>

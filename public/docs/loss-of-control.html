@@ -2,12 +2,13 @@
 
 <p>B&eacute;zier curves are useful for making <i>organic</i> shapes&mdash;shapes that look more like they were made by nature than humans. That reminds me. We should make a shape that looks like a cat's head. Here's some code to get us started:</p>
 
-<div class="docs-source">with path()
-  stroke.color = :silver
-  stroke.size = 2
+<div class="docs-source">path
+  stroke
+    color = :silver
+    size = 2
   opacity = 0
-  go().position = [40, 65]
-  with quadratic()
+  go.position = [40, 65]
+  quadratic
     position = [99, 35]
     control = [98, 74]</div>
 
@@ -17,15 +18,16 @@
 
 <p>Next we add a second curve to round out the muzzle. Here's a first attempt:</p>
 
-<div class="docs-source">with path()
-  stroke.color = :silver
-  stroke.size = 2
+<div class="docs-source">path
+  stroke
+    color = :silver
+    size = 2
   opacity = 0
-  go().position = [40, 65]
-  with quadratic()
+  go.position = [40, 65]
+  quadratic
     position = [99, 35]
     control = [98, 74]
-  with quadratic()
+  quadratic
     position = [33, 2]
     control = [60, 3]</div>
 
@@ -35,15 +37,16 @@
 
 <p>Another name for this bird beak is a <i>discontinuity</i>. The transition from one curve to the next is not smooth. In order to make the transition smooth, the two curves' control points and the vertex that the two curves share must all lie on the same line. We can do some math to work out how to do that, or we can just let the computer figure it out by leaving off the second curve's <code>control</code> altogether:</p>
 
-<div class="docs-source">with path()
-  stroke.color = :silver
-  stroke.size = 2
+<div class="docs-source">path
+  stroke
+    color = :silver
+    size = 2
   opacity = 0
-  go().position = [40, 65]
-  with quadratic()
+  go.position = [40, 65]
+  quadratic
     position = [99, 35]
     control = [98, 74]
-  with quadratic()
+  quadratic
     position = [33, 2]</div>
 
 <p>This looks more cat than bird, doesn't it?</p>
@@ -52,33 +55,35 @@
 
 <p>Let's add one last curve that ends at the tip of the cat's ear. We again leave off the control point to ensure smooth continuity:</p>
 
-<div class="docs-source">with path()
-  stroke.color = :silver
-  stroke.size = 2
+<div class="docs-source">path
+  stroke
+    color = :silver
+    size = 2
   opacity = 0
-  go().position = [40, 65]
-  with quadratic()
+  go.position = [40, 65]
+  quadratic
     position = [99, 35]
     control = [98, 74]
-  with quadratic()
+  quadratic
     position = [33, 2]
-  with quadratic()
+  quadratic
     position = [40, 98]</div>
 
-<p>To close off the head, we close the path and set its fill color:</p>
+<p>To close off the head, we close the path with <code>back</code> and set the shape's fill color:</p>
 
-<div class="docs-source">with path()
-  stroke.color = :silver
-  stroke.size = 2
+<div class="docs-source">path
+  stroke
+    color = :silver
+    size = 2
   color = [0.9, 0.9, 0.9]
-  closed = true
-  go().position = [40, 65]
-  with quadratic()
+  go.position = [40, 65]
+  quadratic
     position = [99, 35]
     control = [98, 74]
-  with quadratic()
+  quadratic
     position = [33, 2]
-  with quadratic()
-    position = [40, 98]</div>
+  quadratic
+    position = [40, 98]
+  back</div>
 
 <p>You can walk away from this lesson with two treasures. The first is the cat head. The second is a strategy for making organic shapes: set the control point for the first curve, but leave it off for the rest.</p>

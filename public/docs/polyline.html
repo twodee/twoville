@@ -2,22 +2,21 @@
 
 <p>To plot a series of connected lines, use the <code>polyline</code> command, which is like <code>line</code>, except you can add as many vertices as you like. For example, this program plots a four-segment polyline:</p>
 
-<div class="docs-source">with polyline()
+<div class="docs-source">polyline
   size = 10
   color = :blue
-  vertex().position = [10, 50]
-  vertex().position = [90, 50]
-  vertex().position = [90, 10]
-  vertex().position = [50, 10]
-  vertex().position = [50, 10]
-  vertex().position = [50, 90]</div>
+  vertex.position = [10, 50]
+  vertex.position = [90, 50]
+  vertex.position = [90, 10]
+  vertex.position = [50, 10]
+  vertex.position = [50, 90]</div>
 
 <p>When drawing multi-segment polylines, you have some control over the sharpness of the bends. To achieve smooth bends, set the polyline's <code>join</code> property to <code>:round</code>, like this:</p>
 
-<div class="docs-source">with polyline()
+<div class="docs-source">polyline
   join = :round
   // ...</div>
 
 <p>If you want pointy bends, use <code>:miter</code>. If you want bends that look clipped, use <code>:bevel</code>.</p>
 
-<p>Polylines aren't the only object whose bends can be altered. The <code>join</code> property can also be set on any other shape's <code>stroke</code> object.</p>
+<p>You can also set the <code>join</code> property on any shape's <code>stroke</code> object.</p>

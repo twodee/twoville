@@ -75,11 +75,14 @@ export class Node extends ObjectFrame {
     this.parentFrame.addMarker(this.marker);
   }
 
-  initializeState(firstNode, previousNode, nextNode) {
-    super.initializeState();
+  connect(firstNode, previousNode, nextNode) {
     this.firstNode = firstNode;
     this.previousNode = previousNode;
     this.nextNode = nextNode;
+  }
+
+  initializeState() {
+    super.initializeState();
     this.state.turtle = new Turtle([0, 0], 0);
   }
 
@@ -174,8 +177,8 @@ export class TabNode extends Node {
 
   }
 
-  initializeState(firstNode, previousNode, nextNode) {
-    super.initializeState(firstNode, previousNode, nextNode);
+  initializeState() {
+    super.initializeState();
 
     if (!this.has('inset')) {
       this.state.inset = this.parentFrame.state.tabDefaults.inset;
@@ -478,10 +481,6 @@ export class WalkNode extends Node {
     this.assertCompleteTimeline('distance', fromTime, toTime);
   }
 
-  initializeState(firstNode, previousNode, nextNode) {
-    super.initializeState(firstNode, previousNode, nextNode);
-  }
-
   initializeStaticState() {
     this.initializeStaticScalarProperty('distance');
   }
@@ -564,10 +563,6 @@ export class FlyNode extends Node {
 
     // Assert completeness of timelines.
     this.assertCompleteTimeline('distance', fromTime, toTime);
-  }
-
-  initializeState(firstNode, previousNode, nextNode) {
-    super.initializeState(firstNode, previousNode, nextNode);
   }
 
   initializeStaticState() {
@@ -656,10 +651,6 @@ export class CircleNode extends Node {
     // Assert completeness of timelines.
     this.assertCompleteTimeline('center', fromTime, toTime);
     this.assertCompleteTimeline('radius', fromTime, toTime);
-  }
-
-  initializeState(firstNode, previousNode, nextNode) {
-    super.initializeState(firstNode, previousNode, nextNode);
   }
 
   initializeStaticState() {
@@ -769,8 +760,8 @@ export class RectangleNode extends Node {
     this.assertCompleteTimeline('size', fromTime, toTime);
   }
 
-  initializeState(firstNode, previousNode, nextNode) {
-    super.initializeState(firstNode, previousNode, nextNode);
+  initializeState() {
+    super.initializeState();
     this.hasCenter = this.has('center');
   }
 
@@ -1553,8 +1544,8 @@ export class ArcNode extends Node {
     }
   }
 
-  initializeState(firstNode, previousNode, nextNode) {
-    super.initializeState(firstNode, previousNode, nextNode);
+  initializeState() {
+    super.initializeState();
     this.state.isWedge = this.has('center');
   }
 
@@ -1897,10 +1888,6 @@ export class Mirror extends ObjectFrame {
     // Assert completeness of timelines.
     this.assertCompleteTimeline('pivot', fromTime, toTime);
     this.assertCompleteTimeline('axis', fromTime, toTime);
-  }
-
-  initializeState(firstNode, previousNode, nextNode) {
-    super.initializeState(firstNode, previousNode, nextNode);
   }
 
   initializeStaticState() {

@@ -8,84 +8,86 @@
 
 <p>This is a very repetitive sequence. We'll use turtle geometry and a <code>repeat</code> loop to trace it out. Here's one way we might write the code:</p>
 
-<div class="docs-source">with viewport
+<div class="docs-source">view
   corner = [-5, -10]
   size = [110, 20]
 
-with polyline()
+polyline
   color = :red
   size = 2
-  with turtle()
+  turtle
     position = :zero
     heading = -45
-  move().distance = 10
+  walk.distance = 10
   repeat 12
-    turn().degrees = 90
-    move().distance = 5
-    turn().degrees = -90
-    move().distance = 5
-  turn().degrees = 90
-  move().distance = 10</div>
+    turn.degrees = 90
+    walk.distance = 5
+    turn.degrees = -90
+    walk.distance = 5
+  turn.degrees = 90
+  walk.distance = 10</div>
 
-<p>The <code>move</code> nodes on lines 11 and 18 form the two longer line segments at the start and end of the fry. On line 12, we have a loop that produces 12 crinkles. To add or take away crinkles, we need only change this number.</p>
+<p>The <code>walk</code> nodes on lines 11 and 18 form the two longer line segments at the start and end of the fry. On line 12, we have a loop that produces 12 crinkles. To add or take away crinkles, we need only change this number.</p>
 
-<p>The top half of the fry is traced out just as the bottom half was. In fact, we can just repeat the <code>move</code> and <code>turn</code> commands we've already written with another <code>repeat</code> loop, like this:</p>
+<p>The top half of the fry is traced out just as the bottom half was. In fact, we can just repeat the <code>walk</code> and <code>turn</code> commands we've already written with another <code>repeat</code> loop, like this:</p>
 
-<div class="docs-source">with polyline()
+<div class="docs-source">polyline
   color = :red
   size = 2
-  with turtle()
+  turtle
     position = :zero
     heading = -45
   repeat 2
-    move().distance = 10
+    walk.distance = 10
     repeat 12
-      turn().degrees = 90
-      move().distance = 5
-      turn().degrees = -90
-      move().distance = 5
-    turn().degrees = 90
-    move().distance = 10</div>
+      turn.degrees = 90
+      walk.distance = 5
+      turn.degrees = -90
+      walk.distance = 5
+    turn.degrees = 90
+    walk.distance = 10</div>
 
 <p>How do things look when you run this? Not good. The second iteration of this new loop walks up rather than left. We fix this by turning the turtle at the end of the first iteration:</p>
 
-<div class="docs-source">with polyline()
+<div class="docs-source">polyline
   color = :red
   size = 2
-  with turtle()
+  turtle
     position = :zero
     heading = -45
   repeat 2
-    move().distance = 10
+    walk.distance = 10
     repeat 12
-      turn().degrees = 90
-      move().distance = 5
-      turn().degrees = -90
-      move().distance = 5
-    turn().degrees = 90
-    move().distance = 10
-    turn().degrees = 90</div>
+      turn.degrees = 90
+      walk.distance = 5
+      turn.degrees = -90
+      walk.distance = 5
+    turn.degrees = 90
+    walk.distance = 10
+    turn.degrees = 90</div>
 
 <p>That brings the turtle back to where it started. Let's switch the shape to an <code>ungon</code> to smooth out the corners:</p>
 
-<div class="docs-source">with ungon()
-  stroke.color = :red
-  stroke.size = 2
+<div class="docs-source">ungon
+  stroke
+    color = :red
+    size = 2
   color = :orange
+  formula = :relative
   rounding = 0
-  with turtle()
+  turtle
     position = :zero
     heading = -45
   repeat 2
-    move().distance = 10
+    walk.distance = 10
     repeat 12
-      turn().degrees = 90
-      move().distance = 5
-      turn().degrees = -90
-      move().distance = 5
-    turn().degrees = 90
-    move().distance = 10
-    turn().degrees = 90</div>
+      turn.degrees = 90
+      walk.distance = 5
+      turn.degrees = -90
+      walk.distance = 5
+    turn.degrees = 90
+    walk.distance = 10
+    turn.degrees = 90</div>
 
 <p>Our final fry looks too perfect to eat:</p>
 

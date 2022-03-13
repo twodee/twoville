@@ -10,16 +10,17 @@
 
 <p>Consider this code that plots a <i>parabola</i>:</p>
 
-<div class="docs-source">with path()
-  stroke.color = :pink
-  stroke.size = 2
+<div class="docs-source">path
+  stroke
+    color = :pink
+    size = 2
   opacity = 0
-  go().position = [20, 0]
-  with quadratic()
+  go.position = [20, 0]
+  quadratic
     position = [80, 0]
     control = [50, 110]</div>
 
-<p>We issue a <code>go</code> node to establish the starting endpoint at [20, 0], and then we issue a <code>quadratic</code> curve that ends at [80, 0]. Instead of a straight line connecting them, the control point [50, 110] drags the curve upward.</p>
+<p>The <code>go</code> node establishes the starting endpoint at [20, 0]. Put your cursor on its code in the text editor and drag around on its handle. The <code>quadratic</code> node adds a curve that ends at [80, 0]. Instead of a straight line connecting these two positions, the control point [50, 110] drags the curve upward. Put your cursor on its code. You'll see two handles appear. Move the control point's handle to see how the black hole pulls the line toward it.</p>
 
 <p>Here's a challenge for you. Add a <code>line</code> and another <code>quadratic</code> to make this arch:</p>
 

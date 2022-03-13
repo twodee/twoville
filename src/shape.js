@@ -1577,6 +1577,12 @@ export class NodeShape extends Shape {
     super.embody(object, inflater);
     this.nodes = object.nodes.map(subobject => inflater.inflate(this, subobject));
     this.mirrors = object.mirrors.map(subobject => inflater.inflate(this, subobject));
+
+    let previousNode = null;
+    for (let [i, node] of this.nodes.entries()) {
+      node.connect(this.nodes[0], previousNode, i + 1 < this.nodes.length ? this.nodes[i + 1] : null);
+      previousNode = node;
+    }
   }
 
   castCursorIntoComponents(column, row) {
@@ -1652,10 +1658,8 @@ export class NodeShape extends Shape {
     this.state.tabDefaults = {size: 1, degrees: 45, inset: 0, isCounterclockwise: true};
     this.state.turtle0 = null;
 
-    let previousNode = null;
-    for (let [i, node] of this.nodes.entries()) {
-      node.initializeState(this.nodes[0], previousNode, i + 1 < this.nodes.length ? this.nodes[i + 1] : null);
-      previousNode = node;
+    for (let node of this.nodes) {
+      node.initializeState();
     }
 
     for (let mirror of this.mirrors) {

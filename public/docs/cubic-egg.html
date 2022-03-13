@@ -4,22 +4,24 @@
 
 <p>The word <i>cubic</i> in this case doesn't mean cube-shaped. Recall that quadratic B&eacute;zier curves have just one control point influencing the curvature. Cubic B&eacute;zier curves have two control points. The first black hole controls the curvature at the start of the curve. The second black hole controls the curvature at the end of the curve.</p>
 
-<p>Let's model an egg using two cubic curves. Start by placing the path's first node at the bottom center of the viewport:</p>
+<p>Let's model an egg using two cubic curves. Start by placing the path's first node at the bottom center of the view:</p>
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = [1, 0.9, 0.9]
-  stroke.color = [0.9, 0.8, 0.8]
-  stroke.size = 2
-  go().position = [50, 1]</div>
+  stroke
+    color = [0.9, 0.8, 0.8]
+    size = 2
+  go.position = [50, 1]</div>
 
 <p>You won't be able to see anything when you run this. Next add a <code>cubic</code> node that ends at the top center and has its two control points tugging the curve to the left:</p>
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = [1, 0.9, 0.9]
-  stroke.color = [0.9, 0.8, 0.8]
-  stroke.size = 2
-  go().position = [50, 1]
-  with cubic()
+  stroke
+    color = [0.9, 0.8, 0.8]
+    size = 2
+  go.position = [50, 1]
+  cubic
     position = [50, 99]
     control1 = [-10, 1]
     control2 = [20, 99]</div>
@@ -28,16 +30,17 @@
 
 <p>To complete the egg, add a second <code>cubic</code> node that ends where we started. Just as we saw with quadratic curves, we can leave off a control point to make a smooth transition between the two segments. For cubic curves, we can only omit <code>control1</code>. By dropping <code>control1</code> and making <code>control2</code> mirror its partner on the other side, we get a nice symmetric egg:</p>
 
-<div class="docs-source">with path()
+<div class="docs-source">path
   color = [1, 0.9, 0.9]
-  stroke.color = [0.9, 0.8, 0.8]
-  stroke.size = 2
-  go().position = [50, 1]
-  with cubic()
+  stroke
+    color = [0.9, 0.8, 0.8]
+    size = 2
+  go.position = [50, 1]
+  cubic
     position = [50, 99]
     control1 = [-10, 1]
     control2 = [20, 99]
-  with cubic()
+  cubic
     position = [50, 1]
     control2 = [110, 1]</div>
 

@@ -4,35 +4,35 @@
 
 <div class="docs-source">side = 10
 
-with viewport
+view
   center = :zero
   size = [side + 2, side + 2]
 
-with rectangle()
+rectangle
   color = :soggy
   size = [side, side]
   center = :zero</div>
 
-<p>Naming <code>side</code> makes it easier to see the connection between the viewport and the rectangle's size because they both refer to the same name. We can tell that the rectangle is a square because both the width and height are set to <code>side</code>. Additionally, if we decide to change <code>side</code> to a different number, we only have to edit the first line of our program. Here we change <code>side</code> to 30:</p>
+<p>Naming <code>side</code> makes it easier to see the connection between the view and the rectangle's size because they both refer to the same name. We can tell that the rectangle is a square because both the width and height are set to <code>side</code>. Additionally, if we decide to change <code>side</code> to a different number, we only have to edit the first line of our program. Here we change <code>side</code> to 30:</p>
 
 <div class="docs-source">side = 30
 
-with viewport
+view
   center = :zero
   size = [side + 2, side + 2]
 
-with rectangle()
+rectangle
   color = :soggy
   size = [side, side]
   center = :zero</div>
 
 <p>If we hadn't named <code>side</code>, our original program would have looked like this:</p>
 
-<div class="docs-source">with viewport
+<div class="docs-source">view
   center = :zero
   size = [12, 12]
 
-with rectangle()
+rectangle
   color = :soggy
   size = [10, 10]
   center = :zero</div>
@@ -44,14 +44,14 @@ with rectangle()
 <div class="docs-source">n = 3
 angle = 360.0 / n
 
-with path()
+path
   color = :lime
-  with turtle()
+  turtle
     position = [30, 0]
     heading = 0
   repeat n
-    move().distance = 40
-    turn().degrees = angle</div>
+    walk.distance = 40
+    turn.degrees = angle</div>
 
 <p>Try changing <code>n</code>. When <code>n</code> is 3, it draws an equilateral triangle. When <code>n</code> is 4, it draws a square. When <code>n</code> is 5, it draws a pentagon.</p>
 

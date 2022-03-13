@@ -4,7 +4,7 @@
 
 <div class="docs-source">for row to 10
   for column to 10
-    with rectangle()
+    rectangle
       color = :black
       corner = [column * 10, row * 10]
       size = [8, 8]</div>
@@ -21,13 +21,13 @@
 
 <p>Because the circles only appear between squares, there are fewer of them. We draw them inside a different set of loops that don't count as high as the square loops. Also, we need to put the circle loops first so that the squares will be drawn over them. Our not-illusion code looks this:</p>
 
-<div class="docs-source">with viewport
+<div class="docs-source">view
   corner = :zero
   size = [96, 96]
   
 for row to 4
   for column to 4
-    with circle()
+    circle
       color = :black
       opacity = 0.1
       radius = 3
@@ -38,7 +38,7 @@ for row to 4
 
 for row to 5
   for column to 5
-    with rectangle()
+    rectangle
       color = :black
       corner = [column * 20, row * 20]
       size = [16, 16]</div>

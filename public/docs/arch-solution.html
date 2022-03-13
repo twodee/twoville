@@ -2,18 +2,19 @@
 
 <p>Here is one way to create the arch design:</p>
 
-<div class="docs-source">with path()
-  stroke.color = :pink
-  stroke.size = 2
+<div class="docs-source">path
+  stroke
+    color = :pink
+    size = 2
   color = [1, 0.75, 1]
-  closed = true
-  go().position = [20, 0]
-  with quadratic()
+  go.position = [20, 0]
+  quadratic
     position = [80, 0]
     control = [50, 110]
-  line().position = [100, 0]
-  with quadratic()
+  line.position = [100, 0]
+  quadratic
     position = :zero
-    control = [50, 150]</div>
+    control = [50, 150]
+  back</div>
 
-<p>A <code>line</code> extends to the bottom-right corner. Then a quadratic curve jumps all the way to the bottom-left corner. To connect the last node to the first, the <code>closed</code> property is set. Finally, the <code>opacity</code> is removed and the whole thing is filled with a lighter pink.</p>
+<p>After the original parabola, a <code>line</code> extends to the bottom-right corner. Then a quadratic curve jumps all the way to the bottom-left corner. A <code>back</code> node connects the last node to the first. Finally, the <code>opacity</code> is removed and the whole thing is filled with a lighter pink.</p>

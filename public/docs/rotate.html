@@ -4,21 +4,21 @@
 
 <p>Consider this square that is tilted up by <code>rotate</code>:</p>
 
-<div class="docs-source">with rectangle()
+<div class="docs-source">rectangle
   center = [50, 50]
   size = [30, 30]
   color = :tomato
-  with rotate()
+  rotate
     pivot = [50, 50]
     degrees = 45</div>
 
 <p>The <code>rotate</code> modifier can be used to animate a shape that spins around endlessly:</p>
 
-<div class="docs-source">with rectangle()
+<div class="docs-source">rectangle
   center = [50, 50]
   size = [30, 30]
   color = :tomato
-  with rotate()
+  rotate
     pivot = [50, 50]
     0 -> t
       degrees = 0

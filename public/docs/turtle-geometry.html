@@ -6,47 +6,47 @@
 
 <p>The second way of looking at space is to imagine that you yourself are in the map, perhaps on a bicycle. When you are in the map, you think less about street addresses and more about going forward in your current direction or turning. This way of looking at space is called <em>turtle geometry</em>. Certain shapes that would be quite difficult to express in "street space" can be traced out quite naturally in "turtle space."</p>
 
-<p>Let's introduce the turtle geometry commands by tracing out an elbow. We start our line with a <code>turtle</code> node, whose <code>position</code> property situates the turtle in street space and whose <code>heading</code> property is the number of degrees that the turtle has turned. A heading of 0 degrees means the turtle is looking along the positive x-axis. A heading of 90 degrees means the turtle is looking up. Here's how our elbow begins:</p>
+<p>Let's introduce the turtle geometry commands by tracing out a polyline that bends like an elbow. We start our line with a <code>turtle</code> node, whose <code>position</code> property situates the turtle in street space and whose <code>heading</code> property is the number of degrees that the turtle has turned. A heading of 0 degrees means the turtle is looking along the positive x-axis. A heading of 90 degrees means the turtle is looking up. Here's how our elbow begins:</p>
 
-<div class="docs-source">with polyline()
+<div class="docs-source">polyline
   color = :black
   size = 3
-  with turtle()
+  turtle
     position = [25, 25]
     heading = 0</div>
 
-<p>We inch the turtle forward using a <code>move</code> node, whose <code>distance</code> property determines how far the turtle moves:</p>
+<p>We inch the turtle forward using a <code>walk</code> node, whose <code>distance</code> property determines how far the turtle walks:</p>
 
-<div class="docs-source">with polyline()
+<div class="docs-source">polyline
   color = :black
   size = 3
-  with turtle()
+  turtle
     position = [25, 25]
     heading = 0
-  move().distance = 50</div>
+  walk.distance = 50</div>
 
 <p>Next we turn the turtle so it's facing upward with a <code>turn</code> node:</p>
 
-<div class="docs-source">with polyline()
+<div class="docs-source">polyline
   color = :black
   size = 3
-  with turtle()
+  turtle
     position = [25, 25]
     heading = 0
-  move().distance = 50
-  turn().degrees = 90</div>
+  walk.distance = 50
+  turn.degrees = 90</div>
 
-<p>When we move a second time, we now travel upward:</p>
+<p>When we walk a second time, we now travel upward:</p>
 
-<div class="docs-source">with polyline()
+<div class="docs-source">polyline
   color = :black
   size = 3
-  with turtle()
+  turtle
     position = [25, 25]
     heading = 0
-  move().distance = 50
-  turn().degrees = 90
-	move().distance = 50</div>
+  walk.distance = 50
+  turn.degrees = 90
+  walk.distance = 50</div>
 
 <p>That's our elbow defined with turtle geometry.</p>
 
