@@ -916,9 +916,9 @@ export class Rectangle extends Shape {
     this.assertProperty('size');
 
     if (this.has('corner') && this.has('center')) {
-      throw new LocatedException(this.where, 'I found a rectangle whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
+      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>corner</code> and <code>center</code> were both set. Define only one of these.`);
     } else if (!this.has('corner') && !this.has('center')) {
-      throw new LocatedException(this.where, "I found a rectangle whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
+      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.`);
     }
 
     // Assert types of extent properties.
@@ -1251,87 +1251,56 @@ export class Raster extends Shape {
     return shape;
   }
 
-  configureState(bounds) {
+  validateProperties(fromTime, toTime) {
+    this.assertProperty('id');
+
+    if (this.has('corner') && this.has('center')) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> whose <code>corner</code> and <code>center</code> were both set. Define only one of these.`);
+    } else if (!this.has('corner') && !this.has('center')) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.`);
+    }
+
+    if (!this.has('width') && !this.has('height')) {
+      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> that had neither its <code>width</code> nor <code>height</code> set. At least one of these must be defined.`);
+    }
+
+    this.assertVectorType('corner', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('id', [ExpressionString]);
+    this.assertScalarType('width', [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('height', [ExpressionInteger, ExpressionReal]);
+  }
+
+  initializeState() {
+    this.hasCenter = this.has('center');
+    super.initializeState();
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('id');
+    this.initializeStaticVectorProperty('corner');
+    this.initializeStaticVectorProperty('center');
+    this.initializeStaticScalarProperty('width');
+    this.initializeStaticScalarProperty('height');
+    this.state.size = [this.state.width, this.state.height];
+    this.synchronizeDimensions();
+  }
+
+  initializeDynamicState() {
+  }
+
+  initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'image');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.connectToParent(root);
+    // this.element.setAttributeNS(null, 'width', this.state.width);
+    // this.element.setAttributeNS(null, 'height', this.state.height);
 
-    // TODO assert id
-    this.root.addRaster(this.untimedProperties.id.value, this);
-
-    // TODO allow no centroid
-    this.state.centroid = [0, 0];
-
-    if (!this.timedProperties.hasOwnProperty('width') && !this.timedProperties.hasOwnProperty('height')) {
-      throw new LocatedException(this.where, 'I found a <code>raster</code> that had neither its <code>width</code> nor <code>height</code> set. At least one of these must be defined.');
-    }
-
-    if (this.timedProperties.hasOwnProperty('width')) {
-      this.configureScalarProperty('width', this, this, this.updateWidth.bind(this), bounds, [], timeline => {
-        try {
-          timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>width</code>. ${e.message}`);
-        }
-      });
-    }
-
-    if (this.timedProperties.hasOwnProperty('height')) {
-      this.configureScalarProperty('height', this, this, this.updateHeight.bind(this), bounds, [], timeline => {
-        try {
-          timeline.assertScalar(this, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>height</code>. ${e.message}`);
-        }
-      });
-    }
-
-    if (this.timedProperties.hasOwnProperty('width') && this.timedProperties.hasOwnProperty('height')) {
+    if (this.hasStatic('width') && this.hasStatic('height')) {
       this.element.setAttributeNS(null, 'preserveAspectRatio', 'none');
     }
 
-    if (this.timedProperties.hasOwnProperty('corner') && this.timedProperties.hasOwnProperty('center')) {
-      throw new LocatedException(this.where, 'I found a <code>raster</code> whose <code>corner</code> and <code>center</code> were both set. Define only one of these.');
-    } else if (this.timedProperties.hasOwnProperty('corner')) {
-      this.configureVectorProperty('corner', this, this, this.updateCorner.bind(this), bounds, [], timeline => {
-        try {
-          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>corner</code>. ${e.message}`);
-        }
-      });
-    } else if (this.timedProperties.hasOwnProperty('center')) {
-      this.configureVectorProperty('center', this, this, this.updateCenter.bind(this), bounds, [], timeline => {
-        try {
-          timeline.assertList({objectFrame: this}, 2, ExpressionInteger, ExpressionReal);
-          return true;
-        } catch (e) {
-          throw new LocatedException(e.where, `I found an illegal value for <code>center</code>. ${e.message}`);
-        }
-      });
-    } else {
-      throw new LocatedException(this.where, "I found a <code>raster</code> whose position I couldn't figure out. Define either its <code>corner</code> or <code>center</code>.");
-    }
-  }
-
-  updateWidth(bounds) {
-    this.element.setAttributeNS(null, 'width', this.state.width);
-  }
-
-  updateHeight(bounds) {
-    this.element.setAttributeNS(null, 'height', this.state.height);
-  }
-
-  updateCenter(bounds) {
-    // this.state.centroid = this.state.center;
-    // this.element.setAttributeNS(null, 'x', this.state.center[0] - this.state.size[0] * 0.5);
-    // this.element.setAttributeNS(null, 'y', bounds.span - this.state.center[1] - this.state.size[1] * 0.5);
-  }
-
-  updateCorner(bounds) {
-    // this.state.centroid = [this.state.corner[0] + 0.5 * this.state.size[0], this.state.corner[1] + 0.5 * this.state.size[1]];
+    root.addRaster(this.state.id, this);
   }
 
   setRaster(aspectRatio, url) {
@@ -1341,104 +1310,157 @@ export class Raster extends Shape {
   }
 
   synchronizeDimensions() {
-    if (this.timedProperties.hasOwnProperty('width') && !this.timedProperties.hasOwnProperty('height')) {
-      this.state.height = this.state.width / this.state.aspectRatio;
-    } else if (this.timedProperties.hasOwnProperty('height') && !this.timedProperties.hasOwnProperty('width')) {
-      this.state.width = this.state.height * this.state.aspectRatio;
+    if (this.hasStatic('width') && !this.hasStatic('height')) {
+      this.state.size[1] = this.state.size[0] / this.state.aspectRatio;
+    } else if (this.hasStatic('height') && !this.hasStatic('width')) {
+      this.state.size[0] = this.state.size[1] * this.state.aspectRatio;
+    }
+
+    if (this.hasCenter) {
+      this.state.corner = [
+        this.state.center[0] - 0.5 * this.state.size[0],
+        this.state.center[1] - 0.5 * this.state.size[1],
+      ];
     }
   }
 
-  updateContentDom(bounds) {
-    super.updateContentDom(bounds);
+  synchronizeDom(t, bounds) {
+    super.synchronizeDom(t, bounds);
 
-    this.element.setAttributeNS(null, 'height', this.state.height);
-    this.element.setAttributeNS(null, 'width', this.state.width);
+    this.element.setAttributeNS(null, 'width', this.state.size[0]);
+    this.element.setAttributeNS(null, 'height', this.state.size[1]);
 
     let x;
     let y;
-    if (this.state.corner) {
+    if (this.hasCenter) {
+      x = this.state.center[0] - 0.5 * this.state.size[0];
+      y = this.state.center[1] - 0.5 * this.state.size[1];
+    } else {
       x = this.state.corner[0];
       y = this.state.corner[1];
-    } else if (this.state.center) {
-      x = this.state.center[0] - 0.5 * this.state.width;
-      y = this.state.center[1] - 0.5 * this.state.height;
     }
 
     this.element.setAttributeNS(null, 'x', x);
-    this.element.setAttributeNS(null, 'y', bounds.span - y - this.state.height);
+    this.element.setAttributeNS(null, 'y', bounds.span - y - this.state.size[1]);
   }
 
-  configureMarks() {
-    super.configureMarks();
+  initializeMarkState() {
+    super.initializeMarkState();
+
     this.outlineMark = new RectangleMark();
 
-    let multiplier;
-    let getPositionExpression;
-    let updatePositionState;
-
-    if (this.timedProperties.hasOwnProperty('center')) {
-      getPositionExpression = t => this.expressionAt('center', this.root.state.t);
-      updatePositionState = ([x, y]) => {
-        this.state.center[0] = x;
-        this.state.center[1] = y;
-      };
-      multiplier = 2;
+    if (this.hasCenter) {
+      this.positionMark = new VectorPanMark(this, null, position => {
+        this.state.center = position;
+        this.state.corner[0] = position[0] - this.state.size[0] * 0.5;
+        this.state.corner[1] = position[1] - this.state.size[1] * 0.5;
+      });
     } else {
-      getPositionExpression = t => this.expressionAt('corner', this.root.state.t);
-      updatePositionState = ([x, y]) => {
-        this.state.corner[0] = x;
-        this.state.corner[1] = y;
-      };
-      multiplier = 1;
-    }
-
-    this.positionMark = new VectorPanMark(this, null, getPositionExpression, updatePositionState);
-
-    let resizeMarks = [];
-    if (this.timedProperties.hasOwnProperty('width')) {
-      this.widthMark = new HorizontalPanMark(this, this, multiplier, t => {
-        return this.expressionAt('width', this.root.state.t);
-      }, newValue => {
-        this.state.width = newValue;
-        this.synchronizeDimensions();
+      this.positionMark = new VectorPanMark(this, null, position => {
+        this.state.corner = position;
       });
-      resizeMarks.push(this.widthMark);
     }
 
-    if (this.timedProperties.hasOwnProperty('height')) {
-      this.heightMark = new VerticalPanMark(this, this, multiplier, t => {
-        return this.expressionAt('height', this.root.state.t);
-      }, newValue => {
-        this.state.height = newValue;
-        this.synchronizeDimensions();
-      });
-      resizeMarks.push(this.heightMark);
+    let marks = [this.positionMark, this.outlineMark];
+
+    if (this.hasStatic('width')) {
+      if (this.hasCenter) {
+        this.widthMark = new HorizontalPanMark(this, null, 2, value => {
+          this.state.size[0] = value;
+          this.state.corner[0] = this.state.center[0] - value * 0.5;
+        });
+      } else {
+        this.widthMark = new HorizontalPanMark(this, null, 1, value => this.state.size[0] = value);
+      }
+      marks.push(this.widthMark);
     }
 
-    this.markers[0].addMarks([this.positionMark, ...resizeMarks], [this.outlineMark]);
+    if (this.hasStatic('height')) {
+      if (this.hasCenter) {
+        this.heightMark = new VerticalPanMark(this, null, 2, value => {
+          this.state.size[1] = value;
+          this.state.corner[1] = this.state.center[1] - value * 0.5;
+        });
+      } else {
+        this.heightMark = new VerticalPanMark(this, null, 1, value => this.state.size[1] = value);
+      }
+      marks.push(this.heightMark);
+    }
+
+    this.markers[0].setMarks(...marks);
+  }
+
+  synchronizeMarkExpressions(t) {
+    super.synchronizeMarkExpressions(t);
+    if (this.hasCenter) {
+      this.positionMark.synchronizeExpressions(this.expressionAt('center', t));
+    } else {
+      this.positionMark.synchronizeExpressions(this.expressionAt('corner', t));
+    }
+    if (this.hasStatic('width')) {
+      this.widthMark.synchronizeExpressions(this.expressionAt('width', t));
+    }
+    if (this.hasStatic('height')) {
+      this.heightMark.synchronizeExpressions(this.expressionAt('height', t));
+    }
+  }
+
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+
+    this.outlineMark.synchronizeState(this.state.corner, this.state.size, 0);
+    if (this.hasCenter) {
+      this.positionMark.synchronizeState(this.state.center, this.state.matrix, this.state.inverseMatrix);
+      if (this.hasStatic('width')) {
+        this.widthMark.synchronizeState([
+          this.state.center[0] + 0.5 * this.state.size[0],
+          this.state.center[1],
+        ], this.state.matrix);
+      }
+      if (this.hasStatic('height')) {
+        this.heightMark.synchronizeState([
+          this.state.center[0],
+          this.state.center[1] + 0.5 * this.state.size[1],
+        ], this.state.matrix);
+      }
+    } else {
+      this.positionMark.synchronizeState(this.state.corner, this.state.matrix, this.state.inverseMatrix);
+      if (this.hasStatic('width')) {
+        this.widthMark.synchronizeState([
+          this.state.corner[0] + this.state.size[0],
+          this.state.corner[1],
+        ], this.state.matrix, this.state.inverseMatrix);
+      }
+      if (this.hasStatic('height')) {
+        this.heightMark.synchronizeState([
+          this.state.corner[0],
+          this.state.corner[1] + this.state.size[1],
+        ], this.state.matrix, this.state.inverseMatrix);
+      }
+    }
+
+    // console.log("this.state.center:", this.state.center);
+    // console.log("this.state.corner:", this.state.corner);
+    // console.log("this.state.size:", this.state.size);
+    // this.state.centroid = [
+      // this.state.corner[0] + this.state.size[0] * 0.5,
+      // this.state.corner[1] + this.state.size[1] * 0.5,
+    // ];
+    // this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
+    // this.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
+    this.state.centroid = [0, 0];
+    this.boundingBox = BoundingBox.fromCornerSize([0, 0], [0, 0]);
   }
  
-  updateInteractionState(bounds) {
-    super.updateInteractionState(bounds);
-    if (this.state.center) {
-      const corner = [this.state.center[0] - this.state.width * 0.5, this.state.center[1] - this.state.height * 0.5];
-      this.outlineMark.updateState(corner, [this.state.width, this.state.height], 0);
-      this.positionMark.updateState(this.state.center, this.state.matrix);
-      if (this.widthMark) {
-        this.widthMark.updateState([this.state.center[0] + this.state.width * 0.5, this.state.center[1]], this.state.matrix);
-      }
-      if (this.heightMark) {
-        this.heightMark.updateState([this.state.center[0], this.state.center[1] + this.state.height * 0.5], this.state.matrix);
-      }
-    } else {
-      this.outlineMark.updateState(this.state.corner, [this.state.width, this.state.height], 0);
-      this.positionMark.updateState(this.state.corner, this.state.matrix);
-      if (this.widthMark) {
-        this.widthMark.updateState([this.state.corner[0] + this.state.width, this.state.corner[1]], this.state.matrix);
-      }
-      if (this.heightMark) {
-        this.heightMark.updateState([this.state.corner[0], this.state.corner[1] + this.state.height], this.state.matrix);
-      }
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    this.outlineMark.synchronizeDom(bounds);
+    this.positionMark.synchronizeDom(bounds, handleRadius);
+    if (this.hasStatic('width')) {
+      this.widthMark.synchronizeDom(bounds, handleRadius);
+    }
+    if (this.hasStatic('height')) {
+      this.heightMark.synchronizeDom(bounds, handleRadius);
     }
   }
 }
@@ -1545,7 +1567,6 @@ export class Grid extends Shape {
 
   synchronizeDom(t, bounds) {
     super.synchronizeDom(t, bounds);
-    this.stroke?.synchronizeDom(t, this.element);
 
     const ticks = this.state.ticks ?? [1, 1];
     const size = this.state.size ?? [bounds.width, bounds.height];
@@ -2501,7 +2522,6 @@ export class Path extends NodeShape {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'path');
     this.element.setAttributeNS(null, 'id', 'element-' + this.id);
-    // this.element.setAttributeNS(null, 'stroke-linecap', 'round'); TODO
     this.element.setAttributeNS(null, 'fill-rule', 'evenodd');
     this.connectToParent(root);
     this.connectJoins();
