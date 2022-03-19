@@ -204,7 +204,7 @@ export class Shape extends ObjectFrame {
 
   hideMarks() {
     for (let marker of this.markers) {
-      marker.hideMarks();
+      marker.hide();
     }
   }
 
@@ -2754,6 +2754,8 @@ export class Tip extends Group {
   }
 
   validateProperties(fromTime, toTime) {
+    this.assertProperty('size');
+
     // Assert required properties.
     if (this.has('corner') && this.has('center')) {
       throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>corner</code> and <code>center</code> were both set. Define only one of these.`);
