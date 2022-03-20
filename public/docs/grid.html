@@ -1,0 +1,22 @@
+<h2>Grid</h2>
+
+<p>You may find it useful to plot a grid on your view. Grids help you see how other shapes are arranged and aligned.</p>
+
+<p>To plot a grid that fills the view, just issue a plain <code>grid</code> command, like this:</p>
+
+<div class="docs-source">grid</div>
+
+<p>Grids may be sized and positioned just like rectangles. This grid is a rectangle of lines around the point (50, 50):</p>
+
+<div class="docs-source">grid
+  size = [30, 20]
+  center = [50, 50]</div>
+
+<p>By default, the grid shows a line at every whole x- or y-coordinate. Suppose you only want lines marking every 5 units. Then you'd set the grid's <code>ticks</code> property:</p>
+
+<div class="docs-source">grid
+  size = [30, 20]
+  center = [50, 50]
+  ticks = [5, 5]</div>
+
+<p>The first shape you draw in a Twoville program will be covered up by shapes drawn later. If you want the grid behind a shape, draw the grid first. If you want the grid in front of a shape, draw the shape first.</p>
