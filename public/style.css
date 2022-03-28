@@ -669,6 +669,37 @@ figcaption {
   grid-row: 1 / span 2;
 }
 
+.context-menu {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-direction: column;
+  background-color: #FEFEFE;
+  box-shadow: 0 0 10px rgb(0, 0, 0, 0.4);
+  /* display: flex; */
+  display: none;
+}
+
+.context-menu > li {
+  border-top: 1px solid lightgray;
+  padding: 10px;
+  user-select: none;
+}
+
+.context-menu > li:hover {
+  background-color: rebeccapurple;
+  color: white;
+}
+
+.context-menu > li:active {
+  background-color: black;
+  color: white;
+}
+
 @media print {
   #toolbar {
     display: none;

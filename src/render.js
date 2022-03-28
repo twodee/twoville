@@ -58,7 +58,7 @@ export class RenderEnvironment extends Frame {
     this.rasters[id] = raster;
   }
 
-  static inflate(svg, mouseStatusLabel, pod, settings, inflater) {
+  static inflate(svg, mouseStatusLabel, contextMenu, pod, settings, inflater) {
     const scene = new RenderEnvironment();
     scene.svg = svg;
     scene.mouseStatusLabel = mouseStatusLabel;
@@ -66,7 +66,7 @@ export class RenderEnvironment extends Frame {
     scene.isMouseDown = false;
     scene.settings = settings;
     scene.embody(pod, inflater);
-
+    scene.contextMenu = contextMenu;
     return scene;
   }
 
@@ -81,6 +81,7 @@ export class RenderEnvironment extends Frame {
     this.svg.addEventListener('mousedown', this.onMouseDown);
     this.svg.addEventListener('mousemove', this.onMouseMove);
     this.svg.addEventListener('mouseup', this.onMouseUp);
+    this.svg.addEventListener('contextmenu', this.onContextMenu);
 
     this.defines = document.createElementNS(svgNamespace, 'defs');
     this.svg.appendChild(this.defines);
@@ -420,7 +421,21 @@ export class RenderEnvironment extends Frame {
     }
   };
 
+  onContextMenu = e => {
+    // Context menu events are preceded by down events. But there's no
+    // corresponding up event. We want to manually cancel the drag.
+    this.isMouseDown = false;
+
+    this.contextMenu.style.display = 'flex';
+    this.contextMenu.style.top = (e.pageY - 5) + 'px';
+    this.contextMenu.style.left = (e.pageX - 5) + 'px';
+    e.preventDefault();
+    return false;
+  }
+
   onMouseDown = e => {
+    this.contextMenu.style.display = 'none';
+
     // Since mouse drags change the SVG's matrix, I need to cache the starting
     // matrix here so that all the mouse coordinates are in the same space.
     this.mouseAtSvg.x = e.clientX;
@@ -453,6 +468,10 @@ export class RenderEnvironment extends Frame {
       this.isMouseDown = false;
     }
   };
+
+  mouseLiteral() {
+    return `[${formatFloat(this.mouseAt.x, this.settings.mousePrecision)}, ${formatFloat(this.bounds.span - this.mouseAt.y, this.settings.mousePrecision)}]`;
+  }
 }
 
 // --------------------------------------------------------------------------- 

@@ -45,6 +45,7 @@ let interpreterWorker;
 let currentName;
 let rasterRows;
 let rastersList;
+let canvasContextMenu;
 
 let frameIndex = 0;
 let delay;
@@ -251,7 +252,7 @@ function postInterpret(frame, successCallback) {
   }
 
   // console.log("frame:", frame);
-  scene = RenderEnvironment.inflate(document.getElementById('svg'), document.getElementById('mouse-status-label'), frame, settings, Inflater);
+  scene = RenderEnvironment.inflate(document.getElementById('svg'), document.getElementById('mouse-status-label'), canvasContextMenu, frame, settings, Inflater);
 
   let hasTweak;
 
@@ -614,6 +615,7 @@ function initialize() {
   spinner = document.getElementById('spinner');
   scrubber = document.getElementById('scrubber');
   timeSpinner = document.getElementById('time-spinner');
+  canvasContextMenu = document.getElementById('canvas-context-menu');
   const svg = document.getElementById('svg');
   new Messager(document.getElementById('messager'), document, highlight);
 
@@ -1646,6 +1648,21 @@ function initialize() {
     };
 
     animation();
+  });
+
+  document.getElementById('type-point-button').addEventListener('click', () => {
+    canvasContextMenu.style.display = 'none';
+    const text = scene.mouseLiteral();
+    if (editor.getSelection().isEmpty()) {
+      editor.getSession().insert(editor.getCursorPosition(), text);
+    } else {
+      let range = editor.getSelectionRange();
+      let doc = editor.getSession().getDocument();
+      doc.replace(range, text);
+      range.setEnd(range.end.row, range.start.column + text.length);
+      editor.getSelection().setSelectionRange(range);
+    }
+    editor.focus();
   });
 
   initializeDocs();
