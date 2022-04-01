@@ -584,6 +584,14 @@ function initialize() {
     }
   });
 
+  editor.commands.addCommand({
+    name: "Run",
+    bindKey: {win: "Ctrl-Return", mac: "Command-Return"},
+    exec: function(editor) {
+      startInterpreting();
+    }
+  });
+
   Range = ace.require('ace/range').Range;
 
   left = document.getElementById('left');
