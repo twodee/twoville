@@ -2556,7 +2556,7 @@ export class Path extends NodeShape {
 				let {pivot, axis} = mirror.state;
 				let line = {point: pivot, axis};
 
-				const mirroredSegments = segments.slice().reverse();
+				let mirroredSegments = segments.slice().reverse();
 
 				if (distancePointLine(mirroredSegments[0].to, line) > 1e-6) {
 					mirroredSegments.unshift(mirroredSegments[0].mirrorBridge(line));

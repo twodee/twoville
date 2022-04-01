@@ -1938,7 +1938,7 @@ export class ExpressionArcNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new ArcNode.create(this.instance, env.callExpression.where);
+    return ArcNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -1951,7 +1951,7 @@ export class ExpressionFlyNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new FlyNode.create(this.instance, env.callExpression.where);
+    return FlyNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -1964,7 +1964,7 @@ export class ExpressionBackNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new BackNode.create(this.instance, env.callExpression.where);
+    return BackNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -1977,7 +1977,7 @@ export class ExpressionGoNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new GoNode.create(this.instance, env.callExpression.where);
+    return GoNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -1990,7 +1990,7 @@ export class ExpressionLineNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new LineNode.create(this.instance, env.callExpression.where);
+    return LineNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -2003,7 +2003,7 @@ export class ExpressionCircleNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new CircleNode.create(this.instance, env.callExpression.where);
+    return CircleNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -2016,7 +2016,7 @@ export class ExpressionRectangleNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new RectangleNode.create(this.instance, env.callExpression.where);
+    return RectangleNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -2029,7 +2029,7 @@ export class ExpressionCubicNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new CubicNode.create(this.instance, env.callExpression.where);
+    return CubicNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -2042,7 +2042,7 @@ export class ExpressionQuadraticNode extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new QuadraticNode.create(this.instance, env.callExpression.where);
+    return QuadraticNode.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -2055,7 +2055,7 @@ export class ExpressionStroke extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new StrokeFrame.create(this.instance, env.callExpression.where);
+    return StrokeFrame.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -2068,7 +2068,7 @@ export class ExpressionTranslate extends ExpressionFunction {
   }
 
   evaluate(env) {
-    return new Translate.create(this.instance, env.callExpression.where);
+    return Translate.create(this.instance, env.callExpression.where);
   }
 }
 
@@ -2115,7 +2115,7 @@ export class ExpressionShear extends ExpressionFunction {
 
 export class ExpressionLine extends ExpressionShapeFunction {
   createShape(env) {
-    return new Line.create(env.callExpression.where);
+    return Line.create(env.callExpression.where);
   }
 }
 
@@ -2139,7 +2139,7 @@ export class ExpressionUngon extends ExpressionShapeFunction {
 
 export class ExpressionPolyline extends ExpressionShapeFunction {
   createShape(env) {
-    return new Polyline.create(env.callExpression.where);
+    return Polyline.create(env.callExpression.where);
   }
 }
 
@@ -2155,7 +2155,7 @@ export class ExpressionPath extends ExpressionShapeFunction {
 
 export class ExpressionText extends ExpressionShapeFunction {
   createShape(env) {
-    return new Text.create(env.callExpression.where);
+    return Text.create(env.callExpression.where);
   }
 }
 

@@ -1,4 +1,4 @@
-const seedrandom = require('seedrandom');
+import seedrandom from 'seedrandom';
 
 export class Random {
   constructor() {

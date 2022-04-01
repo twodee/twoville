@@ -22,7 +22,6 @@ import {
 import {
   AxisMark,
   BumpDegreesMark,
-  BumpPositionMark,
   CircleMark,
   DistanceMark,
   HorizontalPanMark,

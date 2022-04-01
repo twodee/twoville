@@ -1,6 +1,7 @@
 import {Interpreter} from './interpreter.js';
+// importScripts('/src/interpreter.js');
 
-self.addEventListener('message', event => {
+addEventListener('message', event => {
   switch (event.data.command) {
     case 'interpret':
       const result = Interpreter.interpret(event.data.source, message => {

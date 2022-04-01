@@ -4,6 +4,7 @@ import 'ace-builds/src-min-noconflict/theme-katzenmilch';
 import './mode-twoville.js';
 import JSZip from 'jszip';
 import GIF from 'gif.js';
+import InterpreterWorker from './interpreter-worker.js?worker';
 
 import {
   clearChildren,
@@ -14,9 +15,8 @@ import {RenderEnvironment} from './render.js';
 import {Interpreter} from './interpreter.js';
 import {Messager} from './messager.js';
 import {Inflater} from './inflater.js';
-import InterpreterWorker from './interpreter.worker.js';
 
-const hasWorker = false;
+const hasWorker = true;
 
 let editor;
 let docEditors = [];
@@ -479,6 +479,7 @@ function startInterpreting(successCallback) {
   Messager.clear();
 
   if (hasWorker) {
+    // interpreterWorker = new Worker('/interpreter-worker.js', {type: 'classic'});
     interpreterWorker = new InterpreterWorker();
     interpreterWorker.addEventListener('message', event => {
       if (event.data.type === 'output') {
