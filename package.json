@@ -1,20 +1,21 @@
 {
   "name": "Twoville",
   "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "test": "jest test",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest",
     "start": "vite --port 8118 --open",
     "build": "vite build",
     "deploy": "npm run build && ssh twodee \"cd /var/www/twoville && rm -rf assets docs images *.css *.js *.php *.map *.html\" && scp -r dist/* twodee:/var/www/twoville && ssh twodee \"cd /var/www/twoville && chmod -R g+rX assets docs images *.css *.js *.php *.map *.html\""
   },
   "devDependencies": {
     "ace-builds": "^1.4.12",
-    "jest": "^25.5.4",
     "jsdom": "^14.1.0",
     "seedrandom": "^3.0.5"
   },
   "dependencies": {
     "gif.js": "github:twodee/gif.js",
+    "jest": "^27.5.1",
     "jszip": "^3.5.0",
     "vite": "^2.9.1"
   }
