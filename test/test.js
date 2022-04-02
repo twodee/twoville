@@ -1,26 +1,10 @@
-// const jsdom = require("jsdom");
-// const {document} = (new jsdom.JSDOM(`...`)).window;
-
-// const {Reifier} = require('../src/reifier');
-
-// const {
-  // StaticContext,
-  // DynamicContext,
-  // Frame,
-// } = require('../src/frame');
-
-// const {
-  // ExpressionInteger,
-  // ExpressionReal,
-  // ExpressionBoolean,
-  // ExpressionVector,
-// } = require('../src/ast');
-
-// const {
-  // Interpreter
-// } = require('../src/interpreter');
+import jsdom from 'jsdom';
+const {document} = (new jsdom.JSDOM(`...`)).window;
 
 import {
+  ExpressionAdd,
+  ExpressionDitto,
+  ExpressionUnit,
   ExpressionInteger,
   ExpressionReal,
   ExpressionBoolean,
@@ -32,40 +16,54 @@ import {
 } from '../src/ast';
 import {SourceLocation, LocatedException} from '../src/common';
 import {StaticContext, DynamicContext, Frame} from '../src/frame';
-import {Interpreter} from '../src/interpreter';
+import {Interpreter, InterpreterFrame} from '../src/interpreter';
 import {Inflater} from '../src/inflater';
 import {Messager} from '../src/messager';
+import {lex} from '../src/lexer';
+import {parse} from '../src/parser';
 
 // --------------------------------------------------------------------------- 
 
-function evaluateOutput(src, lines) {
+function evaluateOutput(source, lines) {
   let root = document.createElement('div');
   
+  // new Messager(root, document);
+  // let tokens = lex(source);
+  // let ast = parse(tokens);
+  // let env = {stackFrame: InterpreterEnvironment.create(source, Messager.log)};
+  // ast.evaluate(env);
+
   new Messager(root, document);
-  let tokens = lex(src);
-  let ast = parse(tokens);
-  let env = {stackFrame: InterpreterEnvironment.create(src, Messager.log)};
-  ast.evaluate(env);
+  const tokens = lex(source);
+  const ast = parse(tokens);
+  const frame = InterpreterFrame.create(source, Messager.log);
+  const result = ast.evaluate({
+    root: frame,
+    frames: [frame],
+    fromTime: null,
+    toTime: null,
+    prior: new ExpressionUnit(),
+  });
 
   let html = lines.join('<br>') + '<br>';
 
   expect(root.innerHTML).toBe(html);
 }
 
-function evaluateExpression(src, expected) {
+function evaluateExpression(source, expected) {
   let root = document.createElement('div');
   
   new Messager(root, document);
-  let tokens = lex(src);
- 
-  // console.log("---------------------");
-  // for (let token of tokens) {
-    // console.log(token);
-  // }
-
-  let ast = parse(tokens);
-  let env = {stackFrame: new InterpreterEnvironment()};
-  let result = ast.evaluate(env);
+  const tokens = lex(source);
+  const ast = parse(tokens);
+  const frame = InterpreterFrame.create(source, Messager.log);
+  const result = ast.evaluate({
+    root: frame,
+    frames: [frame],
+    fromTime: null,
+    toTime: null,
+    prior: new ExpressionUnit(),
+  });
 
   expect(Object.getPrototypeOf(result)).toBe(Object.getPrototypeOf(expected));
   expect(result.x).toBe(expected.x);
