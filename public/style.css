@@ -8,8 +8,8 @@
 .light {
   --shadow-color: #CCCCCC;
   --code-color: rebeccapurple;
-  --heading-color: #29498a;
   --heading-color: #cc764c;
+  --subheading-color: #9b70ac;
   --active-link-color: #414e64;
   --link-color: #5e84d1;
   --right-foreground-color: #333333;
@@ -25,6 +25,7 @@
   --shadow-color: white;
   --code-color: #eeff00;
   --heading-color: #cda869;
+  --subheading-color: #e2b0f5;
   --active-link-color: #bdc5d4;
   --link-color: #7587a6;
   --right-foreground-color: white;
@@ -438,6 +439,10 @@ html.grabbing {
 #docs-content-panel > h2 {
   margin-top: 0;
   color: var(--heading-color);
+}
+
+#docs-content-panel > h3 {
+  color: var(--subheading-color);
 }
 
 .docs-source {
