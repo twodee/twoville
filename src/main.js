@@ -46,6 +46,7 @@ let currentName;
 let rasterRows;
 let rastersList;
 let canvasContextMenu;
+let showInCodeButton;
 
 let frameIndex = 0;
 let delay;
@@ -252,7 +253,7 @@ function postInterpret(frame, successCallback) {
   }
 
   // console.log("frame:", frame);
-  scene = RenderEnvironment.inflate(document.getElementById('svg'), document.getElementById('mouse-status-label'), canvasContextMenu, frame, settings, Inflater);
+  scene = RenderEnvironment.inflate(document.getElementById('svg'), document.getElementById('mouse-status-label'), canvasContextMenu, showInCodeButton, frame, settings, Inflater);
 
   let hasTweak;
 
@@ -619,6 +620,7 @@ function initialize() {
   canvasContextMenu = document.getElementById('canvas-context-menu');
   const svg = document.getElementById('svg');
   new Messager(document.getElementById('messager'), document, highlight);
+  showInCodeButton = document.getElementById('show-in-code-button');
 
   let savedSettings = {};
 
@@ -1651,7 +1653,7 @@ function initialize() {
     animation();
   });
 
-  document.getElementById('show-in-code-button').addEventListener('click', () => {
+  showInCodeButton.addEventListener('click', () => {
     canvasContextMenu.style.display = 'none';
     if (scene.mouseShape) {
       const where = scene.mouseShape.where;

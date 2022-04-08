@@ -58,7 +58,7 @@ export class RenderEnvironment extends Frame {
     this.rasters[id] = raster;
   }
 
-  static inflate(svg, mouseStatusLabel, contextMenu, pod, settings, inflater) {
+  static inflate(svg, mouseStatusLabel, contextMenu, showInCodeButton, pod, settings, inflater) {
     const scene = new RenderEnvironment();
     scene.svg = svg;
     scene.mouseStatusLabel = mouseStatusLabel;
@@ -67,6 +67,7 @@ export class RenderEnvironment extends Frame {
     scene.settings = settings;
     scene.embody(pod, inflater);
     scene.contextMenu = contextMenu;
+    scene.showInCodeButton = showInCodeButton;
     return scene;
   }
 
@@ -429,6 +430,13 @@ export class RenderEnvironment extends Frame {
     this.contextMenu.style.display = 'flex';
     this.contextMenu.style.top = (e.pageY - 5) + 'px';
     this.contextMenu.style.left = (e.pageX - 5) + 'px';
+
+    if (this.mouseShape) {
+      this.showInCodeButton.style.display = 'block';
+    } else {
+      this.showInCodeButton.style.display = 'none';
+    }
+    
     e.preventDefault();
     return false;
   }
