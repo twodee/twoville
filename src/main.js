@@ -1019,6 +1019,7 @@ function initialize() {
   function closeSaveAsDialog() {
     dialogOverlay.style.display = 'none';
     saveAsDialog.style.display = 'none';
+    saveAsFileNameInput.value = '';
     document.removeEventListener('keydown', saveAsEscapeListener);
   }
 
@@ -1029,6 +1030,8 @@ function initialize() {
   }
 
   function showSaveAsDialog() {
+    // Can this get called with the text input still populated?
+
     saveAsErrorBox.style.display = 'none';
     dialogOverlay.style.display = 'flex';
     saveAsDialog.style.display = 'flex';
@@ -1054,6 +1057,7 @@ function initialize() {
   function reallySaveAs() {
     const oldName = currentName;
     currentName = saveAsFileNameInput.value;
+    console.log("reallySaveAs: currentName:", currentName);
     localStorage.setItem('most-recent-two', currentName);
 
     save();
@@ -1334,9 +1338,13 @@ function initialize() {
   });
 
   function saveSomehow() {
+    // how can I not have a current name but yet have a file open?
+
+    console.log("currentName:", currentName);
     if (currentName) {
       save();
     } else {
+      console.log("no current name");
       showSaveAsDialog();
     }
   }
