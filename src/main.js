@@ -1356,7 +1356,7 @@ function initialize() {
       manageFilesButton.click();
       event.preventDefault();
       return false;
-    } else if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+    } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       startInterpreting();
       event.preventDefault();
       return false;

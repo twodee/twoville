@@ -2808,7 +2808,13 @@ export class Tip extends Group {
   }
 
   synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
+    super.synchronizeDom(t, {
+      x: this.state.corner[0],
+      y: this.state.corner[1],
+      width: this.state.size[0],
+      height: this.state.corner[1] + this.state.corner[1] + this.state.size[1],
+      span: 0,
+    });
     this.element.setAttributeNS(null, 'markerWidth', this.state.size[0]);
     this.element.setAttributeNS(null, 'markerHeight', this.state.size[1]);
     this.element.setAttributeNS(null, 'viewBox', `${this.state.corner[0]} ${this.state.corner[1]} ${this.state.size[0]} ${this.state.size[1]}`);
