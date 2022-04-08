@@ -217,7 +217,7 @@ export class ExpressionData extends Expression {
   }
 
   bind(env, id) {
-    env.stackFrame.bind(id, this);
+    env.frames[0].bind(id, this);
   }
 
   get type() {
@@ -678,7 +678,6 @@ export class ExpressionOr extends ExpressionBinaryOperator {
 
   evaluate(env) {
     const evaluatedL = this.l.evaluate(env);
-    // console.error("evaluatedL:", evaluatedL);
     if (evaluatedL instanceof ExpressionInteger) {
       const evaluatedR = this.r.evaluate(env);
       if (evaluatedR instanceof ExpressionInteger) {
@@ -1078,7 +1077,6 @@ export class ExpressionIdentifier extends Expression {
     // }
 
     // TODO rhs as last parameter
-    // console.log("env:", env);
     env.frames[0].bind(env, this.nameToken.source, value);
     // TODO don't necessarily bind to immediate s cope
 
@@ -1791,7 +1789,7 @@ export class ExpressionWith extends Expression {
 
     // TODO is it ObjectFrame or Frame that I want to ensure?
     if (!(instance instanceof Frame || instance instanceof ExpressionVector)) {
-      throw new LocatedException(this.scope.where, `I encountered a <code>with</code> statement on something that isn't an object.`);
+      throw new LocatedException(this.scope.where, `I encountered a block on something that isn't an object.`);
     }
 
     if (instance.hasOwnProperty('sourceSpans')) {
@@ -1802,7 +1800,11 @@ export class ExpressionWith extends Expression {
       this.body.evaluate({...env, frames: [instance, ...env.frames]});
     } else {
       instance.forEach(element => {
-        this.body.evaluate({...env, frames: [element, ...env.frames]});
+        if (element instanceof Frame) {
+          this.body.evaluate({...env, frames: [element, ...env.frames]});
+        } else {
+          throw new LocatedException(element.where, `I encountered a block on something that isn't an object.`);
+        }
       });
     }
 
