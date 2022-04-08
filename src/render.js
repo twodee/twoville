@@ -472,6 +472,14 @@ export class RenderEnvironment extends Frame {
   mouseLiteral() {
     return `[${formatFloat(this.mouseAt.x, this.settings.mousePrecision)}, ${formatFloat(this.bounds.span - this.mouseAt.y, this.settings.mousePrecision)}]`;
   }
+
+  mouseEnter(shape) {
+    this.mouseShape = shape;
+  }
+
+  mouseExit() {
+    this.mouseShape = null;
+  }
 }
 
 // --------------------------------------------------------------------------- 

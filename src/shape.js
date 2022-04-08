@@ -304,6 +304,10 @@ export class Shape extends ObjectFrame {
         this.markers[0].hover();
       }
 
+      // This is not conditional. After a tweak, we need to reestablish that
+      // this is the hovered shape with the root.
+      root.mouseEnter(this);
+
       // if (this.root.isTweaking) return;
       // Only show the marks if the source code is evaluated and fresh.
       // if (!this.isSelected && !this.root.isStale) {
@@ -320,6 +324,10 @@ export class Shape extends ObjectFrame {
         this.markers[0].unhover();
       }
 
+      if (this.isMouseExit(event)) {
+        root.mouseExit();
+      }
+
       // if (event.buttons === 0) {
         // this.root.contextualizeCursor(event.toElement);
       // }
@@ -330,6 +338,10 @@ export class Shape extends ObjectFrame {
     this.staticBackgroundMarkGroup.addEventListener('mouseleave', event => {
       if (this.isUnhoverTransition(event)) {
         this.markers[0].unhover();
+      }
+
+      if (this.isMouseExit(event)) {
+        root.mouseExit();
       }
     });
 
@@ -382,8 +394,19 @@ export class Shape extends ObjectFrame {
     // The cursor is leaving the shape, but it might just be running across a mark. The marks
     // are all tagged with class tag-SHAPE-ID. Don't unhover if we're on the shape or one of
     // its marks.
-    const isStillShape = event.toElement && event.toElement.classList.contains(`tag-${this.id}`);
+    const element = event.toElement;
+    const isStillShape = element &&
+      (element.classList.contains(`tag-${this.id}`) ||
+       element.classList.contains('canvas-context-menu-item'));
     return !this.isSelected && !isStillShape;
+  }
+
+  isMouseExit(event) {
+    const element = event.toElement;
+    const isStillShape = element &&
+      (element.classList.contains(`tag-${this.id}`) ||
+       element.classList.contains('canvas-context-menu-item'));
+    return !isStillShape;
   }
 
   select(markerId = 0) {

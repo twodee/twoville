@@ -1651,7 +1651,16 @@ function initialize() {
     animation();
   });
 
-  document.getElementById('type-point-button').addEventListener('click', () => {
+  document.getElementById('show-in-code-button').addEventListener('click', () => {
+    canvasContextMenu.style.display = 'none';
+    if (scene.mouseShape) {
+      const where = scene.mouseShape.where;
+      editor.getSelection().setSelectionRange(new Range(where.lineStart, where.columnStart, where.lineEnd, where.columnEnd + 1));
+      editor.centerSelection();
+    }
+  });
+
+  document.getElementById('write-point-button').addEventListener('click', () => {
     canvasContextMenu.style.display = 'none';
     const text = scene.mouseLiteral();
     if (editor.getSelection().isEmpty()) {
