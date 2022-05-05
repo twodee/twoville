@@ -355,6 +355,12 @@ export class RenderEnvironment extends Frame {
   }
 
   select(shape, markerId = 0) {
+    // If the shape is not displaying, it might not have all its properties in
+    // order, so we shouldn't allow it to be selected.
+    if (!shape.state.display) {
+      return;
+    }
+
     // Only select the shape if it's not already selected. Otherwise the
     // deselection might lose the selected component.
     if (this.selectedShape !== shape) {

@@ -25,10 +25,6 @@ import {
 } from './mark.js';
 
 import {
-  TimelinedEnvironment,
-} from './environment.js';
-
-import {
   ObjectFrame,
 } from './frame.js';
 

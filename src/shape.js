@@ -9,17 +9,10 @@ import {
   svgNamespace,
 } from './common.js';
 
-import {TimelinedEnvironment} from './environment.js';
-
 import {
   ObjectFrame,
   StrokeFrame,
 } from './frame.js';
-
-import {
-  Stroke,
-  configureStroke,
-} from './stroke.js';
 
 import {
   mirrorPointLine,
@@ -53,6 +46,8 @@ import {
   RectangleNode,
   TabNode,
   WalkNode,
+  PushNode,
+  PopNode,
   LineNode,
   TurtleNode,
   VertexNode,
@@ -71,6 +66,8 @@ import {
   ExpressionInteger,
   ExpressionFlyNode,
   ExpressionMirror,
+  ExpressionPopNode,
+  ExpressionPushNode,
   ExpressionQuadraticNode,
   ExpressionReal,
   ExpressionRectangleNode,
@@ -97,17 +94,17 @@ order matches the order expected in the SVG transform attribute.
 
 For example, consider this rectangle:
 
-  with rectangle()
+  rectangle
     // ...
-    with translate()
+    translate
       offset = [5, 6]
-    with rotate()
+    rotate
       degrees = 45
-      pivot = :zero2
+      pivot = :zero
 
 The transforms property will look like this:
 
-  [rotate(45, :zero2), translate(5, 6)]
+  [rotate(45, :zero), translate(5, 6)]
 
 */
 
@@ -118,7 +115,7 @@ export class Shape extends ObjectFrame {
     this.sourceSpans = [];
     this.transforms = [];
 
-    this.bindStatic('enabled', new ExpressionBoolean(true));
+    this.bindStatic('display', new ExpressionBoolean(true));
     this.bindStatic('translate', new FunctionDefinition('translate', [], new ExpressionTranslate(this)));
     this.bindStatic('scale', new FunctionDefinition('scale', [], new ExpressionScale(this)));
     this.bindStatic('rotate', new FunctionDefinition('rotate', [], new ExpressionRotate(this)));
@@ -178,19 +175,39 @@ export class Shape extends ObjectFrame {
     }
   }
 
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('display');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('display');
+  }
+
   synchronizeState(t) {
-    for (let transform of this.transforms) {
-      transform.synchronizeState(t);
+    this.synchronizeStateProperty('display', t);
+    if (this.state.display) {
+      for (let transform of this.transforms) {
+        transform.synchronizeState(t);
+      }
+      this.synchronizeCustomState(t);
     }
   }
 
   synchronizeDom(t, bounds) {
-    for (let transform of this.transforms) {
-      transform.synchronizeDom(t, bounds);
-    }
+    if (this.state.display) {
+      this.element.setAttributeNS(null, 'visibility', 'visible');
 
-    const commands = this.transforms.map(transform => transform.state.command).join(' ');
-    this.element.setAttributeNS(null, 'transform', commands);
+      for (let transform of this.transforms) {
+        transform.synchronizeDom(t, bounds);
+      }
+
+      const commands = this.transforms.map(transform => transform.state.command).join(' ');
+      this.element.setAttributeNS(null, 'transform', commands);
+      this.synchronizeCustomDom(t, bounds);
+    } else {
+      this.element.setAttributeNS(null, 'visibility', 'hidden');
+    }
   }
 
   show() {
@@ -471,31 +488,6 @@ export class Shape extends ObjectFrame {
     this.isSelected = false;
     this.selectedMarkerId = null;
   }
-
-  activate(t) {
-    const enabledTimeline = this.timedProperties.enabled;
-    if (enabledTimeline) {
-      this.state.isEnabled = enabledTimeline.intervalAt(t)?.fromValue.value ?? enabledTimeline.defaultValue?.value;
-      this.element.setAttributeNS(null, 'visibility', this.state.isEnabled ? 'visible' : 'hidden');
-      return this.state.isEnabled;
-    } else {
-      return true;
-    }
-  }
-
-  // flushManipulation(bounds, factor) {
-    // this.updateContentState(bounds);
-    // this.updateContentDom(bounds, factor);
-
-    // this.updateInteractionState(bounds);
-    // this.updateInteractionDom(bounds, factor);
-
-    // First get all the model state in order.
-    // A drag on a transform marker will have changed the state.
-    // for (let transform of this.transforms) {
-      // transform.updateDomCommand(bounds);
-    // }
-  // }
 
   synchronizeMarkState(t) {
     // let preMatrix = Matrix.identity();
@@ -809,6 +801,7 @@ export class Text extends Shape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticScalarProperty('size');
     this.initializeStaticVectorProperty('position');
     this.initializeStaticColorState();
@@ -816,7 +809,7 @@ export class Text extends Shape {
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicProperty('size');
     this.initializeDynamicProperty('position');
     this.initializeDynamicColorState();
@@ -856,16 +849,14 @@ export class Text extends Shape {
     this.element.setAttributeNS(null, 'dominant-baseline', anchor[1]);
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
+  synchronizeCustomState(t) {
     this.synchronizeStateProperty('size', t);
     this.synchronizeStateProperty('position', t);
     this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
+  synchronizeCustomDom(t, bounds) {
     this.element.setAttributeNS(null, 'x', this.state.position[0]);
     this.element.setAttributeNS(null, 'y', bounds.span - this.state.position[1]);
     this.element.setAttributeNS(null, 'font-size', this.state.size);
@@ -966,6 +957,7 @@ export class Rectangle extends Shape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticVectorProperty('center');
     this.initializeStaticVectorProperty('corner');
     this.initializeStaticScalarProperty('rounding');
@@ -975,7 +967,7 @@ export class Rectangle extends Shape {
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicProperty('center');
     this.initializeDynamicProperty('corner');
     this.initializeDynamicProperty('rounding');
@@ -990,9 +982,7 @@ export class Rectangle extends Shape {
     this.connectToParent(root);
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
-
+  synchronizeCustomState(t) {
     this.synchronizeStateProperty('rounding', t);
     this.synchronizeStateProperty('size', t);
     this.synchronizeStateProperty('center', t);
@@ -1005,13 +995,11 @@ export class Rectangle extends Shape {
       ];
     }
 
-    this.synchronizeColorState();
+    this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
-
+  synchronizeCustomDom(t, bounds) {
     if (this.state.rounding) {
       this.element.setAttributeNS(null, 'rx', this.state.rounding);
       this.element.setAttributeNS(null, 'ry', this.state.rounding);
@@ -1157,11 +1145,12 @@ export class Circle extends Shape {
     this.validateStrokeProperties(fromTime, toTime);
   }
 
-  initializeState() {
-    super.initializeState();
-  }
+  // initializeState() {
+    // super.initializeState();
+  // }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticScalarProperty('radius');
     this.initializeStaticVectorProperty('center');
     this.initializeStaticColorState();
@@ -1169,7 +1158,7 @@ export class Circle extends Shape {
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicProperty('radius');
     this.initializeDynamicProperty('center');
     this.initializeDynamicColorState();
@@ -1191,17 +1180,14 @@ export class Circle extends Shape {
     this.markers[0].setMarks(this.centerMark, this.radiusMark, this.outlineMark);
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
-
+  synchronizeCustomState(t) {
     this.synchronizeStateProperty('radius', t);
     this.synchronizeStateProperty('center', t);
     this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
+  synchronizeCustomDom(t, bounds) {
     this.element.setAttributeNS(null, 'r', this.state.radius);
     this.element.setAttributeNS(null, 'cx', this.state.center[0]);
     this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
@@ -1300,6 +1286,7 @@ export class Raster extends Shape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticScalarProperty('id');
     this.initializeStaticVectorProperty('corner');
     this.initializeStaticVectorProperty('center');
@@ -1309,8 +1296,9 @@ export class Raster extends Shape {
     this.synchronizeDimensions();
   }
 
-  initializeDynamicState() {
-  }
+  // initializeDynamicState() {
+    // super.initializeDynamicState();
+  // }
 
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'image');
@@ -1347,9 +1335,7 @@ export class Raster extends Shape {
     }
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
-
+  synchronizeCustomDom(t, bounds) {
     this.element.setAttributeNS(null, 'width', this.state.size[0]);
     this.element.setAttributeNS(null, 'height', this.state.size[1]);
 
@@ -1547,6 +1533,7 @@ export class Grid extends Shape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticVectorProperty('center');
     this.initializeStaticVectorProperty('corner');
     this.initializeStaticVectorProperty('ticks');
@@ -1555,7 +1542,7 @@ export class Grid extends Shape {
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicProperty('center');
     this.initializeDynamicProperty('corner');
     this.initializeDynamicProperty('ticks');
@@ -1570,9 +1557,7 @@ export class Grid extends Shape {
     this.connectToParent(root);
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
-
+  synchronizeCustomState(t) {
     this.synchronizeStateProperty('size', t);
     this.synchronizeStateProperty('ticks', t);
     this.synchronizeStateProperty('center', t);
@@ -1588,9 +1573,7 @@ export class Grid extends Shape {
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
-
+  synchronizeCustomDom(t, bounds) {
     const ticks = this.state.ticks ?? [1, 1];
     const size = this.state.size ?? [bounds.width, bounds.height];
     const corner = this.state.corner ?? [bounds.x, bounds.y];
@@ -1831,6 +1814,7 @@ export class NodeShape extends Shape {
 
     this.state.tabDefaults = {size: 1, degrees: 45, inset: 0, isCounterclockwise: true};
     this.state.turtle0 = null;
+    this.state.stack = [];
 
     for (let node of this.nodes) {
       node.initializeState();
@@ -1841,8 +1825,7 @@ export class NodeShape extends Shape {
     }
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
+  synchronizeCustomState(t) {
     for (let node of this.nodes) {
       node.synchronizeState(t);
     }
@@ -1950,6 +1933,8 @@ export class Polygon extends VertexShape {
     this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
     this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
     this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
+    this.bindStatic('push', new FunctionDefinition('push', [], new ExpressionPushNode(this)));
+    this.bindStatic('pop', new FunctionDefinition('pop', [], new ExpressionPopNode(this)));
   }
 
   static create(where) {
@@ -1979,12 +1964,13 @@ export class Polygon extends VertexShape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticColorState();
     this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicColorState();
     this.initializeDynamicStrokeState();
   }
@@ -1996,14 +1982,13 @@ export class Polygon extends VertexShape {
     this.connectJoins();
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
+  synchronizeCustomState(t) {
+    super.synchronizeCustomState(t);
     this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
+  synchronizeCustomDom(t, bounds) {
     this.synchronizeFillDom(t, bounds);
     this.synchronizeStrokeDom(t, bounds, this.element);
 
@@ -2062,6 +2047,8 @@ export class Ungon extends VertexShape {
     // TODO no mirror support yet?
     this.bindStatic('back', new FunctionDefinition('back', [], new ExpressionBackNode(this)));
     this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
+    this.bindStatic('push', new FunctionDefinition('push', [], new ExpressionPushNode(this)));
+    this.bindStatic('pop', new FunctionDefinition('pop', [], new ExpressionPopNode(this)));
   }
 
   static create(where) {
@@ -2111,6 +2098,7 @@ export class Ungon extends VertexShape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticScalarProperty('formula');
     this.initializeStaticScalarProperty('rounding');
     this.initializeStaticColorState();
@@ -2118,7 +2106,7 @@ export class Ungon extends VertexShape {
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicProperty('rounding');
     this.initializeDynamicColorState();
     this.initializeDynamicStrokeState();
@@ -2131,15 +2119,14 @@ export class Ungon extends VertexShape {
     this.connectJoins();
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
+  synchronizeCustomState(t) {
+    super.synchronizeCustomState(t);
     this.synchronizeColorState(t);
     this.synchronizeStateProperty('rounding', t);
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
+  synchronizeCustomDom(t, bounds) {
     this.synchronizeFillDom(t, bounds);
     this.synchronizeStrokeDom(t, bounds, this.element);
 
@@ -2309,11 +2296,12 @@ export class Polyline extends VertexShape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicStrokeState();
   }
 
@@ -2329,13 +2317,12 @@ export class Polyline extends VertexShape {
     this.connectJoins();
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
+  synchronizeCustomState(t) {
+    super.synchronizeCustomState(t);
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
+  synchronizeCustomDom(t, bounds) {
     this.synchronizeStrokeDom(t, bounds, this.element);
 
     const positions = this.domNodes.flatMap((node, index) => {
@@ -2409,11 +2396,12 @@ export class Line extends VertexShape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicColorState();
   }
 
@@ -2425,13 +2413,12 @@ export class Line extends VertexShape {
     this.connectJoins();
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
+  synchronizeCustomState(t) {
+    super.synchronizeCustomState(t);
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
+  synchronizeCustomDom(t, bounds) {
     this.synchronizeStrokeDom(t, bounds, this.element);
 
     const positions = this.domNodes.flatMap((node, index) => {
@@ -2491,6 +2478,8 @@ export class Path extends NodeShape {
     this.bindStatic('arc', new FunctionDefinition('arc', [], new ExpressionArcNode(this)));
     this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
     this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
+    this.bindStatic('push', new FunctionDefinition('push', [], new ExpressionPushNode(this)));
+    this.bindStatic('pop', new FunctionDefinition('pop', [], new ExpressionPopNode(this)));
   }
 
   static create(where) {
@@ -2532,12 +2521,13 @@ export class Path extends NodeShape {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticColorState();
     this.initializeStaticStrokeState();
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicColorState();
     this.initializeDynamicStrokeState();
   }
@@ -2550,14 +2540,13 @@ export class Path extends NodeShape {
     this.connectJoins();
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
+  synchronizeCustomState(t) {
+    super.synchronizeCustomState(t);
     this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, bounds);
+  synchronizeCustomDom(t, bounds) {
     this.synchronizeFillDom(t, bounds);
     this.synchronizeStrokeDom(t, bounds, this.element);
 
@@ -2680,11 +2669,13 @@ export class Group extends Shape {
     }
   }
 
-  initializeStaticState() {
-  }
+  // initializeStaticState() {
+    // super.initializeStaticState();
+  // }
 
-  initializeDynamicState() {
-  }
+  // initializeDynamicState() {
+    // super.initializeDynamicState();
+  // }
 
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'g');
@@ -2703,10 +2694,9 @@ export class Group extends Shape {
     }
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t);
+  synchronizeCustomDom(t, bounds) {
     for (let child of this.children) {
-      child.synchronizeDom(t, bounds);
+      child.synchronizeCustomDom(t, bounds);
     }
   }
 
@@ -2803,21 +2793,20 @@ export class Tip extends Group {
   }
 
   initializeStaticState() {
+    super.initializeStaticState();
     this.initializeStaticVectorProperty('size');
     this.initializeStaticVectorProperty('center');
     this.initializeStaticVectorProperty('corner');
   }
 
   initializeDynamicState() {
-    this.state.animation = {};
+    super.initializeDynamicState();
     this.initializeDynamicProperty('size');
     this.initializeDynamicProperty('center');
     this.initializeDynamicProperty('corner');
   }
 
-  synchronizeState(t) {
-    super.synchronizeState(t);
-
+  synchronizeCustomState(t) {
     this.synchronizeStateProperty('size', t);
     this.synchronizeStateProperty('center', t);
     this.synchronizeStateProperty('corner', t);
@@ -2830,8 +2819,8 @@ export class Tip extends Group {
     }
   }
 
-  synchronizeDom(t, bounds) {
-    super.synchronizeDom(t, {
+  synchronizeCustomDom(t, bounds) {
+    super.synchronizeCustomDom(t, {
       x: this.state.corner[0],
       y: this.state.corner[1],
       width: this.state.size[0],

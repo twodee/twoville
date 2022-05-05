@@ -1,9 +1,7 @@
 import {Timeline} from './timeline.js';
-import {Stroke} from './stroke.js';
 import {FunctionDefinition} from './common.js';
 import {StaticContext, DynamicContext, Frame} from './frame.js';
 import {Group} from './shape.js';
-// import {Environment} from './environment.js';
 
 import {
   Expression,
@@ -23,6 +21,8 @@ import {
   FlyNode,
   LineNode,
   Mirror,
+  PopNode,
+  PushNode,
   WalkNode,
   QuadraticNode,
   RectangleNode,
@@ -56,8 +56,8 @@ export class Inflater {
     } else if (object.type === 'reference') {
       return object;
       // return env.root.shapes.find(shape => shape.id === object.id);
-    } else if (object.type === 'stroke') {
-      return Stroke.inflate(env, object, Inflater);
+    // } else if (object.type === 'stroke') {
+      // return Stroke.inflate(env, object, Inflater);
     } else if (object.type === 'mirror') {
       return Mirror.inflate(env, object, Inflater);
     } else if (object.type === 'timeline') {
@@ -74,6 +74,10 @@ export class Inflater {
       return TurnNode.inflate(env, object, Inflater);
     } else if (object.type === 'back') {
       return BackNode.inflate(env, object, Inflater);
+    } else if (object.type === 'push') {
+      return PushNode.inflate(env, object, Inflater);
+    } else if (object.type === 'pop') {
+      return PopNode.inflate(env, object, Inflater);
     } else if (object.type === 'go') {
       return GoNode.inflate(env, object, Inflater);
     } else if (object.type === 'fly') {

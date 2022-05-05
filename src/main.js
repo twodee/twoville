@@ -43,6 +43,7 @@ let scrubber;
 let timeSpinner;
 let interpreterWorker;
 let currentName;
+let pendingName;
 let rasterRows;
 let rastersList;
 let canvasContextMenu;
@@ -1056,8 +1057,8 @@ function initialize() {
 
   function reallySaveAs() {
     const oldName = currentName;
-    currentName = saveAsFileNameInput.value;
-    console.log("reallySaveAs: currentName:", currentName);
+    currentName = pendingName;
+    pendingName = null;
     localStorage.setItem('most-recent-two', currentName);
 
     save();
@@ -1070,16 +1071,16 @@ function initialize() {
   }
 
   function trySaveAs() {
-    const name = saveAsFileNameInput.value;
-    if (name.match(/^\s*$/)) {
-      saveAsErrorBox.innerText = `The name "${name}" is not valid. Try something different.`;
+    pendingName = saveAsFileNameInput.value;
+    if (pendingName.match(/^\s*$/)) {
+      saveAsErrorBox.innerText = `The name "${pendingName}" is not valid. Try something different.`;
       saveAsErrorBox.style.display = 'block';
     } else {
       const twos = JSON.parse(localStorage.getItem('twos')) ?? {}; 
       closeSaveAsDialog();
       // if user want to rename, delete old file after saving new version
-      if (twos.hasOwnProperty(name)) {
-        showOverwriteDialog(name);
+      if (twos.hasOwnProperty(pendingName)) {
+        showOverwriteDialog(pendingName);
       } else {
         reallySaveAs();
       }
@@ -1340,11 +1341,9 @@ function initialize() {
   function saveSomehow() {
     // how can I not have a current name but yet have a file open?
 
-    console.log("currentName:", currentName);
     if (currentName) {
       save();
     } else {
-      console.log("no current name");
       showSaveAsDialog();
     }
   }

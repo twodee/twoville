@@ -62,6 +62,19 @@ export class Timeline {
     return this.intervals.find(interval => interval.spans(t));
   }
 
+  intervalRange(fromTime, toTime) {
+    // If fromTime = 50, these intervals match:
+    //   0 -> t -> 100
+    //   80 -> t -> 100
+    //   t -> 100
+    const fromIndex = this.intervals.findIndex(interval => interval.spans(fromTime) || interval.startsAfter(fromTime));
+    let toIndex = fromIndex + 1;
+    while (toIndex < this.intervals.length && (this.intervals[toIndex].spans(toTime) || this.intervals[toIndex].endsBefore(toTime))) {
+      toIndex += 1;
+    }
+    return this.intervals.slice(fromIndex, toIndex - fromIndex);
+  }
+
   intervalFrom(t) {
     return this.intervals.find(interval => interval.fromTime == t);
   }
@@ -84,6 +97,7 @@ export class Timeline {
   }
 
   valueAt(env, t) {
+    console.log("t:", t);
     let interval = this.intervalAt(t);
     if (interval) {
       return interval.interpolate(env, t);

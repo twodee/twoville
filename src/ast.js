@@ -51,6 +51,8 @@ import {
   CircleNode,
   RectangleNode,
   GoNode,
+  PushNode,
+  PopNode,
   Mirror,
   WalkNode,
   QuadraticNode,
@@ -1967,6 +1969,32 @@ export class ExpressionBackNode extends ExpressionFunction {
 
   evaluate(env) {
     return BackNode.create(this.instance, env.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPushNode extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env) {
+    return PushNode.create(this.instance, env.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionPopNode extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env) {
+    return PopNode.create(this.instance, env.callExpression.where);
   }
 }
 

@@ -335,9 +335,10 @@ export class ObjectFrame extends Frame {
     // which means there will be a definition for all possible times.
 
     let t = fromTime;
-    for (let interval of timeline.intervals) {
-      if (!interval.spans(t)) {
-        throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>${id}</code> property isn't set at all possible times. For example, it isn't set at time ${t}.`); 
+    for (let [i, interval] of timeline.intervals.entries()) {
+      if (!interval.spans(t) &&
+          (i + 1 < timeline.intervals.length && this.isEverDisplayedBetween(t, timeline.intervals[i + 1].fromTime))) {
+          throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>${id}</code> property isn't set at all possible times. For example, it isn't set at time ${t}.`); 
       } else if (interval.hasTo()) {
         t = interval.toTime.value + 1;
       } else {
@@ -348,8 +349,55 @@ export class ObjectFrame extends Frame {
     // If we made it through all the intervals but not through the full time
     // span, then we have an incomplete timeline.
     if (t <= toTime) {
-      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>${id}</code> property wasn't set at all possible times. For example, it wasn't set at time ${t}.`); 
+      console.log("t:", t);
+      if (this.isEverDisplayedBetween(t, toTime)) {
+        throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>${id}</code> property wasn't set at all possible times. For example, it wasn't set at time ${t}.`); 
+      }
     }
+  }
+
+  isEverDisplayedBetween(fromTime, toTime) {
+    // Grab intervals that overlap the time range.
+    const displayTimeline = this.getDynamic('display');
+    const intervals = displayTimeline.intervalRange(fromTime, toTime);
+    const isDisplayedStatic = this.getStatic('display').value;
+    // console.log("intervals:", intervals.toString());
+    // console.log("fromTime:", fromTime);
+    // console.log("toTime:", toTime);
+    
+    let t = fromTime;
+    let i = 0;
+    while (t <= toTime && i < intervals.length) {
+      // If t falls before current interval, then we must check the static. If
+      // the static is false, we advance t up to the interval and keep
+      // searching for a true.
+      if (intervals[i].startsAfter(t)) {
+        if (isDisplayedStatic) {
+          return true;
+        } else {
+          t = intervals[i].fromTime;
+        }
+      }
+
+      // The current interval must span t. It can't end before t because we
+      // move i along. We first check to see if either end of the interval is
+      // set to display. Failing that, if the interval is open-ended, there's
+      // no reason to keep checking. Otherwise, we must move along to the next
+      // time step after the current interval and the next interval.
+      else {
+        if ((intervals[i].hasFrom() && intervals[i].fromValue.value) ||
+            (intervals[i].hasTo() && intervals[i].toValue.value)) {
+          return true;
+        } else if (!intervals[i].hasTo()) {
+          break;
+        } else {
+          t = intervals[i].toTime + 1;
+          i += 1;
+        }
+      }
+    }
+
+    return false;
   }
 
   assertProperty(id) {

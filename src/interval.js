@@ -71,11 +71,11 @@ export class Interval {
   }
 
   endsBefore(t) {
-    return this.hasTo() && this.toTime.value <= t;
+    return this.hasTo() && this.toTime.value < t;
   }
 
   startsAfter(t) {
-    return this.hasFrom() && this.fromTime.value >= t;
+    return this.hasFrom() && t < this.fromTime.value;
   }
 
   spans(t) {
