@@ -1629,29 +1629,7 @@ export class CubicNode extends Node {
 
 // --------------------------------------------------------------------------- 
 
-const ArcType = Object.freeze({
-  Bump: 'Bump',
-  Wedge: 'Wedge',
-  Curl: 'Curl',
-});
-
 export class ArcNode extends Node {
-  static type = 'arc';
-  static article = 'an';
-  static timedIds = ['degrees', 'position', 'center'];
-
-  static create(parentEnvironment, where) {
-    const node = new ArcNode();
-    node.initialize(parentEnvironment, where);
-    return node;
-  }
-
-  static inflate(parentEnvironment, object, inflater) {
-    const node = new ArcNode();
-    node.embody(parentEnvironment, object, inflater);
-    return node;
-  }
-
   segment(previousSegment) {
     return new ArcSegment(this.previousNode.state.turtle.position, this.state.turtle.position, this.state.radius, this.state.isLarge, this.state.isClockwise);
   }
@@ -1664,65 +1642,6 @@ export class ArcNode extends Node {
     return [this.state.turtle.position];
   }
 
-  validate(fromTime, toTime) {
-    // Assert required properties.
-    this.assertProperty('degrees');
-
-    // Assert types of extent properties.
-    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
-    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('degrees', [ExpressionInteger, ExpressionReal]);
-    this.assertScalarType('radius', [ExpressionInteger, ExpressionReal]);
-
-    // Assert completeness of timelines.
-    this.assertCompleteTimeline('position', fromTime, toTime);
-    this.assertCompleteTimeline('center', fromTime, toTime);
-    this.assertCompleteTimeline('degrees', fromTime, toTime);
-    this.assertCompleteTimeline('radius', fromTime, toTime);
-
-    const n = ['position', 'center', 'radius'].filter(id => this.has(id)).length;
-    if (n !== 1) {
-      throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> node whose position I couldn't figure out. Define exactly one of these properties: <code>position</code>, <code>center</code>, or <code>radius</code>.`);
-    }
-  }
-
-  initializeState() {
-    super.initializeState();
-
-    if (this.has('center')) {
-      this.form = ArcType.Wedge;
-      this.state.position = [null, null];
-    } else if (this.has('radius')) {
-      this.form = ArcType.Curl;
-      this.state.position = [null, null];
-    } else { // has position
-      this.form = ArcType.Bump;
-    }
-  }
-
-  initializeStaticState() {
-    this.initializeStaticScalarProperty('degrees');
-    this.initializeStaticVectorProperty('position');
-    this.initializeStaticVectorProperty('center');
-    this.initializeStaticScalarProperty('radius');
-  }
-
-  initializeDynamicState() {
-    this.state.animation = {};
-    this.initializeDynamicProperty('degrees');
-    this.initializeDynamicProperty('position');
-    this.initializeDynamicProperty('center');
-    this.initializeDynamicProperty('radius');
-  }
-
-  synchronizeState(t) {
-    this.synchronizeStateProperty('degrees', t);
-    this.synchronizeStateProperty('position', t);
-    this.synchronizeStateProperty('center', t);
-    this.synchronizeStateProperty('radius', t);
-    this.configureTurtle();
-  }
-
   configureTurtle() {
     if (this.state.degrees >= 0) {
       this.state.isLarge = this.state.degrees >= 180 ? 1 : 0;
@@ -1733,74 +1652,9 @@ export class ArcNode extends Node {
     }
 
     this.state.isCircle = this.state.degrees === 360;
-    let radians = this.state.degrees * Math.PI / 180;
+    this.state.radians = this.state.degrees * Math.PI / 180;
 
-    // The bump is a position + degrees. The center is derived. Dragging on the
-    // degrees makes the bump grow bigger or smaller.
-    if (this.form === ArcType.Bump) {
-      let diff = [
-        this.state.position[0] - this.previousNode.state.turtle.position[0],
-        this.state.position[1] - this.previousNode.state.turtle.position[1],
-      ];
-      let magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
-      let distance = (0.5 * Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1])) / Math.tan(radians * 0.5);
-      let halfway = [
-        (this.previousNode.state.turtle.position[0] + this.state.position[0]) * 0.5,
-        (this.previousNode.state.turtle.position[1] + this.state.position[1]) * 0.5
-      ];
-      let normal = [
-        diff[1] / magnitude,
-        -diff[0] / magnitude
-      ];
-      this.state.center = [
-        halfway[0] + normal[0] * -distance,
-        halfway[1] + normal[1] * -distance
-      ];
-
-      let radial = [
-        this.previousNode.state.turtle.position[0] - this.state.center[0],
-        this.previousNode.state.turtle.position[1] - this.state.center[1],
-      ];
-      this.state.radius = Math.sqrt(radial[0] * radial[0] + radial[1] * radial[1]);
-    }
-
-    // The curl is position + radius. The center is derived such that the
-    // transition into the curl is smooth. The heading vector runs tangent the
-    // curl.
-    else if (this.form === ArcType.Curl) {
-      const vector = [
-        this.state.radius * Math.sin(this.previousNode.state.turtle.heading * Math.PI / 180),
-        this.state.radius * Math.cos(this.previousNode.state.turtle.heading * Math.PI / 180),
-      ];
-      if (radians > 0) {
-        vector[0] *= -1;
-      } else {
-        vector[1] *= -1;
-      }
-      this.state.center = [
-        this.previousNode.state.turtle.position[0] + vector[0],
-        this.previousNode.state.turtle.position[1] + vector[1],
-      ];
-      this.state.position[0] = this.state.center[0] + Math.cos(radians) * -vector[0] - Math.sin(radians) * -vector[1];
-      this.state.position[1] = this.state.center[1] + Math.sin(radians) * -vector[0] + Math.cos(radians) * -vector[1];
-    }
-
-    // The wedge is center + degrees.
-    else {
-      let radial = [
-        this.previousNode.state.turtle.position[0] - this.state.center[0],
-        this.previousNode.state.turtle.position[1] - this.state.center[1],
-      ];
-      this.state.radius = Math.sqrt(radial[0] * radial[0] + radial[1] * radial[1]);
-
-      const rotated = [
-        radial[0] * Math.cos(radians) - radial[1] * Math.sin(radians),
-        radial[0] * Math.sin(radians) + radial[1] * Math.cos(radians),
-      ];
-
-      this.state.position[0] = this.state.center[0] + radial[0] * Math.cos(radians) - radial[1] * Math.sin(radians);
-      this.state.position[1] = this.state.center[1] + radial[0] * Math.sin(radians) + radial[1] * Math.cos(radians);
-    }
+    this.normalize();
 
     this.state.turtle.position[0] = this.state.position[0];
     this.state.turtle.position[1] = this.state.position[1];
@@ -1836,37 +1690,6 @@ export class ArcNode extends Node {
   initializeMarkState() {
     super.initializeMarkState();
 
-    if (this.form === ArcType.Wedge) {
-      this.centerMark = new VectorPanMark(this.parentFrame, this, value => {
-        this.state.center = value;
-        this.configureTurtleAndDependents();
-      });
-
-      this.positionMark = new WedgeDegreesMark(this.parentFrame, this, value => {
-        this.state.degrees = value;
-        this.configureTurtleAndDependents();
-      });
-    } else if (this.form === ArcType.Bump) {
-      this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
-        this.state.position = value;
-        this.configureTurtleAndDependents();
-      });
-
-      this.centerMark = new BumpDegreesMark(this.parentFrame, this, value => {
-        this.state.degrees = value;
-        this.configureTurtleAndDependents();
-      });
-    } else {
-      this.positionMark = new WedgeDegreesMark(this.parentFrame, this, value => {
-        this.state.degrees = value;
-        this.configureTurtleAndDependents();
-      });
-      this.centerMark = new DistanceMark(this.parentFrame, this, value => {
-        this.state.radius = value;
-        this.configureTurtleAndDependents();
-      });
-    }
-
     this.lineMarks = [
       new LineMark(),
       new LineMark(),
@@ -1876,31 +1699,8 @@ export class ArcNode extends Node {
   }
 
   synchronizeMarkState(matrix, inverseMatrix) {
-    if (this.form === ArcType.Wedge) {
-      this.centerMark.synchronizeState(this.state.center, matrix, inverseMatrix);
-      this.positionMark.synchronizeState(this.state.position, this.previousNode.state.turtle.position, this.state.center, matrix, inverseMatrix);
-    } else if (this.form === ArcType.Bump) {
-      this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
-      this.centerMark.synchronizeState(this.state.degrees, this.state.position, this.previousNode.state.turtle.position, this.state.center, matrix, inverseMatrix);
-    } else {
-      this.centerMark.synchronizeState(this.state.center, this.previousNode.state.turtle.position, this.previousNode.state.turtle.heading + (this.state.degrees < 0 ? -90 : 90), matrix, inverseMatrix);
-      this.positionMark.synchronizeState(this.state.position, this.previousNode.state.turtle.position, this.state.center, matrix, inverseMatrix);
-    }
     this.lineMarks[0].synchronizeState(this.state.center, this.previousNode.state.turtle.position);
     this.lineMarks[1].synchronizeState(this.state.center, this.state.position);
-  }
-
-  synchronizeMarkExpressions(t) {
-    if (this.form === ArcType.Wedge) {
-      this.positionMark.synchronizeExpressions(this.expressionAt('degrees', t));
-      this.centerMark.synchronizeExpressions(this.expressionAt('center', t));
-    } else if (this.form === ArcType.Bump) {
-      this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
-      this.centerMark.synchronizeExpressions(this.expressionAt('degrees', t));
-    } else {
-      this.positionMark.synchronizeExpressions(this.expressionAt('degrees', t));
-      this.centerMark.synchronizeExpressions(this.expressionAt('radius', t));
-    }
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -1908,6 +1708,306 @@ export class ArcNode extends Node {
     this.centerMark.synchronizeDom(bounds, handleRadius);
     this.lineMarks[0].synchronizeDom(bounds, handleRadius);
     this.lineMarks[1].synchronizeDom(bounds, handleRadius);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class OrbitNode extends ArcNode {
+  static type = 'orbit';
+  static article = 'an';
+  static timedIds = ['degrees', 'center'];
+
+  static create(parentEnvironment, where) {
+    const node = new OrbitNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static inflate(parentEnvironment, object, inflater) {
+    const node = new OrbitNode();
+    node.embody(parentEnvironment, object, inflater);
+    return node;
+  }
+
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('degrees');
+    this.assertProperty('center');
+
+    this.assertScalarType('degrees', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('center', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('center', fromTime, toTime);
+    this.assertCompleteTimeline('degrees', fromTime, toTime);
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.state.position = [null, null];
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('degrees');
+    this.initializeStaticVectorProperty('center');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('degrees');
+    this.initializeDynamicProperty('center');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('degrees', t);
+    this.synchronizeStateProperty('center', t);
+    this.configureTurtle();
+  }
+
+  normalize() {
+    let radial = [
+      this.previousNode.state.turtle.position[0] - this.state.center[0],
+      this.previousNode.state.turtle.position[1] - this.state.center[1],
+    ];
+    this.state.radius = Math.sqrt(radial[0] * radial[0] + radial[1] * radial[1]);
+
+    const rotated = [
+      radial[0] * Math.cos(this.state.radians) - radial[1] * Math.sin(this.state.radians),
+      radial[0] * Math.sin(this.state.radians) + radial[1] * Math.cos(this.state.radians),
+    ];
+
+    this.state.position[0] = this.state.center[0] + radial[0] * Math.cos(this.state.radians) - radial[1] * Math.sin(this.state.radians);
+    this.state.position[1] = this.state.center[1] + radial[0] * Math.sin(this.state.radians) + radial[1] * Math.cos(this.state.radians);
+  }
+
+  initializeMarkState() {
+    this.centerMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.center = value;
+      this.configureTurtleAndDependents();
+    });
+
+    this.positionMark = new WedgeDegreesMark(this.parentFrame, this, value => {
+      this.state.degrees = value;
+      this.configureTurtleAndDependents();
+    });
+
+    super.initializeMarkState();
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.centerMark.synchronizeState(this.state.center, matrix, inverseMatrix);
+    this.positionMark.synchronizeState(this.state.position, this.previousNode.state.turtle.position, this.state.center, matrix, inverseMatrix);
+    super.synchronizeMarkState(matrix, inverseMatrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('degrees', t));
+    this.centerMark.synchronizeExpressions(this.expressionAt('center', t));
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class CurlNode extends ArcNode {
+  static type = 'curl';
+  static article = 'an';
+  static timedIds = ['degrees', 'radius'];
+
+  static create(parentEnvironment, where) {
+    const node = new CurlNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static inflate(parentEnvironment, object, inflater) {
+    const node = new CurlNode();
+    node.embody(parentEnvironment, object, inflater);
+    return node;
+  }
+
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('degrees');
+    this.assertProperty('radius');
+
+    this.assertScalarType('degrees', [ExpressionInteger, ExpressionReal]);
+    this.assertScalarType('radius', [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('radius', fromTime, toTime);
+    this.assertCompleteTimeline('degrees', fromTime, toTime);
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.state.position = [null, null];
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('degrees');
+    this.initializeStaticScalarProperty('radius');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('degrees');
+    this.initializeDynamicProperty('radius');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('degrees', t);
+    this.synchronizeStateProperty('radius', t);
+    this.configureTurtle();
+  }
+
+  normalize() {
+    // The curl is position + radius. The center is derived such that the
+    // transition into the curl is smooth. The heading vector runs tangent the
+    // curl.
+    const vector = [
+      this.state.radius * Math.sin(this.previousNode.state.turtle.heading * Math.PI / 180),
+      this.state.radius * Math.cos(this.previousNode.state.turtle.heading * Math.PI / 180),
+    ];
+
+    vector[this.state.radians > 0 ? 0 : 1] *= -1;
+    this.state.center = [
+      this.previousNode.state.turtle.position[0] + vector[0],
+      this.previousNode.state.turtle.position[1] + vector[1],
+    ];
+    this.state.position[0] = this.state.center[0] + Math.cos(this.state.radians) * -vector[0] - Math.sin(this.state.radians) * -vector[1];
+    this.state.position[1] = this.state.center[1] + Math.sin(this.state.radians) * -vector[0] + Math.cos(this.state.radians) * -vector[1];
+  }
+
+  initializeMarkState() {
+    this.positionMark = new WedgeDegreesMark(this.parentFrame, this, value => {
+      this.state.degrees = value;
+      this.configureTurtleAndDependents();
+    });
+    this.centerMark = new DistanceMark(this.parentFrame, this, value => {
+      this.state.radius = value;
+      this.configureTurtleAndDependents();
+    });
+
+    super.initializeMarkState();
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.centerMark.synchronizeState(this.state.center, this.previousNode.state.turtle.position, this.previousNode.state.turtle.heading + (this.state.degrees < 0 ? -90 : 90), matrix, inverseMatrix);
+    this.positionMark.synchronizeState(this.state.position, this.previousNode.state.turtle.position, this.state.center, matrix, inverseMatrix);
+    super.synchronizeMarkState(matrix, inverseMatrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('degrees', t));
+    this.centerMark.synchronizeExpressions(this.expressionAt('radius', t));
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class BumpNode extends ArcNode {
+  static type = 'bump';
+  static article = 'a';
+  static timedIds = ['degrees', 'position'];
+
+  static create(parentEnvironment, where) {
+    const node = new BumpNode();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static inflate(parentEnvironment, object, inflater) {
+    const node = new BumpNode();
+    node.embody(parentEnvironment, object, inflater);
+    return node;
+  }
+
+  validate(fromTime, toTime) {
+    // Assert required properties.
+    this.assertProperty('degrees');
+    this.assertProperty('position');
+
+    this.assertScalarType('degrees', [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    this.assertCompleteTimeline('degrees', fromTime, toTime);
+    this.assertCompleteTimeline('position', fromTime, toTime);
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.state.center = [null, null];
+  }
+
+  initializeStaticState() {
+    this.initializeStaticScalarProperty('degrees');
+    this.initializeStaticVectorProperty('position');
+  }
+
+  initializeDynamicState() {
+    this.state.animation = {};
+    this.initializeDynamicProperty('degrees');
+    this.initializeDynamicProperty('position');
+  }
+
+  synchronizeState(t) {
+    this.synchronizeStateProperty('degrees', t);
+    this.synchronizeStateProperty('position', t);
+    this.configureTurtle();
+  }
+
+  normalize() {
+    let diff = [
+      this.state.position[0] - this.previousNode.state.turtle.position[0],
+      this.state.position[1] - this.previousNode.state.turtle.position[1],
+    ];
+    let magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
+    let distance = (0.5 * Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1])) / Math.tan(this.state.radians * 0.5);
+    let halfway = [
+      (this.previousNode.state.turtle.position[0] + this.state.position[0]) * 0.5,
+      (this.previousNode.state.turtle.position[1] + this.state.position[1]) * 0.5
+    ];
+    let normal = [
+      diff[1] / magnitude,
+      -diff[0] / magnitude
+    ];
+    this.state.center = [
+      halfway[0] + normal[0] * -distance,
+      halfway[1] + normal[1] * -distance
+    ];
+
+    let radial = [
+      this.previousNode.state.turtle.position[0] - this.state.center[0],
+      this.previousNode.state.turtle.position[1] - this.state.center[1],
+    ];
+    this.state.radius = Math.sqrt(radial[0] * radial[0] + radial[1] * radial[1]);
+  }
+
+  initializeMarkState() {
+    this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+      this.state.position = value;
+      this.configureTurtleAndDependents();
+    });
+
+    this.centerMark = new BumpDegreesMark(this.parentFrame, this, value => {
+      this.state.degrees = value;
+      this.configureTurtleAndDependents();
+    });
+
+    super.initializeMarkState();
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+    this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+    this.centerMark.synchronizeState(this.state.degrees, this.state.position, this.previousNode.state.turtle.position, this.state.center, matrix, inverseMatrix);
+    super.synchronizeMarkState(matrix, inverseMatrix);
+  }
+
+  synchronizeMarkExpressions(t) {
+    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+    this.centerMark.synchronizeExpressions(this.expressionAt('degrees', t));
   }
 }
 

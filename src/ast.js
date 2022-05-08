@@ -43,7 +43,9 @@ import {
 } from './transform.js';
 
 import {
-  ArcNode,
+  BumpNode,
+  CurlNode,
+  OrbitNode,
   BackNode,
   CubicNode,
   LineNode,
@@ -1935,14 +1937,40 @@ export class ExpressionWalkNode extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
-export class ExpressionArcNode extends ExpressionFunction {
+export class ExpressionOrbitNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
     this.instance = instance;
   }
 
   evaluate(env) {
-    return ArcNode.create(this.instance, env.callExpression.where);
+    return OrbitNode.create(this.instance, env.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionCurlNode extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env) {
+    return CurlNode.create(this.instance, env.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionBumpNode extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env) {
+    return BumpNode.create(this.instance, env.callExpression.where);
   }
 }
 

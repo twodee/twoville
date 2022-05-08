@@ -13,7 +13,9 @@ import {
 } from './ast.js';
 
 import {
-  ArcNode,
+  BumpNode,
+  CurlNode,
+  OrbitNode,
   BackNode,
   CubicNode,
   CircleNode,
@@ -92,8 +94,12 @@ export class Inflater {
       return QuadraticNode.inflate(env, object, Inflater);
     } else if (object.type === 'cubic') {
       return CubicNode.inflate(env, object, Inflater);
-    } else if (object.type === 'arc') {
-      return ArcNode.inflate(env, object, Inflater);
+    } else if (object.type === 'bump') {
+      return BumpNode.inflate(env, object, Inflater);
+    } else if (object.type === 'orbit') {
+      return OrbitNode.inflate(env, object, Inflater);
+    } else if (object.type === 'curl') {
+      return CurlNode.inflate(env, object, Inflater);
     } else if (object.type === 'translate') {
       return Translate.inflate(env, object, Inflater);
     } else if (object.type === 'scale') {

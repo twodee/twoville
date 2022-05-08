@@ -55,7 +55,9 @@ import {
 
 import {
   Expression,
-  ExpressionArcNode,
+  ExpressionOrbitNode,
+  ExpressionBumpNode,
+  ExpressionCurlNode,
   ExpressionBoolean,
   ExpressionBackNode,
   ExpressionCircleNode,
@@ -2475,7 +2477,9 @@ export class Path extends NodeShape {
     this.bindStatic('line', new FunctionDefinition('line', [], new ExpressionLineNode(this)));
     this.bindStatic('quadratic', new FunctionDefinition('quadratic', [], new ExpressionQuadraticNode(this)));
     this.bindStatic('cubic', new FunctionDefinition('cubic', [], new ExpressionCubicNode(this)));
-    this.bindStatic('arc', new FunctionDefinition('arc', [], new ExpressionArcNode(this)));
+    this.bindStatic('orbit', new FunctionDefinition('orbit', [], new ExpressionOrbitNode(this)));
+    this.bindStatic('curl', new FunctionDefinition('curl', [], new ExpressionCurlNode(this)));
+    this.bindStatic('bump', new FunctionDefinition('bump', [], new ExpressionBumpNode(this)));
     this.bindStatic('mirror', new FunctionDefinition('mirror', [], new ExpressionMirror(this)));
     this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
     this.bindStatic('push', new FunctionDefinition('push', [], new ExpressionPushNode(this)));
