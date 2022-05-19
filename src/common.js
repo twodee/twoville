@@ -67,7 +67,11 @@ export class SourceLocation {
   }
 
   contains(column, row) {
-    return this.lineStart <= row && row <= this.lineEnd && this.columnStart <= column && column - 1 <= this.columnEnd;
+    // If the cursor is on the start line, it must be after the start column.
+    // If on the end line, it must be before (or after) the end column.
+    const afterStart = (this.lineStart === row && this.columnStart <= column) || this.lineStart < row;
+    const beforeEnd = (this.lineEnd === row && this.columnEnd + 1 >= column) || this.lineEnd > row;
+    return afterStart && beforeEnd;
   }
 
   clone() {
