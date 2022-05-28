@@ -16,7 +16,7 @@ import {Interpreter} from './interpreter.js';
 import {Messager} from './messager.js';
 import {Inflater} from './inflater.js';
 
-const hasWorker = true;
+const hasWorker = false;
 
 let editor;
 let docEditors = [];

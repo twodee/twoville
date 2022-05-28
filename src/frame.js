@@ -233,6 +233,15 @@ export class Frame {
     }
     return null;
   }
+
+  static resolveStaticLvalue(id, frames) {
+    for (let frame of frames) {
+      if (frame.staticContext.has(id)) {
+        return frame;
+      }
+    }
+    return frames[0];
+  }
 }
 
 // --------------------------------------------------------------------------- 

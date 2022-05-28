@@ -1028,7 +1028,8 @@ export class ExpressionFunctionDefinition extends Expression {
   }
 
   evaluate(env) {
-    env.frames[env.frames.length - 1].bindStatic(this.name, new FunctionDefinition(this.name, this.formals, this.body));
+    // TODO which end of the frames is this being added to?
+    env.frames[env.frames.length - 1].bindStatic(this.name, new FunctionDefinition(this.name, this.formals, this.body, env.frames[0]));
   }
 }
 
@@ -1080,9 +1081,15 @@ export class ExpressionIdentifier extends Expression {
       // env.stackFrame.sourceSpans.push(env.whereAssigned);
     // }
 
-    // TODO rhs as last parameter
-    env.frames[0].bind(env, this.nameToken.source, value);
-    // TODO don't necessarily bind to immediate s cope
+    // If the immediate frame is an objective, we force the assignment to be to
+    // a local variable. If the immediate frame is a function, we look up the
+    // lexical hierarchy to find a frame a with an existing binding. If none is
+    // found, we make a local.
+    let frame = env.frames[0];
+    if (!(frame instanceof ObjectFrame)) {
+      frame = Frame.resolveStaticLvalue(this.nameToken.source, env.frames);
+    }
+    frame.bind(env, this.nameToken.source, value);
 
     return value;
   }
@@ -1224,7 +1231,7 @@ export class ExpressionFunctionCall extends Expression {
 
     let returnValue = f.body.evaluate({
       ...env,
-      frames: [callFrame, ...env.frames],
+      frames: [callFrame, f.scopeFrame/*, f.scopeFrame.parentFrame*/],
       callExpression: this,
     });
 
@@ -1791,7 +1798,7 @@ export class ExpressionWith extends Expression {
   evaluate(env) {
     let instance = this.scope.evaluate(env);
 
-    // TODO is it ObjectFrame or Frame that I want to ensure?
+    // TODO is it ObjectFrame or Frame that I want to ensure? I think Frame. view isn't an object frame, for example.
     if (!(instance instanceof Frame || instance instanceof ExpressionVector)) {
       throw new LocatedException(this.scope.where, `I encountered a block on something that isn't an object.`);
     }

@@ -357,13 +357,17 @@ export function parse(tokens, source) {
 
   function expressionRelational() {
     let a = expressionAdditive();
-    while (has(Tokens.Less) || has(Tokens.More)) {
+    while (has(Tokens.Less) || has(Tokens.More) || has(Tokens.MoreEqual) || has(Tokens.LessEqual)) {
       let operator = consume();
       let b = expressionAdditive();
-      if (operator.type == Tokens.Less) {
+      if (operator.type === Tokens.Less) {
         a = new ExpressionLess(a, b, SourceLocation.span(a.where, b.where));
-      } else {
+      } else if (operator.type === Tokens.LessEqual) {
+        a = new ExpressionLessEqual(a, b, SourceLocation.span(a.where, b.where));
+      } else if (operator.type === Tokens.More) {
         a = new ExpressionMore(a, b, SourceLocation.span(a.where, b.where));
+      } else {
+        a = new ExpressionMoreEqual(a, b, SourceLocation.span(a.where, b.where));
       }
     }
     return a;
@@ -374,7 +378,7 @@ export function parse(tokens, source) {
     while (has(Tokens.Plus) || has(Tokens.Minus)) {
       let operator = consume();
       let b = expressionMultiplicative();
-      if (operator.type == Tokens.Plus) {
+      if (operator.type === Tokens.Plus) {
         a = new ExpressionAdd(a, b, SourceLocation.span(a.where, b.where));
       } else {
         a = new ExpressionSubtract(a, b, SourceLocation.span(a.where, b.where));
