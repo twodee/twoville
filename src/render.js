@@ -79,6 +79,7 @@ export class RenderEnvironment extends Frame {
     this.mouseAtSvg = this.svg.createSVGPoint();
 
     this.svg.addEventListener('wheel', this.onWheel);
+    this.svg.addEventListener('mouseleave', this.onMouseLeave);
     this.svg.addEventListener('mousedown', this.onMouseDown);
     this.svg.addEventListener('mousemove', this.onMouseMove);
     this.svg.addEventListener('mouseup', this.onMouseUp);
@@ -224,6 +225,7 @@ export class RenderEnvironment extends Frame {
   stop() {
     this.svg.removeEventListener('wheel', this.onWheel);
     this.svg.removeEventListener('mousedown', this.onMouseDown);
+    this.svg.removeEventListener('mouseleave', this.onMouseLeave);
     this.svg.removeEventListener('mousemove', this.onMouseMove);
     this.svg.removeEventListener('mouseup', this.onMouseUp);
   }
@@ -446,6 +448,10 @@ export class RenderEnvironment extends Frame {
     e.preventDefault();
     return false;
   }
+
+  onMouseLeave = e => {
+    this.mouseStatusLabel.innerText = '';
+  };
 
   onMouseDown = e => {
     this.contextMenu.style.display = 'none';
