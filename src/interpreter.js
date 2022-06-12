@@ -107,7 +107,7 @@ export class InterpreterFrame extends Frame {
 
     // Export properties
     const exportProperties = Frame.create();
-    exportProperties.bindStatic('name', new ExpressionString('twoville'));
+    // exportProperties.bindStatic('name', new ExpressionUnit());
     exportProperties.bindStatic('loop', new ExpressionInteger(0));
     exportProperties.bindStatic('delay', new ExpressionInteger(10));
     exportProperties.bindStatic('size', new ExpressionVector([

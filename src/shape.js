@@ -552,8 +552,9 @@ export class Shape extends ObjectFrame {
     this.assertScalarType('opacity', [ExpressionInteger, ExpressionReal]);
 
     // If the opacity of the shape is a constant 0, then color is optional.
-    this.hasFill = this.hasDynamic('opacity') || !this.hasStatic('opacity') || this.getStatic('opacity').value !== 0;
-    if (this.hasFill) {
+    // this.hasFill = (this.hasDynamic('opacity') || !this.hasStatic('opacity') || this.getStatic('opacity').value !== 0) && !this.strokeFrame;
+    this.hasFill = !this.strokeFrame || this.has('color'); 
+    if (!this.strokeFrame) {
       this.assertProperty('color');
     }
 
@@ -601,6 +602,8 @@ export class Shape extends ObjectFrame {
     if (this.hasFill) {
       const rgb = `rgb(${this.state.colorBytes[0]}, ${this.state.colorBytes[1]}, ${this.state.colorBytes[2]})`;
       this.element.setAttributeNS(null, 'fill', rgb);
+    } else {
+      this.element.setAttributeNS(null, 'fill', 'none');
     }
 
     if (this.has('opacity')) {
@@ -2286,6 +2289,7 @@ export class Polyline extends VertexShape {
 
   validateProperties(fromTime, toTime) {
     this.strokeFrame = this;
+    this.strokeFrame.bindStatic('opacity', new ExpressionReal(1));
     this.validateStrokeProperties(fromTime, toTime);
   }
 
@@ -2386,6 +2390,7 @@ export class Line extends VertexShape {
 
   validateProperties(fromTime, toTime) {
     this.strokeFrame = this;
+    this.strokeFrame.bindStatic('opacity', new ExpressionReal(1));
     this.validateStrokeProperties(fromTime, toTime);
   }
 
@@ -2504,6 +2509,9 @@ export class Path extends NodeShape {
 
   validateProperties(fromTime, toTime) {
     this.strokeFrame = this.stroke;
+    if (this.strokeFrame) {
+      this.strokeFrame.bindStatic('opacity', new ExpressionReal(1));
+    }
     this.validateFillProperties(fromTime, toTime);
     this.validateStrokeProperties(fromTime, toTime);
 

@@ -140,7 +140,6 @@ function downloadPng(root) {
   const data = new XMLSerializer().serializeToString(root);
   const svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
   const url = URL.createObjectURL(svgBlob);
-  const name = scene.get('export').get('name').value;
   const size = scene.get('export').get('size');
 
   const img = new Image(size.get(0).value, size.get(1).value);
@@ -151,7 +150,7 @@ function downloadPng(root) {
     const context = canvas.getContext('2d');
     context.drawImage(img, 0, 0);
     canvas.toBlob(blob => {
-      downloadBlob(`${name}.png`, blob);
+      downloadBlob(buildName('png'), blob);
       URL.revokeObjectURL(url);
     }, 'image/png');
   };
@@ -159,11 +158,22 @@ function downloadPng(root) {
   img.src = url;
 }
 
+function buildName(extension) {
+  let name;
+  if (scene.get('export').hasStatic('name')) {
+    name = scene.get('export').get('name').value;
+  } else if (currentName) {
+    name = currentName;
+  } else {
+    name = 'twoville';
+  }
+  return `${name}.${extension}`;
+}
+
 function downloadSvg(root) {
   let data = new XMLSerializer().serializeToString(root);
   let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
-  let name = scene.get('export').get('name').value;
-  downloadBlob(`${name}.svg`, svgBlob);
+  downloadBlob(buildName('svg'), svgBlob);
 }
 
 function animateTo(t) {

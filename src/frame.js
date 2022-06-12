@@ -454,6 +454,7 @@ export class StrokeFrame extends ObjectFrame {
   static create(parentFrame, where) {
     const frame = new StrokeFrame();
     frame.initialize(parentFrame, where);
+    frame.bindStatic('opacity', new ExpressionReal(1));
     parentFrame.stroke = frame;
     return frame;
   }

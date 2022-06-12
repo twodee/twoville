@@ -1029,7 +1029,7 @@ export class ExpressionFunctionDefinition extends Expression {
 
   evaluate(env) {
     // TODO which end of the frames is this being added to?
-    env.frames[env.frames.length - 1].bindStatic(this.name, new FunctionDefinition(this.name, this.formals, this.body, env.frames[0]));
+    env.frames[env.frames.length - 1].bindStatic(this.name, new FunctionDefinition(this.name, this.formals, this.body, env.frames));
   }
 }
 
@@ -1053,9 +1053,10 @@ export class ExpressionIdentifier extends Expression {
       let callFrame = Frame.create();
       let returnValue = value.body.evaluate({
         ...env,
-        frames: [callFrame, ...env.frames],
+        frames: [callFrame, ...value.scopeFrames],
         callExpression: this,
       });
+
       return returnValue;
     } else if (value) {
       return value;
@@ -1231,7 +1232,7 @@ export class ExpressionFunctionCall extends Expression {
 
     let returnValue = f.body.evaluate({
       ...env,
-      frames: [callFrame, f.scopeFrame/*, f.scopeFrame.parentFrame*/],
+      frames: [callFrame, ...f.scopeFrames],
       callExpression: this,
     });
 

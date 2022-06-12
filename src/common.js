@@ -150,11 +150,11 @@ export class LocatedException extends MessagedException {
 // --------------------------------------------------------------------------- 
 
 export class FunctionDefinition {
-  constructor(name, formals, body, scopeFrame) {
+  constructor(name, formals, body, scopeFrames) {
     this.name = name;
     this.formals = formals;
     this.body = body;
-    this.scopeFrame = scopeFrame;
+    this.scopeFrames = scopeFrames ?? [];
   }
 
   deflate() {
