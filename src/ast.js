@@ -1374,13 +1374,43 @@ export class ExpressionFor extends Expression {
   }
 
   evaluate(env) {
-    let start = this.start.evaluate(env).value;
-    let stop = this.stop.evaluate(env).value;
-    let by = this.by.evaluate(env).value;
+    // assert all (integers or units) or (arrays or units)
+    const isInteger = false;
+    if (isInteger) {
+      let start = this.start.evaluate(env).value;
+      let stop = this.stop.evaluate(env).value;
+      let by = this.by.evaluate(env).value;
 
-    for (let i = start; i < stop; i += by) {
-      new ExpressionAssignment(this.i, new ExpressionInteger(i), true).evaluate(env);
-      this.body.evaluate(env);
+      for (let i = start; i < stop; i += by) {
+        new ExpressionAssignment(this.i, new ExpressionInteger(i), true).evaluate(env);
+        this.body.evaluate(env);
+      }
+    } else {
+      let start = this.start.evaluate(env);
+      let stop = this.stop.evaluate(env).toPrimitiveArray();
+      let by = this.by.evaluate(env);
+
+      if (start instanceof ExpressionUnit) {
+        start = stop.map(_ => 0);
+      } else {
+        start = start.value;
+      }
+
+      if (by instanceof ExpressionUnit) {
+        by = stop.map(_ => 1);
+      } else {
+        by = by.value;
+      }
+
+      for (let r = start[1]; r < stop[1]; r += by[1]) {
+        for (let c = start[0]; c < stop[0]; c += by[0]) {
+          new ExpressionAssignment(this.i, new ExpressionVector([
+            new ExpressionInteger(c),
+            new ExpressionInteger(r),
+          ]), true).evaluate(env);
+          this.body.evaluate(env);
+        } 
+      }
     }
 
     // TODO return?
@@ -1801,7 +1831,7 @@ export class ExpressionWith extends Expression {
 
     // TODO is it ObjectFrame or Frame that I want to ensure? I think Frame. view isn't an object frame, for example.
     if (!(instance instanceof Frame || instance instanceof ExpressionVector)) {
-      throw new LocatedException(this.scope.where, `I encountered a block on something that isn't an object.`);
+      throw new LocatedException(this.scope.where, `I encountered a block on something that isn't an object. This can happen if you have some code indented more than it should be. Or maybe the object isn't the object you think it is.`);
     }
 
     if (instance.hasOwnProperty('sourceSpans')) {
@@ -1815,7 +1845,7 @@ export class ExpressionWith extends Expression {
         if (element instanceof Frame) {
           this.body.evaluate({...env, frames: [element, ...env.frames]});
         } else {
-          throw new LocatedException(element.where, `I encountered a block on something that isn't an object.`);
+          throw new LocatedException(element.where, `I encountered a block on something that isn't an object. This can happen if you have some code indented more than it should be. Or maybe the object isn't the object you think it is.`);
         }
       });
     }

@@ -2569,7 +2569,8 @@ export class Path extends NodeShape {
 	  if (this.mirrors.length > 0) {
       let segments = [];
       let previousSegment = null;
-      for (let i = 0; i < this.nodes.length; i += 1) {
+      for (let i = 0; i < this.domNodes.length; i += 1) {
+        console.log("this.nodes[i]:", this.domNodes[i]);
         previousSegment = this.nodes[i].segment(previousSegment);
         if (i > 0 && previousSegment) {
           segments.push(previousSegment);

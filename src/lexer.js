@@ -210,25 +210,20 @@ export function lex(source) {
   }
 
   function indentation() {
-    // while (true) {
-      while (has(/[ \t]/)) {
-        consume();
-      }
-
-      // If we hit a line break, then the whole line is empty. Let's
-      // automatically advance to the next line.
-      // if (has('\n')) {
-        // consume();
-        // resetToken();
-      // } else {
-        // break;
-      // }
-    // }
+    while (has(/[ \t]/)) {
+      consume();
+    }
 
     if (has('/') && has('/', 1)) {
       consume();
       consume();
       wholeLineComment();
+    } else if (has('\n')) {
+      consume();
+      resetToken();
+      indentation();
+    } else if (i === source.length) {
+      resetToken();
     } else {
       emit(Tokens.Indentation);
     }
@@ -285,7 +280,7 @@ export function lex(source) {
     while (i < source.length && !has('\n')) {
       consume();
     }
-    consume();
+    consume(); // eat \n
     resetToken();
     indentation();
   }
@@ -386,5 +381,6 @@ export function lex(source) {
 
   emit(Tokens.EOF);
 
+  // console.log("tokens:", tokens);
   return tokens;
 }

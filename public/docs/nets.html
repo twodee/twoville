@@ -1,0 +1,150 @@
+<h2>Nets</h2>
+
+<p>All the objects we've made so far have been flat. Let's break out of the flat plane into the third dimension. In order to cut 3D objects with our tools, they must start out flat. The flat objects will be folded into their 3D shapes.</p>
+
+<p>A flat shape that folds into a solid and closed 3D shape is called a <i>geometric net</i>. Designing a net is a good mental challenge that requires a lot of reverse thinking. You start by envisioning the 3D shape and unfold it in your mind.</p>
+
+<p>Picture a tetrahedron, which is the simplest shape that occupies all three dimensions. It is made of four equilateral triangles.</p>
+
+<img src="/docs/images/tetrahedron.gif" class="docs-image">
+
+<p>There are several ways to unfold one so that it lies flat. Consider this method:</p>
+
+<ul>
+  <li>Set the tetrahedron so it's resting flat on a table.</li>
+  <li>Peel one of the side triangles down so it lies flat.</li>
+  <li>Peel one of the remaining side triangles down so it lies flat.</li>
+  <li>Peel the last side triangle down so it lies flat.</li>
+</ul>
+
+<p>What shape do the flattened triangles form? A bigger equilateral triangle. We can make this shape in Twoville as a polygon with a bit of turtle geometry:</p>
+
+<div class="docs-source">s = 10
+
+view
+  size = [s * 4, s * 4]
+
+polygon
+  stroke
+    color = :black
+    weight = 0.1
+  turtle
+    position = [10, 10]
+    heading = 0
+  repeat 3
+    walk.distance = s
+    walk.distance = s
+    turn.degrees = 120
+</div>
+
+<p>Where the object should be folded, we put red lines. Our cutting tool will <i>score</i> red lines instead of cutting them all the way through. These lines form an equilateral triangle, which we can make with turtle geometry:</p>
+
+<div class="docs-source">s = 10
+
+view
+  size = [s * 4, s * 4]
+
+polygon
+  stroke
+    color = :black
+    weight = 0.1
+  turtle
+    position = [10, 10]
+    heading = 0
+  repeat 3
+    walk.distance = s
+    walk.distance = s
+    turn.degrees = 120
+
+path
+  stroke
+    color = :red
+    weight = 0.1
+  turtle
+    position = [10 + s, 10]
+    heading = 60
+  repeat 3
+    walk.distance = s
+    turn.degrees = 120
+</div>
+
+<p>Suppose we cut this flat and fold it into a solid tetrahedron. The triangles would not stick to each other. We could attach them with tape, but visible tape is inelegant. To attach them invisibly, we want to add tabs along the edges that fold under a neighboring triangle. With a little glue, these tabs will hold the tetrahedron together.</p>
+
+<p>In Twoville, we add tabs by inserting a <code>tab</code> command right before a command that makes a straight line. Here we add a tab to the first triangle along each edge:</p>
+
+<div class="docs-source">s = 10
+
+view
+  size = [s * 4, s * 4]
+
+polygon
+  stroke
+    color = :black
+    weight = 0.1
+  turtle
+    position = [10, 10]
+    heading = 0
+  repeat 3
+    tab
+    walk.distance = s
+    walk.distance = s
+    turn.degrees = 120
+
+path
+  stroke
+    color = :red
+    weight = 0.1
+  turtle
+    position = [10 + s, 10]
+    heading = 60
+  repeat 3
+    walk.distance = s
+    turn.degrees = 120
+</div>
+
+<p>The tabs also need score lines. We add new segments to our path by tracing along the outer edge again. However, this time we use <code>fly</code> to skip over the triangle that doesn't have a tab:</p>
+
+<div class="docs-source">s = 10
+
+view
+  size = [s * 4, s * 4]
+
+polygon
+  stroke
+    color = :black
+    weight = 0.1
+  turtle
+    position = [10, 10]
+    heading = 0
+  repeat 3
+    tab
+    walk.distance = s
+    walk.distance = s
+    turn.degrees = 120
+
+path
+  stroke
+    color = :red
+    weight = 0.1
+  turtle
+    position = [10 + s, 10]
+    heading = 60
+  repeat 3
+    walk.distance = s
+    turn.degrees = 120
+  turtle
+    position = [10, 10]
+    heading = 0
+  repeat 3
+    walk.distance = s
+    fly.distance = s
+    turn.degrees = 120
+</div>
+
+<p>When we cut this out, we end up with a tetrahedron that almost makes itself. We just apply a little glue.</p>
+
+<p>Now it's your turn design a net that folds into a box. A box has six sides: four walls on the side, one on the top, and one on the bottom. Here's one possible unfolding with the four walls on the side in a long strip:</p>
+
+<img src="/docs/images/box-net.svg" class="column-50">
+
+<p>Draw your unfolded box on graph paper first. Mark the score lines. Label the walk distances and turn degrees. Mark the edges where you would like tabs to appear. Not all of them need tabs; you will need to fold this mentally to identify the ones that do.</p>

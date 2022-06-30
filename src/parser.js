@@ -46,6 +46,7 @@ import {
   ExpressionString,
   ExpressionSubscript,
   ExpressionSubtract,
+  ExpressionUnit,
   ExpressionVector,
   ExpressionWith,
   StatementBetween,
@@ -289,7 +290,7 @@ export function parse(tokens, source) {
       } else if (has(Tokens.Comma)) {
         throw new LocatedException(tokens[i].where, `I found a comma in a strange place. They only appear in lists, function calls, and function headers, but this code isn't any of those. Either you meant it to be or you have a stray comma.`);
       } else if (!has(Tokens.EOF)) {
-        throw new LocatedException(tokens[i].where, `I expected a linebreak or the end of the program, but I found <var>${tokens[i].source}</var>.`);
+        throw new LocatedException(tokens[i].where, `I ran into a stray <var>${tokens[i].source}</var>, and I'm not sure what to do with that.`);
       }
     }
 
@@ -700,7 +701,7 @@ export function parse(tokens, source) {
           if (has(Tokens.Range)) {
             consume(); // eat ..
             stop = expression();
-            stop = new ExpressionAdd(new ExpressionInteger(1), stop);
+            stop = new ExpressionAdd(stop, new ExpressionInteger(1));
           } else {
             // throw new LocatedException(SourceLocation.span(sourceStart, start.where), 'I expected the range operator .. in a for-in loop.');
             const array = start;
@@ -714,13 +715,13 @@ export function parse(tokens, source) {
           }
         } else if (has(Tokens.To)) {
           consume(); // eat to
-          start = new ExpressionInteger(0);
+          start = new ExpressionUnit();
           stop = expression();
         } else if (has(Tokens.Through)) {
           consume(); // eat through
-          start = new ExpressionInteger(0);
+          start = new ExpressionUnit();
           stop = expression();
-          stop = new ExpressionAdd(new ExpressionInteger(1), stop);
+          stop = new ExpressionAdd(stop, new ExpressionInteger(1));
         } else {
           throw new LocatedException(sourceStart, 'I expected one of to, through, or in to specify the for loop\'s range.');
         }
@@ -729,7 +730,7 @@ export function parse(tokens, source) {
           consume(); // eat by
           by = expression();
         } else {
-          by = new ExpressionInteger(1);
+          by = new ExpressionUnit();
         }
 
         if (!has(Tokens.Linebreak)) {

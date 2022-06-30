@@ -465,6 +465,10 @@ export class WalkNode extends Node {
     return true;
   }
 
+  segment(previousSegment) {
+    return new LineSegment(this.previousNode.state.turtle.position, this.state.turtle.position);
+  }
+
   getPositions() {
     return [this.state.turtle.position];
   }
