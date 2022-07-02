@@ -410,6 +410,12 @@ export class TweakableMark extends Mark {
     onMouseDown = event => {
       event.stopPropagation();
 
+      // If the marks are stale, perhaps because of an edit to the code, don't
+      // permit any manipulation through them.
+      if (root.isStale) {
+        return;
+      }
+
       // The shape might not be hovered, which makes the marks appear, but not
       // selected. Clicking forces the shape's selection.
       root.select(this.shape, marker.id);
@@ -435,8 +441,6 @@ export class TweakableMark extends Mark {
 
       window.addEventListener('mousemove', onMouseMove);
       window.addEventListener('mouseup', onMouseUp);
-
-      // if (this.expression && !this.shape.root.isStale) {
     };
 
     onMouseMove = event => {
