@@ -101,14 +101,14 @@ export class RenderEnvironment extends Frame {
       }
     `;
 
-    const viewProperties = this.getStatic('view');
-    let size = viewProperties.get('size');
+    const view = this.getStatic('view');
+    let size = view.get('size');
 
     let corner;
-    if (viewProperties.has('corner')) {
-      corner = viewProperties.get('corner');
-    } else if (viewProperties.has('center')) {
-      let center = viewProperties.get('center');
+    if (view.has('corner')) {
+      corner = view.get('corner');
+    } else if (view.has('center')) {
+      let center = view.get('center');
       corner = new ExpressionVector([
         new ExpressionReal(center.get(0).value - size.get(0).value * 0.5),
         new ExpressionReal(center.get(1).value - size.get(1).value * 0.5),
@@ -184,42 +184,24 @@ export class RenderEnvironment extends Frame {
       shape.initializeMarkDom(this);
     }
 
-    // const boundingBox = new BoundingBox();
-    // for (let shape of this.shapes) {
-      // shape.configure(this.bounds);
-      // boundingBox.encloseBox(shape.boundingBox);
-    // }
+    this.isAutofit = view.get('autofit').value;
 
-    // if (viewProperties.get('autofit').value) {
-      // this.fitBounds = {
-        // x: boundingBox.min[0],
-        // y: boundingBox.min[1],
-        // width: boundingBox.width,
-        // height: boundingBox.height,
-      // };
-      // this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
-      // this.fit();
-
-      // TODO: Is this the best way to ensure that the transform gets updated?
-      // for (let shape of this.shapes) {
-        // for (let transform of shape.transforms) {
-          // transform.updateDomCommand(this.bounds);
-        // }
-      // }
-    // }
-
-    let pageOutline = document.createElementNS(svgNamespace, 'rect');
-    pageOutline.setAttributeNS(null, 'id', 'x-outline');
-    pageOutline.setAttributeNS(null, 'visibility', this.settings.showPageOutline ? 'visible' : 'hidden');
-    pageOutline.setAttributeNS(null, 'x', this.fitBounds.x);
-    pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
-    pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
-    pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
-    pageOutline.classList.add('mark', 'view-outline');
-    this.sceneMarkGroup.appendChild(pageOutline);
+    this.pageOutline = document.createElementNS(svgNamespace, 'rect');
+    this.pageOutline.setAttributeNS(null, 'id', 'x-outline');
+    this.pageOutline.setAttributeNS(null, 'visibility', this.settings.showPageOutline ? 'visible' : 'hidden');
+    this.synchronizeOutline();
+    this.pageOutline.classList.add('mark', 'view-outline');
+    this.sceneMarkGroup.appendChild(this.pageOutline);
 
     this.state = {};
     this.isStarted = true;
+  }
+
+  synchronizeOutline() {
+    this.pageOutline.setAttributeNS(null, 'x', this.fitBounds.x);
+    this.pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
+    this.pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
+    this.pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
   }
 
   stop() {
@@ -256,6 +238,24 @@ export class RenderEnvironment extends Frame {
   synchronizeMarkState(t) {
     for (let drawable of this.drawables) {
       drawable.synchronizeMarkState(t, this.bounds);
+    }
+
+    if (this.isAutofit) {
+      const boundingBox = new BoundingBox();
+      for (let shape of this.shapes) {
+        boundingBox.encloseBox(shape.boundingBox);
+      }
+
+      this.fitBounds = {
+        x: boundingBox.min[0],
+        y: this.bounds.height - boundingBox.height - boundingBox.min[1],
+        width: boundingBox.width,
+        height: boundingBox.height,
+      };
+
+      this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
+      this.fit();
+      this.synchronizeOutline();
     }
   }
 
@@ -317,18 +317,6 @@ export class RenderEnvironment extends Frame {
     clone.setAttributeNS(null, 'viewBox', `${this.fitBounds.x} ${this.fitBounds.y} ${this.fitBounds.width} ${this.fitBounds.height}`);
     removeClassMembers(clone, 'mark-group');
     return clone;
-  }
-
-  rescale() {
-    const matrix = this.svg.getScreenCTM();
-    const factor = matrix.a;
-    // TODO should this be all shapes?
-    for (let shape of this.drawables) {
-      if (shape.state.isEnabled) {
-        shape.updateContentDom(this.bounds, factor);
-        shape.updateInteractionDom(this.bounds, factor);
-      }
-    }
   }
 
   stale() {
