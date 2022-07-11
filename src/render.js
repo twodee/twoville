@@ -126,7 +126,6 @@ export class RenderEnvironment extends Frame {
       width: size.get(0).value,
       height: size.get(1).value,
     };
-    this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
     this.fit();
 
     this.bounds.startTime = this.get('time').get('start').value;
@@ -199,7 +198,7 @@ export class RenderEnvironment extends Frame {
 
   synchronizeOutline() {
     this.pageOutline.setAttributeNS(null, 'x', this.fitBounds.x);
-    this.pageOutline.setAttributeNS(null, 'y', this.fitBounds.y);
+    this.pageOutline.setAttributeNS(null, 'y', -this.fitBounds.y - this.fitBounds.height);
     this.pageOutline.setAttributeNS(null, 'width', this.fitBounds.width);
     this.pageOutline.setAttributeNS(null, 'height', this.fitBounds.height);
   }
@@ -221,6 +220,23 @@ export class RenderEnvironment extends Frame {
     for (let drawable of this.drawables) {
       drawable.synchronizeState(t);
     }
+
+    if (this.isAutofit) {
+      const boundingBox = new BoundingBox();
+      for (let shape of this.shapes) {
+        boundingBox.encloseBox(shape.boundingBox);
+      }
+
+      this.fitBounds = {
+        x: boundingBox.min[0],
+        y: boundingBox.min[1],
+        width: boundingBox.width,
+        height: boundingBox.height,
+      };
+
+      this.fit();
+      this.synchronizeOutline();
+    }
   }
 
   synchronizeDom(t) {
@@ -238,24 +254,6 @@ export class RenderEnvironment extends Frame {
   synchronizeMarkState(t) {
     for (let drawable of this.drawables) {
       drawable.synchronizeMarkState(t, this.bounds);
-    }
-
-    if (this.isAutofit) {
-      const boundingBox = new BoundingBox();
-      for (let shape of this.shapes) {
-        boundingBox.encloseBox(shape.boundingBox);
-      }
-
-      this.fitBounds = {
-        x: boundingBox.min[0],
-        y: this.bounds.height - boundingBox.height - boundingBox.min[1],
-        width: boundingBox.width,
-        height: boundingBox.height,
-      };
-
-      this.fitBounds.span = this.fitBounds.y + (this.fitBounds.y + this.fitBounds.height);
-      this.fit();
-      this.synchronizeOutline();
     }
   }
 
@@ -283,11 +281,12 @@ export class RenderEnvironment extends Frame {
   }
 
   updateViewBox() {
-    svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${this.bounds.y} ${this.bounds.width} ${this.bounds.height}`);
-    if (this.isStarted) {
-      this.synchronizeMarkDom();
-    }
+    svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${-this.bounds.y - this.bounds.height} ${this.bounds.width} ${this.bounds.height}`);
+    // if (this.isStarted) {
+      // this.synchronizeMarkDom();
+    // }
     this.synchronizeToSize();
+    // this.currentTransform = this.svg.getScreenCTM().inverse();
   }
 
   synchronizeToSize() {
@@ -304,7 +303,6 @@ export class RenderEnvironment extends Frame {
     this.bounds.y = this.fitBounds.y;
     this.bounds.width = this.fitBounds.width;
     this.bounds.height = this.fitBounds.height;
-    this.bounds.span = this.bounds.y + (this.bounds.y + this.bounds.height);
     this.updateViewBox();
   }
 
@@ -314,7 +312,7 @@ export class RenderEnvironment extends Frame {
     // https://bugs.launchpad.net/inkscape/+bug/166181
     let clone = this.svg.cloneNode(true);
     clone.removeAttribute('style');
-    clone.setAttributeNS(null, 'viewBox', `${this.fitBounds.x} ${this.fitBounds.y} ${this.fitBounds.width} ${this.fitBounds.height}`);
+    clone.setAttributeNS(null, 'viewBox', `${this.fitBounds.x} ${-this.fitBounds.y - this.fitBounds.height} ${this.fitBounds.width} ${this.fitBounds.height}`);
     removeClassMembers(clone, 'mark-group');
     return clone;
   }
@@ -398,6 +396,7 @@ export class RenderEnvironment extends Frame {
       this.mouseAtSvg.y = e.clientY;
       const matrix = this.svg.getScreenCTM().inverse();
       let center = this.mouseAtSvg.matrixTransform(matrix);
+      center.y = -center.y;
 
       const delta = wheelDistance(e);
 
@@ -450,6 +449,7 @@ export class RenderEnvironment extends Frame {
     this.mouseAtSvg.y = e.clientY;
     this.mouseDownTransform = this.svg.getScreenCTM().inverse();
     this.mouseAt = this.mouseAtSvg.matrixTransform(this.mouseDownTransform);
+    this.mouseAt.y = -this.mouseAt.y;
     this.isMouseDown = true;
   };
 
@@ -459,6 +459,7 @@ export class RenderEnvironment extends Frame {
 
     if (this.isMouseDown) {
       const newMouseAt = this.mouseAtSvg.matrixTransform(this.mouseDownTransform);
+      newMouseAt.y = -newMouseAt.y;
       let delta = [newMouseAt.x - this.mouseAt.x, newMouseAt.y - this.mouseAt.y];
       this.bounds.x -= delta[0];
       this.bounds.y -= delta[1];
@@ -467,7 +468,7 @@ export class RenderEnvironment extends Frame {
     }
 
     const mouseNowAt = this.mouseAtSvg.matrixTransform(this.currentTransform);
-    this.mouseStatusLabel.innerText = `[${formatFloat(mouseNowAt.x, this.settings.mousePrecision)}, ${formatFloat(this.bounds.span - mouseNowAt.y, this.settings.mousePrecision)}]`;
+    this.mouseStatusLabel.innerText = `[${formatFloat(mouseNowAt.x, this.settings.mousePrecision)}, ${formatFloat(-mouseNowAt.y, this.settings.mousePrecision)}]`;
   };
 
   onMouseUp = e => {
@@ -478,7 +479,7 @@ export class RenderEnvironment extends Frame {
   };
 
   mouseLiteral() {
-    return `[${formatFloat(this.mouseAt.x, this.settings.mousePrecision)}, ${formatFloat(this.bounds.span - this.mouseAt.y, this.settings.mousePrecision)}]`;
+    return `[${formatFloat(this.mouseAt.x, this.settings.mousePrecision)}, ${formatFloat(-this.mouseAt.y, this.settings.mousePrecision)}]`;
   }
 
   mouseEnter(shape) {

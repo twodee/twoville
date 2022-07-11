@@ -863,7 +863,7 @@ export class Text extends Shape {
 
   synchronizeCustomDom(t, bounds) {
     this.element.setAttributeNS(null, 'x', this.state.position[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.position[1]);
+    this.element.setAttributeNS(null, 'y', -this.state.position[1]);
     this.element.setAttributeNS(null, 'font-size', this.state.size);
     this.synchronizeFillDom(t, bounds);
     this.synchronizeStrokeDom(t, bounds);
@@ -890,11 +890,11 @@ export class Text extends Shape {
     const box = this.element.getBBox();
     this.state.centroid = this.state.matrix.multiplyPosition([
       box.x + box.width * 0.5,
-      bounds.span - box.y - box.height + box.height * 0.5,
+      -box.y - box.height + box.height * 0.5,
     ]);
 
-    this.boundingBox = BoundingBox.fromCornerSize([box.x, bounds.span - box.y], [box.width, box.height]);
-    this.outlineMark.synchronizeState([box.x, bounds.span - box.y - box.height], [box.width, box.height], 0);
+    this.boundingBox = BoundingBox.fromCornerSize([box.x, -box.y], [box.width, box.height]);
+    this.outlineMark.synchronizeState([box.x, -box.y - box.height], [box.width, box.height], 0);
   }
  
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -1002,6 +1002,16 @@ export class Rectangle extends Shape {
 
     this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
+
+    this.state.centroid = [
+      this.state.corner[0] + this.state.size[0] * 0.5,
+      this.state.corner[1] + this.state.size[1] * 0.5,
+    ];
+    // this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
+    this.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
+    if (this.strokeFrame) {
+      this.boundingBox.dilate(this.strokeFrame.state.weight * 0.5);
+    }
   }
 
   synchronizeCustomDom(t, bounds) {
@@ -1014,7 +1024,7 @@ export class Rectangle extends Shape {
     this.element.setAttributeNS(null, 'height', this.state.size[1]);
 
     this.element.setAttributeNS(null, 'x', this.state.corner[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.size[1] - this.state.corner[1]);
+    this.element.setAttributeNS(null, 'y', -this.state.corner[1] - this.state.size[1]);
 
     this.synchronizeFillDom(t, bounds);
     this.synchronizeStrokeDom(t, bounds, this.element);
@@ -1089,13 +1099,6 @@ export class Rectangle extends Shape {
         this.state.corner[1] + this.state.size[1],
       ], this.state.matrix, this.state.inverseMatrix);
     }
-
-    this.state.centroid = [
-      this.state.corner[0] + this.state.size[0] * 0.5,
-      this.state.corner[1] + this.state.size[1] * 0.5,
-    ];
-    this.state.centroid = this.state.matrix.multiplyPosition(this.state.centroid);
-    this.boundingBox = BoundingBox.fromCornerSize(this.state.corner, this.state.size);
   }
  
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -1150,10 +1153,6 @@ export class Circle extends Shape {
     this.validateStrokeProperties(fromTime, toTime);
   }
 
-  // initializeState() {
-    // super.initializeState();
-  // }
-
   initializeStaticState() {
     super.initializeStaticState();
     this.initializeStaticScalarProperty('radius');
@@ -1190,12 +1189,15 @@ export class Circle extends Shape {
     this.synchronizeStateProperty('center', t);
     this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
+    this.state.centroid = this.state.center;
+    this.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
+    // if has stroke
   }
 
   synchronizeCustomDom(t, bounds) {
     this.element.setAttributeNS(null, 'r', this.state.radius);
     this.element.setAttributeNS(null, 'cx', this.state.center[0]);
-    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
+    this.element.setAttributeNS(null, 'cy', -this.state.center[1]);
     this.synchronizeFillDom(t, bounds);
     this.synchronizeStrokeDom(t, bounds, this.element);
   }
@@ -1214,9 +1216,6 @@ export class Circle extends Shape {
       this.state.center[0] + this.state.radius,
       this.state.center[1],
     ], this.state.matrix, this.state.inverseMatrix);
-
-    this.state.centroid = this.state.matrix.multiplyPosition(this.state.center);
-    this.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
   }
  
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -1224,21 +1223,6 @@ export class Circle extends Shape {
     this.outlineMark.synchronizeDom(bounds);
     this.centerMark.synchronizeDom(bounds, handleRadius);
     this.radiusMark.synchronizeDom(bounds, handleRadius);
-  }
-
-  computeBoundingBox() {
-    if (this.state.center && this.state.radius) {
-      this.boundingBox.enclosePoint([
-        this.state.center[0] - this.state.radius,
-        this.state.center[1] - this.state.radius,
-      ]);
-      this.boundingBox.enclosePoint([
-        this.state.center[0] + this.state.radius,
-        this.state.center[1] + this.state.radius,
-      ]);
-    }
-
-    // add intervals
   }
 }
 
@@ -1355,7 +1339,7 @@ export class Raster extends Shape {
     }
 
     this.element.setAttributeNS(null, 'x', x);
-    this.element.setAttributeNS(null, 'y', bounds.span - y - this.state.size[1]);
+    this.element.setAttributeNS(null, 'y', -y);
   }
 
   initializeMarkState() {
@@ -1594,8 +1578,8 @@ export class Grid extends Shape {
         line.setAttributeNS(null, 'visibility', 'visible');
         line.setAttributeNS(null, 'x1', tick);
         line.setAttributeNS(null, 'x2', tick);
-        line.setAttributeNS(null, 'y1', bounds.span - corner[1]);
-        line.setAttributeNS(null, 'y2', bounds.span - (corner[1] + size[1]));
+        line.setAttributeNS(null, 'y1', -corner[1]);
+        line.setAttributeNS(null, 'y2', -(corner[1] + size[1]));
         line.classList.add('grid-line');
         this.element.appendChild(line);
       }
@@ -1608,8 +1592,8 @@ export class Grid extends Shape {
       for (let tick = first; tick <= last; tick += gap) {
         const line = document.createElementNS(svgNamespace, 'line');
         line.setAttributeNS(null, 'visibility', 'visible');
-        line.setAttributeNS(null, 'y1', bounds.span - tick);
-        line.setAttributeNS(null, 'y2', bounds.span - tick);
+        line.setAttributeNS(null, 'y1', -tick);
+        line.setAttributeNS(null, 'y2', -tick);
         line.setAttributeNS(null, 'x1', corner[0]);
         line.setAttributeNS(null, 'x2', corner[0] + size[0]);
         line.classList.add('grid-line');
@@ -2006,7 +1990,7 @@ export class Polygon extends VertexShape {
       throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Polygons must have at least 3 vertices.`);
     }
 
-    const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    const coordinates = positions.map(position => `${position[0]},${-position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 
@@ -2145,19 +2129,19 @@ export class Ungon extends VertexShape {
         (this.domNodes[0].state.turtle.position[0] + this.domNodes[1].state.turtle.position[0]) * 0.5,
         (this.domNodes[0].state.turtle.position[1] + this.domNodes[1].state.turtle.position[1]) * 0.5
       ];
-      pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
+      pathCommands.push(`M ${start[0]},${-start[1]}`);
 
       let previous = start;
       for (let i = 1; i < nnodes; ++i) {
         const a = this.domNodes[i].state.turtle.position;
         const b = this.domNodes[(i + 1) % this.domNodes.length].state.turtle.position;
         let mid = [(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5];
-        pathCommands.push(`Q ${a[0]},${bounds.span - a[1]} ${mid[0]},${bounds.span - mid[1]}`);
+        pathCommands.push(`Q ${a[0]},${-a[1]} ${mid[0]},${-mid[1]}`);
         previous = mid;
       }
 
       const first = this.domNodes[0].state.position;
-      pathCommands.push(`Q ${first[0]},${bounds.span - first[1]} ${start[0]},${bounds.span - start[1]}`);
+      pathCommands.push(`Q ${first[0]},${-first[1]} ${start[0]},${-start[1]}`);
     } else if (this.state.formula === UngonFormula.Absolute) {
       let rounding = this.state.rounding;
 
@@ -2177,7 +2161,7 @@ export class Ungon extends VertexShape {
         this.domNodes[0].state.turtle.position[0] + rounding * vectors[0][0],
         this.domNodes[0].state.turtle.position[1] + rounding * vectors[0][1],
       ];
-      pathCommands.push(`M ${insetA[0]},${bounds.span - insetA[1]}`);
+      pathCommands.push(`M ${insetA[0]},${-insetA[1]}`);
 
       for (let i = 0; i < nnodes; ++i) {
         const position = this.domNodes[(i + 1) % nnodes].state.turtle.position;
@@ -2187,20 +2171,20 @@ export class Ungon extends VertexShape {
           position[0] - rounding * vectors[i][0],
           position[1] - rounding * vectors[i][1],
         ];
-        pathCommands.push(`L ${insetB[0]},${bounds.span - insetB[1]}`);
+        pathCommands.push(`L ${insetB[0]},${-insetB[1]}`);
 
         let insetA = [
           position[0] + rounding * vector[0],
           position[1] + rounding * vector[1],
         ];
-        pathCommands.push(`Q ${position[0]},${bounds.span - position[1]} ${insetA[0]},${bounds.span - insetA[1]}`);
+        pathCommands.push(`Q ${position[0]},${-position[1]} ${insetA[0]},${-insetA[1]}`);
       }
     } else {
       let start = [
         (this.domNodes[0].state.turtle.position[0] + this.domNodes[1].state.turtle.position[0]) * 0.5,
         (this.domNodes[0].state.turtle.position[1] + this.domNodes[1].state.turtle.position[1]) * 0.5
       ];
-      pathCommands.push(`M ${start[0]},${bounds.span - start[1]}`);
+      pathCommands.push(`M ${start[0]},${-start[1]}`);
 
       let rounding = 1 - this.state.rounding;
 
@@ -2221,7 +2205,7 @@ export class Ungon extends VertexShape {
           mid[1] + rounding * (a[1] - mid[1]),
         ];
 
-        pathCommands.push(`C ${control1[0]},${bounds.span - control1[1]} ${control2[0]},${bounds.span - control2[1]} ${mid[0]},${bounds.span - mid[1]}`);
+        pathCommands.push(`C ${control1[0]},${-control1[1]} ${control2[0]},${-control2[1]} ${mid[0]},${-mid[1]}`);
         previous = mid;
       }
 
@@ -2235,7 +2219,7 @@ export class Ungon extends VertexShape {
         start[1] + rounding * (first[1] - start[1]),
       ];
 
-      pathCommands.push(`C ${control1[0]},${bounds.span - control1[1]} ${control2[0]},${bounds.span - control2[1]} ${start[0]},${bounds.span - start[1]}`);
+      pathCommands.push(`C ${control1[0]},${-control1[1]} ${control2[0]},${-control2[1]} ${start[0]},${-start[1]}`);
     }
 
     pathCommands.push('z');
@@ -2340,7 +2324,7 @@ export class Polyline extends VertexShape {
       throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Polylines must have at least 2 vertices.`);
     }
 
-    const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    const coordinates = positions.map(position => `${position[0]},${-position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'points', coordinates);
   }
 
@@ -2437,11 +2421,11 @@ export class Line extends VertexShape {
       throw new LocatedException(this.where, `I found ${this.article} <code>${this.type}</code> with ${positions.length} ${positions.length == 1 ? 'vertex' : 'vertices'}. Lines must have exactly 2 vertices.`);
     }
 
-    const coordinates = positions.map(position => `${position[0]},${bounds.span - position[1]}`).join(' ');
+    const coordinates = positions.map(position => `${position[0]},${-position[1]}`).join(' ');
     this.element.setAttributeNS(null, 'x1', positions[0][0]);
-    this.element.setAttributeNS(null, 'y1', bounds.span - positions[0][1]);
+    this.element.setAttributeNS(null, 'y1', -positions[0][1]);
     this.element.setAttributeNS(null, 'x2', positions[1][0]);
-    this.element.setAttributeNS(null, 'y2', bounds.span - positions[1][1]);
+    this.element.setAttributeNS(null, 'y2', -positions[1][1]);
   }
 
   initializeMarkState() {
@@ -2838,7 +2822,6 @@ export class Tip extends Group {
       y: this.state.corner[1],
       width: this.state.size[0],
       height: this.state.corner[1] + this.state.corner[1] + this.state.size[1],
-      span: 0,
     });
     this.element.setAttributeNS(null, 'markerWidth', this.state.size[0]);
     this.element.setAttributeNS(null, 'markerHeight', this.state.size[1]);

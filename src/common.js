@@ -372,7 +372,7 @@ export class BoundingBox {
     ];
   }
 
-  thicken(width) {
+  dilate(width) {
     this.min[0] -= width;
     this.min[1] -= width;
     this.max[0] += width;
@@ -385,7 +385,7 @@ export class BoundingBox {
 
   static fromCornerSize(corner, size) {
     const box = new BoundingBox();
-    box.min = corner;
+    box.min = [...corner];
     box.max = [
       corner[0] + size[0],
       corner[1] + size[1],

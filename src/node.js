@@ -242,7 +242,7 @@ export class TabNode extends Node {
 
   pathCommand(bounds) {
     const positions = this.getPositions();
-    return positions.map(position => `L${position[0]},${bounds.span - position[1]}`).join(' ');
+    return positions.map(position => `L${position[0]},${-position[1]}`).join(' ');
   }
 
   initializeMarkState() {
@@ -401,7 +401,7 @@ export class TurtleNode extends Node {
   }
 
   pathCommand(bounds) {
-    return `M ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+    return `M ${this.state.position[0]},${-this.state.position[1]}`;
   }
 
   configureTurtle() {
@@ -505,7 +505,7 @@ export class WalkNode extends Node {
   }
 
   pathCommand(bounds) {
-    return `L ${this.state.turtle.position[0]},${bounds.span - this.state.turtle.position[1]}`;
+    return `L ${this.state.turtle.position[0]},${-this.state.turtle.position[1]}`;
   }
 
   initializeMarkState() {
@@ -589,7 +589,7 @@ export class FlyNode extends Node {
   }
 
   pathCommand(bounds) {
-    return `M ${this.state.turtle.position[0]},${bounds.span - this.state.turtle.position[1]}`;
+    return `M ${this.state.turtle.position[0]},${-this.state.turtle.position[1]}`;
   }
 
   initializeMarkState() {
@@ -680,7 +680,7 @@ export class CircleNode extends Node {
   }
 
   pathCommand(bounds) {
-    return `M ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] - this.state.radius},${bounds.span - this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] + this.state.radius},${bounds.span - this.state.center[1]}`;
+    return `M ${this.state.center[0] + this.state.radius},${-this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] - this.state.radius},${-this.state.center[1]} A ${this.state.radius},${this.state.radius} 0 1 0 ${this.state.center[0] + this.state.radius},${-this.state.center[1]}`;
   }
 
   initializeMarkState() {
@@ -809,10 +809,10 @@ export class RectangleNode extends Node {
     }
 
     return `
-M ${corner[0]},${bounds.span - corner[1]}
-L ${corner[0] + this.state.size[0]},${bounds.span - corner[1]}
-L ${corner[0] + this.state.size[0]},${bounds.span - (corner[1] + this.state.size[1])}
-L ${corner[0]},${bounds.span - (corner[1] + this.state.size[1])}
+M ${corner[0]},${-corner[1]}
+L ${corner[0] + this.state.size[0]},${-corner[1]}
+L ${corner[0] + this.state.size[0]},${-(corner[1] + this.state.size[1])}
+L ${corner[0]},${-(corner[1] + this.state.size[1])}
 z
     `;
   }
@@ -1059,7 +1059,7 @@ export class PopNode extends Node {
   }
 
   pathCommand(bounds) {
-    return `M ${this.state.turtle.position[0]},${bounds.span - this.state.turtle.position[1]}`;
+    return `M ${this.state.turtle.position[0]},${-this.state.turtle.position[1]}`;
   }
 
   validate(fromTime, toTime) {
@@ -1226,7 +1226,7 @@ export class GoNode extends Node {
   }
 
   pathCommand(bounds) {
-    return `M ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+    return `M ${this.state.position[0]},${-this.state.position[1]}`;
   }
 
   configureTurtle() {
@@ -1319,7 +1319,7 @@ export class LineNode extends Node {
   }
 
   pathCommand(bounds) {
-    return `L ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+    return `L ${this.state.position[0]},${-this.state.position[1]}`;
   }
 
   initializeMarkState() {
@@ -1345,7 +1345,7 @@ export class LineNode extends Node {
   }
 
   getPathCommand(bounds, from, to) {
-    return `L ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+    return `L ${this.state.position[0]},${-this.state.position[1]}`;
   }
 }
 
@@ -1429,9 +1429,9 @@ export class QuadraticNode extends Node {
 
   pathCommand(bounds) {
     if (this.state.control) {
-      return `Q ${this.state.control[0]},${bounds.span - this.state.control[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+      return `Q ${this.state.control[0]},${-this.state.control[1]} ${this.state.position[0]},${-this.state.position[1]}`;
     } else {
-      return `T ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+      return `T ${this.state.position[0]},${-this.state.position[1]}`;
     }
   }
 
@@ -1570,9 +1570,9 @@ export class CubicNode extends Node {
 
   pathCommand(bounds) {
     if (this.state.control1) {
-      return `C ${this.state.control1[0]},${bounds.span - this.state.control1[1]} ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+      return `C ${this.state.control1[0]},${-this.state.control1[1]} ${this.state.control2[0]},${-this.state.control2[1]} ${this.state.position[0]},${-this.state.position[1]}`;
     } else {
-      return `S ${this.state.control2[0]},${bounds.span - this.state.control2[1]} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+      return `S ${this.state.control2[0]},${-this.state.control2[1]} ${this.state.position[0]},${-this.state.position[1]}`;
     }
   }
 
@@ -1685,9 +1685,9 @@ export class ArcNode extends Node {
         this.state.center[0] + (this.state.center[0] - this.state.position[0]),
         this.state.center[1] + (this.state.center[1] - this.state.position[1]),
       ];
-      return `A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${opposite[0]},${bounds.span - opposite[1]} A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+      return `A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${opposite[0]},${-opposite[1]} A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${this.state.position[0]},${-this.state.position[1]}`;
     } else {
-      return `A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${this.state.position[0]},${bounds.span - this.state.position[1]}`;
+      return `A ${this.state.radius},${this.state.radius} 0 ${this.state.isLarge} ${this.state.isClockwise} ${this.state.position[0]},${-this.state.position[1]}`;
     }
   }
 
@@ -2028,7 +2028,7 @@ class GapSegment {
   }
 
   toCommandString(bounds) {
-    return `M ${this.to[0]},${bounds.span - this.to[1]}`;
+    return `M ${this.to[0]},${-this.to[1]}`;
   }
 }
 
@@ -2049,7 +2049,7 @@ export class LineSegment {
   }
 
   toCommandString(bounds) {
-    return `L ${this.to[0]},${bounds.span - this.to[1]}`;
+    return `L ${this.to[0]},${-this.to[1]}`;
   }
 }
 
@@ -2081,9 +2081,9 @@ export class QuadraticSegment {
 
   toCommandString(bounds) {
     if (this.isImplicit) {
-      return `T ${this.to[0]},${bounds.span - this.to[1]}`;
+      return `T ${this.to[0]},${-this.to[1]}`;
     } else {
-      return `Q ${this.control[0]},${bounds.span - this.control[1]} ${this.to[0]},${bounds.span - this.to[1]}`;
+      return `Q ${this.control[0]},${-this.control[1]} ${this.to[0]},${-this.to[1]}`;
     }
   }
 }
@@ -2117,9 +2117,9 @@ export class CubicSegment {
 
   toCommandString(bounds) {
     if (this.isImplicit) {
-      return `S ${this.control2[0]},${bounds.span - this.control2[1]} ${this.to[0]},${bounds.span - this.to[1]}`;
+      return `S ${this.control2[0]},${-this.control2[1]} ${this.to[0]},${-this.to[1]}`;
     } else {
-      return `C ${this.control1[0]},${bounds.span - this.control1[1]} ${this.control2[0]},${bounds.span - this.control2[1]} ${this.to[0]},${bounds.span - this.to[1]}`;
+      return `C ${this.control1[0]},${-this.control1[1]} ${this.control2[0]},${-this.control2[1]} ${this.to[0]},${-this.to[1]}`;
     }
   }
 }
@@ -2144,7 +2144,7 @@ export class ArcSegment {
   }
 
   toCommandString(bounds) {
-    return `A${this.radius},${this.radius} 0 ${this.isLarge} ${this.isClockwise} ${this.to[0]},${bounds.span - this.to[1]}`;
+    return `A${this.radius},${this.radius} 0 ${this.isLarge} ${this.isClockwise} ${this.to[0]},${-this.to[1]}`;
   }
 }
 

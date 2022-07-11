@@ -168,7 +168,7 @@ export class RectangleMark extends Mark {
 
   synchronizeDom(bounds) {
     this.element.setAttributeNS(null, 'x', this.state.corner[0]);
-    this.element.setAttributeNS(null, 'y', bounds.span - this.state.corner[1] - this.state.size[1]);
+    this.element.setAttributeNS(null, 'y', -this.state.corner[1] - this.state.size[1]);
     this.element.setAttributeNS(null, 'width', this.state.size[0]);
     this.element.setAttributeNS(null, 'height', this.state.size[1]);
     if (this.state.rounding !== undefined) {
@@ -193,7 +193,7 @@ export class CircleMark extends Mark {
 
   synchronizeDom(bounds) {
     this.element.setAttributeNS(null, 'cx', this.state.center[0]);
-    this.element.setAttributeNS(null, 'cy', bounds.span - this.state.center[1]);
+    this.element.setAttributeNS(null, 'cy', -this.state.center[1]);
     this.element.setAttributeNS(null, 'r', this.state.radius);
   }
 }
@@ -213,9 +213,9 @@ export class LineMark extends Mark {
 
   synchronizeDom(bounds, handleRadius, radialLength) {
     this.element.setAttributeNS(null, 'x1', this.a[0]);
-    this.element.setAttributeNS(null, 'y1', bounds.span - this.a[1]);
+    this.element.setAttributeNS(null, 'y1', -this.a[1]);
     this.element.setAttributeNS(null, 'x2', this.b[0]);
-    this.element.setAttributeNS(null, 'y2', bounds.span - this.b[1]);
+    this.element.setAttributeNS(null, 'y2', -this.b[1]);
   }
 }
 
@@ -234,9 +234,9 @@ export class RayMark extends Mark {
 
   synchronizeDom(bounds, handleRadius, radialLength) {
     this.element.setAttributeNS(null, 'x1', this.pivot[0]);
-    this.element.setAttributeNS(null, 'y1', bounds.span - this.pivot[1]);
+    this.element.setAttributeNS(null, 'y1', -this.pivot[1]);
     this.element.setAttributeNS(null, 'x2', this.pivot[0] + radialLength * this.axis[0]);
-    this.element.setAttributeNS(null, 'y2', bounds.span - (this.pivot[1] + radialLength * this.axis[1]));
+    this.element.setAttributeNS(null, 'y2', -(this.pivot[1] + radialLength * this.axis[1]));
   }
 }
 
@@ -253,7 +253,7 @@ export class PolygonMark extends Mark {
   }
 
   synchronizeDom(bounds) {
-    this.element.setAttributeNS(null, 'points', this.state.positions.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
+    this.element.setAttributeNS(null, 'points', this.state.positions.map(([x, y]) => `${x},${-y}`).join(' '));
   }
 }
 
@@ -341,9 +341,9 @@ export class WedgeMark extends Mark {
     }
 
     const commands =
-      `M${transformedPivot[0]},${bounds.span - transformedPivot[1]} ` +
-      `L${fromPosition[0]},${bounds.span - fromPosition[1]} ` +
-      `A ${radialLength},${radialLength} 0 ${isLarge} ${isClockwise} ${toPosition[0]},${bounds.span - toPosition[1]} ` +
+      `M${transformedPivot[0]},${-transformedPivot[1]} ` +
+      `L${fromPosition[0]},${-fromPosition[1]} ` +
+      `A ${radialLength},${radialLength} 0 ${isLarge} ${isClockwise} ${toPosition[0]},${-toPosition[1]} ` +
       'z';
     this.element.setAttributeNS(null, 'd', commands);
   }
@@ -362,7 +362,7 @@ export class PolylineMark extends Mark {
   }
 
   synchronizeDom(bounds) {
-    this.element.setAttributeNS(null, 'points', this.state.positions.map(([x, y]) => `${x},${bounds.span - y}`).join(' '));
+    this.element.setAttributeNS(null, 'points', this.state.positions.map(([x, y]) => `${x},${-y}`).join(' '));
   }
 }
 
@@ -479,7 +479,7 @@ export class TweakableMark extends Mark {
     this.mouseAtSvg.x = event.clientX;
     this.mouseAtSvg.y = event.clientY;
     let mouseAt = this.mouseAtSvg.matrixTransform(root.svg.getScreenCTM().inverse());
-    mouseAt.y = root.bounds.span - mouseAt.y;
+    mouseAt.y = -mouseAt.y;
     return mouseAt;
   }
 
@@ -513,7 +513,7 @@ export class PanMark extends TweakableMark {
 
   synchronizeDom(bounds, handleRadius) {
     const transformedPosition = this.state.matrix.multiplyPosition(this.state.position);
-    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    let command = `translate(${transformedPosition[0]} ${-transformedPosition[1]})`;
     command += ` rotate(${-this.state.rotation})`;
     this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
   }
@@ -726,14 +726,14 @@ export class HorizontalScaleMark extends ScaleMark {
       this.state.position[0] + radialLength * sign + this.state.delta[0],
       this.state.position[1],
     ]);
-    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    let command = `translate(${transformedPosition[0]} ${-transformedPosition[1]})`;
     command += ` rotate(${-this.state.rotation})`;
     this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
 
     this.pivotToHandleLine.setAttributeNS(null, 'x1', transformedPivot[0]);
-    this.pivotToHandleLine.setAttributeNS(null, 'y1', bounds.span - transformedPivot[1]);
+    this.pivotToHandleLine.setAttributeNS(null, 'y1', -transformedPivot[1]);
     this.pivotToHandleLine.setAttributeNS(null, 'x2', transformedPosition[0]);
-    this.pivotToHandleLine.setAttributeNS(null, 'y2', bounds.span - transformedPosition[1]);
+    this.pivotToHandleLine.setAttributeNS(null, 'y2', -transformedPosition[1]);
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
@@ -776,14 +776,14 @@ export class VerticalScaleMark extends ScaleMark {
       this.state.position[0],
       this.state.position[1] + radialLength * sign + this.state.delta[1],
     ]);
-    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    let command = `translate(${transformedPosition[0]} ${-transformedPosition[1]})`;
     command += ` rotate(${-this.state.rotation})`;
     this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
 
     this.pivotToHandleLine.setAttributeNS(null, 'x1', transformedPivot[0]);
-    this.pivotToHandleLine.setAttributeNS(null, 'y1', bounds.span - transformedPivot[1]);
+    this.pivotToHandleLine.setAttributeNS(null, 'y1', -transformedPivot[1]);
     this.pivotToHandleLine.setAttributeNS(null, 'x2', transformedPosition[0]);
-    this.pivotToHandleLine.setAttributeNS(null, 'y2', bounds.span - transformedPosition[1]);
+    this.pivotToHandleLine.setAttributeNS(null, 'y2', -transformedPosition[1]);
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {
@@ -844,7 +844,7 @@ export class RotationMark extends PanMark {
       transformedPivot[0] + transformedVector[0],
       transformedPivot[1] + transformedVector[1],
     ];
-    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    let command = `translate(${transformedPosition[0]} ${-transformedPosition[1]})`;
     // Don't rotate the arc as is done with other pan marks. The rotation glyph
     // looks more like a rotation cue with the hole at the bottom.
     this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
@@ -916,7 +916,7 @@ export class AxisMark extends PanMark {
     ];
 
     const transformedPosition = this.state.matrix.multiplyPosition(position);
-    let command = `translate(${transformedPosition[0]} ${bounds.span - transformedPosition[1]})`;
+    let command = `translate(${transformedPosition[0]} ${-transformedPosition[1]})`;
     command += ` rotate(${-this.state.rotation})`;
     this.element.setAttributeNS(null, "transform", `${command} scale(${handleRadius})`);
   }
