@@ -1375,19 +1375,22 @@ export class ExpressionFor extends Expression {
 
   evaluate(env) {
     // assert all (integers or units) or (arrays or units)
-    const isInteger = false;
-    if (isInteger) {
-      let start = this.start.evaluate(env).value;
-      let stop = this.stop.evaluate(env).value;
-      let by = this.by.evaluate(env).value;
+    // TODO
+    let start = this.start.evaluate(env);
+    let stop = this.stop.evaluate(env);
+    if ((start instanceof ExpressionInteger || start instanceof ExpressionUnit) && stop instanceof ExpressionInteger) {
+      start = start?.value || 0;
+      stop = stop.value;
+      let by = this.by.evaluate(env)?.value || 1;
 
       for (let i = start; i < stop; i += by) {
+        console.log("i:", i);
         new ExpressionAssignment(this.i, new ExpressionInteger(i), true).evaluate(env);
         this.body.evaluate(env);
       }
     } else {
-      let start = this.start.evaluate(env);
-      let stop = this.stop.evaluate(env).toPrimitiveArray();
+      start = this.start.evaluate(env);
+      stop = this.stop.evaluate(env).toPrimitiveArray();
       let by = this.by.evaluate(env);
 
       if (start instanceof ExpressionUnit) {

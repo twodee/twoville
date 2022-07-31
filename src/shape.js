@@ -1191,7 +1191,9 @@ export class Circle extends Shape {
     this.synchronizeStrokeState(t);
     this.state.centroid = this.state.center;
     this.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
-    // if has stroke
+    if (this.strokeFrame) {
+      this.boundingBox.dilate(this.strokeFrame.state.weight * 0.5);
+    }
   }
 
   synchronizeCustomDom(t, bounds) {

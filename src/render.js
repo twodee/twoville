@@ -120,12 +120,14 @@ export class RenderEnvironment extends Frame {
       ]);
     }
 
-    this.fitBounds = {
-      x: corner.get(0).value,
-      y: corner.get(1).value,
-      width: size.get(0).value,
-      height: size.get(1).value,
-    };
+    if (view.hasStatic('units')) {
+      this.units = view.getStatic('units').value;
+    }
+
+    this.fitBounds = BoundingBox.fromCornerSize(corner.toPrimitiveArray(), size.toPrimitiveArray());
+    if (view.hasStatic('padding')) {
+      this.fitBounds.dilate(view.getStatic('padding').value);
+    }
     this.fit();
 
     this.bounds.startTime = this.get('time').get('start').value;
@@ -222,17 +224,15 @@ export class RenderEnvironment extends Frame {
     }
 
     if (this.isAutofit) {
-      const boundingBox = new BoundingBox();
+      this.fitBounds = new BoundingBox();
       for (let shape of this.shapes) {
-        boundingBox.encloseBox(shape.boundingBox);
+        this.fitBounds.encloseBox(shape.boundingBox);
       }
 
-      this.fitBounds = {
-        x: boundingBox.min[0],
-        y: boundingBox.min[1],
-        width: boundingBox.width,
-        height: boundingBox.height,
-      };
+      const view = this.getStatic('view');
+      if (view.hasStatic('padding')) {
+        this.fitBounds.dilate(view.getStatic('padding').value);
+      }
 
       this.fit();
       this.synchronizeOutline();
@@ -313,6 +313,10 @@ export class RenderEnvironment extends Frame {
     let clone = this.svg.cloneNode(true);
     clone.removeAttribute('style');
     clone.setAttributeNS(null, 'viewBox', `${this.fitBounds.x} ${-this.fitBounds.y - this.fitBounds.height} ${this.fitBounds.width} ${this.fitBounds.height}`);
+    if (this.units) {
+      clone.setAttributeNS(null, 'width', `${this.fitBounds.width}${this.units}`);
+      clone.setAttributeNS(null, 'height', `${this.fitBounds.height}${this.units}`);
+    }
     removeClassMembers(clone, 'mark-group');
     return clone;
   }

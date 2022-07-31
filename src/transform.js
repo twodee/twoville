@@ -203,7 +203,7 @@ export class Rotate extends Transform {
   }
 
   synchronizeDom(t, bounds) {
-    this.state.command = `rotate(${-this.state.degrees} ${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]})`;
+    this.state.command = `rotate(${-this.state.degrees} ${this.state.pivot[0]} ${-this.state.pivot[1]})`;
   }
 
   initializeMarkState() {
@@ -341,7 +341,7 @@ export class Shear extends Transform {
   }
 
   updateDomCommand(bounds) {
-    this.command = `translate(${-this.pivot[0]} ${bounds.span - this.pivot[1]}) matrix(1 ${this.factors[1]} ${this.factors[0]} 1 0 0) translate(${this.pivot[0]} ${-(bounds.span - this.pivot[1])})`;
+    this.command = `translate(${-this.pivot[0]} ${-this.pivot[1]}) matrix(1 ${this.factors[1]} ${this.factors[0]} 1 0 0) translate(${this.pivot[0]} ${this.pivot[1]})`;
   }
 }
 
@@ -395,7 +395,7 @@ export class Scale extends Transform {
   }
 
   synchronizeDom(t, bounds) {
-    this.state.command = `translate(${this.state.pivot[0]} ${bounds.span - this.state.pivot[1]}) scale(${this.state.factors[0]} ${this.state.factors[1]}) translate(${-this.state.pivot[0]} ${-(bounds.span - this.state.pivot[1])})`;
+    this.state.command = `translate(${this.state.pivot[0]} ${-this.state.pivot[1]}) scale(${this.state.factors[0]} ${this.state.factors[1]}) translate(${-this.state.pivot[0]} ${this.state.pivot[1]})`;
   }
 
   initializeMarkState() {

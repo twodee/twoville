@@ -676,7 +676,7 @@ export class CircleNode extends Node {
   configureTurtle() {
     this.state.turtle.position[0] = this.state.center[0];
     this.state.turtle.position[1] = this.state.center[1];
-    this.state.turtle.heading = this.previousNode.state.turtle.heading;
+    this.state.turtle.heading = this.previousNode?.state.turtle.heading ?? 0;
   }
 
   pathCommand(bounds) {

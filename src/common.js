@@ -357,6 +357,14 @@ export class BoundingBox {
     return this;
   }
 
+  get x() {
+    return this.min[0];
+  }
+
+  get y() {
+    return this.min[1];
+  }
+
   get width() {
     return this.max[0] - this.min[0];
   }
