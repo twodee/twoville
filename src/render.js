@@ -455,6 +455,12 @@ export class RenderEnvironment extends Frame {
     this.mouseAt = this.mouseAtSvg.matrixTransform(this.mouseDownTransform);
     this.mouseAt.y = -this.mouseAt.y;
     this.isMouseDown = true;
+
+    // Clicks on the SVG canvas can mean different things. A click could be the
+    // user panning the entire canvas or it could be a click to deselect the
+    // current shape. I distinguish between these two by tracking the absolute
+    // drift.
+    this.mouseDrift = 0;
   };
 
   onMouseMove = e => {
@@ -469,6 +475,7 @@ export class RenderEnvironment extends Frame {
       this.bounds.y -= delta[1];
       this.updateViewBox();
       this.mouseAt = newMouseAt;
+      this.mouseDrift += Math.abs(delta[0]) + Math.abs(delta[1]);
     }
 
     const mouseNowAt = this.mouseAtSvg.matrixTransform(this.currentTransform);
@@ -477,7 +484,11 @@ export class RenderEnvironment extends Frame {
 
   onMouseUp = e => {
     if (this.isMouseDown) {
-      this.selectNothing();
+      // If the drift is big, the action must have been a pan. We don't
+      // deselect the shape on a pan.
+      if (this.mouseDrift < 3) {
+        this.selectNothing();
+      }
       this.isMouseDown = false;
     }
   };

@@ -364,6 +364,7 @@ export function parse(tokens, source) {
       if (operator.type === Tokens.Less) {
         a = new ExpressionLess(a, b, SourceLocation.span(a.where, b.where));
       } else if (operator.type === Tokens.LessEqual) {
+        console.log("less equal");
         a = new ExpressionLessEqual(a, b, SourceLocation.span(a.where, b.where));
       } else if (operator.type === Tokens.More) {
         a = new ExpressionMore(a, b, SourceLocation.span(a.where, b.where));

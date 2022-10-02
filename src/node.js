@@ -120,7 +120,7 @@ export class TabNode extends Node {
 
     const scale = this.state.size / Math.sin(this.state.degrees * Math.PI / 180);
     let v = unitVectorBetween(from.position, to.position);
-    const sign = this.state.isCounterclockwise ? -1 : 1;
+    const sign = this.state.isCounterClockwise ? -1 : 1;
     const fore = rotateVector(v, sign * this.state.degrees);
     const aft = rotateVector([-v[0], -v[1]], -sign * this.state.degrees);
 
@@ -192,7 +192,7 @@ export class TabNode extends Node {
     }
 
     if (!this.has('order')) {
-      this.state.isCounterclockwise = this.parentFrame.state.tabDefaults.isCounterclockwise;
+      this.state.isCounterClockwise = this.parentFrame.state.tabDefaults.isCounterClockwise;
     }
   }
 
@@ -228,7 +228,7 @@ export class TabNode extends Node {
     }
 
     if (this.has('order')) {
-      this.parentFrame.state.tabDefaults.isCounterclockwise = this.state.isCounterclockwise;
+      this.parentFrame.state.tabDefaults.isCounterClockwise = this.state.isCounterClockwise;
     }
   }
 
@@ -2250,6 +2250,49 @@ export class Mirror extends ObjectFrame {
 
   castCursor(column, row) {
     return this.sourceSpans.some(span => span.contains(column, row));
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Tile extends ObjectFrame {
+  static type = 'tile';
+  static article = 'a';
+  static timedIds = [];
+
+  static create(parentEnvironment, where) {
+    const node = new Tile();
+    node.initialize(parentEnvironment, where);
+    return node;
+  }
+
+  static inflate(parentEnvironment, object, inflater) {
+    const node = new Tile();
+    node.embody(parentEnvironment, object, inflater);
+    return node;
+  }
+
+  initialize(shape, where) {
+    super.initialize(shape, where);
+    this.parentFrame.addTile(this);
+  }
+
+  validate(fromTime, toTime) {
+    const indices = this.getStatic('indices');
+  }
+
+  initializeStaticState() {
+    super.initializeStaticState();
+    this.initializeStaticScalarProperty('indices');
+  }
+
+  initializeMarkState() {
+  }
+
+  synchronizeMarkState(matrix, inverseMatrix) {
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
   }
 }
 

@@ -29,6 +29,7 @@ import {
   QuadraticNode,
   RectangleNode,
   TabNode,
+  Tile,
   TurtleNode,
   TurnNode,
   VertexNode,
@@ -84,6 +85,8 @@ export class Inflater {
       return GoNode.inflate(env, object, Inflater);
     } else if (object.type === 'fly') {
       return FlyNode.inflate(env, object, Inflater);
+    } else if (object.type === 'tile') {
+      return Tile.inflate(env, object, Inflater);
     } else if (object.type === 'circle') {
       return CircleNode.inflate(env, object, Inflater);
     } else if (object.type === 'rectangle') {

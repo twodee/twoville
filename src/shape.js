@@ -15,9 +15,13 @@ import {
 } from './frame.js';
 
 import {
+  halfwayVector,
+  isLeftPolygon,
+  isLeftTurn,
   mirrorPointLine,
   distancePointPoint,
   distancePointLine,
+  unitVectorBetween,
 } from './math.js';
 
 import {
@@ -25,6 +29,7 @@ import {
   HorizontalPanMark,
   LineMark,
   Marker,
+  NumberedDotsMark,
   PathMark,
   PolygonMark,
   PolylineMark,
@@ -74,6 +79,7 @@ import {
   ExpressionReal,
   ExpressionRectangleNode,
   ExpressionString,
+  ExpressionTile,
   ExpressionTranslate,
   ExpressionRotate,
   ExpressionScale,
@@ -737,6 +743,8 @@ export class Shape extends ObjectFrame {
       return Circle.inflate(object, inflater);
     } else if (object.type === 'polygon') {
       return Polygon.inflate(object, inflater);
+    } else if (object.type === 'mosaic') {
+      return Mosaic.inflate(object, inflater);
     } else if (object.type === 'polyline') {
       return Polyline.inflate(object, inflater);
     } else if (object.type === 'ungon') {
@@ -1803,7 +1811,7 @@ export class NodeShape extends Shape {
   initializeState() {
     super.initializeState();
 
-    this.state.tabDefaults = {size: 1, degrees: 45, inset: 0, isCounterclockwise: true};
+    this.state.tabDefaults = {size: 1, degrees: 45, inset: 0, isCounterClockwise: true};
     this.state.turtle0 = null;
     this.state.stack = [];
 
@@ -1896,13 +1904,17 @@ export class VertexShape extends NodeShape {
     }
   }
 
-  synchronizeMarkState(t) {
-    super.synchronizeMarkState(t);
-
+  synchronizeCustomState(t) {
+    super.synchronizeCustomState(t);
     for (let node of this.domNodes) {
       this.boundingBox.enclosePoint(node.state.turtle.position);
     }
-    this.state.centroid = this.state.matrix.multiplyPosition(this.boundingBox.centroid());
+    // this.state.centroid = this.state.matrix.multiplyPosition(this.boundingBox.centroid());
+    this.state.centroid = this.boundingBox.centroid();
+  }
+
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
   }
 }
 
@@ -2010,6 +2022,223 @@ export class Polygon extends VertexShape {
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
     super.synchronizeMarkDom(bounds, handleRadius, radialLength);
     this.outlineMark.synchronizeDom(bounds);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class Mosaic extends VertexShape {
+  static type = 'mosaic';
+  static article = 'a';
+  static timedIds = ['color', 'opacity', 'enabled'];
+
+  select(markerId = 0) {
+    super.select(markerId);
+    this.nodeMarker.show();
+  }
+
+  deselect() {
+    super.deselect();
+    this.nodeMarker.hide();
+  }
+
+  initialize(where) {
+    super.initialize(where);
+    this.bindStatic('vertex', new FunctionDefinition('vertex', [], new ExpressionVertexNode(this)));
+    this.bindStatic('turtle', new FunctionDefinition('turtle', [], new ExpressionTurtleNode(this)));
+    this.bindStatic('turn', new FunctionDefinition('turn', [], new ExpressionTurnNode(this)));
+    this.bindStatic('fly', new FunctionDefinition('fly', [], new ExpressionFlyNode(this)));
+    this.bindStatic('stroke', new FunctionDefinition('stroke', [], new ExpressionStroke(this)));
+    this.bindStatic('push', new FunctionDefinition('push', [], new ExpressionPushNode(this)));
+    this.bindStatic('pop', new FunctionDefinition('pop', [], new ExpressionPopNode(this)));
+    this.bindStatic('tile', new FunctionDefinition('tile', [], new ExpressionTile(this)));
+    this.tiles = [];
+  }
+
+  addTile(tile) {
+    this.tiles.push(tile);
+  }
+
+  deflateReferent() {
+    const object = super.deflateReferent();
+    object.tiles = this.tiles.map(tile => tile.deflate());
+    return object;
+  }
+
+  static create(where) {
+    const shape = new Mosaic();
+    shape.initialize(where);
+    return shape;
+  }
+
+  static inflate(object, inflater) {
+    const shape = new Mosaic();
+    shape.embody(object, inflater);
+    return shape;
+  }
+
+  embody(object, inflater) {
+    super.embody(object, inflater);
+    this.tiles = object.tiles.map(subobject => inflater.inflate(this, subobject));
+  }
+
+  validateProperties(fromTime, toTime) {
+    this.assertProperty('gap');
+    this.assertScalarType('gap', [ExpressionInteger, ExpressionReal]);
+    this.assertCompleteTimeline('gap', fromTime, toTime);
+
+    this.strokeFrame = this.stroke;
+    this.validateFillProperties(fromTime, toTime);
+    this.validateStrokeProperties(fromTime, toTime);
+    for (let tile of this.tiles) {
+      tile.validate(fromTime, toTime);
+      // TODO: validate indices are legitimate
+    }
+  }
+
+  initializeState() {
+    super.initializeState();
+    this.domNodes = this.nodes.filter(node => node.isDom);
+    if (this.domNodes.length > 0) {
+      this.state.turtle0 = this.domNodes[0].turtle;
+    }
+    this.indices = this.tiles.map(tile => tile.getStatic('indices').toPrimitiveArray());
+  }
+
+  initializeStaticState() {
+    super.initializeStaticState();
+    this.initializeStaticScalarProperty('gap');
+    this.initializeStaticColorState();
+    this.initializeStaticStrokeState();
+  }
+
+  initializeDynamicState() {
+    super.initializeDynamicState();
+    this.initializeDynamicProperty('gap');
+    this.initializeDynamicColorState();
+    this.initializeDynamicStrokeState();
+  }
+
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'g');
+    this.element.setAttributeNS(null, 'id', 'element-' + this.id);
+    this.connectToParent(root);
+    this.connectJoins();
+  }
+
+  synchronizeCustomState(t) {
+    super.synchronizeCustomState(t);
+    this.synchronizeColorState(t);
+    this.synchronizeStrokeState(t);
+
+    const positions = this.domNodes.flatMap((node, index) => {
+      return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
+    });
+
+    this.state.polygonTiles = [];
+
+    for (let i = 0; i < this.tiles.length; ++i) {
+      const tile = this.tiles[i];
+      const polygon = this.indices[i];
+      const vertices = polygon.map(i => [positions[i][0], positions[i][1]]);
+      const isLeftTile = !isLeftPolygon(vertices);
+
+      const polygonTile = {};
+      polygonTile.positions = vertices.map((vertex, i) => {
+        const previousVertex = vertices[(i - 1 + vertices.length) % vertices.length];
+        const nextVertex = vertices[(i + 1) % vertices.length];
+        const isConcavity = isLeftTurn(previousVertex, vertex, nextVertex) === isLeftTile;
+
+        const backward = unitVectorBetween(vertex, previousVertex);
+        const forward = unitVectorBetween(vertex, nextVertex);
+
+        const halfway = halfwayVector(backward, forward);
+        const dot = backward[0] * forward[0] + backward[1] * forward[1];
+        const radians = Math.acos(dot) * 0.5;
+        const factor = this.state.gap / Math.sin(radians) * (isConcavity ? 1 : -1);
+        return [vertex[0] + halfway[0] * factor, vertex[1] + halfway[1] * factor];
+      });
+
+      if (tile.hasStatic('color')) {
+        polygonTile.color = tile.getStatic('color').toPrimitiveArray();
+      }
+
+      this.state.polygonTiles.push(polygonTile);
+    }
+  }
+
+  synchronizeCustomDom(t, bounds) {
+    this.synchronizeFillDom(t, bounds);
+    this.synchronizeStrokeDom(t, bounds, this.element);
+
+    // Purge old polygons.
+    clearChildren(this.element);
+
+    for (let polygonTile of this.state.polygonTiles) {
+      const polygonElement = document.createElementNS(svgNamespace, 'polygon');
+      const coordinates = polygonTile.positions.map(vertex => `${vertex[0]},${-vertex[1]}`).join(' ');
+      polygonElement.setAttributeNS(null, 'points', coordinates);
+      this.element.appendChild(polygonElement);
+
+      if (polygonTile.hasOwnProperty('color')) {
+        const colorBytes = [
+          Math.floor(polygonTile.color[0] * 255),
+          Math.floor(polygonTile.color[1] * 255),
+          Math.floor(polygonTile.color[2] * 255),
+        ];
+        const rgb = `rgb(${colorBytes[0]}, ${colorBytes[1]}, ${colorBytes[2]})`;
+        polygonElement.setAttributeNS(null, 'fill', rgb);
+      }
+    }
+  }
+
+  initializeMarkState() {
+    super.initializeMarkState();
+
+    this.nodeMarker = new Marker(this);
+    this.addMarker(this.nodeMarker);
+
+    for (let tile of this.tiles) {
+      tile.initializeMarkState();
+    }
+
+    this.outlineMark = new PathMark();
+    this.markers[0].setMarks(this.outlineMark);
+
+    this.dotsMark = new NumberedDotsMark();
+    this.nodeMarker.setMarks(this.dotsMark);
+  }
+
+  synchronizeMarkState(t) {
+    super.synchronizeMarkState(t);
+    for (let tile of this.tiles) {
+      tile.synchronizeMarkState();
+    }
+    this.outlineMark.synchronizeState(this.state.polygonTiles.map(polygonTile => {
+      let command = '';
+      if (polygonTile.positions.length > 0) {
+        command += `M${polygonTile.positions[0][0]},${-polygonTile.positions[0][1]}`;
+        for (let i = 1; i < polygonTile.positions.length; ++i) {
+          command += ` L${polygonTile.positions[i][0]},${-polygonTile.positions[i][1]}`;
+        }
+        command += ' z';
+      }
+      return command;
+    }).join(' '));
+
+    const positions = this.domNodes.flatMap((node, index) => {
+      return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
+    });
+    this.dotsMark.synchronizeState(positions);
+  }
+
+  synchronizeMarkDom(bounds, handleRadius, radialLength) {
+    super.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    for (let tile of this.tiles) {
+      tile.synchronizeMarkDom(bounds, handleRadius, radialLength);
+    }
+    this.outlineMark.synchronizeDom(bounds);
+    this.dotsMark.synchronizeDom(bounds);
   }
 }
 

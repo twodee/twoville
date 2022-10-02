@@ -74,8 +74,19 @@ export function unitVectorBetween(a, b) {
   ];
   const magnitude = Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
   return [
-    diff[0] /= magnitude,
-    diff[1] /= magnitude,
+    diff[0] / magnitude,
+    diff[1] / magnitude,
+  ];
+}
+
+// --------------------------------------------------------------------------- 
+
+export function halfwayVector(a, b) {
+  const halfway = [a[0] + b[0], a[1] + b[1]];
+  const magnitude = Math.sqrt(halfway[0] * halfway[0] + halfway[1] * halfway[1]);
+  return [
+    halfway[0] / magnitude,
+    halfway[1] / magnitude,
   ];
 }
 
@@ -87,6 +98,27 @@ export function rotateVector(vector, degrees) {
     vector[0] * Math.cos(radians) - vector[1] * Math.sin(radians), 
     vector[0] * Math.sin(radians) + vector[1] * Math.cos(radians), 
   ];
+}
+
+// --------------------------------------------------------------------------- 
+
+export function isLeftPolygon(positions) {
+	let signedArea = 0;
+	for (let i = 0; i < positions.length; ++i) {
+		const a = positions[i];
+		const b = positions[(i + 1) % positions.length];
+		signedArea += (b[0] - a[0]) * (b[1] + a[1]);
+	}
+	return signedArea < 0;
+}
+
+// --------------------------------------------------------------------------- 
+
+export function isLeftTurn(a, b, c) {
+  const aToB = [b[0] - a[0], b[1] - a[1]];
+  const aToC = [c[0] - a[0], c[1] - a[1]];
+	const area = aToB[0] * aToC[1] - aToB[1] * aToC[0];
+	return area < 0;
 }
 
 // --------------------------------------------------------------------------- 

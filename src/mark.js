@@ -2,6 +2,7 @@ import {
   classifyArc,
   standardizeDegrees,
   svgNamespace,
+  clearChildren,
 } from './common.js';
 
 import { 
@@ -200,6 +201,42 @@ export class CircleMark extends Mark {
 
 // --------------------------------------------------------------------------- 
 
+export class NumberedDotsMark extends Mark {
+  initializeDom(root) {
+    this.element = document.createElementNS(svgNamespace, 'g');
+    this.staticBackgroundElements.push(this.element);
+  }
+
+  synchronizeState(positions) {
+    this.state.positions = positions;
+  }
+
+  synchronizeDom(bounds) {
+    clearChildren(this.element);
+    for (let [i, position] of this.state.positions.entries()) {
+      const circle = document.createElementNS(svgNamespace, 'circle');
+      circle.classList.add('numbered-dot');
+      circle.setAttributeNS(null, 'cx', position[0]);
+      circle.setAttributeNS(null, 'cy', -position[1]);
+      circle.setAttributeNS(null, 'r', 1);
+
+      const text = document.createElementNS(svgNamespace, 'text');
+      text.classList.add('dotted-number');
+      text.setAttributeNS(null, 'x', position[0]);
+      text.setAttributeNS(null, 'y', -position[1]);
+      text.appendChild(document.createTextNode(i));
+      text.setAttributeNS(null, 'text-anchor', 'middle');
+      text.setAttributeNS(null, 'dominant-baseline', 'central');
+      text.setAttributeNS(null, 'font-size', 1);
+
+      this.element.appendChild(circle);
+      this.element.appendChild(text);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class LineMark extends Mark {
   initializeDom(root) {
     this.element = document.createElementNS(svgNamespace, 'line');
@@ -270,7 +307,7 @@ export class PathMark extends Mark {
   }
 
   synchronizeDom(bounds) {
-    // this.element.setAttributeNS(null, 'd', this.commands);
+    this.element.setAttributeNS(null, 'd', this.commands);
   }
 
   // setTransform(matrix, bounds) {

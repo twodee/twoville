@@ -295,6 +295,16 @@ html.grabbing {
   stroke-dasharray: 6 3;
 }
 
+.numbered-dot {
+  stroke: none;
+  fill: black;
+}
+
+.dotted-number {
+  stroke: none;
+  fill: white;
+}
+
 .hovered > .mark-piece, .hovered > .mark {
   /* stroke: rebeccapurple; */
   /* stroke-dasharray: unset; */

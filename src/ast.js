@@ -26,6 +26,7 @@ import {
   Group,
   Line,
   Mask,
+  Mosaic,
   Path,
   Polygon,
   Polyline,
@@ -59,6 +60,7 @@ import {
   WalkNode,
   QuadraticNode,
   TabNode,
+  Tile,
   TurnNode,
   TurtleNode,
   VertexNode,
@@ -377,6 +379,7 @@ export class ExpressionInteger extends ExpressionData {
   }
 
   isLess(other) {
+    console.log("isLess");
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
       return new ExpressionBoolean(this.value < other.value);
     } else {
@@ -393,7 +396,10 @@ export class ExpressionInteger extends ExpressionData {
   }
 
   isSame(other) {
+    console.log("isSame");
     if (other instanceof ExpressionInteger || other instanceof ExpressionReal) {
+      console.log("this.value:", this.value);
+      console.log("other.value:", other.value);
       return new ExpressionBoolean(this.value === other.value);
     } else {
       throw new MessagedException('I can only compare integers to other numbers.');
@@ -789,7 +795,7 @@ export class ExpressionLessEqual extends ExpressionBinaryOperator {
   evaluate(env) {
     let evaluatedL = this.l.evaluate(env);
     let evaluatedR = this.r.evaluate(env);
-    return evaluatedL.isLess(evaluatedR) || evaluatedL.isSame(evaluatedR);
+    return new ExpressionBoolean(evaluatedL.isLess(evaluatedR).value || evaluatedL.isSame(evaluatedR).value);
   }
 }
 
@@ -821,7 +827,7 @@ export class ExpressionMoreEqual extends ExpressionBinaryOperator {
   evaluate(env) {
     let evaluatedL = this.l.evaluate(env);
     let evaluatedR = this.r.evaluate(env);
-    return evaluatedL.isMore(evaluatedR) || evaluatedL.isSame(evaluatedR);
+    return new ExpressionBoolean(evaluatedL.isMore(evaluatedR).value || evaluatedL.isSame(evaluatedR).value);
   }
 }
 
@@ -2069,6 +2075,19 @@ export class ExpressionPopNode extends ExpressionFunction {
 
 // --------------------------------------------------------------------------- 
 
+export class ExpressionTile extends ExpressionFunction {
+  constructor(instance, unevaluated) {
+    super(null, unevaluated);
+    this.instance = instance;
+  }
+
+  evaluate(env) {
+    return Tile.create(this.instance, env.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ExpressionGoNode extends ExpressionFunction {
   constructor(instance, unevaluated) {
     super(null, unevaluated);
@@ -2223,6 +2242,14 @@ export class ExpressionLine extends ExpressionShapeFunction {
 export class ExpressionPolygon extends ExpressionShapeFunction {
   createShape(env) {
     return Polygon.create(env.callExpression.where);
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class ExpressionMosaic extends ExpressionShapeFunction {
+  createShape(env) {
+    return Mosaic.create(env.callExpression.where);
   }
 }
 
