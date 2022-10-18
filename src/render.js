@@ -76,7 +76,8 @@ export class RenderEnvironment extends Frame {
   }
 
   initializeDom() {
-    this.mouseAtSvg = this.svg.createSVGPoint();
+    this.mouseAtPixels = this.svg.createSVGPoint();
+    this.lastMouseAtPixels = this.svg.createSVGPoint();
 
     this.svg.addEventListener('wheel', this.onWheel);
     this.svg.addEventListener('mouseleave', this.onMouseLeave);
@@ -222,7 +223,9 @@ export class RenderEnvironment extends Frame {
     for (let drawable of this.drawables) {
       drawable.synchronizeState(t);
     }
+  }
 
+  synchronizeWithView() {
     if (this.isAutofit) {
       this.fitBounds = new BoundingBox();
       for (let shape of this.shapes) {
@@ -282,9 +285,11 @@ export class RenderEnvironment extends Frame {
 
   updateViewBox() {
     svg.setAttributeNS(null, 'viewBox', `${this.bounds.x} ${-this.bounds.y - this.bounds.height} ${this.bounds.width} ${this.bounds.height}`);
-    // if (this.isStarted) {
-      // this.synchronizeMarkDom();
-    // }
+    // This was commented out, but I don't know why. It is needed to
+    // rescale the marks.
+    if (this.isStarted) {
+      this.synchronizeMarkDom();
+    }
     this.synchronizeToSize();
     // this.currentTransform = this.svg.getScreenCTM().inverse();
   }
@@ -396,10 +401,10 @@ export class RenderEnvironment extends Frame {
 
   onWheel = e => {
     if (this.isStarted && !this.isTweaking) {
-      this.mouseAtSvg.x = e.clientX;
-      this.mouseAtSvg.y = e.clientY;
+      this.mouseAtPixels.x = e.clientX;
+      this.mouseAtPixels.y = e.clientY;
       const matrix = this.svg.getScreenCTM().inverse();
-      let center = this.mouseAtSvg.matrixTransform(matrix);
+      let center = this.mouseAtPixels.matrixTransform(matrix);
       center.y = -center.y;
 
       const delta = wheelDistance(e);
@@ -422,6 +427,10 @@ export class RenderEnvironment extends Frame {
   };
 
   onContextMenu = e => {
+    if (e.shiftKey) {
+      return;
+    }
+
     // Context menu events are preceded by down events. But there's no
     // corresponding up event. We want to manually cancel the drag.
     this.isMouseDown = false;
@@ -449,10 +458,10 @@ export class RenderEnvironment extends Frame {
 
     // Since mouse drags change the SVG's matrix, I need to cache the starting
     // matrix here so that all the mouse coordinates are in the same space.
-    this.mouseAtSvg.x = e.clientX;
-    this.mouseAtSvg.y = e.clientY;
+    this.mouseAtPixels.x = e.clientX;
+    this.mouseAtPixels.y = e.clientY;
     this.mouseDownTransform = this.svg.getScreenCTM().inverse();
-    this.mouseAt = this.mouseAtSvg.matrixTransform(this.mouseDownTransform);
+    this.mouseAt = this.mouseAtPixels.matrixTransform(this.mouseDownTransform);
     this.mouseAt.y = -this.mouseAt.y;
     this.isMouseDown = true;
 
@@ -464,21 +473,25 @@ export class RenderEnvironment extends Frame {
   };
 
   onMouseMove = e => {
-    this.mouseAtSvg.x = e.clientX;
-    this.mouseAtSvg.y = e.clientY;
+    const tmp = this.lastMouseAtPixels;
+    this.lastMouseAtPixels = this.mouseAtPixels;
+    this.mouseAtPixels = tmp;
+
+    this.mouseAtPixels.x = e.clientX;
+    this.mouseAtPixels.y = e.clientY;
 
     if (this.isMouseDown) {
-      const newMouseAt = this.mouseAtSvg.matrixTransform(this.mouseDownTransform);
+      const newMouseAt = this.mouseAtPixels.matrixTransform(this.mouseDownTransform);
       newMouseAt.y = -newMouseAt.y;
       let delta = [newMouseAt.x - this.mouseAt.x, newMouseAt.y - this.mouseAt.y];
       this.bounds.x -= delta[0];
       this.bounds.y -= delta[1];
       this.updateViewBox();
       this.mouseAt = newMouseAt;
-      this.mouseDrift += Math.abs(delta[0]) + Math.abs(delta[1]);
+      this.mouseDrift += Math.abs(this.mouseAtPixels.x - this.lastMouseAtPixels.x) + Math.abs(this.mouseAtPixels.y - this.lastMouseAtPixels.y);
     }
 
-    const mouseNowAt = this.mouseAtSvg.matrixTransform(this.currentTransform);
+    const mouseNowAt = this.mouseAtPixels.matrixTransform(this.currentTransform);
     this.mouseStatusLabel.innerText = `[${formatFloat(mouseNowAt.x, this.settings.mousePrecision)}, ${formatFloat(-mouseNowAt.y, this.settings.mousePrecision)}]`;
   };
 
@@ -494,7 +507,7 @@ export class RenderEnvironment extends Frame {
   };
 
   mouseLiteral() {
-    return `[${formatFloat(this.mouseAt.x, this.settings.mousePrecision)}, ${formatFloat(-this.mouseAt.y, this.settings.mousePrecision)}]`;
+    return `[${formatFloat(this.mouseAt.x, this.settings.mousePrecision)}, ${formatFloat(this.mouseAt.y, this.settings.mousePrecision)}]`;
   }
 
   mouseEnter(shape) {

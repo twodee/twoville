@@ -195,10 +195,13 @@ export class Shape extends ObjectFrame {
   synchronizeState(t) {
     this.synchronizeStateProperty('display', t);
     if (this.state.display) {
+      this.synchronizeCustomState(t);
+      // Some of the transforms rely on the centroid having been calculated.
+      // So the custom state needs to get set first. The order used to be
+      // reversed, so I have probably broken some things.
       for (let transform of this.transforms) {
         transform.synchronizeState(t);
       }
-      this.synchronizeCustomState(t);
     }
   }
 
@@ -1011,6 +1014,7 @@ export class Rectangle extends Shape {
     this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
 
+    console.log("calculate centroid");
     this.state.centroid = [
       this.state.corner[0] + this.state.size[0] * 0.5,
       this.state.corner[1] + this.state.size[1] * 0.5,
@@ -2165,6 +2169,28 @@ export class Mosaic extends VertexShape {
 
       this.state.polygonTiles.push(polygonTile);
     }
+
+    this.boundingBox = null;
+    if (positions.length > 0) {
+      let min = [Number.MAX_VALUE, Number.MAX_VALUE];
+      let max = [-Number.MAX_VALUE, -Number.MAX_VALUE];
+      for (let position of positions) {
+        if (position[0] < min[0]) {
+          min[0] = position[0];
+        } else if (position[0] > max[0]) {
+          max[0] = position[0];
+        }
+        if (position[1] < min[1]) {
+          min[1] = position[1];
+        } else if (position[1] > max[1]) {
+          max[1] = position[1];
+        }
+      }
+      this.boundingBox = BoundingBox.fromCorners(min, max);
+      if (this.strokeFrame) {
+        this.boundingBox.dilate(this.strokeFrame.state.weight * 0.5);
+      }
+    }
   }
 
   synchronizeCustomDom(t, bounds) {
@@ -2202,7 +2228,7 @@ export class Mosaic extends VertexShape {
       tile.initializeMarkState();
     }
 
-    this.outlineMark = new PathMark();
+    this.outlineMark = new RectangleMark();
     this.markers[0].setMarks(this.outlineMark);
 
     this.dotsMark = new NumberedDotsMark();
@@ -2214,21 +2240,39 @@ export class Mosaic extends VertexShape {
     for (let tile of this.tiles) {
       tile.synchronizeMarkState();
     }
-    this.outlineMark.synchronizeState(this.state.polygonTiles.map(polygonTile => {
-      let command = '';
-      if (polygonTile.positions.length > 0) {
-        command += `M${polygonTile.positions[0][0]},${-polygonTile.positions[0][1]}`;
-        for (let i = 1; i < polygonTile.positions.length; ++i) {
-          command += ` L${polygonTile.positions[i][0]},${-polygonTile.positions[i][1]}`;
-        }
-        command += ' z';
-      }
-      return command;
-    }).join(' '));
-
+    let min = [Number.MAX_VALUE, Number.MAX_VALUE];
+    let max = [-Number.MAX_VALUE, -Number.MAX_VALUE];
     const positions = this.domNodes.flatMap((node, index) => {
       return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
     });
+    for (let position of positions) {
+      if (position[0] < min[0]) {
+        min[0] = position[0];
+      } else if (position[0] > max[0]) {
+        max[0] = position[0];
+      }
+      if (position[1] < min[1]) {
+        min[1] = position[1];
+      } else if (position[1] > max[1]) {
+        max[1] = position[1];
+      }
+    }
+    this.outlineMark.synchronizeState(min, [max[0] - min[0], max[1] - min[1]], 0);
+    // this.outlineMark.synchronizeState(this.state.polygonTiles.map(polygonTile => {
+      // let command = '';
+      // if (polygonTile.positions.length > 0) {
+        // command += `M${polygonTile.positions[0][0]},${-polygonTile.positions[0][1]}`;
+        // for (let i = 1; i < polygonTile.positions.length; ++i) {
+          // command += ` L${polygonTile.positions[i][0]},${-polygonTile.positions[i][1]}`;
+        // }
+        // command += ' z';
+      // }
+      // return command;
+    // }).join(' '));
+
+    // const positions = this.domNodes.flatMap((node, index) => {
+      // return node.getPositions(this.domNodes[index - 1]?.turtle, this.domNodes[index + 1]?.turtle);
+    // });
     this.dotsMark.synchronizeState(positions);
   }
 
@@ -2238,7 +2282,7 @@ export class Mosaic extends VertexShape {
       tile.synchronizeMarkDom(bounds, handleRadius, radialLength);
     }
     this.outlineMark.synchronizeDom(bounds);
-    this.dotsMark.synchronizeDom(bounds);
+    this.dotsMark.synchronizeDom(bounds, handleRadius, radialLength);
   }
 }
 
@@ -2785,7 +2829,6 @@ export class Path extends NodeShape {
       let segments = [];
       let previousSegment = null;
       for (let i = 0; i < this.domNodes.length; i += 1) {
-        console.log("this.nodes[i]:", this.domNodes[i]);
         previousSegment = this.nodes[i].segment(previousSegment);
         if (i > 0 && previousSegment) {
           segments.push(previousSegment);

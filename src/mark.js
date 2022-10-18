@@ -211,14 +211,14 @@ export class NumberedDotsMark extends Mark {
     this.state.positions = positions;
   }
 
-  synchronizeDom(bounds) {
+  synchronizeDom(bounds, handleRadius, radialLength) {
     clearChildren(this.element);
     for (let [i, position] of this.state.positions.entries()) {
       const circle = document.createElementNS(svgNamespace, 'circle');
       circle.classList.add('numbered-dot');
       circle.setAttributeNS(null, 'cx', position[0]);
       circle.setAttributeNS(null, 'cy', -position[1]);
-      circle.setAttributeNS(null, 'r', 1);
+      circle.setAttributeNS(null, 'r', handleRadius);
 
       const text = document.createElementNS(svgNamespace, 'text');
       text.classList.add('dotted-number');
@@ -227,7 +227,7 @@ export class NumberedDotsMark extends Mark {
       text.appendChild(document.createTextNode(i));
       text.setAttributeNS(null, 'text-anchor', 'middle');
       text.setAttributeNS(null, 'dominant-baseline', 'central');
-      text.setAttributeNS(null, 'font-size', 1);
+      text.setAttributeNS(null, 'font-size', handleRadius * 1.3);
 
       this.element.appendChild(circle);
       this.element.appendChild(text);
@@ -606,6 +606,51 @@ export class VectorPanMark extends PanMark {
 
   synchronizeExpressions(positionExpression) {
     this.expression = positionExpression;
+  }
+
+  manipulate(delta, isShiftModified, mouseAt, manipulation) {
+    const untransformedOffset = this.state.markFromMouse.multiplyVector(delta);
+
+    let x = manipulation.formatReal(this.untweakedExpression.get(0).value + untransformedOffset[0]);
+    let y = manipulation.formatReal(this.untweakedExpression.get(1).value + untransformedOffset[1]);
+
+    if (isShiftModified) {
+      x = Math.round(x);
+      y = Math.round(y);
+    }
+
+    this.expression.set(0, new ExpressionReal(x));
+    this.expression.set(1, new ExpressionReal(y));
+    this.tweakShapeState([x, y]);
+
+    return '[' + this.expression.get(0).value + ', ' + this.expression.get(1).value + ']';
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
+export class OffsetPanMark extends PanMark {
+  constructor(shape, host, tweakShapeState) {
+    super(shape, host, tweakShapeState);
+  }
+
+  initializeDom(root, marker) {
+    super.initializeDom(root, marker);
+    this.addHorizontal();
+    this.addVertical();
+  }
+
+  synchronizeState(offset, pivot, matrix, markFromMouse) {
+    super.synchronizeState([
+      offset[0] + pivot[0],
+      offset[1] + pivot[1]
+    ], matrix, markFromMouse);
+    this.state.offset = offset;
+    this.state.pivot = pivot;
+  }
+
+  synchronizeExpressions(offsetExpression) {
+    this.expression = offsetExpression;
   }
 
   manipulate(delta, isShiftModified, mouseAt, manipulation) {

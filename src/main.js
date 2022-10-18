@@ -201,6 +201,7 @@ function scrubTo(t) {
   scene.synchronizeMarkState(t, scene.bounds);
   scene.synchronizeMarkExpressions(t);
   scene.synchronizeMarkDom();
+  scene.synchronizeWithView();
 }
 
 function animateFrame() {
@@ -300,6 +301,7 @@ function postInterpret(frame, successCallback) {
     range.setEnd(range.end.row, range.start.column + newText.length);
     editor.getSelection().setSelectionRange(range);
 
+    shape.synchronizeState(frameIndex);
     shape.synchronizeDom(frameIndex, scene.bounds);
     shape.synchronizeMarkState(frameIndex, scene.bounds);
     shape.synchronizeMarkDom(scene.bounds, scene.handleRadius, scene.radialLength);

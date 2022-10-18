@@ -296,13 +296,16 @@ html.grabbing {
 }
 
 .numbered-dot {
-  stroke: none;
-  fill: black;
+  stroke-dasharray: none;
+  stroke-width: 1;
+  fill: aliceblue;
+  vector-effect: non-scaling-stroke;
+  stroke: rebeccapurple;
 }
 
 .dotted-number {
   stroke: none;
-  fill: white;
+  fill: rebeccapurple;
 }
 
 .hovered > .mark-piece, .hovered > .mark {

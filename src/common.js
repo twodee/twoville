@@ -402,6 +402,14 @@ export class BoundingBox {
     return box;
   }
 
+  static fromCorners(min, max) {
+    const box = new BoundingBox();
+    box.min = min;
+    box.max = max;
+    box.isEmpty = false;
+    return box;
+  }
+
   static fromCenterSize(center, size) {
     const box = new BoundingBox();
     box.min = [
