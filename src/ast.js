@@ -191,7 +191,7 @@ export class Expression {
       throw new LocatedException(e.where, `It must be a list.`);
     }
 
-    if (e.length !== length) {
+    if (length >= 0 && e.length !== length) {
       throw new LocatedException(e.where, `It must be a list with ${length} element${length === 1 ? '' : 's'}.`);
     }
 

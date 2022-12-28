@@ -108,7 +108,6 @@ export class InterpreterFrame extends Frame {
 
     // Export properties
     const exportProperties = Frame.create();
-    // exportProperties.bindStatic('name', new ExpressionUnit());
     exportProperties.bindStatic('loop', new ExpressionInteger(0));
     exportProperties.bindStatic('delay', new ExpressionInteger(10));
     exportProperties.bindStatic('size', new ExpressionVector([
@@ -126,6 +125,9 @@ export class InterpreterFrame extends Frame {
       new ExpressionReal(1),
     ]));
     this.bindStatic('export', exportProperties);
+
+    const defaultShape = Frame.create();
+    this.bindStatic('default', defaultShape);
   }
 
   bindGlobalFunctions() {

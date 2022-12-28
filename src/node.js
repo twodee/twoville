@@ -1325,55 +1325,110 @@ export class LineNode extends Node {
 
   validate(fromTime, toTime) {
     // Assert required properties.
-    this.assertProperty('position');
+    // this.assertProperty('position');
+
+    // Assert types of extent properties.
+    // this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+
+    // Assert completeness of timelines.
+    // this.assertCompleteTimeline('position', fromTime, toTime);
+
+    // Assert required properties.
+    // this.assertProperty('position');
+    if (this.has('position') && this.has('offset')) {
+      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose <code>position</code> and <code>offset</code> were both set. Define only one of these.`);
+    } else if (!this.has('position') && !this.has('offset')) {
+      throw new LocatedException(this.where, `I found ${this.article} ${this.type} whose position I couldn't figure out. Define either its <code>position</code> or <code>offset</code>.`);
+    }
 
     // Assert types of extent properties.
     this.assertVectorType('position', 2, [ExpressionInteger, ExpressionReal]);
+    this.assertVectorType('offset', 2, [ExpressionInteger, ExpressionReal]);
 
     // Assert completeness of timelines.
     this.assertCompleteTimeline('position', fromTime, toTime);
+    this.assertCompleteTimeline('offset', fromTime, toTime);
   }
 
   initializeStaticState() {
     this.initializeStaticVectorProperty('position');
+    this.initializeStaticVectorProperty('offset');
   }
 
   initializeDynamicState() {
     this.state.animation = {};
     this.initializeDynamicProperty('position');
+    this.initializeDynamicProperty('offset');
   }
 
   synchronizeState(t) {
-    this.synchronizeStateProperty('position', t);
-    this.configureTurtle();
+    this.configureTurtle(t);
   }
 
-  configureTurtle() {
-    this.state.turtle.position[0] = this.state.position[0];
-    this.state.turtle.position[1] = this.state.position[1];
+  configureTurtle(t) {
+    // this.state.turtle.position[0] = this.state.position[0];
+    // this.state.turtle.position[1] = this.state.position[1];
     this.state.turtle.heading = this.previousNode.state.turtle.heading;
+    this.synchronizeStateProperty('position', t);
+    this.synchronizeStateProperty('offset', t);
+    if (this.has('position')) {
+      this.state.turtle.position[0] = this.state.position[0];
+      this.state.turtle.position[1] = this.state.position[1];
+    } else {
+      this.state.turtle.position[0] = this.state.offset[0] + this.previousNode.state.turtle.position[0];
+      this.state.turtle.position[1] = this.state.offset[1] + this.previousNode.state.turtle.position[1];
+    }
   }
 
   pathCommand(bounds) {
-    return `L ${this.state.position[0]},${-this.state.position[1]}`;
+    return `L ${this.state.turtle.position[0]},${-this.state.turtle.position[1]}`;
   }
 
   initializeMarkState() {
+    // super.initializeMarkState();
+    // this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+      // this.state.position = value;
+      // this.state.turtle.position[0] = this.state.position[0];
+      // this.state.turtle.position[1] = this.state.position[1];
+    // });
+    // this.marker.setMarks(this.positionMark);
     super.initializeMarkState();
-    this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
-      this.state.position = value;
-      this.state.turtle.position[0] = this.state.position[0];
-      this.state.turtle.position[1] = this.state.position[1];
-    });
+    if (this.has('position')) {
+      this.positionMark = new VectorPanMark(this.parentFrame, this, value => {
+        this.state.position = value;
+        this.state.turtle.position[0] = this.state.position[0];
+        this.state.turtle.position[1] = this.state.position[1];
+      });
+    } else {
+      this.positionMark = new OffsetPanMark(this.parentFrame, this, value => {
+        this.state.offset = value;
+        this.state.position = [
+          value[0] + this.previousNode.state.turtle.position[0],
+          value[1] + this.previousNode.state.turtle.position[1]
+        ];
+        this.state.turtle.position[0] = this.state.position[0];
+        this.state.turtle.position[1] = this.state.position[1];
+      });
+    }
     this.marker.setMarks(this.positionMark);
   }
 
   synchronizeMarkState(matrix, inverseMatrix) {
-    this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+    // this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+    if (this.has('position')) {
+      this.positionMark.synchronizeState(this.state.position, matrix, inverseMatrix);
+    } else {
+      this.positionMark.synchronizeState(this.state.offset, this.previousNode.state.turtle.position, matrix, inverseMatrix);
+    }
   }
 
   synchronizeMarkExpressions(t) {
-    this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+    // this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+    if (this.has('position')) {
+      this.positionMark.synchronizeExpressions(this.expressionAt('position', t));
+    } else {
+      this.positionMark.synchronizeExpressions(this.expressionAt('offset', t));
+    }
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
@@ -2314,12 +2369,17 @@ export class Tile extends ObjectFrame {
   }
 
   validate(fromTime, toTime) {
-    const indices = this.getStatic('indices');
+    this.assertProperty('nodes');
+    this.assertVectorType('nodes', -1, [ExpressionInteger]);
+    const nodes = this.getStatic('nodes');
+    if (nodes.length < 3) {
+      throw new LocatedException(nodes.where, "I found a <code>nodes</code> vector that didn't have enough nodes. I need at least 3.");
+    }
   }
 
   initializeStaticState() {
     super.initializeStaticState();
-    this.initializeStaticScalarProperty('indices');
+    this.initializeStaticVectorProperty('nodes');
   }
 
   initializeMarkState() {

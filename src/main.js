@@ -856,7 +856,7 @@ function initialize() {
     if (twos.hasOwnProperty(name)) {
       currentName = name;
       const file = twos[name];
-      editor.setValue(file.source, 1);
+      editor.session.setValue(file.source, 1);
       closeOpenDialog();
       isSaved = true;
       syncTitle();
@@ -1175,7 +1175,7 @@ function initialize() {
   });
 
   if (source0) {
-    editor.setValue(source0, 1);
+    editor.session.setValue(source0, 1);
   } else if (!isEmbedded) {
     const mostRecentTwo = localStorage.getItem('most-recent-two');
     if (mostRecentTwo) {
@@ -1188,7 +1188,7 @@ function initialize() {
     if (scene) {
       scene.clear();
     }
-    editor.setValue('', 1);
+    editor.session.setValue('', 1);
     currentName = null;
     localStorage.removeItem('most-recent-two');
     isSaved = true;

@@ -1338,6 +1338,9 @@ export class Raster extends Shape {
     }
   }
 
+  synchronizeCustomState(t) {
+  }
+
   synchronizeCustomDom(t, bounds) {
     this.element.setAttributeNS(null, 'width', this.state.size[0]);
     this.element.setAttributeNS(null, 'height', this.state.size[1]);
@@ -2096,7 +2099,6 @@ export class Mosaic extends VertexShape {
     this.validateStrokeProperties(fromTime, toTime);
     for (let tile of this.tiles) {
       tile.validate(fromTime, toTime);
-      // TODO: validate indices are legitimate
     }
   }
 
@@ -2106,7 +2108,18 @@ export class Mosaic extends VertexShape {
     if (this.domNodes.length > 0) {
       this.state.turtle0 = this.domNodes[0].turtle;
     }
-    this.indices = this.tiles.map(tile => tile.getStatic('indices').toPrimitiveArray());
+
+    this.state.tileNodes = this.tiles.map(tile => tile.getStatic('nodes').toPrimitiveArray());
+
+    for (let [tileIndex, nodes] of this.state.tileNodes.entries()) { 
+      for (let [nodeIndex, node] of nodes.entries()) {
+        const tile = this.tiles[tileIndex];
+        if (node < 0 || node >= this.domNodes.length) {
+          const expr = tile.getStatic('nodes').get(nodeIndex).unevaluated;
+          throw new LocatedException(expr.where, `I found a tile with node ${node}, which doesn't exist.`);
+        }
+      }
+    }
   }
 
   initializeStaticState() {
@@ -2143,7 +2156,7 @@ export class Mosaic extends VertexShape {
 
     for (let i = 0; i < this.tiles.length; ++i) {
       const tile = this.tiles[i];
-      const polygon = this.indices[i];
+      const polygon = this.state.tileNodes[i];
       const vertices = polygon.map(i => [positions[i][0], positions[i][1]]);
       const isLeftTile = !isLeftPolygon(vertices);
 
@@ -2201,9 +2214,18 @@ export class Mosaic extends VertexShape {
     clearChildren(this.element);
 
     for (let polygonTile of this.state.polygonTiles) {
-      const polygonElement = document.createElementNS(svgNamespace, 'polygon');
-      const coordinates = polygonTile.positions.map(vertex => `${vertex[0]},${-vertex[1]}`).join(' ');
-      polygonElement.setAttributeNS(null, 'points', coordinates);
+      // Use a path so we can subtract away from it.
+      const polygonElement = document.createElementNS(svgNamespace, 'path');
+
+      let vertex = polygonTile.positions[0];
+      let commands = `M${vertex[0]},${-vertex[1]}`;
+      for (let i = 1; i < polygonTile.positions.length; ++i) {
+        vertex = polygonTile.positions[i];
+        commands += ` L${vertex[0]},${-vertex[1]}`;
+      }
+
+      // const coordinates = polygonTile.positions.map(vertex => `${vertex[0]},${-vertex[1]}`).join(' ');
+      polygonElement.setAttributeNS(null, 'd', commands);
       this.element.appendChild(polygonElement);
 
       if (polygonTile.hasOwnProperty('color')) {
