@@ -126,8 +126,18 @@ export class InterpreterFrame extends Frame {
     ]));
     this.bindStatic('export', exportProperties);
 
-    const defaultShape = Frame.create();
-    this.bindStatic('default', defaultShape);
+    // I've been tempted to add a default shape on which users could set global
+    // properties that get copied into each shape. Through the default they
+    // could make all shapes black or be outlined by a stroke. But I feel like
+    // a default shape will lead to too many surprises. I'm nixing the idea.
+    //
+    // Properties can still be set en masse using a with-block:
+    //
+    //   [s1, s2, s3]
+    //     color = :black
+    //
+    // const defaultShape = Frame.create();
+    // this.bindStatic('default', defaultShape);
   }
 
   bindGlobalFunctions() {

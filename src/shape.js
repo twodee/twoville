@@ -123,6 +123,8 @@ export class Shape extends ObjectFrame {
     this.sourceSpans = [];
     this.transforms = [];
 
+    // TODO: assign defaults here?
+
     this.bindStatic('display', new ExpressionBoolean(true));
     this.bindStatic('translate', new FunctionDefinition('translate', [], new ExpressionTranslate(this)));
     this.bindStatic('scale', new FunctionDefinition('scale', [], new ExpressionScale(this)));
