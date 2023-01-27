@@ -228,7 +228,7 @@ export class Shape extends ObjectFrame {
       let backward = Matrix.identity();
       let after = Matrix.identity();
       this.afterMatrices = [after];
-      for (let i = 0; i < this.transforms.length - 1; ++i) {
+      for (let i = 0; i < this.transforms.length; ++i) {
         let transform = this.transforms[i];
 
         let inverseMatrix = transform.toInverseMatrix();
@@ -241,32 +241,31 @@ export class Shape extends ObjectFrame {
 
       this.state.matrix = before;
       this.state.inverseMatrix = backward;
+
+      // let matrices = this.transforms.map(transform => transform.toMatrix());
+      // let inverseMatrices = this.transforms.map(transform => transform.toInverseMatrix());
+
+      // let f = this.isChild ? this.getStatic('parent').state.matrix : Matrix.identity();
+      // let b = Matrix.identity();
+      // let forwardMatrices = [f];
+      // let backwardMatrices = [b];
+      // let afterMatrices = [Matrix.identity()];
+      // for (let i = 0; i < this.transforms.length; ++i) {
+        // let ii = this.transforms.length - 1 - i;
+        // f = matrices[ii].multiplyMatrix(f);
+        // b = b.multiplyMatrix(inverseMatrices[i]);
+        // forwardMatrices.push(f);
+        // backwardMatrices.push(b);
+        // afterMatrices.push(afterMatrices[afterMatrices.length - 1].multiplyMatrix(matrices[i]));
+      // }
+      // this.state.matrix = forwardMatrices[forwardMatrices.length - 1];
+      // this.state.inverseMatrix = backwardMatrices[backwardMatrices.length - 1];
+      // console.log("this.state.inverseMatrix:", this.state.inverseMatrix);
+
+      // R T
+      // forwardMatrices: [I T R*T]
+      // backwardMatrices: [I R^-1 R^-1*T^-1]
     }
-
-    /*
-    let matrices = this.transforms.map(transform => transform.toMatrix());
-    let inverseMatrices = this.transforms.map(transform => transform.toInverseMatrix());
-
-    let f = this.isChild ? this.getStatic('parent').state.matrix : Matrix.identity();
-    let b = Matrix.identity();
-    let forwardMatrices = [f];
-    let backwardMatrices = [b];
-    let afterMatrices = [Matrix.identity()];
-    for (let i = 0; i < this.transforms.length; ++i) {
-      let ii = this.transforms.length - 1 - i;
-      f = matrices[ii].multiplyMatrix(f);
-      b = b.multiplyMatrix(inverseMatrices[i]);
-      forwardMatrices.push(f);
-      backwardMatrices.push(b);
-      afterMatrices.push(afterMatrices[afterMatrices.length - 1].multiplyMatrix(matrices[i]));
-    }
-    this.state.matrix = forwardMatrices[forwardMatrices.length - 1];
-    this.state.inverseMatrix = backwardMatrices[backwardMatrices.length - 1];
-
-    // R T
-    // forwardMatrices: [I T R*T]
-    // backwardMatrices: [I R^-1 R^-1*T^-1]
-    */
   }
 
   synchronizeDom(t, bounds) {
