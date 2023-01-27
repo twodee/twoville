@@ -373,6 +373,17 @@ export class BoundingBox {
     return this.max[1] - this.min[1];
   }
 
+  transform(matrix) {
+    const bl = matrix.multiplyPosition([this.min[0], this.min[1]]);
+    const br = matrix.multiplyPosition([this.max[0], this.min[1]]);
+    const tl = matrix.multiplyPosition([this.min[0], this.max[1]]);
+    const tr = matrix.multiplyPosition([this.max[0], this.max[1]]);
+    this.min[0] = Math.min(bl[0], br[0], tl[0], tr[0]);
+    this.min[1] = Math.min(bl[1], br[1], tl[1], tr[1]);
+    this.max[0] = Math.max(bl[0], br[0], tl[0], tr[0]);
+    this.max[1] = Math.max(bl[1], br[1], tl[1], tr[1]);
+  }
+
   centroid() {
     return [
       (this.min[0] + this.max[0]) * 0.5,

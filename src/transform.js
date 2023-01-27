@@ -176,8 +176,9 @@ export class Rotate extends Transform {
     // Assert required properties.
     // this.assertProperty('pivot');
     this.assertProperty('degrees');
+    this.assertProperty('pivot');
 
-    this.hasPivot = this.has('pivot');
+    // this.hasPivot = this.has('pivot');
 
     // Assert types of extent properties.
     this.assertVectorType('pivot', 2, [ExpressionInteger, ExpressionReal]);
@@ -202,9 +203,9 @@ export class Rotate extends Transform {
   synchronizeState(t) {
     this.synchronizeStateProperty('pivot', t);
     this.synchronizeStateProperty('degrees', t);
-    if (!this.hasPivot) {
-      this.state.pivot = this.parentFrame.state.centroid;
-    }
+    // if (!this.hasPivot) {
+    // this.state.pivot = this.parentFrame.state.centroid;
+    // }
   }
 
   synchronizeDom(t, bounds) {
@@ -217,32 +218,32 @@ export class Rotate extends Transform {
     this.degreesMark = new RotationMark(this.parentFrame, this, value => this.state.degrees = value);
     this.wedgeMark = new WedgeMark();
     const marks = [this.degreesMark, this.wedgeMark];
-    if (this.hasPivot) {
-      this.pivotMark = new VectorPanMark(this.parentFrame, this, value => this.state.pivot = value);
-      marks.push(this.pivotMark);
-    }
+    // if (this.hasPivot) {
+    this.pivotMark = new VectorPanMark(this.parentFrame, this, value => this.state.pivot = value);
+    marks.push(this.pivotMark);
+    // }
     this.marker.setMarks(...marks);
   }
 
   synchronizeMarkExpressions(t) {
     this.degreesMark.synchronizeExpressions(this.expressionAt('degrees', t));
-    if (this.hasPivot) {
-      this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
-    }
+    // if (this.hasPivot) {
+    this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
+    // }
   }
 
   synchronizeMarkState(t, afterMatrix, inverseMatrix) {
-    if (this.hasPivot) {
-      this.pivotMark.synchronizeState(this.state.pivot, afterMatrix, inverseMatrix);
-    }
+    // if (this.hasPivot) {
+    this.pivotMark.synchronizeState(this.state.pivot, afterMatrix, inverseMatrix);
+    // }
     this.degreesMark.synchronizeState(this.state.pivot, this.state.degrees, 0, afterMatrix, inverseMatrix);
     this.wedgeMark.synchronizeState(this.state.pivot, this.state.degrees, 0, afterMatrix);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
-    if (this.hasPivot) {
-      this.pivotMark.synchronizeDom(bounds, handleRadius);
-    }
+    // if (this.hasPivot) {
+    this.pivotMark.synchronizeDom(bounds, handleRadius);
+    // }
     this.degreesMark.synchronizeDom(bounds, handleRadius, radialLength);
     this.wedgeMark.synchronizeDom(bounds, radialLength);
   }
@@ -382,7 +383,8 @@ export class Scale extends Transform {
   validate(fromTime, toTime) {
     // Assert required properties.
     this.assertProperty('factors');
-    this.hasPivot = this.has('pivot');
+    this.assertProperty('pivot');
+    // this.hasPivot = this.has('pivot');
 
     // Assert types of extent properties.
     this.assertVectorType('factors', 2, [ExpressionInteger, ExpressionReal]);
@@ -407,9 +409,9 @@ export class Scale extends Transform {
   synchronizeState(t) {
     this.synchronizeStateProperty('factors', t);
     this.synchronizeStateProperty('pivot', t);
-    if (!this.hasPivot) {
-      this.state.pivot = this.parentFrame.state.centroid;
-    }
+    // if (!this.hasPivot) {
+    // this.state.pivot = this.parentFrame.state.centroid;
+    // }
   }
 
   synchronizeDom(t, bounds) {
@@ -421,36 +423,36 @@ export class Scale extends Transform {
     this.widthFactorMark = new HorizontalScaleMark(this.parentFrame, null, value => this.state.factors[0] = value);
     this.heightFactorMark = new VerticalScaleMark(this.parentFrame, null, value => this.state.factors[1] = value);
     const marks = [this.widthFactorMark, this.heightFactorMark];
-    if (this.hasPivot) {
-      this.pivotMark = new VectorPanMark(this.parentFrame, null, position => {
-        this.state.pivot[0] = position[0];
-        this.state.pivot[1] = position[1];
-      });
-      marks.push(this.pivotMark);
-    }
+    // if (this.hasPivot) {
+    this.pivotMark = new VectorPanMark(this.parentFrame, null, position => {
+      this.state.pivot[0] = position[0];
+      this.state.pivot[1] = position[1];
+    });
+    marks.push(this.pivotMark);
+    // }
     this.marker.setMarks(...marks);
   }
 
   synchronizeMarkExpressions(t) {
-    if (this.hasPivot) {
+    // if (this.hasPivot) {
       this.pivotMark.synchronizeExpressions(this.expressionAt('pivot', t));
-    }
+    // }
     this.widthFactorMark.synchronizeExpressions(this.expressionAt('factors', t).get(0));
     this.heightFactorMark.synchronizeExpressions(this.expressionAt('factors', t).get(1));
   }
 
   synchronizeMarkState(t, afterMatrix, inverseMatrix) {
-    if (this.hasPivot) {
+    // if (this.hasPivot) {
       this.pivotMark.synchronizeState(this.state.pivot, afterMatrix, inverseMatrix);
-    }
+    // }
     this.widthFactorMark.synchronizeState(this.state.pivot, this.state.factors[0], afterMatrix, inverseMatrix);
     this.heightFactorMark.synchronizeState(this.state.pivot, this.state.factors[1], afterMatrix, inverseMatrix);
   }
 
   synchronizeMarkDom(bounds, handleRadius, radialLength) {
-    if (this.hasPivot) {
+    // if (this.hasPivot) {
       this.pivotMark.synchronizeDom(bounds, handleRadius);
-    }
+    // }
     this.widthFactorMark.synchronizeDom(bounds, handleRadius, radialLength);
     this.heightFactorMark.synchronizeDom(bounds, handleRadius, radialLength);
   }

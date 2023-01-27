@@ -95,26 +95,34 @@ import {
 // --------------------------------------------------------------------------- 
 
 /*
-In the source code, the first transform added to the shape is the first one to
-be be applied. The last transform is the last to be applied. These are stored
-in the transforms property of a shape from last-applied to first-applied. This
-order matches the order expected in the SVG transform attribute.
-
-For example, consider this rectangle:
-
-  rectangle
-    // ...
-    translate
-      offset = [5, 6]
-    rotate
-      degrees = 45
-      pivot = :zero
-
-The transforms property will look like this:
-
-  [rotate(45, :zero), translate(5, 6)]
-
+ * In the source code, the first transform added to the shape is the first one to
+ * be applied. The last transform is the last to be applied. These are stored in
+ * the transforms property of a shape from last-applied to first-applied. This
+ * order matches the order expected in the SVG transform attribute.
+ * 
+ * For example, consider this rectangle:
+ * 
+ *   rectangle
+ *     // ...
+ *     translate
+ *       offset = [5, 6]
+ *     rotate
+ *       degrees = 45
+ *       pivot = :zero
+ * 
+ * The transforms property will look like this:
+ * 
+ *   [rotate(45, :zero), translate(5, 6)]
+ * 
 */
+
+/*
+ * Lifecycle.
+ *
+ * synchronizeCustomState: implemented by all concrete shapes to update
+ * shape-specific properties and compute an untransformed bounding box and
+ * centroid.
+ */
 
 export class Shape extends ObjectFrame {
   initialize(where) {
@@ -122,8 +130,6 @@ export class Shape extends ObjectFrame {
 
     this.sourceSpans = [];
     this.transforms = [];
-
-    // TODO: assign defaults here?
 
     this.bindStatic('display', new ExpressionBoolean(true));
     this.bindStatic('translate', new FunctionDefinition('translate', [], new ExpressionTranslate(this)));
@@ -198,13 +204,65 @@ export class Shape extends ObjectFrame {
     this.synchronizeStateProperty('display', t);
     if (this.state.display) {
       this.synchronizeCustomState(t);
-      // Some of the transforms rely on the centroid having been calculated.
-      // So the custom state needs to get set first. The order used to be
-      // reversed, so I have probably broken some things.
-      for (let transform of this.transforms) {
+
+      // Walk the matrix gauntlet and apply the transforms to the bounding box.
+      // Go from right to left since last transform is applied first.
+      let forward = Matrix.identity();
+      for (let i = this.transforms.length - 1; i >= 0; --i) {
+        let transform = this.transforms[i];
         transform.synchronizeState(t);
+        let matrix = transform.toMatrix();
+
+        // Update centroid and bounding box.
+        this.state.centroid = matrix.multiplyPosition(this.state.centroid);
+        this.boundingBox.transform(matrix);
+
+        // Accumulate matrix onto its rightward predecessors.
+        forward = matrix.multiplyMatrix(forward);
       }
+
+      let backward = Matrix.identity();
+      let after = Matrix.identity();
+      this.afterMatrices = [after];
+      for (let i = 0; i < this.transforms.length - 1; ++i) {
+        let transform = this.transforms[i];
+
+        let inverseMatrix = transform.toInverseMatrix();
+        backward = backward.multiplyMatrix(inverseMatrix);
+   
+        let matrix = transform.toMatrix();
+        after = after.multiplyMatrix(matrix);
+        this.afterMatrices.push(after);
+      }
+
+      this.state.matrix = forward;
+      this.state.inverseMatrix = backward;
     }
+
+    /*
+    let matrices = this.transforms.map(transform => transform.toMatrix());
+    let inverseMatrices = this.transforms.map(transform => transform.toInverseMatrix());
+
+    let f = this.isChild ? this.getStatic('parent').state.matrix : Matrix.identity();
+    let b = Matrix.identity();
+    let forwardMatrices = [f];
+    let backwardMatrices = [b];
+    let afterMatrices = [Matrix.identity()];
+    for (let i = 0; i < this.transforms.length; ++i) {
+      let ii = this.transforms.length - 1 - i;
+      f = matrices[ii].multiplyMatrix(f);
+      b = b.multiplyMatrix(inverseMatrices[i]);
+      forwardMatrices.push(f);
+      backwardMatrices.push(b);
+      afterMatrices.push(afterMatrices[afterMatrices.length - 1].multiplyMatrix(matrices[i]));
+    }
+    this.state.matrix = forwardMatrices[forwardMatrices.length - 1];
+    this.state.inverseMatrix = backwardMatrices[backwardMatrices.length - 1];
+
+    // R T
+    // forwardMatrices: [I T R*T]
+    // backwardMatrices: [I R^-1 R^-1*T^-1]
+    */
   }
 
   synchronizeDom(t, bounds) {
@@ -503,39 +561,11 @@ export class Shape extends ObjectFrame {
   }
 
   synchronizeMarkState(t) {
-    // let preMatrix = Matrix.identity();
-    // let inverse = Matrix.identity();
-
-    let matrices = this.transforms.map(transform => transform.toMatrix());
-    let inverseMatrices = this.transforms.map(transform => transform.toInverseMatrix());
-
-    let f = this.isChild ? this.getStatic('parent').state.matrix : Matrix.identity();
-    let b = Matrix.identity();
-    let forwardMatrices = [f];
-    let backwardMatrices = [b];
-    let afterMatrices = [Matrix.identity()];
-    for (let i = 0; i < this.transforms.length; ++i) {
-      let ii = this.transforms.length - 1 - i;
-      f = matrices[ii].multiplyMatrix(f);
-      b = b.multiplyMatrix(inverseMatrices[i]);
-      forwardMatrices.push(f);
-      backwardMatrices.push(b);
-      afterMatrices.push(afterMatrices[afterMatrices.length - 1].multiplyMatrix(matrices[i]));
-    }
-    this.state.matrix = forwardMatrices[forwardMatrices.length - 1];
-    this.state.inverseMatrix = backwardMatrices[backwardMatrices.length - 1];
-
-    // R T
-    // forwardMatrices: [I T R*T]
-    // backwardMatrices: [I R^-1 R^-1*T^-1]
-
     for (let i = 0; i < this.transforms.length; i += 1) {
       const ii = this.transforms.length - 1 - i;
-      const m = afterMatrices[ii];
+      const m = this.afterMatrices[ii];
       this.transforms[ii].synchronizeMarkState(t, m, m.inverse());
     }
-
-    // Subclasses should compute centroid.
   }
 
   synchronizeMarkExpressions(t) {
@@ -1203,6 +1233,7 @@ export class Circle extends Shape {
     this.synchronizeStateProperty('center', t);
     this.synchronizeColorState(t);
     this.synchronizeStrokeState(t);
+ 
     this.state.centroid = this.state.center;
     this.boundingBox = BoundingBox.fromCenterRadius(this.state.center, this.state.radius);
     if (this.strokeFrame) {
