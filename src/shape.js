@@ -205,9 +205,10 @@ export class Shape extends ObjectFrame {
     if (this.state.display) {
       this.synchronizeCustomState(t);
 
-      // Walk the matrix gauntlet and apply the transforms to the bounding box.
-      // Go from right to left since last transform is applied first.
-      let forward = Matrix.identity();
+      // Walk the transform gauntlet, synchronizing each transform and applying
+      // it to the bounding box. Go from right to left since the last transform
+      // is applied first.
+      let before = Matrix.identity();
       for (let i = this.transforms.length - 1; i >= 0; --i) {
         let transform = this.transforms[i];
         transform.synchronizeState(t);
@@ -218,9 +219,12 @@ export class Shape extends ObjectFrame {
         this.boundingBox.transform(matrix);
 
         // Accumulate matrix onto its rightward predecessors.
-        forward = matrix.multiplyMatrix(forward);
+        before = matrix.multiplyMatrix(before);
       }
 
+      // Walk the transform gauntlet again, this time in reverse. To convert
+      // mouse positions, we need to untransform by the matrices that come
+      // later.
       let backward = Matrix.identity();
       let after = Matrix.identity();
       this.afterMatrices = [after];
@@ -235,7 +239,7 @@ export class Shape extends ObjectFrame {
         this.afterMatrices.push(after);
       }
 
-      this.state.matrix = forward;
+      this.state.matrix = before;
       this.state.inverseMatrix = backward;
     }
 
