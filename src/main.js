@@ -62,7 +62,7 @@ let defaultSettings = {
   showTimeScrubber: false,
   mousePrecision: 2,
   handleSize: 15,
-  theme: 'light',
+  theme: 'dark',
 };
 const settings = {...defaultSettings};
 
@@ -673,13 +673,13 @@ function initialize() {
       document.documentElement.style.setProperty('--hilite-color', settings.hiliteColor);
     },
     showCopyLinks: () => {
-      // showCopyLinksToggle.checked = settings.showCopyLinks;
+      showCopyLinksToggle.checked = settings.showCopyLinks;
     },
     showPageOutline: () => {
-      // showPageOutlineToggle.checked = settings.showPageOutline;
+      showPageOutlineToggle.checked = settings.showPageOutline;
     },
     theme: () => {
-      // themePicker.value = settings.theme;
+      themePicker.value = settings.theme;
       let theme;
       if (settings.theme === 'dark') {
         theme = 'twilight';

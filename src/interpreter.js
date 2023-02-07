@@ -100,6 +100,10 @@ export class InterpreterFrame extends Frame {
     // View properties
     const viewProperties = Frame.create();
     viewProperties.bindStatic('autofit', new ExpressionBoolean(false));
+    viewProperties.bindStatic('center', new ExpressionVector([
+      new ExpressionInteger(0),
+      new ExpressionInteger(0)
+    ]));
     viewProperties.bindStatic('size', new ExpressionVector([
       new ExpressionInteger(100),
       new ExpressionInteger(100)
