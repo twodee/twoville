@@ -584,10 +584,19 @@ function save() {
 }
 
 function initialize() {
+  let fontSize;
+  if (context === 'slide') {
+    fontSize = 24;
+  } else if (context === 'article') {
+    fontSize = 14;
+  } else {
+    fontSize = 14;
+  }
+
   editor = ace.edit('editor');
   editor.setOptions({
     fontFamily: 'Roboto Mono',
-    fontSize: source0 ? 14 : 18,
+    fontSize: `${fontSize}pt`,
     tabSize: 2,
     useSoftTabs: true
   });
@@ -1442,11 +1451,17 @@ function initialize() {
     startInterpreting();
   });
 
-  if (source0) {
+  if (context === 'slide') {
+    left.style.width = '450px';
+    messagerContainer.style.height = '50px';
+    editor.resize();
+  } else if (context === 'article') {
     left.style.width = '300px';
     messagerContainer.style.height = '50px';
     editor.resize();
+  }
 
+  if (source0) {
     if (runZeroMode) {
       startInterpreting(() => {
         if (runZeroMode == 'loop') {
