@@ -246,6 +246,16 @@ export class Frame {
 
 // --------------------------------------------------------------------------- 
 
+export class ParameterFrame extends Frame {
+  static create(parentFrame) {
+    const context = new ParameterFrame();
+    context.initialize(parentFrame);   
+    return context;
+  }
+}
+
+// --------------------------------------------------------------------------- 
+
 export class ObjectFrame extends Frame {
   initialize(parentFrame, where) {
     super.initialize(parentFrame);

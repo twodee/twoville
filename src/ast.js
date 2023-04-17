@@ -13,6 +13,7 @@ import {
 
 import {
   Frame,
+  ParameterFrame,
   ObjectFrame,
   StrokeFrame,
 } from './frame.js';
@@ -1051,20 +1052,7 @@ export class ExpressionIdentifier extends Expression {
 
   evaluate(env) {
     let value = Frame.resolveStaticRvalue(this.nameToken.source, env.frames);
-    if (value instanceof FunctionDefinition) {
-      if (value.formals.length !== 0) {
-        throw new LocatedException(this.where, `I expected function ${this.nameToken.source} to be called with ${f.formals.length} parameter${f.formals.length == 1 ? '' : 's'}.`);
-      }
-
-      let callFrame = Frame.create();
-      let returnValue = value.body.evaluate({
-        ...env,
-        frames: [callFrame, ...value.scopeFrames],
-        callExpression: this,
-      });
-
-      return returnValue;
-    } else if (value) {
+    if (value) {
       return value;
     } else {
       throw new LocatedException(this.nameToken.where, `I'm sorry, but I've never heard of <code>${this.nameToken.source}</code> before.`);
@@ -1088,12 +1076,12 @@ export class ExpressionIdentifier extends Expression {
       // env.stackFrame.sourceSpans.push(env.whereAssigned);
     // }
 
-    // If the immediate frame is an objective, we force the assignment to be to
-    // a local variable. If the immediate frame is a function, we look up the
-    // lexical hierarchy to find a frame a with an existing binding. If none is
+    // If the immediate frame is an object, we force the assignment to be to a
+    // local variable. If the immediate frame is a function, we look up the
+    // lexical hierarchy to find a frame with an existing binding. If none is
     // found, we make a local.
     let frame = env.frames[0];
-    if (!(frame instanceof ObjectFrame)) {
+    if (!(frame instanceof ObjectFrame || frame instanceof ParameterFrame)) {
       frame = Frame.resolveStaticLvalue(this.nameToken.source, env.frames);
     }
     frame.bind(env, this.nameToken.source, value);
@@ -1138,6 +1126,19 @@ export class ExpressionMemberIdentifier extends ExpressionIdentifier {
 
   assign(env) {
     let baseValue = this.base.evaluate(env); 
+
+    if (baseValue instanceof FunctionDefinition) {
+      // Function is nullary. Go ahead and call it and then run block in its context.
+      if (baseValue.formals.length === 0) {
+        baseValue = baseValue.body.evaluate({
+          ...env,
+          frames: [Frame.create(), ...baseValue.scopeFrames],
+          callExpression: this,
+        });
+      } else {
+        throw new LocatedException(this.nameToken.where, `I found a property being set on an uncalled function.`);
+      }
+    }
 
     let rhsValue;
     if (env.rhs.isTimeSensitive(env)) {
@@ -1390,7 +1391,6 @@ export class ExpressionFor extends Expression {
       let by = this.by.evaluate(env)?.value || 1;
 
       for (let i = start; i < stop; i += by) {
-        console.log("i:", i);
         new ExpressionAssignment(this.i, new ExpressionInteger(i), true).evaluate(env);
         this.body.evaluate(env);
       }
@@ -1836,21 +1836,53 @@ export class ExpressionWith extends Expression {
   }
 
   evaluate(env) {
-    let instance = this.scope.evaluate(env);
+    let scopeValue = this.scope.evaluate(env);
 
+    if (scopeValue instanceof FunctionDefinition) {
+
+      // Function is nullary. Go ahead and call it and then run block in its context.
+      if (scopeValue.formals.length === 0) {
+        const frame = scopeValue.body.evaluate({
+          ...env,
+          frames: [Frame.create(), ...scopeValue.scopeFrames],
+          callExpression: this,
+        });
+        this.evaluateBlockWithin(env, frame);
+        return frame;
+      }
+
+      // Function takes parameters. The block must provide those parameters.
+      else {
+        const parameterFrame = ParameterFrame.create();
+        console.log("parameterFrame:", parameterFrame);
+        this.body.evaluate({...env, frames: [parameterFrame, ...env.frames]});
+
+        return scopeValue.body.evaluate({
+          ...env,
+          frames: [parameterFrame, ...scopeValue.scopeFrames],
+          callExpression: this,
+        });
+      }
+    } else {
+      this.evaluateBlockWithin(scopeValue);
+      return scopeValue;
+    }
+  }
+
+  evaluateBlockWithin(env, frame) {
     // TODO is it ObjectFrame or Frame that I want to ensure? I think Frame. view isn't an object frame, for example.
-    if (!(instance instanceof Frame || instance instanceof ExpressionVector)) {
+    if (!(frame instanceof Frame || frame instanceof ExpressionVector)) {
       throw new LocatedException(this.scope.where, `I encountered a block on something that isn't an object. This can happen if you have some code indented more than it should be. Or maybe the object isn't the object you think it is.`);
     }
 
-    if (instance.hasOwnProperty('sourceSpans')) {
-      instance.sourceSpans.push(this.where);
+    if (frame.hasOwnProperty('sourceSpans')) {
+      frame.sourceSpans.push(this.where);
     }
 
-    if (instance instanceof Frame) {
-      this.body.evaluate({...env, frames: [instance, ...env.frames]});
+    if (frame instanceof Frame) {
+      this.body.evaluate({...env, frames: [frame, ...env.frames]});
     } else {
-      instance.forEach(element => {
+      frame.forEach(element => {
         if (element instanceof Frame) {
           this.body.evaluate({...env, frames: [element, ...env.frames]});
         } else {
@@ -1859,7 +1891,7 @@ export class ExpressionWith extends Expression {
       });
     }
 
-    return instance;
+    return frame;
   }
 
   isTimeSensitive(env) {
