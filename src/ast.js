@@ -1854,7 +1854,6 @@ export class ExpressionWith extends Expression {
       // Function takes parameters. The block must provide those parameters.
       else {
         const parameterFrame = ParameterFrame.create();
-        console.log("parameterFrame:", parameterFrame);
         this.body.evaluate({...env, frames: [parameterFrame, ...env.frames]});
 
         return scopeValue.body.evaluate({
@@ -1863,8 +1862,10 @@ export class ExpressionWith extends Expression {
           callExpression: this,
         });
       }
+
+      throw new Error('yuh yoh');
     } else {
-      this.evaluateBlockWithin(scopeValue);
+      this.evaluateBlockWithin(env, scopeValue);
       return scopeValue;
     }
   }

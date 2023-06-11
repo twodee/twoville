@@ -316,7 +316,17 @@ export function parse(tokens, source) {
     let lhs = expressionOr();
     if (has(Tokens.Assign)) {
       consume();
+
       let rhs = expressionAssignment();
+
+      // If it has more indentation, read it as a block and make a with.
+      if (has(Tokens.Linebreak) && has(Tokens.Indentation, 1) && tokens[i + 1].source.length > indents[indents.length - 1]) {
+        consume();
+        const scope = rhs;
+        const body = block();
+        rhs = new ExpressionWith(scope, body, SourceLocation.span(scope.where, body.where));
+      }
+
       lhs = new ExpressionAssignment(lhs, rhs, SourceLocation.span(lhs.where, rhs.where));
     }
     return lhs;
@@ -364,7 +374,6 @@ export function parse(tokens, source) {
       if (operator.type === Tokens.Less) {
         a = new ExpressionLess(a, b, SourceLocation.span(a.where, b.where));
       } else if (operator.type === Tokens.LessEqual) {
-        console.log("less equal");
         a = new ExpressionLessEqual(a, b, SourceLocation.span(a.where, b.where));
       } else if (operator.type === Tokens.More) {
         a = new ExpressionMore(a, b, SourceLocation.span(a.where, b.where));
