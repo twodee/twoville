@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "ace-builds": "^1.4.12",
-    "jsdom": "^14.1.0",
+    "jsdom": "^16.5.0",
     "seedrandom": "^3.0.5"
   },
   "dependencies": {
