@@ -922,6 +922,12 @@ export class Text extends Shape {
       this.state.position = value;
     });
     this.markers[0].setMarks(this.positionMark, this.outlineMark);
+
+    // const box = this.element.getBBox();
+    this.state.centroid = [0, 0];
+      // box.x + box.width * 0.5,
+      // -box.y - box.height + box.height * 0.5,
+    // ]);
   }
 
   synchronizeMarkExpressions(t) {
@@ -2259,6 +2265,10 @@ export class Mosaic extends VertexShape {
         vertex = polygonTile.positions[i];
         commands += ` L${vertex[0]},${-vertex[1]}`;
       }
+
+      // The path needs to be closed for Silhouette Studio to cut all the way
+      // around.
+      commands += ' Z';
 
       // const coordinates = polygonTile.positions.map(vertex => `${vertex[0]},${-vertex[1]}`).join(' ');
       polygonElement.setAttributeNS(null, 'd', commands);

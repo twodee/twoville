@@ -144,6 +144,10 @@ export class Expression {
       e = new ExpressionDitto(where, unevaluated, prevalues);
     } else if (object.type === 'ExpressionAdd') {
       e = new ExpressionAdd(inflater.inflate(env, object.l), inflater.inflate(env, object.r), where, unevaluated, prevalues);
+    } else if (object.type === 'ExpressionIf') {
+      console.log("object:", object);
+      // TODO
+      e = new ExpressionIf(inflater.inflate(env, object.l), inflater.inflate(env, object.r), where, unevaluated, prevalues);
     } else if (object.type === 'ExpressionMultiply') {
       e = new ExpressionMultiply(inflater.inflate(env, object.l), inflater.inflate(env, object.r), where, unevaluated, prevalues);
     } else if (object.type === 'ExpressionPower') {
