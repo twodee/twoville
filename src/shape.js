@@ -896,6 +896,19 @@ export class Text extends Shape {
       }
     }
 
+    const box = this.element.getBBox();
+    if (!this.has('matrix')) {
+      console.log('text has no matrix, set identity')
+      this.state.matrix = Matrix.identity();
+    }
+    if (!this.has('centroid')) {
+      this.state.centroid = this.state.matrix.multiplyPosition([
+        box.x + box.width * 0.5,
+        -box.y - box.height + box.height * 0.5,
+      ]);
+      console.log("setting centroid in text.initializeDom");
+    }
+
     this.element.setAttributeNS(null, 'text-anchor', anchor[0]);
     this.element.setAttributeNS(null, 'dominant-baseline', anchor[1]);
   }
